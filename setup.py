@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 import os
 import codecs
 
-from pyfvm import __version__, __author__, __author_email__
+from voropy import __version__, __author__, __author_email__
 
 
 def read(fname):
@@ -26,8 +26,8 @@ setup(
     packages=find_packages(),
     description='Finite Volume Discretizations for Python',
     long_description=read('README.rst'),
-    url='https://github.com/nschloe/pyfvm',
-    download_url='https://github.com/nschloe/pyfvm/releases',
+    url='https://github.com/nschloe/voropy',
+    download_url='https://github.com/nschloe/voropy/releases',
     license='License :: OSI Approved :: MIT License',
     platforms='any',
     install_requires=[
