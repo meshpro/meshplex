@@ -12,7 +12,7 @@ addons:
       - python-h5py
       - python-matplotlib
       - python-scipy
-      - python-vtk
+      - python-vtk6
 
 before_install:
   - pip install pytest pytest-cov
