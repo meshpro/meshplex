@@ -1,4 +1,4 @@
-VERSION=$(shell python -c "import pyfvm; print(pyfvm.__version__)")
+VERSION=$(shell python -c "import voropy; print(voropy.__version__)")
 
 # Make sure we're on the master branch
 ifneq "$(shell git rev-parse --abbrev-ref HEAD)" "master"

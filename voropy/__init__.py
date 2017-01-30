@@ -10,6 +10,8 @@ __all__ = [
     'reader'
     ]
 
-__version__ = '0.1.0'
-__author__ = 'Nico Schlömer'
-__author_email__ = 'nico.schloemer@gmail.com'
+from voropy.__about__ import (
+    __version__,
+    __author__,
+    __author_email__
+    )

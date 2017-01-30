@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
 #
-#from distutils.core import setup
 from setuptools import setup, find_packages
 import os
 import codecs
 
-from voropy import __version__, __author__, __author_email__
+# https://packaging.python.org/single_source_version/
+base_dir = os.path.abspath(os.path.dirname(__file__))
+about = {}
+with open(os.path.join(base_dir, 'betterbib', '__about__.py')) as f:
+    exec(f.read(), about)
 
 
 def read(fname):
@@ -18,11 +21,12 @@ def read(fname):
         content = ''
     return content
 
+
 setup(
-    name='PyFVM',
-    version=__version__,
-    author=__author__,
-    author_email=__author_email__,
+    name='voropy',
+    version=about['__version__'],
+    author=about['__author__'],
+    author_email=about['__author_email__'],
     packages=find_packages(),
     description='Finite Volume Discretizations for Python',
     long_description=read('README.rst'),
@@ -31,6 +35,7 @@ setup(
     license='License :: OSI Approved :: MIT License',
     platforms='any',
     install_requires=[
+        'meshio',
         'numpy',
         'scipy',
         'sympy',
