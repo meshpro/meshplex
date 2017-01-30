@@ -37,9 +37,7 @@ setup(
     install_requires=[
         'meshio',
         'numpy',
-        'scipy',
-        'sympy',
-        'vtk'
+        'scipy'
         ],
     classifiers=[
         'Development Status :: 4 - Beta',
