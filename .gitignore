@@ -1,3 +1,4 @@
+.cache/
 build/
 doc/_build/
 doc/build/
