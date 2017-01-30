@@ -35,6 +35,7 @@ setup(
     license='License :: OSI Approved :: MIT License',
     platforms='any',
     install_requires=[
+        'matplotlib',
         'meshio',
         'meshzoo',  # only required by tests
         'numpy',
