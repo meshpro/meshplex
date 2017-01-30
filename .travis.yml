@@ -7,7 +7,7 @@ python:
 
 virtualenv:
   # needed for vtk to be available
-  - system_site_packages: true
+  system_site_packages: true
 
 addons:
   apt:
