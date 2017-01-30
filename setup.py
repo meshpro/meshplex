@@ -36,8 +36,9 @@ setup(
     platforms='any',
     install_requires=[
         'meshio',
+        'meshzoo',  # only required by tests
         'numpy',
-        'scipy'
+        'scipy',
         ],
     classifiers=[
         'Development Status :: 4 - Beta',
