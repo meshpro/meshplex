@@ -66,21 +66,54 @@ def compute_tri_areas_and_ce_ratios(e0, e1, e2):
     e0_dot_e0 = _row_dot(e0, e0)
     e0_dot_e1 = _row_dot(e0, e1)
     e0_dot_e2 = _row_dot(e0, e2)
-    e1_dot_e1 = _row_dot(e1, e1)
     e1_dot_e2 = _row_dot(e1, e2)
+    #
+    # So far, we haven't made use of the fact that the edges are connected by
+    # the relationship
+    #
+    #  e1 +- e2 +- e3 = 0.
+    #
+    # Assume `+` everywhere for now.
+    # Since
+    #
+    #   <e1 x e2, e1 x e3> = <e1 x e2, e1 x (-e1-e2)> = - <e1 x e2, e1 x e2>,
+    #
+    # We have that
+    #
+    #    0.5 * sqrt(abs(<e1 x e2, e1 x e3>))
+    #
+    # is the area of the triangle. (The abs() is here to compensate for any of
+    # the +- combinations above.)
+    #
+    aa = e0_dot_e0 * e1_dot_e2 - e0_dot_e1 * e0_dot_e2
+    # Any of aa, bb, cc are good for this. A more symmetric
+    # variant like.
+    #   s = numpy.sqrt(abs(
+    #       e0_dot_e1 * e1_dot_e2 +
+    #       e0_dot_e2 * e1_dot_e2 +
+    #       e0_dot_e1 * e0_dot_e2
+    #       ))
+    # would be preferable (if only for the fact that we don't need to compute
+    # e0_dot_e0).
+    sqrt_abs_s = numpy.sqrt(abs(aa))
+    cell_volumes = 0.5 * sqrt_abs_s
+    #
+    # TODO If we knew that e1+e2+e3=0, we could save computing bb and cc and
+    #      the three dot-products <e_i, e_i>.
+    e1_dot_e1 = _row_dot(e1, e1)
     e2_dot_e2 = _row_dot(e2, e2)
-    # It doesn't matter much which cross product we take for computing the cell
-    # volumes; deliberately take
-    #
-    #   <e0 x e1, e0 x e1> = <e0, e0> <e1, e1> - <e0, e1>^2.
-    #
-    cell_volumes = 0.5 * numpy.sqrt(e0_dot_e0 * e1_dot_e1 - e0_dot_e1**2)
+    sign_a = numpy.sign(aa)
+    sign_b = numpy.sign(e1_dot_e1 * e0_dot_e2 - e0_dot_e1 * e1_dot_e2)
+    sign_c = numpy.sign(e2_dot_e2 * e0_dot_e1 - e0_dot_e2 * e1_dot_e2)
 
-    a = e1_dot_e2 / (e0_dot_e0 * e1_dot_e2 - e0_dot_e1 * e0_dot_e2)
-    b = e0_dot_e2 / (e1_dot_e1 * e0_dot_e2 - e0_dot_e1 * e1_dot_e2)
-    c = e0_dot_e1 / (e2_dot_e2 * e0_dot_e1 - e0_dot_e2 * e1_dot_e2)
+    # a = e1_dot_e2 / (e0_dot_e0 * e1_dot_e2 - e0_dot_e1 * e0_dot_e2) * area
+    # b = e0_dot_e2 / (e1_dot_e1 * e0_dot_e2 - e0_dot_e1 * e1_dot_e2) * area
+    # c = e0_dot_e1 / (e2_dot_e2 * e0_dot_e1 - e0_dot_e2 * e1_dot_e2) * area
+    a = e1_dot_e2 * 0.5 / sqrt_abs_s * sign_a
+    b = e0_dot_e2 * 0.5 / sqrt_abs_s * sign_b
+    c = e0_dot_e1 * 0.5 / sqrt_abs_s * sign_c
 
-    sol = numpy.column_stack((a, b, c)) * cell_volumes[:, None]
+    sol = numpy.column_stack((a, b, c))
 
     return cell_volumes, sol
 
