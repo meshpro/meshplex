@@ -28,7 +28,7 @@ class TestIo(unittest.TestCase):
         # import matplotlib.pyplot as plt
         # plt.show()
 
-        _, fname = tempfile.mkstemp(suffix='.vtu')
+        _, fname = tempfile.mkstemp(suffix='.msh')
         mesh.write(fname)
 
         mesh2, _, _, _ = voropy.reader.read(fname)
