@@ -15,42 +15,42 @@ def _column_stack(a, b):
     return numpy.concatenate([a[:, None], b[:, None]], axis=1)
 
 
-def lloyd_smoothing(mesh, tol, verbose=True):
-    # 2D mesh
-    assert all(mesh.node_coords[:, 2] == 0.0)
-
-    # If any of the covolume-edge length ratios is negative, it must be on the
-    # interior. If we flip the edge, it should be positive.
-    if any(mesh.ce_ratios < 0.0):
-        mesh.flip_edges(mesh.ce_ratios < 0.0)
-    assert all(mesh.ce_ratios >= 0.0)
-
-    boundary_verts = mesh.get_vertices('boundary')
-
-    max_move = tol + 1
-
-    k = 0
-    while max_move > tol:
-        k += 1
-
-        # move interior points into centroids
-        new_points = mesh.centroids
-        new_points[boundary_verts] = mesh.node_coords[boundary_verts]
-        diff = new_points - mesh.node_coords
-        max_move = numpy.sqrt(numpy.max(numpy.sum(diff*diff, axis=1)))
-
-        if verbose:
-            print('step: %d,  maximum move: %.15e' % (k, max_move))
-
-        # create new mesh and flip edges if necessary
-        mesh.reset_vertex_coords(new_points)
-        if any(mesh.ce_ratios < 0.0):
-            mesh.flip_edges(mesh.ce_ratios < 0.0)
-        assert all(mesh.ce_ratios >= 0.0)
-
-        # mesh.write('out%04d.vtu' % k)
-
-    return mesh
+# def lloyd_smoothing(mesh, tol, verbose=True):
+#     # 2D mesh
+#     assert all(mesh.node_coords[:, 2] == 0.0)
+#
+#     # If any of the covolume-edge length ratios is negative, it must be on the
+#     # interior. If we flip the edge, it should be positive.
+#     if any(mesh.ce_ratios < 0.0):
+#         mesh.flip_edges(mesh.ce_ratios < 0.0)
+#     assert all(mesh.ce_ratios >= 0.0)
+#
+#     boundary_verts = mesh.get_vertices('boundary')
+#
+#     max_move = tol + 1
+#
+#     k = 0
+#     while max_move > tol:
+#         k += 1
+#
+#         # move interior points into centroids
+#         new_points = mesh.centroids
+#         new_points[boundary_verts] = mesh.node_coords[boundary_verts]
+#         diff = new_points - mesh.node_coords
+#         max_move = numpy.sqrt(numpy.max(numpy.sum(diff*diff, axis=1)))
+#
+#         if verbose:
+#             print('step: %d,  maximum move: %.15e' % (k, max_move))
+#
+#         # create new mesh and flip edges if necessary
+#         mesh.reset_vertex_coords(new_points)
+#         if any(mesh.ce_ratios < 0.0):
+#             mesh.flip_edges(mesh.ce_ratios < 0.0)
+#         assert all(mesh.ce_ratios >= 0.0)
+#
+#         # mesh.write('out%04d.vtu' % k)
+#
+#     return mesh
 
 
 def _mirror_point(p0, p1, p2):
@@ -352,73 +352,73 @@ class MeshTri(_base_mesh):
         self.compute_data()
         return
 
-    def reset_vertex_coords(self, new_coords):
-        assert self.node_coords.shape == new_coords.shape
-        self.node_coords = new_coords
-        self.compute_data()
-        return
-
-    def flip_edges(self, is_flip_edge):
-        '''Flips some edges on the mesh. Note that each cell can have at most
-        one flip edge.
-        '''
-        is_flip_edge_per_cell = is_flip_edge[self.cells['edges']]
-
-        # can only handle the case where each cell has at most one edge to flip
-        count = numpy.sum(is_flip_edge_per_cell, axis=1)
-        assert all(count <= 1)
-
-        # new cells
-        edge_cells = self.compute_edge_cells()
-        flip_edges = numpy.where(is_flip_edge)[0]
-        new_cells = numpy.empty((len(flip_edges), 2, 3), dtype=int)
-        for k, flip_edge in enumerate(flip_edges):
-            adj_cells = edge_cells[flip_edge]
-            assert len(adj_cells) == 2
-            # The local edge ids are opposite of the local vertex with the same
-            # id.
-            cell0_local_edge_id = numpy.where(
-                is_flip_edge_per_cell[adj_cells[0]]
-                )[0]
-            cell1_local_edge_id = numpy.where(
-                is_flip_edge_per_cell[adj_cells[1]]
-                )[0]
-
-            #     0
-            #     /\
-            #    /  \
-            #   / 0  \
-            # 2/______\3
-            #  \      /
-            #   \  1 /
-            #    \  /
-            #     \/
-            #      1
-            verts = [
-                self.cells['nodes'][adj_cells[0], cell0_local_edge_id],
-                self.cells['nodes'][adj_cells[1], cell1_local_edge_id],
-                self.cells['nodes'][adj_cells[0], (cell0_local_edge_id + 1) % 3],
-                self.cells['nodes'][adj_cells[0], (cell0_local_edge_id + 2) % 3]
-                ]
-            new_cells[k, 0] = [verts[0], verts[1], verts[2]]
-            new_cells[k, 1] = [verts[0], verts[1], verts[3]]
-
-        # find cells that can stay
-        is_good_cell = numpy.all(
-                numpy.logical_not(is_flip_edge_per_cell),
-                axis=1
-                )
-
-        self.cells['nodes'] = numpy.concatenate([
-            self.cells['nodes'][is_good_cell],
-            new_cells[:, 0, :],
-            new_cells[:, 1, :]
-            ])
-
-        # create data
-        self.compute_data()
-
-        return
+#     def reset_vertex_coords(self, new_coords):
+#         assert self.node_coords.shape == new_coords.shape
+#         self.node_coords = new_coords
+#         self.compute_data()
+#         return
+#
+#     def flip_edges(self, is_flip_edge):
+#         '''Flips some edges on the mesh. Note that each cell can have at most
+#         one flip edge.
+#         '''
+#         is_flip_edge_per_cell = is_flip_edge[self.cells['edges']]
+#
+#         # can only handle the case where each cell has at most one edge to flip
+#         count = numpy.sum(is_flip_edge_per_cell, axis=1)
+#         assert all(count <= 1)
+#
+#         # new cells
+#         edge_cells = self.compute_edge_cells()
+#         flip_edges = numpy.where(is_flip_edge)[0]
+#         new_cells = numpy.empty((len(flip_edges), 2, 3), dtype=int)
+#         for k, flip_edge in enumerate(flip_edges):
+#             adj_cells = edge_cells[flip_edge]
+#             assert len(adj_cells) == 2
+#             # The local edge ids are opposite of the local vertex with the same
+#             # id.
+#             cell0_local_edge_id = numpy.where(
+#                 is_flip_edge_per_cell[adj_cells[0]]
+#                 )[0]
+#             cell1_local_edge_id = numpy.where(
+#                 is_flip_edge_per_cell[adj_cells[1]]
+#                 )[0]
+#
+#             #     0
+#             #     /\
+#             #    /  \
+#             #   / 0  \
+#             # 2/______\3
+#             #  \      /
+#             #   \  1 /
+#             #    \  /
+#             #     \/
+#             #      1
+#             verts = [
+#                 self.cells['nodes'][adj_cells[0], cell0_local_edge_id],
+#                 self.cells['nodes'][adj_cells[1], cell1_local_edge_id],
+#                 self.cells['nodes'][adj_cells[0], (cell0_local_edge_id + 1) % 3],
+#                 self.cells['nodes'][adj_cells[0], (cell0_local_edge_id + 2) % 3]
+#                 ]
+#             new_cells[k, 0] = [verts[0], verts[1], verts[2]]
+#             new_cells[k, 1] = [verts[0], verts[1], verts[3]]
+#
+#         # find cells that can stay
+#         is_good_cell = numpy.all(
+#                 numpy.logical_not(is_flip_edge_per_cell),
+#                 axis=1
+#                 )
+#
+#         self.cells['nodes'] = numpy.concatenate([
+#             self.cells['nodes'][is_good_cell],
+#             new_cells[:, 0, :],
+#             new_cells[:, 1, :]
+#             ])
+#
+#         # create data
+#         self.compute_data()
+#
+#         return
 
     def compute_data(self):
         self.compute_edge_lengths()
@@ -667,94 +667,94 @@ class MeshTri(_base_mesh):
                 )
         return ids, vals
 
-    def compute_gradient(self, u):
-        '''Computes an approximation to the gradient :math:`\\nabla u` of a
-        given scalar valued function :math:`u`, defined in the node points.
-        This is taken from :cite:`NME2187`,
-
-           Discrete gradient method in solid mechanics,
-           Lu, Jia and Qian, Jing and Han, Weimin,
-           International Journal for Numerical Methods in Engineering,
-           http://dx.doi.org/10.1002/nme.2187.
-        '''
-        if self.cell_circumcenters is None:
-            X = self.node_coords[self.cells['nodes']]
-            self.cell_circumcenters = self.compute_triangle_circumcenters(X)
-
-        if 'cells' not in self.edges:
-            self.edges['cells'] = self.compute_edge_cells()
-
-        # This only works for flat meshes.
-        assert (abs(self.node_coords[:, 2]) < 1.0e-10).all()
-        node_coords2d = self.node_coords[:, :2]
-        cell_circumcenters2d = self.cell_circumcenters[:, :2]
-
-        num_nodes = len(node_coords2d)
-        assert len(u) == num_nodes
-
-        gradient = numpy.zeros((num_nodes, 2), dtype=u.dtype)
-
-        # Create an empty 2x2 matrix for the boundary nodes to hold the
-        # edge correction ((17) in [1]).
-        boundary_matrices = {}
-        for node in self.get_vertices('boundary'):
-            boundary_matrices[node] = numpy.zeros((2, 2))
-
-        for edge_id, edge in enumerate(self.edges['cells']):
-            # Compute edge length.
-            node0 = self.edges['nodes'][edge_id][0]
-            node1 = self.edges['nodes'][edge_id][1]
-
-            # Compute coedge length.
-            if len(self.edges['cells'][edge_id]) == 1:
-                # Boundary edge.
-                edge_midpoint = 0.5 * (
-                        node_coords2d[node0] +
-                        node_coords2d[node1]
-                        )
-                cell0 = self.edges['cells'][edge_id][0]
-                coedge_midpoint = 0.5 * (
-                        cell_circumcenters2d[cell0] +
-                        edge_midpoint
-                        )
-            elif len(self.edges['cells'][edge_id]) == 2:
-                cell0 = self.edges['cells'][edge_id][0]
-                cell1 = self.edges['cells'][edge_id][1]
-                # Interior edge.
-                coedge_midpoint = 0.5 * (
-                        cell_circumcenters2d[cell0] +
-                        cell_circumcenters2d[cell1]
-                        )
-            else:
-                raise RuntimeError(
-                        'Edge needs to have either one or two neighbors.'
-                        )
-
-            # Compute the coefficient r for both contributions
-            coeffs = self.ce_ratios[edge_id] / \
-                self.control_volumes[self.edges['nodes'][edge_id]]
-
-            # Compute R*_{IJ} ((11) in [1]).
-            r0 = (coedge_midpoint - node_coords2d[node0]) * coeffs[0]
-            r1 = (coedge_midpoint - node_coords2d[node1]) * coeffs[1]
-
-            diff = u[node1] - u[node0]
-
-            gradient[node0] += r0 * diff
-            gradient[node1] -= r1 * diff
-
-            # Store the boundary correction matrices.
-            edge_coords = node_coords2d[node1] - node_coords2d[node0]
-            if node0 in boundary_matrices:
-                boundary_matrices[node0] += numpy.outer(r0, edge_coords)
-            if node1 in boundary_matrices:
-                boundary_matrices[node1] += numpy.outer(r1, -edge_coords)
-
-        # Apply corrections to the gradients on the boundary.
-        for k, value in boundary_matrices.items():
-            gradient[k] = numpy.linalg.solve(value, gradient[k])
-
-        return gradient
+#     def compute_gradient(self, u):
+#         '''Computes an approximation to the gradient :math:`\\nabla u` of a
+#         given scalar valued function :math:`u`, defined in the node points.
+#         This is taken from :cite:`NME2187`,
+#
+#            Discrete gradient method in solid mechanics,
+#            Lu, Jia and Qian, Jing and Han, Weimin,
+#            International Journal for Numerical Methods in Engineering,
+#            http://dx.doi.org/10.1002/nme.2187.
+#         '''
+#         if self.cell_circumcenters is None:
+#             X = self.node_coords[self.cells['nodes']]
+#             self.cell_circumcenters = self.compute_triangle_circumcenters(X)
+#
+#         if 'cells' not in self.edges:
+#             self.edges['cells'] = self.compute_edge_cells()
+#
+#         # This only works for flat meshes.
+#         assert (abs(self.node_coords[:, 2]) < 1.0e-10).all()
+#         node_coords2d = self.node_coords[:, :2]
+#         cell_circumcenters2d = self.cell_circumcenters[:, :2]
+#
+#         num_nodes = len(node_coords2d)
+#         assert len(u) == num_nodes
+#
+#         gradient = numpy.zeros((num_nodes, 2), dtype=u.dtype)
+#
+#         # Create an empty 2x2 matrix for the boundary nodes to hold the
+#         # edge correction ((17) in [1]).
+#         boundary_matrices = {}
+#         for node in self.get_vertices('boundary'):
+#             boundary_matrices[node] = numpy.zeros((2, 2))
+#
+#         for edge_id, edge in enumerate(self.edges['cells']):
+#             # Compute edge length.
+#             node0 = self.edges['nodes'][edge_id][0]
+#             node1 = self.edges['nodes'][edge_id][1]
+#
+#             # Compute coedge length.
+#             if len(self.edges['cells'][edge_id]) == 1:
+#                 # Boundary edge.
+#                 edge_midpoint = 0.5 * (
+#                         node_coords2d[node0] +
+#                         node_coords2d[node1]
+#                         )
+#                 cell0 = self.edges['cells'][edge_id][0]
+#                 coedge_midpoint = 0.5 * (
+#                         cell_circumcenters2d[cell0] +
+#                         edge_midpoint
+#                         )
+#             elif len(self.edges['cells'][edge_id]) == 2:
+#                 cell0 = self.edges['cells'][edge_id][0]
+#                 cell1 = self.edges['cells'][edge_id][1]
+#                 # Interior edge.
+#                 coedge_midpoint = 0.5 * (
+#                         cell_circumcenters2d[cell0] +
+#                         cell_circumcenters2d[cell1]
+#                         )
+#             else:
+#                 raise RuntimeError(
+#                         'Edge needs to have either one or two neighbors.'
+#                         )
+#
+#             # Compute the coefficient r for both contributions
+#             coeffs = self.ce_ratios[edge_id] / \
+#                 self.control_volumes[self.edges['nodes'][edge_id]]
+#
+#             # Compute R*_{IJ} ((11) in [1]).
+#             r0 = (coedge_midpoint - node_coords2d[node0]) * coeffs[0]
+#             r1 = (coedge_midpoint - node_coords2d[node1]) * coeffs[1]
+#
+#             diff = u[node1] - u[node0]
+#
+#             gradient[node0] += r0 * diff
+#             gradient[node1] -= r1 * diff
+#
+#             # Store the boundary correction matrices.
+#             edge_coords = node_coords2d[node1] - node_coords2d[node0]
+#             if node0 in boundary_matrices:
+#                 boundary_matrices[node0] += numpy.outer(r0, edge_coords)
+#             if node1 in boundary_matrices:
+#                 boundary_matrices[node1] += numpy.outer(r1, -edge_coords)
+#
+#         # Apply corrections to the gradients on the boundary.
+#         for k, value in boundary_matrices.items():
+#             gradient[k] = numpy.linalg.solve(value, gradient[k])
+#
+#         return gradient
 
     def compute_curl(self, vector_field):
         '''Computes the curl of a vector field. While the vector field is
