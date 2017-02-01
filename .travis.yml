@@ -5,10 +5,6 @@ language: python
 python:
     - '2.7'
 
-virtualenv:
-  # needed for vtk to be available
-  system_site_packages: true
-
 addons:
   apt:
     packages:
@@ -16,7 +12,6 @@ addons:
       - python-h5py
       - python-matplotlib
       - python-scipy
-      - python-vtk6
 
 before_install:
   - pip install pytest pytest-cov
@@ -25,7 +20,7 @@ install:
   - pip install .
 
 script:
-  - cd tests && pytest --cov voropy
+  - cd tests && MPLBACKEND=Agg pytest --cov voropy
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
