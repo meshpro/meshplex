@@ -416,7 +416,7 @@ class MeshTri(_base_mesh):
             ])
 
         # create data
-        self.create_data()
+        self.compute_data()
 
         return
 

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 #
+import fetch_data
 import voropy
 
-import os
 import numpy
 import unittest
 
@@ -19,7 +19,7 @@ class CurlTest(unittest.TestCase):
             [-0.5 * coord[1], 0.5 * coord[0], 0.0]
             for coord in mesh.node_coords
             ])
-        # Compute the gradient numerically.
+        # Compute the curl numerically.
         B = mesh.compute_curl(A)
 
         # mesh.write(
@@ -36,12 +36,14 @@ class CurlTest(unittest.TestCase):
         return
 
     def test_pacman(self):
-        filename = os.path.join(
-            os.path.dirname(os.path.realpath(__file__)), 'pacman.vtu'
-            )
+        filename = fetch_data.download_mesh(
+                'pacman.msh',
+                '2da8ff96537f844a95a83abb48471b6a'
+                )
         mesh, _, _, _ = voropy.reader.read(filename)
         self._run_test(mesh)
         return
+
 
 if __name__ == '__main__':
     unittest.main()
