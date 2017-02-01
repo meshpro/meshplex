@@ -615,8 +615,9 @@ class TestVolumes(unittest.TestCase):
         return
 
     def test_pacman(self):
-        filename = os.path.join(
-                os.path.dirname(os.path.realpath(__file__)), 'pacman.vtu'
+        filename = fetch_data.download_mesh(
+                'pacman.msh',
+                '2da8ff96537f844a95a83abb48471b6a'
                 )
         mesh, _, _, _ = voropy.reader.read(filename)
         # self._run_test(
@@ -640,9 +641,9 @@ class TestVolumes(unittest.TestCase):
         return
 
     # def test_pacman_lloyd(self):
-    #     filename = os.path.join(
-    #             os.path.dirname(os.path.realpath(__file__)), 'pacman.vtu'
-    #             )
+    #    filename = os.path.join(
+    #            os.path.dirname(os.path.realpath(__file__)), 'pacman.vtu'
+    #            )
     #     mesh, _, _, _ = voropy.reader.read(filename)
 
     #     mesh = voropy.mesh_tri.lloyd_smoothing(
@@ -691,8 +692,10 @@ class TestVolumes(unittest.TestCase):
         return
 
     def test_sphere(self):
-        filename = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                                'sphere.vtu')
+        filename = fetch_data.download_mesh(
+                'sphere.msh',
+                '70a5dbf79c3b259ed993458ff4aa2e93'
+                )
         mesh, _, _, _ = voropy.reader.read(filename)
         self._run_test(
                 mesh,
