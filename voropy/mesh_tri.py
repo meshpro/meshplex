@@ -810,11 +810,6 @@ class MeshTri(_base_mesh):
         :type show_ce_ratios: bool, optional
         '''
         # Importing matplotlib takes a while, so don't do that at the header.
-        import os
-        if 'DISPLAY' not in os.environ:
-            import matplotlib as mpl
-            # headless mode, for remote executions (and travis)
-            mpl.use('Agg')
         from matplotlib import pyplot as plt
         from matplotlib.collections import LineCollection
 
@@ -899,11 +894,6 @@ class MeshTri(_base_mesh):
         :type show_ce_ratio: bool, optional
         '''
         # Importing matplotlib takes a while, so don't do that at the header.
-        import os
-        if 'DISPLAY' not in os.environ:
-            import matplotlib as mpl
-            # headless mode, for remote executions (and travis)
-            mpl.use('Agg')
         from matplotlib import pyplot as plt
 
         fig = plt.figure()

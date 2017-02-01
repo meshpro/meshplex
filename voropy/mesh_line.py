@@ -2,21 +2,16 @@
 #
 import numpy
 from voropy.base import _base_mesh
-import os
-import matplotlib as mpl
-if 'DISPLAY' not in os.environ:
-    # headless mode, for remote executions (and travis)
-    mpl.use('Agg')
 from matplotlib import pyplot as plt
 
 
-class meshLine(_base_mesh):
+class MeshLine(_base_mesh):
     '''Class for handling 1D line "meshes".
     '''
     def __init__(self, node_coords, cells):
         '''Initialization.
         '''
-        super(MeshTetra, self).__init__(node_coords, cells)
+        super(MeshLine, self).__init__(node_coords, cells)
 
         num_cells = len(cells)
         self.cells = numpy.empty(
@@ -34,7 +29,7 @@ class meshLine(_base_mesh):
         '''
         num_cells = len(self.cells['nodes'])
         self.cell_volumes = numpy.empty(num_cells, dtype=float)
-        self.cell_volumes = np.array([
+        self.cell_volumes = numpy.array([
             abs(self.node_coords[cell['nodes']][1] -
                 self.node_coords[cell['nodes']][0])
             for cell in self.cells

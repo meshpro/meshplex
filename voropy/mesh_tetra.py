@@ -320,12 +320,7 @@ class MeshTetra(_base_mesh):
         return numpy.sum(sums < 0.0)
 
     def show(self):
-        import matplotlib as mpl
         from mpl_toolkits.mplot3d import Axes3D
-        import os
-        if 'DISPLAY' not in os.environ:
-            # headless mode, for remote executions (and travis)
-            mpl.use('Agg')
         from matplotlib import pyplot as plt
 
         fig = plt.figure()
@@ -343,12 +338,7 @@ class MeshTetra(_base_mesh):
         :param edge_id: Edge ID for which to show the ce_ratio.
         :type edge_id: int
         '''
-        import os
-        import matplotlib as mpl
         from mpl_toolkits.mplot3d import Axes3D
-        if 'DISPLAY' not in os.environ:
-            # headless mode, for remote executions (and travis)
-            mpl.use('Agg')
         from matplotlib import pyplot as plt
 
         fig = plt.figure()
