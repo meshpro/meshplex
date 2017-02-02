@@ -25,10 +25,9 @@ def compute_tri_areas_and_ce_ratios(e0, e1, e2):
     #
     # |simplex| ||u||^2 = \sum_i \alpha_i <u,e_i> <e_i,u>,
     #
-    # where alpha_i are the covolume contributions for the edges.
-    #
-    # This equation system to hold for all vectors u in the plane spanned by
-    # the edges, particularly by the edges themselves.
+    # where alpha_i are the covolume contributions for the edges. This
+    # equation system to hold for all vectors u in the plane spanned by the
+    # edges, particularly by the edges themselves.
     #
     # For triangles, the exact solution of the system is
     #
@@ -46,72 +45,72 @@ def compute_tri_areas_and_ce_ratios(e0, e1, e2):
     # b = _row_dot(e2, e0) / _row_dot(e1_cross_e2, -e0_cross_e1)
     # c = _row_dot(e0, e1) / _row_dot(e2_cross_e0, -e1_cross_e2)
     #
-    # With
+    # Note that the edges are connected by the relationship
+    #
+    #   e1 + s2*e2 + s3*e3 = 0
+    #
+    # where the s_ are signs. (We assume s1=1 w.l.o.g.) Since
+    #
+    #   <e1 x e2, e1 x e3> = <e1 x e2, e1 x (-s1*s3*e1-s2*s3*e2)>
+    #                      = -s2*s3 * <e1 x e2, e1 x e2>,
+    #
+    # we have that
+    #
+    #   |simplex| = 0.5 * sqrt(abs(<e1 x e2, e1 x e3>))
+    #
+    # so
+    #
+    #  x_1 = 0.5 * <e_2, e_3> / sqrt(abs(<e1 x e2, e1 x e3>))
+    #      * sign(<e1 x e2, e1 x e3>)
+    #
+    # Since dot-products are much faster computed than cross-products, we
+    # rewrite the former as
     #
     #   <e1 x e2, e1 x e3> = <e1, e1> <e2, e3> - <e1, e2> <e1, e3>.
     #
-    # we can rewrite the term without cross-products which are less favorable
-    # computationally (see, e.g. <http://stackoverflow.com/q/39662540/353337>).
-    # With this, the solution can be expressed as
-    #
-    #  x_1 / |simplex| * <e1, e1>
-    #    = <e1, e1> <e_2, e_3> / (<e1, e1> <e2, e3> - <e1, e2> <e1, e3>)
-    #
-    # Note that the cross-product formulation turns out to be more favorable in
-    # terms of round-off errors sometimes:
-    # For almost degenerate triangles, the difference in the denominator is
-    # small, but the two values are large. This might lead to significant
-    # round-off in the denominator.
-    #
-    e0_dot_e0 = _row_dot(e0, e0)
     e0_dot_e1 = _row_dot(e0, e1)
     e0_dot_e2 = _row_dot(e0, e2)
     e1_dot_e2 = _row_dot(e1, e2)
     #
-    # So far, we haven't made use of the fact that the edges are connected by
-    # the relationship
-    #
-    #  e1 +- e2 +- e3 = 0.
-    #
-    # Assume `+` everywhere for now.
-    # Since
-    #
-    #   <e1 x e2, e1 x e3> = <e1 x e2, e1 x (-e1-e2)> = - <e1 x e2, e1 x e2>,
-    #
-    # We have that
-    #
-    #    0.5 * sqrt(abs(<e1 x e2, e1 x e3>))
-    #
-    # is the area of the triangle. (The abs() is here to compensate for any of
-    # the +- combinations above.)
+    e0_dot_e0 = _row_dot(e0, e0)
+    e1_dot_e1 = _row_dot(e1, e1)
+    e2_dot_e2 = _row_dot(e2, e2)
     #
     aa = e0_dot_e0 * e1_dot_e2 - e0_dot_e1 * e0_dot_e2
+    bb = e1_dot_e1 * e0_dot_e2 - e0_dot_e1 * e1_dot_e2
+    cc = e2_dot_e2 * e0_dot_e1 - e0_dot_e2 * e1_dot_e2
+    # assert abs(aa) == abs(bb)
+    # assert abs(bb) == abs(cc)
+    a = e1_dot_e2 * 0.5 / numpy.sqrt(abs(aa)) * numpy.sign(aa)
+    b = e0_dot_e2 * 0.5 / numpy.sqrt(abs(bb)) * numpy.sign(bb)
+    c = e0_dot_e1 * 0.5 / numpy.sqrt(abs(cc)) * numpy.sign(cc)
+
     # Any of aa, bb, cc are good for this. A more symmetric
-    # variant like.
+    # variant like
     #   s = numpy.sqrt(abs(
     #       e0_dot_e1 * e1_dot_e2 +
     #       e0_dot_e2 * e1_dot_e2 +
     #       e0_dot_e1 * e0_dot_e2
     #       ))
-    # would be preferable (if only for the fact that we don't need to compute
+    # might be preferable (if only for the fact that we don't need to compute
     # e0_dot_e0).
-    sqrt_abs_s = numpy.sqrt(abs(aa))
-    cell_volumes = 0.5 * sqrt_abs_s
     #
-    # TODO If we knew that e1+e2+e3=0, we could save computing bb and cc and
-    #      the three dot-products <e_i, e_i>.
-    e1_dot_e1 = _row_dot(e1, e1)
-    e2_dot_e2 = _row_dot(e2, e2)
-    sign_a = numpy.sign(aa)
-    sign_b = numpy.sign(e1_dot_e1 * e0_dot_e2 - e0_dot_e1 * e1_dot_e2)
-    sign_c = numpy.sign(e2_dot_e2 * e0_dot_e1 - e0_dot_e2 * e1_dot_e2)
-
-    # a = e1_dot_e2 / (e0_dot_e0 * e1_dot_e2 - e0_dot_e1 * e0_dot_e2) * area
-    # b = e0_dot_e2 / (e1_dot_e1 * e0_dot_e2 - e0_dot_e1 * e1_dot_e2) * area
-    # c = e0_dot_e1 / (e2_dot_e2 * e0_dot_e1 - e0_dot_e2 * e1_dot_e2) * area
-    a = e1_dot_e2 * 0.5 / sqrt_abs_s * sign_a
-    b = e0_dot_e2 * 0.5 / sqrt_abs_s * sign_b
-    c = e0_dot_e1 * 0.5 / sqrt_abs_s * sign_c
+    cell_volumes = 0.5 * numpy.sqrt(abs(aa))
+    #
+    # TODO We could dodge computing <e1, e1> by noting that
+    #
+    #   <e1, e1> = -s2 * <e1, e2> - s3 * <e1, e3>,
+    #
+    # so
+    #
+    #   <e1 x e2, e1 x e3> =\
+    #       -s2 * <e1, e2> * <e2, e3> \
+    #       -s3 * <e1, e3> * <e2, e3> \
+    #       -     <e1, e2> <e1, e3>.
+    #
+    # This would require finding out about s2, s3 though. Perhaps we can get
+    # this from the input data.
+    #
 
     sol = numpy.column_stack((a, b, c))
 
