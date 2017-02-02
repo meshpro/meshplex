@@ -261,7 +261,7 @@ class MeshTetra(_base_mesh):
         x2_dot_x2 = _my_dot(x2, x2)
 
         a = (
-            2 * _my_dot(numpy.cross(x0, x1), x2)**2 -
+            2 * _my_dot(x0_cross_x1, x2)**2 -
             _my_dot(
                 x0_cross_x1 + x1_cross_x2 + x2_cross_x0,
                 x0_cross_x1 * x2_dot_x2[..., None] +
