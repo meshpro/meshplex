@@ -3,7 +3,6 @@
 import fetch_data
 import voropy
 
-import os
 from math import fsum
 import numpy
 import unittest
@@ -149,7 +148,11 @@ class TestVolumes(unittest.TestCase):
     #     # centroids
     #     alpha = -41.666666669333345
     #     beta = 0.58333199998399976
-    #     self.assertAlmostEqual(mesh.centroids[0][0], 0.416668000016, delta=tol)
+    #      self.assertAlmostEqual(
+    #              mesh.centroids[0][0],
+    #              0.416668000016,
+    #              delta=tol
+    #              )
     #     self.assertAlmostEqual(mesh.centroids[0][1], alpha, delta=tol)
     #     self.assertAlmostEqual(mesh.centroids[0][2], 0.0, delta=tol)
 
@@ -620,13 +623,6 @@ class TestVolumes(unittest.TestCase):
                 '2da8ff96537f844a95a83abb48471b6a'
                 )
         mesh, _, _, _ = voropy.reader.read(filename)
-        # self._run_test(
-        #         mesh,
-        #         73.64573933105898,
-        #         [3.596101914906618, 0.26638548094154707],
-        #         [719.8706213234083, 1.8142648825759053],
-        #         [2.6213234038171014, 0.13841739494523228]
-        #         )
 
         self._run_test(
                 mesh,
@@ -737,7 +733,7 @@ class TestVolumes(unittest.TestCase):
                 )
         return
 
-    def test_toy(self):
+    def test_toy_algebraic(self):
         filename = fetch_data.download_mesh(
             'toy.msh',
             '1d125d3fa9f373823edd91ebae5f7a81'
@@ -773,11 +769,35 @@ class TestVolumes(unittest.TestCase):
                 mesh,
                 volume=9.3875504672601107,
                 cv_norms=[0.20348466631551548, 0.010271101930468585],
-                covol_norms=[396.4116393776213, 3.4508458933423918],
+                covol_norms=[396.4116343366758, 3.4508458933423918],
                 cellvol_norms=[0.091903119589148916, 0.0019959463063558944],
                 tol=1.0e-6
                 )
         return
+
+    def test_toy_geometric(self):
+        filename = fetch_data.download_mesh(
+            'toy.msh',
+            '1d125d3fa9f373823edd91ebae5f7a81'
+            )
+        mesh, _, _, _ = voropy.reader.read(filename)
+
+        mesh = voropy.mesh_tetra.MeshTetra(
+            mesh.node_coords,
+            mesh.cells['nodes'],
+            mode='geometric'
+            )
+
+        self._run_test(
+                mesh,
+                volume=9.3875504672601107,
+                cv_norms=[0.20175742659663737, 0.0093164692200450819],
+                covol_norms=[76.7500558132087, 0.34008519731077325],
+                cellvol_norms=[0.091903119589148916, 0.0019959463063558944],
+                tol=1.0e-6
+                )
+        return
+
 
 if __name__ == '__main__':
     unittest.main()

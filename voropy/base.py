@@ -60,8 +60,8 @@ def compute_tri_areas_and_ce_ratios(e0, e1, e2):
     #
     # so
     #
-    #  x_1 = 0.5 * <e_2, e_3> / sqrt(abs(<e1 x e2, e1 x e3>))
-    #      * sign(<e1 x e2, e1 x e3>)
+    #   x_1 = 0.5 * <e_2, e_3> / sqrt(abs(<e1 x e2, e1 x e3>))
+    #       * sign(<e1 x e2, e1 x e3>)
     #
     # Since dot-products are much faster computed than cross-products, we
     # rewrite the former as
