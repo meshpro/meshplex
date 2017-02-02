@@ -17,7 +17,7 @@ class TestVolumes(unittest.TestCase):
             self,
             mesh,
             volume,
-            cv_norms, convol_norms, cellvol_norms,
+            convol_norms, ce_ratio_norms, cellvol_norms,
             tol=1.0e-12
             ):
         # if mesh.cells['nodes'].shape[1] == 3:
@@ -45,9 +45,9 @@ class TestVolumes(unittest.TestCase):
         # ```
         # Check ce_ratio norms.
         alpha = fsum(mesh.ce_ratios**2)
-        self.assertAlmostEqual(convol_norms[0], alpha, delta=tol)
+        self.assertAlmostEqual(ce_ratio_norms[0], alpha, delta=tol)
         alpha = max(abs(mesh.ce_ratios))
-        self.assertAlmostEqual(convol_norms[1], alpha, delta=tol)
+        self.assertAlmostEqual(ce_ratio_norms[1], alpha, delta=tol)
 
         # Check the volume by summing over the absolute value of the
         # control volumes.
@@ -55,9 +55,9 @@ class TestVolumes(unittest.TestCase):
         self.assertAlmostEqual(volume, vol, delta=tol * volume)
         # Check control volume norms.
         norm = numpy.linalg.norm(mesh.control_volumes, ord=2)
-        self.assertAlmostEqual(cv_norms[0], norm, delta=tol)
+        self.assertAlmostEqual(convol_norms[0], norm, delta=tol)
         norm = numpy.linalg.norm(mesh.control_volumes, ord=numpy.Inf)
-        self.assertAlmostEqual(cv_norms[1], norm, delta=tol)
+        self.assertAlmostEqual(convol_norms[1], norm, delta=tol)
 
         return
 
@@ -768,8 +768,8 @@ class TestVolumes(unittest.TestCase):
         self._run_test(
                 mesh,
                 volume=9.3875504672601107,
-                cv_norms=[0.20348466631551548, 0.010271101930468585],
-                convol_norms=[396.4116343366758, 3.4508458933423918],
+                convol_norms=[0.20348466631551548, 0.010271101930468585],
+                ce_ratio_norms=[396.4116343366758, 3.4508458933423918],
                 cellvol_norms=[0.091903119589148916, 0.0019959463063558944],
                 tol=1.0e-6
                 )
@@ -791,8 +791,8 @@ class TestVolumes(unittest.TestCase):
         self._run_test(
                 mesh,
                 volume=9.3875504672601107,
-                cv_norms=[0.20175742659663737, 0.0093164692200450819],
-                convol_norms=[76.7500558132087, 0.34008519731077325],
+                convol_norms=[0.20175742659663737, 0.0093164692200450819],
+                ce_ratio_norms=[76.7500558132087, 0.34008519731077325],
                 cellvol_norms=[0.091903119589148916, 0.0019959463063558944],
                 tol=1.0e-6
                 )
