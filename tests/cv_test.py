@@ -17,7 +17,7 @@ class TestVolumes(unittest.TestCase):
             self,
             mesh,
             volume,
-            cv_norms, covol_norms, cellvol_norms,
+            cv_norms, convol_norms, cellvol_norms,
             tol=1.0e-12
             ):
         # if mesh.cells['nodes'].shape[1] == 3:
@@ -45,9 +45,9 @@ class TestVolumes(unittest.TestCase):
         # ```
         # Check ce_ratio norms.
         alpha = fsum(mesh.ce_ratios**2)
-        self.assertAlmostEqual(covol_norms[0], alpha, delta=tol)
+        self.assertAlmostEqual(convol_norms[0], alpha, delta=tol)
         alpha = max(abs(mesh.ce_ratios))
-        self.assertAlmostEqual(covol_norms[1], alpha, delta=tol)
+        self.assertAlmostEqual(convol_norms[1], alpha, delta=tol)
 
         # Check the volume by summing over the absolute value of the
         # control volumes.
@@ -358,7 +358,7 @@ class TestVolumes(unittest.TestCase):
         z = a / numpy.sqrt(24.0)
         self.assertAlmostEqual(mesh.cell_circumcenters[0][2], z, delta=tol)
 
-        # covolume/edge length ratios
+        # convolume/edge length ratios
         val = a / 12.0 / numpy.sqrt(2)
         self.assertAlmostEqual(mesh.ce_ratios[0], val, delta=tol)
         self.assertAlmostEqual(mesh.ce_ratios[1], val, delta=tol)
@@ -398,7 +398,7 @@ class TestVolumes(unittest.TestCase):
         self.assertAlmostEqual(mesh.cell_circumcenters[0][1], a/2.0, delta=tol)
         self.assertAlmostEqual(mesh.cell_circumcenters[0][2], a/2.0, delta=tol)
 
-        # covolume/edge length ratios
+        # convolume/edge length ratios
         self.assertAlmostEqual(mesh.ce_ratios[0], a/6.0, delta=tol)
         self.assertAlmostEqual(mesh.ce_ratios[1], a/6.0, delta=tol)
         self.assertAlmostEqual(mesh.ce_ratios[2], a/6.0, delta=tol)
@@ -435,7 +435,7 @@ class TestVolumes(unittest.TestCase):
         self.assertAlmostEqual(mesh.cell_circumcenters[0][1], a/2.0, delta=tol)
         self.assertAlmostEqual(mesh.cell_circumcenters[0][2], a/2.0, delta=tol)
 
-        # covolume/edge length ratios
+        # convolume/edge length ratios
         self.assertAlmostEqual(mesh.ce_ratios[0], a/4.0, delta=tol)
         self.assertAlmostEqual(mesh.ce_ratios[1], a/4.0, delta=tol)
         self.assertAlmostEqual(mesh.ce_ratios[2], a/4.0, delta=tol)
@@ -472,7 +472,7 @@ class TestVolumes(unittest.TestCase):
         z = 0.5 * h - 1.0 / (4*h)
         self.assertAlmostEqual(mesh.cell_circumcenters[0][2], z, delta=tol)
 
-        # covolume/edge length ratios
+        # convolume/edge length ratios
         self.assertAlmostEqual(mesh.ce_ratios[0], h / 6.0, delta=tol)
         self.assertAlmostEqual(mesh.ce_ratios[1], h / 6.0, delta=tol)
         self.assertAlmostEqual(mesh.ce_ratios[2], 0.0, delta=tol)
@@ -769,7 +769,7 @@ class TestVolumes(unittest.TestCase):
                 mesh,
                 volume=9.3875504672601107,
                 cv_norms=[0.20348466631551548, 0.010271101930468585],
-                covol_norms=[396.4116343366758, 3.4508458933423918],
+                convol_norms=[396.4116343366758, 3.4508458933423918],
                 cellvol_norms=[0.091903119589148916, 0.0019959463063558944],
                 tol=1.0e-6
                 )
@@ -792,7 +792,7 @@ class TestVolumes(unittest.TestCase):
                 mesh,
                 volume=9.3875504672601107,
                 cv_norms=[0.20175742659663737, 0.0093164692200450819],
-                covol_norms=[76.7500558132087, 0.34008519731077325],
+                convol_norms=[76.7500558132087, 0.34008519731077325],
                 cellvol_norms=[0.091903119589148916, 0.0019959463063558944],
                 tol=1.0e-6
                 )
