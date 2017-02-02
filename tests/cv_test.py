@@ -300,7 +300,7 @@ class TestVolumes(unittest.TestCase):
                 cells
                 )
 
-        tol = 1.0e-12
+        tol = 1.0e-11
 
         # ce_ratios
         alpha = h - 1.0 / (4*h)
@@ -737,21 +737,47 @@ class TestVolumes(unittest.TestCase):
                 )
         return
 
-    # def test_toy(self):
-    #     filename = fetch_data.download_mesh(
-    #         'toy.msh',
-    #         '1d125d3fa9f373823edd91ebae5f7a81'
-    #         )
-    #     mesh, _, _, _ = voropy.reader.read(filename)
-    #     self._run_test(
-    #             mesh,
-    #             9.3875504672601107,
-    #             [0.20348466631551548, 0.010271101930468585],
-    #             [396.4116393776213, 3.4508458933423918],
-    #             [0.091903119589148916, 0.0019959463063558944],
-    #             tol=1.0e-6
-    #             )
-    #     return
+    def test_toy(self):
+        filename = fetch_data.download_mesh(
+            'toy.msh',
+            '1d125d3fa9f373823edd91ebae5f7a81'
+            )
+        mesh, _, _, _ = voropy.reader.read(filename)
+
+        # Even if the input data has only a small error, the error in the
+        # ce_ratios can be magnitudes larger. This is demonstrated here: Take
+        # the same mesh from two different source files with a differnce of
+        # the order of 1e-16. The ce_ratios differ by up to 1e-7.
+        if False:
+            print(mesh.cells.keys())
+            pts = mesh.node_coords.copy()
+            pts += 1.0e-16 * numpy.random.rand(pts.shape[0], pts.shape[1])
+            mesh2 = voropy.mesh_tetra.MeshTetra(pts, mesh.cells['nodes'])
+            #
+            diff_coords = mesh.node_coords - mesh2.node_coords
+            max_diff_coords = max(diff_coords.flatten())
+            print('||coords_1 - coords_2||_inf  =  %e' % max_diff_coords)
+            diff_ce_ratios = mesh.ce_ratios - mesh2.ce_ratios
+            print(
+                '||ce_ratios_1 - ce_ratios_2||_inf  =  %e'
+                % max(diff_ce_ratios)
+                )
+            from matplotlib import pyplot as plt
+            plt.figure()
+            n = len(mesh.ce_ratios)
+            plt.semilogy(range(n), diff_ce_ratios)
+            plt.show()
+            exit(1)
+
+        self._run_test(
+                mesh,
+                volume=9.3875504672601107,
+                cv_norms=[0.20348466631551548, 0.010271101930468585],
+                covol_norms=[396.4116393776213, 3.4508458933423918],
+                cellvol_norms=[0.091903119589148916, 0.0019959463063558944],
+                tol=1.0e-6
+                )
+        return
 
 if __name__ == '__main__':
     unittest.main()
