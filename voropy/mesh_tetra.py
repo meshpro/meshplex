@@ -245,8 +245,13 @@ class MeshTetra(_base_mesh):
         x1 = self.node_coords[v1] - self.node_coords[v_op]
         x2 = self.node_coords[v2] - self.node_coords[v_op]
 
-        e0_cross_e1 = numpy.cross(x2 - x0, x1 - x0)
-        face_areas = numpy.sqrt(_my_dot(e0_cross_e1, e0_cross_e1))
+        e0 = x2 - x0
+        e1 = x1 - x0
+        e0_dot_e0 = _my_dot(e0, e0)
+        e1_dot_e1 = _my_dot(e1, e1)
+        e0_dot_e1 = _my_dot(e0, e1)
+        # area = <e0 x e1, e0 x e1>
+        face_areas = numpy.sqrt(e0_dot_e0 * e1_dot_e1 - e0_dot_e1**2)
 
         x0_cross_x1 = numpy.cross(x0, x1)
         x1_cross_x2 = numpy.cross(x1, x2)
