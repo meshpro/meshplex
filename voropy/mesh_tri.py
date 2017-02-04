@@ -15,7 +15,7 @@ def _column_stack(a, b):
     return numpy.concatenate([a[:, None], b[:, None]], axis=1)
 
 
-def lloyd_smoothing(mesh, tol, verbose=True):
+def lloyd_smoothing(mesh, tol, verbose=True, output=None):
     # 2D mesh
     assert all(mesh.node_coords[:, 2] == 0.0)
 
@@ -34,7 +34,9 @@ def lloyd_smoothing(mesh, tol, verbose=True):
     # plt.show()
 
     k = 0
-    mesh.write('out%04d.vtu' % k)
+    if output:
+        mesh.write('lloyd%04d.vtu' % k)
+
     while max_move > tol:
         k += 1
 
@@ -55,8 +57,10 @@ def lloyd_smoothing(mesh, tol, verbose=True):
         if any(mesh.ce_ratios < 0.0):
             mesh = mesh.flip_edges(mesh.ce_ratios < 0.0)
 
-        mesh.write('out%04d.vtu' % k)
         assert all(mesh.ce_ratios >= 0.0)
+
+        if output:
+            mesh.write('lloyd%04d.vtu' % k)
 
     return mesh
 
