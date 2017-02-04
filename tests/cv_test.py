@@ -358,7 +358,7 @@ class TestVolumes(unittest.TestCase):
         z = a / numpy.sqrt(24.0)
         self.assertAlmostEqual(mesh.cell_circumcenters[0][2], z, delta=tol)
 
-        # convolume/edge length ratios
+        # covolume/edge length ratios
         val = a / 12.0 / numpy.sqrt(2)
         self.assertAlmostEqual(mesh.ce_ratios[0], val, delta=tol)
         self.assertAlmostEqual(mesh.ce_ratios[1], val, delta=tol)
@@ -398,7 +398,7 @@ class TestVolumes(unittest.TestCase):
         self.assertAlmostEqual(mesh.cell_circumcenters[0][1], a/2.0, delta=tol)
         self.assertAlmostEqual(mesh.cell_circumcenters[0][2], a/2.0, delta=tol)
 
-        # convolume/edge length ratios
+        # covolume/edge length ratios
         self.assertAlmostEqual(mesh.ce_ratios[0], a/6.0, delta=tol)
         self.assertAlmostEqual(mesh.ce_ratios[1], a/6.0, delta=tol)
         self.assertAlmostEqual(mesh.ce_ratios[2], a/6.0, delta=tol)
@@ -435,7 +435,7 @@ class TestVolumes(unittest.TestCase):
         self.assertAlmostEqual(mesh.cell_circumcenters[0][1], a/2.0, delta=tol)
         self.assertAlmostEqual(mesh.cell_circumcenters[0][2], a/2.0, delta=tol)
 
-        # convolume/edge length ratios
+        # covolume/edge length ratios
         self.assertAlmostEqual(mesh.ce_ratios[0], a/4.0, delta=tol)
         self.assertAlmostEqual(mesh.ce_ratios[1], a/4.0, delta=tol)
         self.assertAlmostEqual(mesh.ce_ratios[2], a/4.0, delta=tol)
@@ -472,7 +472,7 @@ class TestVolumes(unittest.TestCase):
         z = 0.5 * h - 1.0 / (4*h)
         self.assertAlmostEqual(mesh.cell_circumcenters[0][2], z, delta=tol)
 
-        # convolume/edge length ratios
+        # covolume/edge length ratios
         self.assertAlmostEqual(mesh.ce_ratios[0], h / 6.0, delta=tol)
         self.assertAlmostEqual(mesh.ce_ratios[1], h / 6.0, delta=tol)
         self.assertAlmostEqual(mesh.ce_ratios[2], 0.0, delta=tol)

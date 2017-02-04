@@ -187,12 +187,12 @@ class _base_mesh(object):
 #         if subdomain not in self.subdomains:
 #             self.mark_subdomain(subdomain)
 #         return self.subdomains[subdomain]['edges']
-#
-#     def get_vertices(self, subdomain):
-#         if subdomain not in self.subdomains:
-#             self.mark_subdomain(subdomain)
-#         return self.subdomains[subdomain]['vertices']
-#
+
+    def get_vertices(self, subdomain):
+        if subdomain not in self.subdomains:
+            self.mark_subdomain(subdomain)
+        return self.subdomains[subdomain]['vertices']
+
 #     def mark_subdomain(self, subdomain):
 #         # find vertices in subdomain
 #         if subdomain.is_boundary_only:
