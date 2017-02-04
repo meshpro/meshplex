@@ -50,7 +50,7 @@ setup(
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 3',
         'Topic :: Scientific/Engineering :: Mathematics'
-        ]
+        ],
     scripts=[
         'tools/lloyd_smoothing'
         ]
