@@ -636,30 +636,6 @@ class TestVolumes(unittest.TestCase):
 
         return
 
-    # def test_pacman_lloyd(self):
-    #    filename = os.path.join(
-    #            os.path.dirname(os.path.realpath(__file__)), 'pacman.vtu'
-    #            )
-    #     mesh, _, _, _ = voropy.reader.read(filename)
-
-    #     mesh = voropy.mesh_tri.lloyd_smoothing(
-    #         mesh,
-    #         1.0e-2,
-    #         verbose=False
-    #         )
-
-    #     self._run_test(
-    #             mesh,
-    #             73.64573933105898,
-    #             [3.5571110980719789, 0.2277950272885419],
-    #             [534.4169730732567, 1.4906838669106004],
-    #             [2.5663979979329499, 0.1213739572895572]
-    #             )
-
-    #     self.assertEqual(mesh.num_delaunay_violations(), 0)
-
-    #     return
-
     def test_shell(self):
         points = numpy.array([
             [0.0,  0.0,  1.0],
