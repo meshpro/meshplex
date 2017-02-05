@@ -6,6 +6,8 @@
 [![PyPi Version](https://img.shields.io/pypi/v/voropy.svg)](https://pypi.python.org/pypi/voropy)
 [![GitHub stars](https://img.shields.io/github/stars/nschloe/voropy.svg?style=social&label=Star&maxAge=2592000)](https://github.com/nschloe/voropy)
 
+<img src="https://nschloe.github.io/voropy/logo.png" width="20%">
+
 Compute Voronoi tesselations and everything else you need for finite-volume
 discretizations. Do it fast, too.
 
