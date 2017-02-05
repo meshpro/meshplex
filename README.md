@@ -48,6 +48,7 @@ improve the quality your mesh. To use, simply type
 ```
 lloyd_smoothing --verbose -t 1.0e-3 pacman.msh out.msh
 ```
+<img src="https://nschloe.github.io/voropy/lloyd.gif" width="20%">
 
 ### Installation
 
