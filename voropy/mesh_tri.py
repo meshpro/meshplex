@@ -15,7 +15,9 @@ def _column_stack(a, b):
     return numpy.concatenate([a[:, None], b[:, None]], axis=1)
 
 
-def lloyd_smoothing(mesh, tol, verbose=True, output=False):
+def lloyd_smoothing(mesh, tol, verbose=True, output_filetype=None):
+    from matplotlib import pyplot as plt
+
     # 2D mesh
     assert all(mesh.node_coords[:, 2] == 0.0)
 
@@ -34,8 +36,17 @@ def lloyd_smoothing(mesh, tol, verbose=True, output=False):
     # plt.show()
 
     k = 0
-    if output:
-        mesh.write('lloyd%04d.vtu' % k)
+    if output_filetype:
+        if output_filetype == 'png':
+            fig = mesh.show(
+                    show_ce_ratios=False,
+                    show_centroids=False,
+                    show_axes=False
+                    )
+            plt.savefig('lloyd%04d.png' % k)
+            plt.close(fig)
+        else:
+            mesh.write('lloyd%04d.vtu' % k)
 
     while max_move > tol:
         k += 1
@@ -59,8 +70,17 @@ def lloyd_smoothing(mesh, tol, verbose=True, output=False):
 
         assert all(mesh.ce_ratios >= 0.0)
 
-        if output:
-            mesh.write('lloyd%04d.vtu' % k)
+        if output_filetype:
+            if output_filetype == 'png':
+                fig = mesh.show(
+                        show_ce_ratios=False,
+                        show_centroids=False,
+                        show_axes=False
+                        )
+                plt.savefig('lloyd%04d.png' % k)
+                plt.close(fig)
+            else:
+                mesh.write('lloyd%04d.vtu' % k)
 
     return mesh
 
@@ -830,6 +850,7 @@ class MeshTri(_base_mesh):
             mesh_color='k',
             boundary_edge_color=None,
             comesh_color=[0.8, 0.8, 0.8],
+            show_axes=True
             ):
         '''Show the mesh using matplotlib.
 
@@ -845,6 +866,8 @@ class MeshTri(_base_mesh):
         # ax = fig.gca(projection='3d')
         ax = fig.gca()
         plt.axis('equal')
+        if not show_axes:
+            ax.set_axis_off()
 
         xmin = numpy.amin(self.node_coords[:, 0])
         xmax = numpy.amax(self.node_coords[:, 0])
@@ -915,7 +938,7 @@ class MeshTri(_base_mesh):
         if show_centroids:
             ax.plot(self.centroids[:, 0], self.centroids[:, 1], 'r.')
 
-        return
+        return fig
 
     def show_vertex(self, node_id, show_ce_ratio=True):
         '''Plot the vicinity of a node and its ce_ratio.
