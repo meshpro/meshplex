@@ -23,9 +23,8 @@ Given a triangular or tetrahedral mesh, voropy computes
 
 and much more.
 
-To use voropy, e.g., [this
-pacman](https://sourceforge.net/projects/meshzoo-data/files/pacman.msh/download),
-simply read a mesh,
+To use voropy, simple read a mesh (e.g., [this
+pacman](https://sourceforge.net/projects/meshzoo-data/files/pacman.msh/download)):
 ```python
 mesh = voropy.reader.read('pacman.msh')
 
@@ -40,6 +39,15 @@ plt.show()
 [mshr](https://bitbucket.org/fenics-project/mshr),
 [frentos](https://github.com/nschloe/frentos),
 [meshzoo](https://github.com/nschloe/meshzoo) or any other tool.)
+
+#### Lloyd smoothing
+
+voropy comes with a smoothing tool for triangular meshes after
+[Lloyd](https://en.wikipedia.org/wiki/Lloyd's_algorithm) that can dramatically
+improve the quality your mesh. To use, simply type
+```
+lloyd_smoothing --verbose -t 1.0e-3 pacman.msh out.msh
+```
 
 ### Installation
 
