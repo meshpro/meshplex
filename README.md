@@ -11,6 +11,36 @@
 Compute Voronoi tesselations and everything else you need for finite-volume
 discretizations. Do it fast, too.
 
+### Usage
+
+Given a triangular or tetrahedral mesh, voropy computes
+
+ * covolumes,
+ * control volumes,
+ * cell circumcenters,
+ * the surface areas,
+ * control volume circumcenters,
+
+and much more.
+
+To use voropy, e.g., [this
+pacman](https://sourceforge.net/projects/meshzoo-data/files/pacman.msh/download),
+simply read a mesh,
+```python
+mesh = voropy.reader.read('pacman.msh')
+
+print(mesh.node_coords)
+print(mesh.control_volumes)
+
+from matplotlib import pyplot as plt
+mesh.show()
+plt.show()
+```
+(For mesh creation, check out [pygmsh](https://github.com/nschloe/pygmsh),
+[mshr](https://bitbucket.org/fenics-project/mshr),
+[frentos](https://github.com/nschloe/frentos),
+[meshzoo](https://github.com/nschloe/meshzoo) or any other tool.)
+
 ### Installation
 
 #### Python Package Index
@@ -30,6 +60,13 @@ Place voropy in a directory where Python can find it (e.g.,
 `$PYTHONPATH`).  You can install it system-wide with
 ```
 python setup.py install
+```
+
+### Testing
+
+To run the voropy unit tests, check out this repository and type
+```
+pytest
 ```
 
 ### Distribution
