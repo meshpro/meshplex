@@ -1,7 +1,9 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
+from matplotlib import pyplot as plt
 import numpy as np
 import pygmsh as pg
+import voropy
 
 
 def generate():
@@ -35,6 +37,13 @@ def generate():
 
 
 if __name__ == '__main__':
-    import meshio
     points, cells = pg.generate_mesh(generate())
-    meshio.write('logo.vtu', points, cells)
+    mesh = voropy.mesh_tri.MeshTri(points, cells['triangle'])
+    mesh = voropy.mesh_tri.lloyd_smoothing(mesh, 1.0e-10)
+    mesh.show(
+            show_centroids=False,
+            mesh_color=[0.8,0.8,0.8],
+            comesh_color='k',
+            boundary_edge_color='k'
+            )
+    plt.show()

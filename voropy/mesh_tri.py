@@ -15,7 +15,7 @@ def _column_stack(a, b):
     return numpy.concatenate([a[:, None], b[:, None]], axis=1)
 
 
-def lloyd_smoothing(mesh, tol, verbose=True, output=None):
+def lloyd_smoothing(mesh, tol, verbose=True, output=False):
     # 2D mesh
     assert all(mesh.node_coords[:, 2] == 0.0)
 
@@ -823,7 +823,14 @@ class MeshTri(_base_mesh):
         # the ce_ratio is negative. Count those.
         return numpy.sum(self.ce_ratios[~self.is_boundary_edge] < 0.0)
 
-    def show(self, show_ce_ratios=True):
+    def show(
+            self,
+            show_ce_ratios=True,
+            show_centroids=True,
+            mesh_color='k',
+            boundary_edge_color=None,
+            comesh_color=[0.8, 0.8, 0.8],
+            ):
         '''Show the mesh using matplotlib.
 
         :param show_ce_ratios: If true, show all ce_ratios of the mesh, too.
@@ -857,9 +864,9 @@ class MeshTri(_base_mesh):
 
         # Get edges, cut off z-component.
         e = self.node_coords[self.edges['nodes']][:, :, :2]
-        # Plot regular edges black, those with negative ce-ratio red.
+        # Plot regular edges, mark those with negative ce-ratio red.
         pos = self.ce_ratios >= 0
-        line_segments0 = LineCollection(e[pos], color='k')
+        line_segments0 = LineCollection(e[pos], color=mesh_color)
         ax.add_collection(line_segments0)
         #
         neg = numpy.logical_not(pos)
@@ -895,12 +902,18 @@ class MeshTri(_base_mesh):
 
             line_segments = LineCollection(
                 numpy.concatenate([a, b, c]),
-                color=[0.8, 0.8, 0.8]
+                color=comesh_color
                 )
             ax.add_collection(line_segments)
 
-        # plot centroids
-        ax.plot(self.centroids[:, 0], self.centroids[:, 1], 'r.')
+        if boundary_edge_color:
+            boundary_edges = self.subdomains['boundary']['edges']
+            e = self.node_coords[self.edges['nodes'][boundary_edges]][:, :, :2]
+            line_segments1 = LineCollection(e, color=boundary_edge_color)
+            ax.add_collection(line_segments1)
+
+        if show_centroids:
+            ax.plot(self.centroids[:, 0], self.centroids[:, 1], 'r.')
 
         return
 
