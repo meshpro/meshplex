@@ -160,6 +160,7 @@ def test_regular_tri():
 
 @pytest.mark.parametrize(
         'h',
+        # TODO [1.0e0, 1.0e-1]
         [1.0e0]
         )
 def test_degenerate_small0b(h):

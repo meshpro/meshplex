@@ -537,17 +537,15 @@ class MeshTri(_base_mesh):
         # The denominator is the control volume. The numerator can be computed
         # by making use of the fact that the control volume around any vertex
         # v_0 is composed of right triangles, two for each adjacent cell.
-        ids0, vals0 = \
+        ids, vals = \
             self.compute_integral_x(self.cell_circumcenters, regular_cell_ids)
-        # flat boundary contributions
-        ids1, vals1 = fbc.integral_x()
+        if flat_boundary_correction:
+            ids1, vals1 = fbc.integral_x()
+            ids = numpy.concatenate([ids, ids1])
+            vals = numpy.concatenate([vals, vals1])
         # add them all up
         self.centroids = numpy.zeros((len(self.node_coords), 3))
-        numpy.add.at(
-            self.centroids,
-            numpy.concatenate([ids0, ids1]),
-            numpy.concatenate([vals0, vals1])
-            )
+        numpy.add.at(self.centroids, ids, vals)
         # Don't forget to divide by the control volume for the centroids
         self.centroids /= self.control_volumes[:, None]
 
