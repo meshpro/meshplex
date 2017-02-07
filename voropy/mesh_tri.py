@@ -488,43 +488,14 @@ class MeshTri(_base_mesh):
                 numpy.all(numpy.logical_not(is_flat_boundary), axis=1)
                 )[0]
 
-        fbc = FlatBoundaryCorrector(
-                self.cells, self.node_coords, cell_ids, local_edge_ids
-                )
-        if flat_boundary_correction:
-            ids, vals = fbc.correct_ce_ratios()
-            self.ce_ratios_per_half_edge[ids] = vals
-
-        # Sum up all the partial entities for convenience.
-        # covolume-edgelength ratios
-        self.ce_ratios = numpy.zeros(len(self.edges['nodes']), dtype=float)
-        cells_edges = self.cells['edges']
-        numpy.add.at(self.ce_ratios, cells_edges, self.ce_ratios_per_half_edge)
-
         # control_volumes
-        ids, vals = self.compute_control_volumes(regular_cell_ids)
-        if flat_boundary_correction:
-            fb_ids, fb_vals = fbc.control_volumes()
-            ids = numpy.concatenate([ids, fb_ids])
-            vals = numpy.concatenate([vals, fb_vals])
-        # add it up
-        self.control_volumes = numpy.zeros(len(self.node_coords), dtype=float)
-        numpy.add.at(self.control_volumes, ids, vals)
+        control_volume_data = [self.compute_control_volumes(regular_cell_ids)]
 
         # surface areas
-        ids0, vals0 = self.compute_surface_areas(
+        surface_area_data = [self.compute_surface_areas(
                 regular_boundary_cell_ids,
                 regular_local_edge_ids
-                )
-        ids = ids0
-        vals = vals0
-        if flat_boundary_correction:
-            ids1, vals1 = fbc.surface_areas()
-            ids = numpy.concatenate([ids, ids1])
-            vals = numpy.concatenate([vals, vals1])
-        # add them up
-        self.surface_areas = numpy.zeros(len(self.node_coords))
-        numpy.add.at(self.surface_areas, ids, vals)
+                )]
 
         # Compute the control volume centroids.
         # This is actually only necessary for special applications like Lloyd's
@@ -537,15 +508,37 @@ class MeshTri(_base_mesh):
         # The denominator is the control volume. The numerator can be computed
         # by making use of the fact that the control volume around any vertex
         # v_0 is composed of right triangles, two for each adjacent cell.
-        ids, vals = \
-            self.compute_integral_x(self.cell_circumcenters, regular_cell_ids)
+        centroid_data = [self.compute_integral_x(
+            self.cell_circumcenters,
+            regular_cell_ids
+            )]
+
         if flat_boundary_correction:
-            ids1, vals1 = fbc.integral_x()
-            ids = numpy.concatenate([ids, ids1])
-            vals = numpy.concatenate([vals, vals1])
-        # add them all up
+            fbc = FlatBoundaryCorrector(
+                    self.cells, self.node_coords, cell_ids, local_edge_ids
+                    )
+            ids, vals = fbc.correct_ce_ratios()
+            self.ce_ratios_per_half_edge[ids] = vals
+            control_volume_data.append(fbc.control_volumes())
+            surface_area_data.append(fbc.surface_areas())
+            centroid_data.append(fbc.integral_x())
+
+        # Sum up all the partial entities for convenience.
+        self.ce_ratios = numpy.zeros(len(self.edges['nodes']), dtype=float)
+        cells_edges = self.cells['edges']
+        numpy.add.at(self.ce_ratios, cells_edges, self.ce_ratios_per_half_edge)
+        # control volumes
+        self.control_volumes = numpy.zeros(len(self.node_coords), dtype=float)
+        for d in control_volume_data:
+            numpy.add.at(self.control_volumes, d[0], d[1])
+        # surface areas
+        self.surface_areas = numpy.zeros(len(self.node_coords))
+        for d in surface_area_data:
+            numpy.add.at(self.surface_areas, d[0], d[1])
+        # centroids
         self.centroids = numpy.zeros((len(self.node_coords), 3))
-        numpy.add.at(self.centroids, ids, vals)
+        for d in centroid_data:
+            numpy.add.at(self.centroids, d[0], d[1])
         # Don't forget to divide by the control volume for the centroids
         self.centroids /= self.control_volumes[:, None]
 
