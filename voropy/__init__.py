@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 #
+from . import mesh_line
 from . import mesh_tri
 from . import mesh_tetra
 from .reader import read

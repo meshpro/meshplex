@@ -1,17 +1,14 @@
 # -*- coding: utf-8 -*-
 #
 import numpy
-from voropy.base import _base_mesh
 from matplotlib import pyplot as plt
 
 
-class MeshLine(_base_mesh):
-    '''Class for handling 1D line "meshes".
+class MeshLine(object):
+    '''Class for handling line segment "meshes".
     '''
     def __init__(self, node_coords, cells):
-        '''Initialization.
-        '''
-        super(MeshLine, self).__init__(node_coords, cells)
+        self.node_coords = node_coords
 
         num_cells = len(cells)
         self.cells = numpy.empty(
@@ -25,10 +22,8 @@ class MeshLine(_base_mesh):
         return
 
     def create_cell_volumes(self):
-        '''Computes the volumes of the tetrahedra in the mesh.
+        '''Computes the volumes of the "cells" in the mesh.
         '''
-        num_cells = len(self.cells['nodes'])
-        self.cell_volumes = numpy.empty(num_cells, dtype=float)
         self.cell_volumes = numpy.array([
             abs(self.node_coords[cell['nodes']][1] -
                 self.node_coords[cell['nodes']][0])
