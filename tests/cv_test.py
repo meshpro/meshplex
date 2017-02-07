@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 import fetch_data
+import pytest
 import voropy
 
 from math import fsum
@@ -157,8 +158,8 @@ def test_regular_tri():
 #     return
 
 
-def test_degenerate_small0b():
-    h = 1.0e-3
+@pytest.mark.parametrize('h', [1.0e-3])
+def test_degenerate_small0b(h):
     points = numpy.array([
         [0, 0, 0],
         [1, 0, 0],
@@ -209,9 +210,8 @@ def test_degenerate_small0b():
     return
 
 
-def test_degenerate_small1():
-    h = 1.0e-3
-    a = 0.3
+@pytest.mark.parametrize('h, a', [(1.0e-3, 0.3)])
+def test_degenerate_small1(h, a):
     points = numpy.array([
         [0, 0, 0],
         [1, 0, 0],
@@ -260,8 +260,8 @@ def test_degenerate_small1():
     return
 
 
-def test_degenerate_small2():
-    h = 1.0e-2
+@pytest.mark.parametrize('h', [1.0e-2])
+def test_degenerate_small2(h):
     points = numpy.array([
         [0, 0, 0],
         [1, 0, 0],
@@ -306,9 +306,11 @@ def test_degenerate_small2():
     return
 
 
-def test_regular_tet0():
-    a = 1.0  # edge length
-
+@pytest.mark.parametrize(
+        'a',  # edge length
+        [1.0]
+        )
+def test_regular_tet0(a):
     points = numpy.array([
         [1.0, 0, 0],
         [-0.5,  numpy.sqrt(3.0) / 2.0, 0],
@@ -343,9 +345,11 @@ def test_regular_tet0():
     return
 
 
-def test_regular_tet1_algebraic():
-    a = 1.0  # basis edge length
-
+@pytest.mark.parametrize(
+        'a',  # basis edge length
+        [1.0]
+        )
+def test_regular_tet1_algebraic(a):
     points = numpy.array([
         [0, 0, 0],
         [a, 0, 0],
@@ -383,9 +387,11 @@ def test_regular_tet1_algebraic():
     return
 
 
-def test_regular_tet1_geometric():
-    a = 1.0  # basis edge length
-
+@pytest.mark.parametrize(
+        'a',  # basis edge length
+        [1.0]
+        )
+def test_regular_tet1_geometric(a):
     points = numpy.array([
         [0, 0, 0],
         [a, 0, 0],
@@ -419,8 +425,11 @@ def test_regular_tet1_geometric():
     return
 
 
-def test_degenerate_tet0():
-    h = 1.0e-2
+@pytest.mark.parametrize(
+        'h',
+        [1.0e-2]
+        )
+def test_degenerate_tet0(h):
     points = numpy.array([
         [0, 0, 0],
         [1, 0, 0],
@@ -457,8 +466,11 @@ def test_degenerate_tet0():
     return
 
 
-def test_degenerate_tet1():
-    h = 1.0e-1
+@pytest.mark.parametrize(
+        'h',
+        [1.0e-1]
+        )
+def test_degenerate_tet1(h):
     points = numpy.array([
         [0, 0, 0],
         [1, 0, 0],
