@@ -20,7 +20,7 @@ def test_mesh_line():
         [1, 2],
         [2, 3],
         ]
-    mesh = voropy.mesh_segment.MeshSegment(pts, cells)
+    mesh = voropy.mesh_line.MeshLine(pts, cells)
     assert _near_equal(mesh.cell_volumes, [1.0, 2.0, 1.0])
     assert _near_equal(mesh.control_volumes, [0.5, 1.5, 1.5, 0.5])
     return

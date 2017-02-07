@@ -4,7 +4,7 @@ import numpy
 from matplotlib import pyplot as plt
 
 
-class MeshSegment(object):
+class MeshLine(object):
     '''Class for handling line segment "meshes".
     '''
     def __init__(self, node_coords, cells):
