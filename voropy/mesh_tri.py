@@ -52,7 +52,7 @@ def lloyd_smoothing(mesh, tol, verbose=True, output_filetype=None):
         k += 1
 
         # move interior points into centroids
-        new_points = mesh.centroids
+        new_points = mesh.compute_control_volume_centroids()
         new_points[boundary_verts] = mesh.node_coords[boundary_verts]
         diff = new_points - mesh.node_coords
         max_move = numpy.sqrt(numpy.max(numpy.sum(diff*diff, axis=1)))
@@ -483,12 +483,14 @@ class MeshTri(_base_mesh):
         regular_boundary_cell_ids, regular_local_edge_ids = \
             numpy.where(is_regular_boundary)
         # All rows which are completely not flat boundary
-        regular_cell_ids = numpy.where(
+        self.regular_cell_ids = numpy.where(
                 numpy.all(numpy.logical_not(is_flat_boundary), axis=1)
                 )[0]
 
         # control_volumes
-        control_volume_data = [self.compute_control_volumes(regular_cell_ids)]
+        control_volume_data = [
+            self.compute_control_volumes(self.regular_cell_ids)
+            ]
 
         # surface areas
         surface_area_data = [self.compute_surface_areas(
@@ -496,31 +498,15 @@ class MeshTri(_base_mesh):
                 regular_local_edge_ids
                 )]
 
-        # Compute the control volume centroids.
-        # This is actually only necessary for special applications like Lloyd's
-        # smoothing <https://en.wikipedia.org/wiki/Lloyd%27s_algorithm>.
-        #
-        # The centroid of any volume V is given by
-        #
-        #   c = \int_V x / \int_V 1.
-        #
-        # The denominator is the control volume. The numerator can be computed
-        # by making use of the fact that the control volume around any vertex
-        # v_0 is composed of right triangles, two for each adjacent cell.
-        centroid_data = [self.compute_integral_x(
-            self.cell_circumcenters,
-            regular_cell_ids
-            )]
-
+        self.flat_boundary_correction = flat_boundary_correction
         if flat_boundary_correction:
-            fbc = FlatBoundaryCorrector(
+            self.fbc = FlatBoundaryCorrector(
                     self.cells, self.node_coords, cell_ids, local_edge_ids
                     )
-            ids, vals = fbc.correct_ce_ratios()
+            ids, vals = self.fbc.correct_ce_ratios()
             self.ce_ratios_per_half_edge[ids] = vals
-            control_volume_data.append(fbc.control_volumes())
-            surface_area_data.append(fbc.surface_areas())
-            centroid_data.append(fbc.integral_x())
+            control_volume_data.append(self.fbc.control_volumes())
+            surface_area_data.append(self.fbc.surface_areas())
 
         # Sum up all the partial entities for convenience.
         self.ce_ratios = numpy.zeros(len(self.edges['nodes']))
@@ -534,14 +520,33 @@ class MeshTri(_base_mesh):
         self.surface_areas = numpy.zeros(len(self.node_coords))
         for d in surface_area_data:
             numpy.add.at(self.surface_areas, d[0], d[1])
-        # centroids
-        self.centroids = numpy.zeros((len(self.node_coords), 3))
-        for d in centroid_data:
-            numpy.add.at(self.centroids, d[0], d[1])
-        # Don't forget to divide by the control volume for the centroids
-        self.centroids /= self.control_volumes[:, None]
 
         return
+
+    def compute_control_volume_centroids(self):
+        # This function is necessary, e.g., for Lloyd's
+        # smoothing <https://en.wikipedia.org/wiki/Lloyd%27s_algorithm>.
+        #
+        # The centroid of any volume V is given by
+        #
+        #   c = \int_V x / \int_V 1.
+        #
+        # The denominator is the control volume. The numerator can be computed
+        # by making use of the fact that the control volume around any vertex
+        # v_0 is composed of right triangles, two for each adjacent cell.
+        centroid_data = [self.compute_integral_x(
+            self.cell_circumcenters,
+            self.regular_cell_ids
+            )]
+        if self.flat_boundary_correction:
+            centroid_data.append(self.fbc.integral_x())
+        # add it all up
+        centroids = numpy.zeros((len(self.node_coords), 3))
+        for d in centroid_data:
+            numpy.add.at(centroids, d[0], d[1])
+        # Don't forget to divide by the control volume for the centroids
+        centroids /= self.control_volumes[:, None]
+        return centroids
 
     def mark_default_subdomains(self):
         self.subdomains = {}
@@ -925,7 +930,8 @@ class MeshTri(_base_mesh):
             ax.add_collection(line_segments1)
 
         if show_centroids:
-            ax.plot(self.centroids[:, 0], self.centroids[:, 1], 'r.')
+            centroids = self.compute_control_volume_centroids()
+            ax.plot(centroids[:, 0], centroids[:, 1], 'r.')
 
         return fig
 

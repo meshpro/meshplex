@@ -81,9 +81,10 @@ def test_regular_tri():
     assert _near_equal(mesh.cell_circumcenters[0], [0.5, 0.5, 0.0], tol)
 
     # centroids
-    assert _near_equal(mesh.centroids[0], [0.25, 0.25, 0.0], tol)
-    assert _near_equal(mesh.centroids[1], [2.0/3.0, 1.0/6.0, 0.0], tol)
-    assert _near_equal(mesh.centroids[2], [1.0/6.0, 2.0/3.0, 0.0], tol)
+    centroids = mesh.compute_control_volume_centroids()
+    assert _near_equal(centroids[0], [0.25, 0.25, 0.0], tol)
+    assert _near_equal(centroids[1], [2.0/3.0, 1.0/6.0, 0.0], tol)
+    assert _near_equal(centroids[2], [1.0/6.0, 2.0/3.0, 0.0], tol)
 
     assert mesh.num_delaunay_violations() == 0
 
@@ -251,11 +252,12 @@ def test_degenerate_small0b_fbc():
     assert _near_equal(mesh.surface_areas, [alpha, alpha, beta], tol)
 
     # centroids
+    centroids = mesh.compute_control_volume_centroids()
     alpha = 1.0 / 6000.0
     gamma = 0.00038888918518558031
-    assert _near_equal(mesh.centroids[0], [0.166667, alpha, 0.0], tol)
-    assert _near_equal(mesh.centroids[1], [0.833333, alpha, 0.0], tol)
-    assert _near_equal(mesh.centroids[2], [0.5, gamma, 0.0], tol)
+    assert _near_equal(centroids[0], [0.166667, alpha, 0.0], tol)
+    assert _near_equal(centroids[1], [0.833333, alpha, 0.0], tol)
+    assert _near_equal(centroids[2], [0.5, gamma, 0.0], tol)
 
     assert mesh.num_delaunay_violations() == 0
     return
