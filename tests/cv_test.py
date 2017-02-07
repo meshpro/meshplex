@@ -158,7 +158,10 @@ def test_regular_tri():
 #     return
 
 
-@pytest.mark.parametrize('h', [1.0e-3])
+@pytest.mark.parametrize(
+        'h',
+        [1.0e0]
+        )
 def test_degenerate_small0b(h):
     points = numpy.array([
         [0, 0, 0],
@@ -168,7 +171,54 @@ def test_degenerate_small0b(h):
     cells = numpy.array([[0, 1, 2]])
     mesh = voropy.mesh_tri.MeshTri(
             points,
-            cells
+            cells,
+            flat_boundary_correction=False
+            )
+
+    tol = 1.0e-14
+
+    # edge lengths
+    edge_length = numpy.sqrt(0.5**2 + h**2)
+    assert _near_equal(
+        mesh.edge_lengths,
+        [1.0, edge_length, edge_length],
+        tol)
+
+    # ce_ratios
+    ce0 = 0.5/h * (h**2 - 0.25)
+    ce12 = 0.25/h
+    assert _near_equal(mesh.ce_ratios, [ce0, ce12, ce12], tol)
+
+    # control volumes
+    cv12 = 0.25 * (1.0**2 * ce0 + (0.25 + h**2) * ce12)
+    cv0 = 0.5 * (0.25 + h**2) * ce12
+    assert _near_equal(mesh.control_volumes, [cv12, cv12, cv0], tol)
+
+    # cell volumes
+    assert _near_equal(mesh.cell_volumes, [0.5 * h], tol)
+
+    # surface areas
+    alpha = 0.5 + 0.5*edge_length
+    beta = edge_length
+    assert _near_equal(mesh.surface_areas, [alpha, alpha, beta], tol)
+
+    assert mesh.num_delaunay_violations() == 0
+    return
+
+
+# don't parametrize with flat boundary correction
+def test_degenerate_small0b_fbc():
+    h = 1.0e-3
+    points = numpy.array([
+        [0, 0, 0],
+        [1, 0, 0],
+        [0.5, h, 0.0],
+        ])
+    cells = numpy.array([[0, 1, 2]])
+    mesh = voropy.mesh_tri.MeshTri(
+            points,
+            cells,
+            flat_boundary_correction=True
             )
 
     tol = 1.0e-14
