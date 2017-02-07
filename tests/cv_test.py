@@ -182,9 +182,10 @@ def test_degenerate_small0b(h):
     # edge lengths
     edge_length = numpy.sqrt(0.5**2 + h**2)
     assert _near_equal(
-        mesh.edge_lengths,
+        mesh.compute_edge_lengths(),
         [1.0, edge_length, edge_length],
-        tol)
+        tol
+        )
 
     # ce_ratios
     ce0 = 0.5/h * (h**2 - 0.25)
@@ -228,9 +229,10 @@ def test_degenerate_small0b_fbc():
     # edge lengths
     edge_length = numpy.sqrt(0.5**2 + h**2)
     assert _near_equal(
-        mesh.edge_lengths,
+        mesh.compute_edge_lengths(),
         [1.0, edge_length, edge_length],
-        tol)
+        tol
+        )
 
     # ce_ratios
     ce = h
@@ -281,7 +283,7 @@ def test_degenerate_small1(h, a):
     # edge lengths
     el1 = numpy.sqrt(a**2 + h**2)
     el2 = numpy.sqrt((1.0 - a)**2 + h**2)
-    assert _near_equal(mesh.edge_lengths, [1.0, el1, el2], tol)
+    assert _near_equal(mesh.compute_edge_lengths(), [1.0, el1, el2], tol)
 
     # ce_ratios
     ce1 = 0.5 * h / a

@@ -460,8 +460,6 @@ class MeshTri(_base_mesh):
         return
 
     def compute_data(self, flat_boundary_correction=True):
-        self.compute_edge_lengths()
-
         self.cell_circumcenters = compute_triangle_circumcenters(
                 self.node_coords[self.cells['nodes']]
                 )
@@ -645,7 +643,7 @@ class MeshTri(_base_mesh):
             self.node_coords[edge_nodes[:, 0]]
         # Compute the control volumes. Note that
         #   0.5 * (0.5 * edge_length) * covolume
-        # = 0.5 * (0.5 * edge_length**2) * ce_ratio_edge_ratio
+        # = 0.25 * edge_length**2 * ce_ratio_edge_ratio
         edge_lengths_squared = _row_dot(edges, edges)
         el2 = edge_lengths_squared[self.cells['edges'][cell_ids]]
 
@@ -700,11 +698,11 @@ class MeshTri(_base_mesh):
             ):
         edge_ids = \
             self.cells['edges'][regular_boundary_cell_ids, local_edge_ids]
+
+        el = self.compute_edge_lengths(edge_ids)
+
         ids = self.edges['nodes'][edge_ids]
-        vals = _column_stack(
-                0.5 * self.edge_lengths[edge_ids],
-                0.5 * self.edge_lengths[edge_ids]
-                )
+        vals = _column_stack(0.5 * el, 0.5 * el)
         return ids, vals
 
 #     def compute_gradient(self, u):

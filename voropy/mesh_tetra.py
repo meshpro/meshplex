@@ -42,7 +42,7 @@ class MeshTetra(_base_mesh):
 
         self.create_adjacent_entities()
         self.create_cell_circumcenters_and_volumes()
-        self.compute_edge_lengths()
+        self.edge_lengths = self.compute_edge_lengths()
 
         num_edges = len(self.edges['nodes'])
         self.ce_ratios = numpy.zeros(num_edges, dtype=float)
