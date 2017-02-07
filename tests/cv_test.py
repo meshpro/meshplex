@@ -8,6 +8,10 @@ import numpy
 import unittest
 
 
+def _near_equal(a, b, tol):
+    return numpy.allclose(a, b, rtol=0.0, atol=tol)
+
+
 class TestVolumes(unittest.TestCase):
 
     def setUp(self):
@@ -29,11 +33,10 @@ class TestVolumes(unittest.TestCase):
 
         # Check cell volumes.
         total_cellvolume = fsum(mesh.cell_volumes)
-        self.assertAlmostEqual(volume, total_cellvolume, delta=tol * volume)
-        norm = numpy.linalg.norm(mesh.cell_volumes, ord=2)
-        self.assertAlmostEqual(cellvol_norms[0], norm, delta=tol)
-        norm = numpy.linalg.norm(mesh.cell_volumes, ord=numpy.Inf)
-        self.assertAlmostEqual(cellvol_norms[1], norm, delta=tol)
+        assert abs(volume - total_cellvolume) < tol * volume
+        norm2 = numpy.linalg.norm(mesh.cell_volumes, ord=2)
+        norm_inf = numpy.linalg.norm(mesh.cell_volumes, ord=numpy.Inf)
+        assert _near_equal(cellvol_norms, [norm2, norm_inf], tol)
 
         # If everything is Delaunay and the boundary elements aren't flat, the
         # volume of the domain is given by
@@ -44,20 +47,18 @@ class TestVolumes(unittest.TestCase):
         # self.assertAlmostEqual(volume, total_ce_ratio, delta=tol * volume)
         # ```
         # Check ce_ratio norms.
-        alpha = fsum(mesh.ce_ratios**2)
-        self.assertAlmostEqual(ce_ratio_norms[0], alpha, delta=tol)
-        alpha = max(abs(mesh.ce_ratios))
-        self.assertAlmostEqual(ce_ratio_norms[1], alpha, delta=tol)
+        alpha2 = fsum(mesh.ce_ratios**2)
+        alpha_inf = max(abs(mesh.ce_ratios))
+        assert _near_equal(ce_ratio_norms, [alpha2, alpha_inf], tol)
 
-        # Check the volume by summing over the absolute value of the
-        # control volumes.
+        # Check the volume by summing over the absolute value of the control
+        # volumes.
         vol = fsum(mesh.control_volumes)
-        self.assertAlmostEqual(volume, vol, delta=tol * volume)
+        assert abs(volume - vol) < tol*volume
         # Check control volume norms.
-        norm = numpy.linalg.norm(mesh.control_volumes, ord=2)
-        self.assertAlmostEqual(convol_norms[0], norm, delta=tol)
-        norm = numpy.linalg.norm(mesh.control_volumes, ord=numpy.Inf)
-        self.assertAlmostEqual(convol_norms[1], norm, delta=tol)
+        norm2 = numpy.linalg.norm(mesh.control_volumes, ord=2)
+        norm_inf = numpy.linalg.norm(mesh.control_volumes, ord=numpy.Inf)
+        assert _near_equal(convol_norms, [norm2, norm_inf], tol)
 
         return
 
@@ -73,34 +74,27 @@ class TestVolumes(unittest.TestCase):
         tol = 1.0e-14
 
         # ce_ratios
-        self.assertAlmostEqual(mesh.ce_ratios[0], 0.5, delta=tol)
-        self.assertAlmostEqual(mesh.ce_ratios[1], 0.5, delta=tol)
-        self.assertAlmostEqual(mesh.ce_ratios[2], 0, delta=tol)
+        assert _near_equal(mesh.ce_ratios, [0.5, 0.5, 0.0], tol)
 
         # control volumes
-        self.assertAlmostEqual(mesh.control_volumes[0], 0.25, delta=tol)
-        self.assertAlmostEqual(mesh.control_volumes[1], 0.125, delta=tol)
-        self.assertAlmostEqual(mesh.control_volumes[2], 0.125, delta=tol)
+        assert _near_equal(mesh.control_volumes, [0.25, 0.125, 0.125], tol)
 
         # cell volumes
-        self.assertAlmostEqual(mesh.cell_volumes[0], 0.5, delta=tol)
+        assert _near_equal(mesh.cell_volumes, [0.5], tol)
+
+        # circumcenters
+        assert _near_equal(mesh.cell_circumcenters[0], [0.5, 0.5, 0.0], tol)
 
         # centroids
-        self.assertAlmostEqual(mesh.centroids[0][0], 0.25, delta=tol)
-        self.assertAlmostEqual(mesh.centroids[0][1], 0.25, delta=tol)
-        self.assertAlmostEqual(mesh.centroids[0][2], 0.0, delta=tol)
-        self.assertAlmostEqual(mesh.centroids[1][0], 2.0/3.0, delta=tol)
-        self.assertAlmostEqual(mesh.centroids[1][1], 1.0/6.0, delta=tol)
-        self.assertAlmostEqual(mesh.centroids[1][2], 0.0, delta=tol)
-        self.assertAlmostEqual(mesh.centroids[2][0], 1.0/6.0, delta=tol)
-        self.assertAlmostEqual(mesh.centroids[2][1], 2.0/3.0, delta=tol)
-        self.assertAlmostEqual(mesh.centroids[2][2], 0.0, delta=tol)
+        assert _near_equal(mesh.centroids[0], [0.25, 0.25, 0.0], tol)
+        assert _near_equal(mesh.centroids[1], [2.0/3.0, 1.0/6.0, 0.0], tol)
+        assert _near_equal(mesh.centroids[2], [1.0/6.0, 2.0/3.0, 0.0], tol)
 
-        self.assertEqual(mesh.num_delaunay_violations(), 0)
+        assert mesh.num_delaunay_violations() == 0
 
         # edge_cells
         edge_cells = mesh.compute_edge_cells()
-        self.assertEqual(edge_cells, [[0], [0], [0]])
+        assert edge_cells == [[0], [0], [0]]
 
         return
 
@@ -184,51 +178,38 @@ class TestVolumes(unittest.TestCase):
 
         # edge lengths
         edge_length = numpy.sqrt(0.5**2 + h**2)
-        self.assertAlmostEqual(mesh.edge_lengths[0], 1.0, delta=tol)
-        self.assertAlmostEqual(mesh.edge_lengths[1], edge_length, delta=tol)
-        self.assertAlmostEqual(mesh.edge_lengths[2], edge_length, delta=tol)
+        assert _near_equal(
+            mesh.edge_lengths,
+            [1.0, edge_length, edge_length],
+            tol)
 
         # ce_ratios
         ce = h
-        self.assertAlmostEqual(mesh.ce_ratios[0], 0.0, delta=tol)
-        self.assertAlmostEqual(mesh.ce_ratios[1], ce, delta=tol)
-        self.assertAlmostEqual(mesh.ce_ratios[2], ce, delta=tol)
+        assert _near_equal(mesh.ce_ratios, [0.0, ce, ce], tol)
 
         # control volumes
         cv = ce * edge_length
         alpha = 0.25 * edge_length * cv
         beta = 0.5*h - 2*alpha
-        self.assertAlmostEqual(mesh.control_volumes[0], alpha, delta=tol)
-        self.assertAlmostEqual(mesh.control_volumes[1], alpha, delta=tol)
-        self.assertAlmostEqual(mesh.control_volumes[2], beta, delta=tol)
+        assert _near_equal(mesh.control_volumes, [alpha, alpha, beta], tol)
 
         # cell volumes
-        self.assertAlmostEqual(mesh.cell_volumes[0], 0.5 * h, delta=tol)
+        assert _near_equal(mesh.cell_volumes, [0.5 * h], tol)
 
         # surface areas
         g = numpy.sqrt((0.5 * edge_length)**2 + (ce * edge_length)**2)
         alpha = 0.5 * edge_length + g
         beta = edge_length + (1.0 - 2*g)
-        self.assertAlmostEqual(mesh.surface_areas[0], alpha, delta=tol)
-        self.assertAlmostEqual(mesh.surface_areas[1], alpha, delta=tol)
-        self.assertAlmostEqual(mesh.surface_areas[2], beta, delta=tol)
+        assert _near_equal(mesh.surface_areas, [alpha, alpha, beta], tol)
 
         # centroids
         alpha = 1.0 / 6000.0
-        self.assertAlmostEqual(mesh.centroids[0][0], 0.166667, delta=tol)
-        self.assertAlmostEqual(mesh.centroids[0][1], alpha, delta=tol)
-        self.assertAlmostEqual(mesh.centroids[0][2], 0.0, delta=tol)
-
-        self.assertAlmostEqual(mesh.centroids[1][0], 0.833333, delta=tol)
-        self.assertAlmostEqual(mesh.centroids[1][1], alpha, delta=tol)
-        self.assertAlmostEqual(mesh.centroids[1][2], 0.0, delta=tol)
-
         gamma = 0.00038888918518558031
-        self.assertAlmostEqual(mesh.centroids[2][0], 0.5, delta=tol)
-        self.assertAlmostEqual(mesh.centroids[2][1], gamma, delta=tol)
-        self.assertAlmostEqual(mesh.centroids[2][2], 0.0, delta=tol)
+        assert _near_equal(mesh.centroids[0], [0.166667, alpha, 0.0], tol)
+        assert _near_equal(mesh.centroids[1], [0.833333, alpha, 0.0], tol)
+        assert _near_equal(mesh.centroids[2], [0.5, gamma, 0.0], tol)
 
-        self.assertEqual(mesh.num_delaunay_violations(), 0)
+        assert mesh.num_delaunay_violations() == 0
         return
 
     def test_degenerate_small1(self):
@@ -250,16 +231,12 @@ class TestVolumes(unittest.TestCase):
         # edge lengths
         el1 = numpy.sqrt(a**2 + h**2)
         el2 = numpy.sqrt((1.0 - a)**2 + h**2)
-        self.assertAlmostEqual(mesh.edge_lengths[0], 1.0, delta=tol)
-        self.assertAlmostEqual(mesh.edge_lengths[1], el1, delta=tol)
-        self.assertAlmostEqual(mesh.edge_lengths[2], el2, delta=tol)
+        assert _near_equal(mesh.edge_lengths, [1.0, el1, el2], tol)
 
         # ce_ratios
         ce1 = 0.5 * h / a
         ce2 = 0.5 * h / (1.0 - a)
-        self.assertAlmostEqual(mesh.ce_ratios[0], 0.0, delta=tol)
-        self.assertAlmostEqual(mesh.ce_ratios[1], ce1, delta=tol)
-        self.assertAlmostEqual(mesh.ce_ratios[2], ce2, delta=tol)
+        assert _near_equal(mesh.ce_ratios, [0.0, ce1, ce2], tol)
 
         # control volumes
         cv1 = ce1 * el1
@@ -267,13 +244,11 @@ class TestVolumes(unittest.TestCase):
         cv2 = ce2 * el2
         alpha2 = 0.25 * el2 * cv2
         beta = 0.5*h - (alpha1 + alpha2)
-        self.assertAlmostEqual(mesh.control_volumes[0], alpha1, delta=tol)
-        self.assertAlmostEqual(mesh.control_volumes[1], alpha2, delta=tol)
-        self.assertAlmostEqual(mesh.control_volumes[2], beta, delta=tol)
-        self.assertAlmostEqual(sum(mesh.control_volumes), 0.5 * h, delta=tol)
+        assert _near_equal(mesh.control_volumes, [alpha1, alpha2, beta], tol)
+        assert abs(sum(mesh.control_volumes) - 0.5*h) < tol
 
         # cell volumes
-        self.assertAlmostEqual(mesh.cell_volumes[0], 0.5 * h, delta=tol)
+        assert _near_equal(mesh.cell_volumes, [0.5 * h], tol)
 
         # surface areas
         b1 = numpy.sqrt((0.5*el1)**2 + cv1**2)
@@ -282,11 +257,9 @@ class TestVolumes(unittest.TestCase):
         alpha1 = b2 + 0.5*el2
         total = 1.0 + el1 + el2
         alpha2 = total - alpha0 - alpha1
-        self.assertAlmostEqual(mesh.surface_areas[0], alpha0, delta=tol)
-        self.assertAlmostEqual(mesh.surface_areas[1], alpha1, delta=tol)
-        self.assertAlmostEqual(mesh.surface_areas[2], alpha2, delta=tol)
+        assert _near_equal(mesh.surface_areas, [alpha0, alpha1, alpha2], tol)
 
-        self.assertEqual(mesh.num_delaunay_violations(), 0)
+        assert mesh.num_delaunay_violations() == 0
         return
 
     def test_degenerate_small2(self):
@@ -308,29 +281,29 @@ class TestVolumes(unittest.TestCase):
         # ce_ratios
         alpha = h - 1.0 / (4*h)
         beta = 1.0 / (4*h)
-        self.assertAlmostEqual(mesh.ce_ratios[0], alpha, delta=tol)
-        self.assertAlmostEqual(mesh.ce_ratios[1], beta, delta=tol)
-        self.assertAlmostEqual(mesh.ce_ratios[2], beta, delta=tol)
-        self.assertAlmostEqual(mesh.ce_ratios[3], beta, delta=tol)
-        self.assertAlmostEqual(mesh.ce_ratios[4], beta, delta=tol)
+        assert _near_equal(
+            mesh.ce_ratios,
+            [alpha, beta, beta, beta, beta],
+            tol
+            )
 
         # control volumes
         alpha1 = 0.125 * (3*h - 1.0/(4*h))
         alpha2 = 0.125 * (h + 1.0 / (4*h))
-        self.assertAlmostEqual(mesh.control_volumes[0], alpha1, delta=tol)
-        self.assertAlmostEqual(mesh.control_volumes[1], alpha1, delta=tol)
-        self.assertAlmostEqual(mesh.control_volumes[2], alpha2, delta=tol)
-        self.assertAlmostEqual(mesh.control_volumes[3], alpha2, delta=tol)
+        assert _near_equal(
+            mesh.control_volumes,
+            [alpha1, alpha1, alpha2, alpha2],
+            tol
+            )
 
         # cell volumes
-        self.assertAlmostEqual(mesh.cell_volumes[0], 0.5 * h, delta=tol)
-        self.assertAlmostEqual(mesh.cell_volumes[1], 0.5 * h, delta=tol)
+        assert _near_equal(mesh.cell_volumes, [0.5*h, 0.5*h], tol)
 
-        self.assertEqual(mesh.num_delaunay_violations(), 1)
+        assert mesh.num_delaunay_violations() == 1
 
         # edge_cells
         edge_cells = mesh.compute_edge_cells()
-        self.assertEqual(edge_cells, [[0, 1], [0], [1], [0], [1]])
+        assert edge_cells == [[0, 1], [0], [1], [0], [1]]
 
         return
 
@@ -353,30 +326,20 @@ class TestVolumes(unittest.TestCase):
 
         tol = 1.0e-10
 
-        self.assertAlmostEqual(mesh.cell_circumcenters[0][0], 0.0, delta=tol)
-        self.assertAlmostEqual(mesh.cell_circumcenters[0][1], 0.0, delta=tol)
         z = a / numpy.sqrt(24.0)
-        self.assertAlmostEqual(mesh.cell_circumcenters[0][2], z, delta=tol)
+        assert _near_equal(mesh.cell_circumcenters, [0.0, 0.0, z], tol)
 
         # covolume/edge length ratios
         val = a / 12.0 / numpy.sqrt(2)
-        self.assertAlmostEqual(mesh.ce_ratios[0], val, delta=tol)
-        self.assertAlmostEqual(mesh.ce_ratios[1], val, delta=tol)
-        self.assertAlmostEqual(mesh.ce_ratios[2], val, delta=tol)
-        self.assertAlmostEqual(mesh.ce_ratios[3], val, delta=tol)
-        self.assertAlmostEqual(mesh.ce_ratios[4], val, delta=tol)
-        self.assertAlmostEqual(mesh.ce_ratios[5], val, delta=tol)
+        assert _near_equal(mesh.ce_ratios, [val, val, val, val, val, val], tol)
 
         # cell volumes
         vol = a**3 / 6.0 / numpy.sqrt(2)
-        self.assertAlmostEqual(mesh.cell_volumes[0], vol, delta=tol)
+        assert _near_equal(mesh.cell_volumes, [vol], tol)
 
         # control volumes
         val = vol / 4.0
-        self.assertAlmostEqual(mesh.control_volumes[0], val, delta=tol)
-        self.assertAlmostEqual(mesh.control_volumes[1], val, delta=tol)
-        self.assertAlmostEqual(mesh.control_volumes[2], val, delta=tol)
-        self.assertAlmostEqual(mesh.control_volumes[3], val, delta=tol)
+        assert _near_equal(mesh.control_volumes, [val, val, val, val], tol)
 
         return
 
@@ -394,26 +357,28 @@ class TestVolumes(unittest.TestCase):
 
         mesh = voropy.mesh_tetra.MeshTetra(points, cells, mode='algebraic')
 
-        self.assertAlmostEqual(mesh.cell_circumcenters[0][0], a/2.0, delta=tol)
-        self.assertAlmostEqual(mesh.cell_circumcenters[0][1], a/2.0, delta=tol)
-        self.assertAlmostEqual(mesh.cell_circumcenters[0][2], a/2.0, delta=tol)
+        assert _near_equal(
+            mesh.cell_circumcenters,
+            [[a/2.0, a/2.0, a/2.0]],
+            tol
+            )
 
         # covolume/edge length ratios
-        self.assertAlmostEqual(mesh.ce_ratios[0], a/6.0, delta=tol)
-        self.assertAlmostEqual(mesh.ce_ratios[1], a/6.0, delta=tol)
-        self.assertAlmostEqual(mesh.ce_ratios[2], a/6.0, delta=tol)
-        self.assertAlmostEqual(mesh.ce_ratios[3], 0.0, delta=tol)
-        self.assertAlmostEqual(mesh.ce_ratios[4], 0.0, delta=tol)
-        self.assertAlmostEqual(mesh.ce_ratios[5], 0.0, delta=tol)
+        assert _near_equal(
+            mesh.ce_ratios,
+            [a/6.0, a/6.0, a/6.0, 0.0, 0.0, 0.0],
+            tol
+            )
 
         # cell volumes
-        self.assertAlmostEqual(mesh.cell_volumes[0], a**3/6.0, delta=tol)
+        assert _near_equal(mesh.cell_volumes, [a**3/6.0], tol)
 
         # control volumes
-        self.assertAlmostEqual(mesh.control_volumes[0], a**3/12.0, delta=tol)
-        self.assertAlmostEqual(mesh.control_volumes[1], a**3/36.0, delta=tol)
-        self.assertAlmostEqual(mesh.control_volumes[2], a**3/36.0, delta=tol)
-        self.assertAlmostEqual(mesh.control_volumes[3], a**3/36.0, delta=tol)
+        assert _near_equal(
+            mesh.control_volumes,
+            [a**3/12.0, a**3/36.0, a**3/36.0, a**3/36.0],
+            tol
+            )
 
         return
 
@@ -431,26 +396,24 @@ class TestVolumes(unittest.TestCase):
 
         mesh = voropy.mesh_tetra.MeshTetra(points, cells, mode='geometric')
 
-        self.assertAlmostEqual(mesh.cell_circumcenters[0][0], a/2.0, delta=tol)
-        self.assertAlmostEqual(mesh.cell_circumcenters[0][1], a/2.0, delta=tol)
-        self.assertAlmostEqual(mesh.cell_circumcenters[0][2], a/2.0, delta=tol)
+        assert _near_equal(mesh.cell_circumcenters, [a/2.0, a/2.0, a/2.0], tol)
 
         # covolume/edge length ratios
-        self.assertAlmostEqual(mesh.ce_ratios[0], a/4.0, delta=tol)
-        self.assertAlmostEqual(mesh.ce_ratios[1], a/4.0, delta=tol)
-        self.assertAlmostEqual(mesh.ce_ratios[2], a/4.0, delta=tol)
-        self.assertAlmostEqual(mesh.ce_ratios[3], -a/24.0, delta=tol)
-        self.assertAlmostEqual(mesh.ce_ratios[4], -a/24.0, delta=tol)
-        self.assertAlmostEqual(mesh.ce_ratios[5], -a/24.0, delta=tol)
+        assert _near_equal(
+            mesh.ce_ratios,
+            [a/4.0, a/4.0, a/4.0, -a/24.0, -a/24.0, -a/24.0],
+            tol
+            )
 
         # cell volumes
-        self.assertAlmostEqual(mesh.cell_volumes[0], a**3/6.0, delta=tol)
+        assert _near_equal(mesh.cell_volumes, [a**3/6.0], tol)
 
         # control volumes
-        self.assertAlmostEqual(mesh.control_volumes[0], a**3/8.0, delta=tol)
-        self.assertAlmostEqual(mesh.control_volumes[1], a**3/72.0, delta=tol)
-        self.assertAlmostEqual(mesh.control_volumes[2], a**3/72.0, delta=tol)
-        self.assertAlmostEqual(mesh.control_volumes[3], a**3/72.0, delta=tol)
+        assert _near_equal(
+            mesh.control_volumes,
+            [a**3/8.0, a**3/72.0, a**3/72.0, a**3/72.0],
+            tol
+            )
 
         return
 
@@ -467,39 +430,27 @@ class TestVolumes(unittest.TestCase):
 
         tol = 1.0e-7
 
-        self.assertAlmostEqual(mesh.cell_circumcenters[0][0], 0.5, delta=tol)
-        self.assertAlmostEqual(mesh.cell_circumcenters[0][1], 0.5, delta=tol)
         z = 0.5 * h - 1.0 / (4*h)
-        self.assertAlmostEqual(mesh.cell_circumcenters[0][2], z, delta=tol)
+        assert _near_equal(mesh.cell_circumcenters, [[0.5, 0.5, z]], tol)
 
         # covolume/edge length ratios
-        self.assertAlmostEqual(mesh.ce_ratios[0], h / 6.0, delta=tol)
-        self.assertAlmostEqual(mesh.ce_ratios[1], h / 6.0, delta=tol)
-        self.assertAlmostEqual(mesh.ce_ratios[2], 0.0, delta=tol)
-        self.assertAlmostEqual(mesh.ce_ratios[3], -1.0/24.0 / h, delta=tol)
-        self.assertAlmostEqual(mesh.ce_ratios[4],  1.0/12.0 / h, delta=tol)
-        self.assertAlmostEqual(mesh.ce_ratios[5],  1.0/12.0 / h, delta=tol)
+        assert _near_equal(
+            mesh.ce_ratios,
+            [h / 6.0, h / 6.0, 0.0, -1.0/24/h, 1.0/12/h, 1.0/12/h],
+            tol
+            )
 
         # control volumes
-        self.assertAlmostEqual(mesh.control_volumes[0], h / 18.0, delta=tol)
-        self.assertAlmostEqual(
-                mesh.control_volumes[1],
-                1.0/72.0 * (3*h - 1.0/(2*h)),
-                delta=tol
-                )
-        self.assertAlmostEqual(
-                mesh.control_volumes[2],
-                1.0/72.0 * (3*h - 1.0/(2*h)),
-                delta=tol
-                )
-        self.assertAlmostEqual(
-                mesh.control_volumes[3],
-                1.0/36.0 * (h + 1.0/(2*h)),
-                delta=tol
-                )
+        ref = [
+            h / 18.0,
+            1.0/72.0 * (3*h - 1.0/(2*h)),
+            1.0/72.0 * (3*h - 1.0/(2*h)),
+            1.0/36.0 * (h + 1.0/(2*h))
+            ]
+        assert _near_equal(mesh.control_volumes, ref, tol)
 
         # cell volumes
-        self.assertAlmostEqual(mesh.cell_volumes[0], h/6.0, delta=tol)
+        assert _near_equal(mesh.cell_volumes, [h/6.0], tol)
 
         return
 
@@ -546,23 +497,15 @@ class TestVolumes(unittest.TestCase):
         tol = 1.0e-14
 
         # ce_ratios
-        self.assertAlmostEqual(mesh.ce_ratios[0], 0.05, delta=tol)
-        self.assertAlmostEqual(mesh.ce_ratios[1], 0.0, delta=tol)
-        self.assertAlmostEqual(mesh.ce_ratios[2], 5.0, delta=tol)
-        self.assertAlmostEqual(mesh.ce_ratios[3], 5.0, delta=tol)
-        self.assertAlmostEqual(mesh.ce_ratios[4], 0.05, delta=tol)
+        assert _near_equal(mesh.ce_ratios, [0.05, 0.0, 5.0, 5.0, 0.05], tol)
 
         # control volumes
-        self.assertAlmostEqual(mesh.control_volumes[0], 2.5, delta=tol)
-        self.assertAlmostEqual(mesh.control_volumes[1], 2.5, delta=tol)
-        self.assertAlmostEqual(mesh.control_volumes[2], 2.5, delta=tol)
-        self.assertAlmostEqual(mesh.control_volumes[3], 2.5, delta=tol)
+        assert _near_equal(mesh.control_volumes, [2.5, 2.5, 2.5, 2.5], tol)
 
         # cell volumes
-        self.assertAlmostEqual(mesh.cell_volumes[0], 5.0, delta=tol)
-        self.assertAlmostEqual(mesh.cell_volumes[1], 5.0, delta=tol)
+        assert _near_equal(mesh.cell_volumes, [5.0, 5.0], tol)
 
-        self.assertEqual(mesh.num_delaunay_violations(), 0)
+        assert mesh.num_delaunay_violations() == 0
 
         return
 
@@ -597,7 +540,7 @@ class TestVolumes(unittest.TestCase):
                 [numpy.sqrt(0.45), 0.45]
                 )
 
-        self.assertEqual(mesh.num_delaunay_violations(), 2)
+        assert mesh.num_delaunay_violations() == 2
 
         return
 
@@ -632,7 +575,7 @@ class TestVolumes(unittest.TestCase):
                 [2.6213234038171014, 0.13841739494523228]
                 )
 
-        self.assertEqual(mesh.num_delaunay_violations(), 0)
+        assert mesh.num_delaunay_violations() == 0
 
         return
 
@@ -659,7 +602,7 @@ class TestVolumes(unittest.TestCase):
                 [numpy.sqrt(3.0), numpy.sqrt(3.0) / 2.0]
                 )
 
-        self.assertEqual(mesh.num_delaunay_violations(), 0)
+        assert mesh.num_delaunay_violations() == 0
 
         return
 
