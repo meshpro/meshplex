@@ -61,7 +61,7 @@ def lloyd_smoothing(mesh, tol, verbose=True, output_filetype=None):
             print('step: %d,  maximum move: %.15e' % (k, max_move))
 
         # create new mesh and flip edges if necessary
-        mesh.reset_vertex_coords(new_points)
+        mesh = MeshTri(new_points, mesh.cells['nodes'])
         # mesh.show()
         # plt.show()
 
@@ -450,12 +450,6 @@ class MeshTri(_base_mesh):
         self.mark_default_subdomains()
 
         self.compute_data(flat_boundary_correction=flat_boundary_correction)
-        return
-
-    def reset_vertex_coords(self, new_coords):
-        assert self.node_coords.shape == new_coords.shape
-        self.node_coords = new_coords
-        self.compute_data()
         return
 
     def compute_data(self, flat_boundary_correction=True):
