@@ -24,7 +24,7 @@ def lloyd_smoothing(mesh, tol, verbose=True, output_filetype=None):
     # If any of the covolume-edge length ratios is negative, it must be on the
     # interior. If we flip the edge, it should be positive.
     if any(mesh.ce_ratios < 0.0):
-        mesh = mesh.flip_edges(mesh.ce_ratios < 0.0)
+        mesh = flip_edges(mesh)
     assert all(mesh.ce_ratios >= 0.0)
 
     boundary_verts = mesh.get_vertices('boundary')
@@ -66,7 +66,7 @@ def lloyd_smoothing(mesh, tol, verbose=True, output_filetype=None):
         # plt.show()
 
         if any(mesh.ce_ratios < 0.0):
-            mesh = mesh.flip_edges(mesh.ce_ratios < 0.0)
+            mesh = flip_edges(mesh)
 
         assert all(mesh.ce_ratios >= 0.0)
 
@@ -359,6 +359,73 @@ class FlatBoundaryCorrector(object):
         return ids, vals
 
 
+def flip_edges(mesh):
+    '''Creates a new mesh by flipping those interior edges which have a
+    negative covolume (i.e., a negative covolume-edge length ratio). The
+    resulting mesh is Delaunay.
+    '''
+    is_flip_edge = mesh.ce_ratios < 0.0
+
+    is_flip_edge_per_cell = is_flip_edge[mesh.cells['edges']]
+
+    # can only handle the case where each cell has at most one edge to flip
+    count = numpy.sum(is_flip_edge_per_cell, axis=1)
+    assert all(count <= 1)
+
+    # new cells
+    edge_cells = mesh.compute_edge_cells()
+    flip_edges = numpy.where(is_flip_edge)[0]
+    new_cells = numpy.empty((len(flip_edges), 2, 3), dtype=int)
+    for k, flip_edge in enumerate(flip_edges):
+        adj_cells = edge_cells[flip_edge]
+        assert len(adj_cells) == 2
+        # The local edge ids are opposite of the local vertex with the same
+        # id.
+        cell0_local_edge_id = numpy.where(
+            is_flip_edge_per_cell[adj_cells[0]]
+            )[0]
+        cell1_local_edge_id = numpy.where(
+            is_flip_edge_per_cell[adj_cells[1]]
+            )[0]
+
+        #     0
+        #     /\
+        #    /  \
+        #   / 0  \
+        # 2/______\3
+        #  \      /
+        #   \  1 /
+        #    \  /
+        #     \/
+        #      1
+        verts = [
+            mesh.cells['nodes'][adj_cells[0], cell0_local_edge_id],
+            mesh.cells['nodes'][adj_cells[1], cell1_local_edge_id],
+            mesh.cells['nodes'][adj_cells[0], (cell0_local_edge_id + 1) % 3],
+            mesh.cells['nodes'][adj_cells[0], (cell0_local_edge_id + 2) % 3],
+            ]
+        new_cells[k, 0] = [verts[0], verts[1], verts[2]]
+        new_cells[k, 1] = [verts[0], verts[1], verts[3]]
+
+    # find cells that can stay
+    is_good_cell = numpy.all(
+            numpy.logical_not(is_flip_edge_per_cell),
+            axis=1
+            )
+
+    mesh.cells['nodes'] = numpy.concatenate([
+        mesh.cells['nodes'][is_good_cell],
+        new_cells[:, 0, :],
+        new_cells[:, 1, :]
+        ])
+
+    # Create and return new mesh.
+    # TODO be more economic here
+    new_mesh = MeshTri(mesh.node_coords, mesh.cells['nodes'])
+
+    return new_mesh
+
+
 class MeshTri(_base_mesh):
     '''Class for handling triangular meshes.
 
@@ -390,75 +457,6 @@ class MeshTri(_base_mesh):
         self.node_coords = new_coords
         self.compute_data()
         return
-
-    def flip_edges(self, is_flip_edge):
-        '''Flips some edges on the mesh. Note that each cell can have at most
-        one flip edge.
-        '''
-        is_flip_edge_per_cell = is_flip_edge[self.cells['edges']]
-
-        # can only handle the case where each cell has at most one edge to flip
-        count = numpy.sum(is_flip_edge_per_cell, axis=1)
-        assert all(count <= 1)
-
-        # new cells
-        edge_cells = self.compute_edge_cells()
-        flip_edges = numpy.where(is_flip_edge)[0]
-        new_cells = numpy.empty((len(flip_edges), 2, 3), dtype=int)
-        for k, flip_edge in enumerate(flip_edges):
-            adj_cells = edge_cells[flip_edge]
-            assert len(adj_cells) == 2
-            # The local edge ids are opposite of the local vertex with the same
-            # id.
-            cell0_local_edge_id = numpy.where(
-                is_flip_edge_per_cell[adj_cells[0]]
-                )[0]
-            cell1_local_edge_id = numpy.where(
-                is_flip_edge_per_cell[adj_cells[1]]
-                )[0]
-
-            #     0
-            #     /\
-            #    /  \
-            #   / 0  \
-            # 2/______\3
-            #  \      /
-            #   \  1 /
-            #    \  /
-            #     \/
-            #      1
-            verts = [
-                self.cells['nodes'][adj_cells[0], cell0_local_edge_id],
-                self.cells['nodes'][adj_cells[1], cell1_local_edge_id],
-                self.cells['nodes'][
-                    adj_cells[0], (cell0_local_edge_id + 1) % 3
-                    ],
-                self.cells['nodes'][
-                    adj_cells[0], (cell0_local_edge_id + 2) % 3
-                    ]
-                ]
-            new_cells[k, 0] = [verts[0], verts[1], verts[2]]
-            new_cells[k, 1] = [verts[0], verts[1], verts[3]]
-
-        # find cells that can stay
-        is_good_cell = numpy.all(
-                numpy.logical_not(is_flip_edge_per_cell),
-                axis=1
-                )
-
-        self.cells['nodes'] = numpy.concatenate([
-            self.cells['nodes'][is_good_cell],
-            new_cells[:, 0, :],
-            new_cells[:, 1, :]
-            ])
-
-        # Create and return new mesh.
-        # TODO by more economic here
-        new_mesh = MeshTri(self.node_coords, self.cells['nodes'])
-        # # create data
-        # self.compute_data()
-
-        return new_mesh
 
     def compute_data(self, flat_boundary_correction=True):
         self.compute_edge_lengths()
@@ -524,11 +522,11 @@ class MeshTri(_base_mesh):
             centroid_data.append(fbc.integral_x())
 
         # Sum up all the partial entities for convenience.
-        self.ce_ratios = numpy.zeros(len(self.edges['nodes']), dtype=float)
+        self.ce_ratios = numpy.zeros(len(self.edges['nodes']))
         cells_edges = self.cells['edges']
         numpy.add.at(self.ce_ratios, cells_edges, self.ce_ratios_per_half_edge)
         # control volumes
-        self.control_volumes = numpy.zeros(len(self.node_coords), dtype=float)
+        self.control_volumes = numpy.zeros(len(self.node_coords))
         for d in control_volume_data:
             numpy.add.at(self.control_volumes, d[0], d[1])
         # surface areas
