@@ -503,33 +503,28 @@ class MeshTri(_base_mesh):
 
         # control_volumes
         ids, vals = self.compute_control_volumes(regular_cell_ids)
-        self.control_volumes = numpy.zeros(len(self.node_coords), dtype=float)
         if flat_boundary_correction:
-            # flat boundary elements
             fb_ids, fb_vals = fbc.control_volumes()
-            numpy.add.at(
-                self.control_volumes,
-                numpy.concatenate([ids, fb_ids]),
-                numpy.concatenate([vals, fb_vals])
-                )
-        else:
-            numpy.add.at(self.control_volumes, ids, vals)
+            ids = numpy.concatenate([ids, fb_ids])
+            vals = numpy.concatenate([vals, fb_vals])
+        # add it up
+        self.control_volumes = numpy.zeros(len(self.node_coords), dtype=float)
+        numpy.add.at(self.control_volumes, ids, vals)
 
         # surface areas
         ids0, vals0 = self.compute_surface_areas(
                 regular_boundary_cell_ids,
                 regular_local_edge_ids
                 )
-        self.surface_areas = numpy.zeros(len(self.node_coords))
+        ids = ids0
+        vals = vals0
         if flat_boundary_correction:
             ids1, vals1 = fbc.surface_areas()
-            numpy.add.at(
-                    self.surface_areas,
-                    numpy.concatenate([ids0, ids1]),
-                    numpy.concatenate([vals0, vals1])
-                    )
-        else:
-            numpy.add.at(self.surface_areas, ids0, vals0)
+            ids = numpy.concatenate([ids, ids1])
+            vals = numpy.concatenate([vals, vals1])
+        # add them up
+        self.surface_areas = numpy.zeros(len(self.node_coords))
+        numpy.add.at(self.surface_areas, ids, vals)
 
         # Compute the control volume centroids.
         # This is actually only necessary for special applications like Lloyd's
