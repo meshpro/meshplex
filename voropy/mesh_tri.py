@@ -464,8 +464,13 @@ class MeshTri(_base_mesh):
                 self.node_coords[self.cells['nodes']]
                 )
 
+        edge_nodes = self.edges['nodes']
+        edges = \
+            self.node_coords[edge_nodes[:, 1]] - \
+            self.node_coords[edge_nodes[:, 0]]
+
         self.cell_volumes, self.ce_ratios_per_half_edge = \
-            self.compute_cell_volumes_and_ce_ratios()
+            self._compute_cell_volumes_and_ce_ratios(edges)
 
         # Find out which boundary cells need special treatment
         is_flat_boundary = numpy.logical_and(
@@ -487,7 +492,7 @@ class MeshTri(_base_mesh):
 
         # control_volumes
         control_volume_data = [
-            self.compute_control_volumes(self.regular_cell_ids)
+            self._compute_control_volumes(self.regular_cell_ids, edges)
             ]
 
         self.flat_boundary_correction = flat_boundary_correction
@@ -624,23 +629,14 @@ class MeshTri(_base_mesh):
             edge_cells[edge_id].append(k % num_cells)
         return edge_cells
 
-    def compute_cell_volumes_and_ce_ratios(self):
-        edge_nodes = self.edges['nodes']
-        edges = \
-            self.node_coords[edge_nodes[:, 1]] - \
-            self.node_coords[edge_nodes[:, 0]]
+    def _compute_cell_volumes_and_ce_ratios(self, edges):
         cells_edges = edges[self.cells['edges']]
         e0 = cells_edges[:, 0, :]
         e1 = cells_edges[:, 1, :]
         e2 = cells_edges[:, 2, :]
         return compute_tri_areas_and_ce_ratios(e0, e1, e2)
 
-    def compute_control_volumes(self, cell_ids):
-        edge_nodes = self.edges['nodes']
-
-        edges = \
-            self.node_coords[edge_nodes[:, 1]] - \
-            self.node_coords[edge_nodes[:, 0]]
+    def _compute_control_volumes(self, cell_ids, edges):
         # Compute the control volumes. Note that
         #   0.5 * (0.5 * edge_length) * covolume
         # = 0.25 * edge_length**2 * ce_ratio_edge_ratio
