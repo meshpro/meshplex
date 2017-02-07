@@ -177,11 +177,14 @@ class _base_mesh(object):
             field_data=field_data
             )
 
-    def compute_edge_lengths(self):
-        edges = self.node_coords[self.edges['nodes'][:, 1]] \
-            - self.node_coords[self.edges['nodes'][:, 0]]
-        self.edge_lengths = numpy.sqrt(_row_dot(edges, edges))
-        return
+    def compute_edge_lengths(self, edge_ids=None):
+        if edge_ids is not None:
+            edges = self.node_coords[self.edges['nodes'][edge_ids, 1]] \
+                - self.node_coords[self.edges['nodes'][edge_ids, 0]]
+        else:
+            edges = self.node_coords[self.edges['nodes'][:, 1]] \
+                - self.node_coords[self.edges['nodes'][:, 0]]
+        return numpy.sqrt(_row_dot(edges, edges))
 
     def get_edges(self, subdomain):
         if subdomain not in self.subdomains:

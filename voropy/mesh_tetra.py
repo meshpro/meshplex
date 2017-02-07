@@ -22,10 +22,17 @@ class MeshTetra(_base_mesh):
     def __init__(self, node_coords, cells, mode='algebraic'):
         '''Initialization.
         '''
-        # Make sure to only to include those vertices which are part of a cell
-        uvertices, uidx = numpy.unique(cells, return_inverse=True)
-        cells = uidx.reshape(cells.shape)
-        node_coords = node_coords[uvertices]
+        # Assert that all vertices are used.
+        # If there are vertices which do not appear in the cells list, this
+        # ```
+        # uvertices, uidx = numpy.unique(cells, return_inverse=True)
+        # cells = uidx.reshape(cells.shape)
+        # nodes = nodes[uvertices]
+        # ```
+        # helps.
+        is_used = numpy.zeros(len(node_coords), dtype=bool)
+        is_used[cells.flat] = True
+        assert all(is_used)
 
         super(MeshTetra, self).__init__(node_coords, cells)
 
@@ -35,7 +42,7 @@ class MeshTetra(_base_mesh):
 
         self.create_adjacent_entities()
         self.create_cell_circumcenters_and_volumes()
-        self.compute_edge_lengths()
+        self.edge_lengths = self.compute_edge_lengths()
 
         num_edges = len(self.edges['nodes'])
         self.ce_ratios = numpy.zeros(num_edges, dtype=float)
