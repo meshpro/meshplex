@@ -434,10 +434,17 @@ class MeshTri(_base_mesh):
     def __init__(self, nodes, cells, flat_boundary_correction=True):
         '''Initialization.
         '''
-        # Make sure to only to include those vertices which are part of a cell
-        uvertices, uidx = numpy.unique(cells, return_inverse=True)
-        cells = uidx.reshape(cells.shape)
-        nodes = nodes[uvertices]
+        # Assert that all vertices are used.
+        # If there are vertices which do not appear in the cells list, this
+        # ```
+        # uvertices, uidx = numpy.unique(cells, return_inverse=True)
+        # cells = uidx.reshape(cells.shape)
+        # nodes = nodes[uvertices]
+        # ```
+        # helps.
+        is_used = numpy.zeros(len(nodes), dtype=bool)
+        is_used[cells.flat] = True
+        assert all(is_used)
 
         super(MeshTri, self).__init__(nodes, cells)
         self.cells = numpy.empty(
