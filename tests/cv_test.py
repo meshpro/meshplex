@@ -202,7 +202,7 @@ def test_degenerate_small0b(h):
     # surface areas
     alpha = 0.5 + 0.5*edge_length
     beta = edge_length
-    assert _near_equal(mesh.surface_areas, [alpha, alpha, beta], tol)
+    assert _near_equal(mesh.compute_surface_areas(), [alpha, alpha, beta], tol)
 
     assert mesh.num_delaunay_violations() == 0
     return
@@ -249,7 +249,7 @@ def test_degenerate_small0b_fbc():
     g = numpy.sqrt((0.5 * edge_length)**2 + (ce * edge_length)**2)
     alpha = 0.5 * edge_length + g
     beta = edge_length + (1.0 - 2*g)
-    assert _near_equal(mesh.surface_areas, [alpha, alpha, beta], tol)
+    assert _near_equal(mesh.compute_surface_areas(), [alpha, alpha, beta], tol)
 
     # centroids
     centroids = mesh.compute_control_volume_centroids()
@@ -307,7 +307,8 @@ def test_degenerate_small1(h, a):
     alpha1 = b2 + 0.5*el2
     total = 1.0 + el1 + el2
     alpha2 = total - alpha0 - alpha1
-    assert _near_equal(mesh.surface_areas, [alpha0, alpha1, alpha2], tol)
+    surf = mesh.compute_surface_areas()
+    assert _near_equal(surf, [alpha0, alpha1, alpha2], tol)
 
     assert mesh.num_delaunay_violations() == 0
     return
