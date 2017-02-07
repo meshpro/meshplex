@@ -173,6 +173,9 @@ class MeshTetra(_base_mesh):
     def create_cell_circumcenters_and_volumes(self):
         '''Computes the center of the circumsphere of each cell.
         '''
+        # TODO replace all cross products by dot-products
+        # (e.g., <a x b, c x d> = <a, c><b, d> - <...
+        #
         cell_coords = self.node_coords[self.cells['nodes']]
 
         a = cell_coords[:, 1, :] - cell_coords[:, 0, :]
