@@ -6,7 +6,7 @@
 [![PyPi Version](https://img.shields.io/pypi/v/voropy.svg)](https://pypi.python.org/pypi/voropy)
 [![GitHub stars](https://img.shields.io/github/stars/nschloe/voropy.svg?style=social&label=Star&maxAge=2592000)](https://github.com/nschloe/voropy)
 
-<img src="https://nschloe.github.io/voropy/logo.png" width="20%">
+![voropy logo](https://nschloe.github.io/voropy/logo-180x180.png)
 
 Compute Voronoi tesselations and everything else you need for finite-volume
 discretizations. Do it fast, too.
@@ -48,7 +48,7 @@ improve the quality your mesh. To use, simply type
 ```
 lloyd_smoothing --verbose -t 1.0e-3 pacman.msh out.msh
 ```
-<img src="https://nschloe.github.io/voropy/lloyd.gif" width="20%">
+![Lloyd's algorithm](https://nschloe.github.io/voropy/lloyd.gif)
 
 ### Installation
 
