@@ -61,18 +61,39 @@ def lloyd_smoothing(mesh, tol, verbose=True, output_filetype=None):
         max_move = numpy.sqrt(numpy.max(numpy.sum(diff*diff, axis=1)))
 
         if verbose:
-            print('step: %d' % k)
-            print(
-                '  maximum move:              %.15e' % max_move
-                )
-            min_ce_ratios = numpy.min(mesh.ce_ratios_per_half_edge.flat)
-            av_ce_ratios = numpy.sum(mesh.ce_ratios_per_half_edge.flat) \
-                / len(mesh.ce_ratios_per_half_edge.flat)
-            max_ce_ratios = numpy.max(mesh.ce_ratios_per_half_edge.flat)
-            print(
-                '  c/e ratios (min, av, max): %.15e  %.15e  %.15e' %
-                (min_ce_ratios, av_ce_ratios, max_ce_ratios)
-                )
+            print('\nstep: %d' % k)
+            print('  maximum move: %.15e' % max_move)
+
+            vals = mesh.ce_ratios_per_half_edge.flat
+            counts = [
+                numpy.sum(vals < 0.0),
+                numpy.sum(numpy.logical_and(0.0 <= vals, vals < 0.1)),
+                numpy.sum(numpy.logical_and(0.1 <= vals, vals < 0.2)),
+                numpy.sum(numpy.logical_and(0.2 <= vals, vals < 0.3)),
+                numpy.sum(numpy.logical_and(0.3 <= vals, vals < 0.4)),
+                numpy.sum(numpy.logical_and(0.4 <= vals, vals < 0.5)),
+                numpy.sum(numpy.logical_and(0.5 <= vals, vals < 0.6)),
+                numpy.sum(numpy.logical_and(0.6 <= vals, vals < 0.7)),
+                numpy.sum(0.7 <= vals),
+                ]
+            print('  covolume/edge length ratios:\n')
+            print('            ce < 0.0:   %d' % counts[0])
+            print('      0.0 < ce < 0.1:   %d' % counts[1])
+            print('      0.1 < ce < 0.2:   %d' % counts[2])
+            print('      0.2 < ce < 0.3:   %d' % counts[3])
+            print('      0.3 < ce < 0.4:   %d' % counts[4])
+            print('      0.4 < ce < 0.5:   %d' % counts[5])
+            print('      0.5 < ce < 0.6:   %d' % counts[6])
+            print('      0.6 < ce < 0.7:   %d' % counts[7])
+            print('      0.7 < ce      :   %d' % counts[8])
+
+            # av_ce_ratios = numpy.sum(mesh.ce_ratios_per_half_edge.flat) \
+            #     / len(mesh.ce_ratios_per_half_edge.flat)
+            # max_ce_ratios = numpy.max(mesh.ce_ratios_per_half_edge.flat)
+            # print(
+            #     '  c/e ratios (min, av, max): %.15e  %.15e  %.15e' %
+            #     (min_ce_ratios, av_ce_ratios, max_ce_ratios)
+            #     )
 
         # create new mesh and flip edges if necessary
         mesh = MeshTri(
