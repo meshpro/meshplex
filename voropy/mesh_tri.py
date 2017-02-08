@@ -67,7 +67,18 @@ def lloyd_smoothing(mesh, tol, verbose=True, output_filetype=None):
         max_move = numpy.sqrt(numpy.max(numpy.sum(diff*diff, axis=1)))
 
         if verbose:
-            print('step: %d,  maximum move: %.15e' % (k, max_move))
+            print('step: %d' % k)
+            print(
+                '  maximum move:              %.15e' % max_move
+                )
+            min_ce_ratios = numpy.min(mesh.ce_ratios_per_half_edge.flat)
+            av_ce_ratios = numpy.sum(mesh.ce_ratios_per_half_edge.flat) \
+                / len(mesh.ce_ratios_per_half_edge.flat)
+            max_ce_ratios = numpy.max(mesh.ce_ratios_per_half_edge.flat)
+            print(
+                '  c/e ratios (min, av, max): %.15e  %.15e  %.15e' %
+                (min_ce_ratios, av_ce_ratios, max_ce_ratios)
+                )
 
         # create new mesh and flip edges if necessary
         mesh = MeshTri(
@@ -438,6 +449,7 @@ def flip_edges(mesh):
     new_mesh = MeshTri(
         mesh.node_coords,
         mesh.cells['nodes'],
+        # Don't actually need that last bit here.
         flat_boundary_correction=True
         )
 
