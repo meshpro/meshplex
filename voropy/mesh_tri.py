@@ -21,6 +21,13 @@ def lloyd_smoothing(mesh, tol, verbose=True, output_filetype=None):
     # 2D mesh
     assert all(mesh.node_coords[:, 2] == 0.0)
 
+    # make sure that flat_boundary_correction is active
+    mesh = MeshTri(
+            mesh.node_coords,
+            mesh.cells['nodes'],
+            flat_boundary_correction=True
+            )
+
     # If any of the covolume-edge length ratios is negative, it must be on the
     # interior. If we flip the edge, it should be positive.
     ce_ratios = mesh.compute_ce_ratios()
@@ -63,7 +70,11 @@ def lloyd_smoothing(mesh, tol, verbose=True, output_filetype=None):
             print('step: %d,  maximum move: %.15e' % (k, max_move))
 
         # create new mesh and flip edges if necessary
-        mesh = MeshTri(new_points, mesh.cells['nodes'])
+        mesh = MeshTri(
+                new_points,
+                mesh.cells['nodes'],
+                flat_boundary_correction=True
+                )
         # mesh.show()
         # plt.show()
 
@@ -424,8 +435,11 @@ def flip_edges(mesh):
         ])
 
     # Create and return new mesh.
-    # TODO be more economic here
-    new_mesh = MeshTri(mesh.node_coords, mesh.cells['nodes'])
+    new_mesh = MeshTri(
+        mesh.node_coords,
+        mesh.cells['nodes'],
+        flat_boundary_correction=True
+        )
 
     return new_mesh
 
@@ -435,9 +449,11 @@ class MeshTri(_base_mesh):
 
     .. inheritance-diagram:: MeshTri
     '''
-    def __init__(self, nodes, cells, flat_boundary_correction=True):
+    def __init__(self, nodes, cells, flat_boundary_correction=False):
         '''Initialization.
         '''
+        super(MeshTri, self).__init__(nodes, cells)
+
         # Assert that all vertices are used.
         # If there are vertices which do not appear in the cells list, this
         # ```
@@ -450,7 +466,6 @@ class MeshTri(_base_mesh):
         is_used[cells.flat] = True
         assert all(is_used)
 
-        super(MeshTri, self).__init__(nodes, cells)
         self.cells = numpy.empty(
                 len(cells),
                 dtype=numpy.dtype([('nodes', (int, 3))])

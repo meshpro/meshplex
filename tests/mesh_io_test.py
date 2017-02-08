@@ -13,7 +13,7 @@ def test_io_2d():
             zigzag=True
             )
     mesh = voropy.mesh_tri.MeshTri(vertices, cells)
-    # mesh, _, _, _ = voropy.reader.read('pacman.vtu')
+    # mesh, _, _, _ = voropy.read('pacman.vtu')
 
     assert mesh.num_delaunay_violations() == 0
 
@@ -25,7 +25,7 @@ def test_io_2d():
     _, fname = tempfile.mkstemp(suffix='.msh')
     mesh.write(fname)
 
-    mesh2, _, _, _ = voropy.reader.read(fname)
+    mesh2, _, _, _ = voropy.read(fname)
 
     for k in range(len(mesh.cells['nodes'])):
         assert tuple(mesh.cells['nodes'][k]) == tuple(mesh2.cells['nodes'][k])
@@ -47,7 +47,7 @@ def test_io_2d():
 
 #     mesh.write('test.vtu')
 
-#     mesh2, _, _, _ = voropy.reader.read('test.vtu')
+#     mesh2, _, _, _ = voropy.read('test.vtu')
 
 #     for k in range(len(mesh.cells['nodes'])):
 #         self.assertEqual(

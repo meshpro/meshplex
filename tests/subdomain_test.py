@@ -9,7 +9,7 @@ def test_get_edges():
             'pacman.msh',
             '2da8ff96537f844a95a83abb48471b6a'
             )
-    mesh, _, _, _ = voropy.reader.read(filename)
+    mesh, _, _, _ = voropy.read(filename)
     edges = mesh.get_edges('everywhere')
     assert len(edges) == 1276
     return
@@ -20,7 +20,7 @@ def test_mark_subdomain():
             'pacman.msh',
             '2da8ff96537f844a95a83abb48471b6a'
             )
-    mesh, _, _, _ = voropy.reader.read(filename)
+    mesh, _, _, _ = voropy.read(filename)
 
     class Subdomain(object):
         def __init__(self):

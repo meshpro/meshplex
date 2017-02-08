@@ -286,7 +286,8 @@ def test_degenerate_small1(h, a):
     cells = numpy.array([[0, 1, 2]])
     mesh = voropy.mesh_tri.MeshTri(
             points,
-            cells
+            cells,
+            flat_boundary_correction=True
             )
 
     tol = 1.0e-14
@@ -648,7 +649,7 @@ def test_tetrahedron():
             'tetrahedron.msh',
             '27a5d7e102e6613a1e58629c252cb293'
             )
-    mesh, _, _, _ = voropy.reader.read(filename)
+    mesh, _, _, _ = voropy.read(filename)
     # mesh.show_edge(54)
     _run(
         mesh,
@@ -665,7 +666,7 @@ def test_pacman():
             'pacman.msh',
             '2da8ff96537f844a95a83abb48471b6a'
             )
-    mesh, _, _, _ = voropy.reader.read(filename)
+    mesh, _, _, _ = voropy.read(filename, flat_boundary_correction=True)
 
     _run(
         mesh,
@@ -713,7 +714,7 @@ def test_sphere():
             'sphere.msh',
             '70a5dbf79c3b259ed993458ff4aa2e93'
             )
-    mesh, _, _, _ = voropy.reader.read(filename)
+    mesh, _, _, _ = voropy.read(filename)
     _run(
         mesh,
         12.273645818711595,
@@ -761,7 +762,7 @@ def test_toy_algebraic():
         'toy.msh',
         '1d125d3fa9f373823edd91ebae5f7a81'
         )
-    mesh, _, _, _ = voropy.reader.read(filename)
+    mesh, _, _, _ = voropy.read(filename)
 
     # Even if the input data has only a small error, the error in the
     # ce_ratios can be magnitudes larger. This is demonstrated here: Take
@@ -804,7 +805,7 @@ def test_toy_geometric():
         'toy.msh',
         '1d125d3fa9f373823edd91ebae5f7a81'
         )
-    mesh, _, _, _ = voropy.reader.read(filename)
+    mesh, _, _, _ = voropy.read(filename)
 
     mesh = voropy.mesh_tetra.MeshTetra(
         mesh.node_coords,

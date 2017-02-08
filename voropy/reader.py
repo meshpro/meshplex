@@ -12,7 +12,7 @@ import voropy
 __all__ = ['read']
 
 
-def read(filename):
+def read(filename, flat_boundary_correction=False):
     '''Reads an unstructured mesh with added data.
 
     :param filenames: The files to read from.
@@ -30,7 +30,10 @@ def read(filename):
         return voropy.mesh_tetra.MeshTetra(points, cells_nodes['tetra']), \
                point_data, cell_data, field_data
     elif 'triangle' in cells_nodes:
-        return voropy.mesh_tri.MeshTri(points, cells_nodes['triangle']), \
+        return voropy.mesh_tri.MeshTri(
+               points, cells_nodes['triangle'],
+               flat_boundary_correction=flat_boundary_correction
+               ), \
                point_data, cell_data, field_data
     else:
         raise RuntimeError('Unknown mesh type.')

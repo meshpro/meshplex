@@ -11,7 +11,7 @@ def test_pacman_lloyd():
             'pacman.msh',
             '2da8ff96537f844a95a83abb48471b6a'
             )
-    mesh, _, _, _ = voropy.reader.read(filename)
+    mesh, _, _, _ = voropy.read(filename, flat_boundary_correction=True)
 
     mesh = voropy.mesh_tri.lloyd_smoothing(
             mesh,

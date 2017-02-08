@@ -26,7 +26,7 @@ and much more.
 To use voropy, simple read a mesh (e.g., [this
 pacman](https://sourceforge.net/projects/meshzoo-data/files/pacman.msh/download)):
 ```python
-mesh = voropy.reader.read('pacman.msh')
+mesh = voropy.read('pacman.msh')
 
 print(mesh.node_coords)
 print(mesh.control_volumes)
