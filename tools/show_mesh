@@ -3,6 +3,7 @@
 import argparse
 import numpy
 from matplotlib import pyplot as plt
+import meshio
 import voropy
 
 
@@ -12,8 +13,8 @@ def _parse_input_arguments():
         )
 
     parser.add_argument(
-        'input',
-        metavar='INPUT',
+        'file',
+        metavar='FILE',
         type=str,
         help='Input file'
         )
@@ -23,6 +24,16 @@ def _parse_input_arguments():
 
 if __name__ == '__main__':
     args = _parse_input_arguments()
-    mesh, _, _, _ = voropy.read(args.input, flat_boundary_correction=True)
+
+    pts, cells, _, _, _ = meshio.read(args.file)
+    cells = cells['triangle']
+
+    # toss away all nodes which don't belong to cells
+    uvertices, uidx = numpy.unique(cells, return_inverse=True)
+    cells = uidx.reshape(cells.shape)
+    pts = pts[uvertices]
+
+    mesh = voropy.mesh_tri.MeshTri(pts, cells)
+
     mesh.show()
     plt.show()
