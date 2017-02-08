@@ -1,0 +1,28 @@
+#! /usr/bin/env python
+# -*- coding: utf-8 -*-
+import argparse
+import numpy
+from matplotlib import pyplot as plt
+import voropy
+
+
+def _parse_input_arguments():
+    parser = argparse.ArgumentParser(
+        description='Show triangular mesh with control volumes etc.'
+        )
+
+    parser.add_argument(
+        'input',
+        metavar='INPUT',
+        type=str,
+        help='Input file'
+        )
+
+    return parser.parse_args()
+
+
+if __name__ == '__main__':
+    args = _parse_input_arguments()
+    mesh, _, _, _ = voropy.read(args.input, flat_boundary_correction=True)
+    mesh.show()
+    plt.show()
