@@ -20,13 +20,7 @@ def lloyd_smoothing(mesh, tol, verbose=True, output_filetype=None):
 
     # 2D mesh
     assert all(mesh.node_coords[:, 2] == 0.0)
-
-    # make sure that flat_boundary_correction is active
-    mesh = MeshTri(
-            mesh.node_coords,
-            mesh.cells['nodes'],
-            flat_boundary_correction=True
-            )
+    assert mesh.flat_boundary_correction
 
     # If any of the covolume-edge length ratios is negative, it must be on the
     # interior. If we flip the edge, it should be positive.

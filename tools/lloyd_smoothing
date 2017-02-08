@@ -52,7 +52,7 @@ def _parse_input_arguments():
 
 if __name__ == '__main__':
     args = _parse_input_arguments()
-    mesh, _, _, _ = voropy.read(args.input)
+    mesh, _, _, _ = voropy.read(args.input, flat_boundary_correction=True)
     out_mesh = voropy.mesh_tri.lloyd_smoothing(
         mesh,
         args.tolerance,
