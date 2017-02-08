@@ -925,6 +925,8 @@ class MeshTri(_base_mesh):
         ax.set_xlim(xmin, xmax)
         ax.set_ylim(ymin, ymax)
 
+        new_red = '#d62728'  # mpl 2.0 default red
+
         # Get edges, cut off z-component.
         e = self.node_coords[self.edges['nodes']][:, :, :2]
         # Plot regular edges, mark those with negative ce-ratio red.
@@ -934,7 +936,7 @@ class MeshTri(_base_mesh):
         ax.add_collection(line_segments0)
         #
         neg = numpy.logical_not(pos)
-        line_segments1 = LineCollection(e[neg], color='r')
+        line_segments1 = LineCollection(e[neg], color=new_red)
         ax.add_collection(line_segments1)
 
         if show_ce_ratios:
@@ -978,7 +980,13 @@ class MeshTri(_base_mesh):
 
         if show_centroids:
             centroids = self.compute_control_volume_centroids()
-            ax.plot(centroids[:, 0], centroids[:, 1], 'r.')
+            ax.plot(
+                centroids[:, 0],
+                centroids[:, 1],
+                linestyle='',
+                marker='.',
+                color=new_red,
+                )
 
         return fig
 
