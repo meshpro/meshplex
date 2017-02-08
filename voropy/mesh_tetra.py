@@ -64,10 +64,13 @@ class MeshTetra(_base_mesh):
         else:
             raise ValueError('Illegal mode \'%s\'.' % mode)
 
-        self.compute_control_volumes()
+        self._compute_control_volumes()
 
         self.mark_default_subdomains()
         return
+
+    def compute_ce_ratios(self):
+        return self.ce_ratios
 
     def mark_default_subdomains(self):
         self.subdomains = {}
@@ -302,6 +305,9 @@ class MeshTetra(_base_mesh):
         return s
 
     def compute_control_volumes(self):
+        return self.control_volumes
+
+    def _compute_control_volumes(self):
         '''Compute the control volumes of all nodes in the mesh.
         '''
         self.control_volumes = numpy.zeros(len(self.node_coords), dtype=float)
@@ -315,7 +321,6 @@ class MeshTetra(_base_mesh):
         edge_nodes = self.edges['nodes']
         numpy.add.at(self.control_volumes, edge_nodes[:, 0], vals)
         numpy.add.at(self.control_volumes, edge_nodes[:, 1], vals)
-
         return
 
     def num_delaunay_violations(self):

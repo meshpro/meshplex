@@ -23,9 +23,11 @@ def lloyd_smoothing(mesh, tol, verbose=True, output_filetype=None):
 
     # If any of the covolume-edge length ratios is negative, it must be on the
     # interior. If we flip the edge, it should be positive.
-    if any(mesh.ce_ratios < 0.0):
+    ce_ratios = mesh.compute_ce_ratios()
+    if any(ce_ratios < 0.0):
         mesh = flip_edges(mesh)
-    assert all(mesh.ce_ratios >= 0.0)
+    ce_ratios = mesh.compute_ce_ratios()
+    assert all(ce_ratios >= 0.0)
 
     boundary_verts = mesh.get_vertices('boundary')
 
@@ -65,10 +67,11 @@ def lloyd_smoothing(mesh, tol, verbose=True, output_filetype=None):
         # mesh.show()
         # plt.show()
 
-        if any(mesh.ce_ratios < 0.0):
+        ce_ratios = mesh.compute_ce_ratios()
+        if any(ce_ratios < 0.0):
             mesh = flip_edges(mesh)
-
-        assert all(mesh.ce_ratios >= 0.0)
+        ce_ratios = mesh.compute_ce_ratios()
+        assert all(ce_ratios >= 0.0)
 
         if output_filetype:
             if output_filetype == 'png':
@@ -364,7 +367,8 @@ def flip_edges(mesh):
     negative covolume (i.e., a negative covolume-edge length ratio). The
     resulting mesh is Delaunay.
     '''
-    is_flip_edge = mesh.ce_ratios < 0.0
+    ce_ratios = mesh.compute_ce_ratios()
+    is_flip_edge = ce_ratios < 0.0
 
     is_flip_edge_per_cell = is_flip_edge[mesh.cells['edges']]
 
@@ -464,13 +468,22 @@ class MeshTri(_base_mesh):
                 self.node_coords[self.cells['nodes']]
                 )
 
-        edge_nodes = self.edges['nodes']
-        edges = \
-            self.node_coords[edge_nodes[:, 1]] - \
-            self.node_coords[edge_nodes[:, 0]]
+        cell_nodes = self.cells['nodes']
+        pts = self.node_coords
+        # Make sure that the k-th edge is opposite of the k-th point in the
+        # triangle.
+        half_edge_coords = numpy.stack([
+            pts[cell_nodes[:, 2]] - pts[cell_nodes[:, 1]],
+            pts[cell_nodes[:, 0]] - pts[cell_nodes[:, 2]],
+            pts[cell_nodes[:, 1]] - pts[cell_nodes[:, 0]],
+            ], axis=1)
+
+        e0h = half_edge_coords[:, 0, :]
+        e1h = half_edge_coords[:, 1, :]
+        e2h = half_edge_coords[:, 2, :]
 
         self.cell_volumes, self.ce_ratios_per_half_edge = \
-            self._compute_cell_volumes_and_ce_ratios(edges)
+            self._compute_cell_volumes_and_ce_ratios(e0h, e1h, e2h)
 
         # Find out which boundary cells need special treatment
         is_flat_boundary = numpy.logical_and(
@@ -491,8 +504,10 @@ class MeshTri(_base_mesh):
                 )[0]
 
         # control_volumes
-        control_volume_data = [
-            self._compute_control_volumes(self.regular_cell_ids, edges)
+        self.control_volume_data = [
+            self._compute_control_volumes(
+                self.regular_cell_ids, half_edge_coords
+                )
             ]
 
         self.flat_boundary_correction = flat_boundary_correction
@@ -502,18 +517,23 @@ class MeshTri(_base_mesh):
                     )
             ids, vals = self.fbc.correct_ce_ratios()
             self.ce_ratios_per_half_edge[ids] = vals
-            control_volume_data.append(self.fbc.control_volumes())
-
-        # Sum up all the partial entities for convenience.
-        self.ce_ratios = numpy.zeros(len(self.edges['nodes']))
-        cells_edges = self.cells['edges']
-        numpy.add.at(self.ce_ratios, cells_edges, self.ce_ratios_per_half_edge)
-        # control volumes
-        self.control_volumes = numpy.zeros(len(self.node_coords))
-        for d in control_volume_data:
-            numpy.add.at(self.control_volumes, d[0], d[1])
+            self.control_volume_data.append(self.fbc.control_volumes())
 
         return
+
+    def compute_ce_ratios(self):
+        # sum up from self.ce_ratios_per_half_edge
+        ce_ratios = numpy.zeros(len(self.edges['nodes']))
+        cells_edges = self.cells['edges']
+        numpy.add.at(ce_ratios, cells_edges, self.ce_ratios_per_half_edge)
+        return ce_ratios
+
+    def compute_control_volumes(self):
+        # sum up from self.control_volume_data
+        control_volumes = numpy.zeros(len(self.node_coords))
+        for d in self.control_volume_data:
+            numpy.add.at(control_volumes, d[0], d[1])
+        return control_volumes
 
     def compute_surface_areas(self):
         # surface areas
@@ -552,7 +572,8 @@ class MeshTri(_base_mesh):
         for d in centroid_data:
             numpy.add.at(centroids, d[0], d[1])
         # Divide by the control volume
-        centroids /= self.control_volumes[:, None]
+        control_volumes = self.compute_control_volumes()
+        centroids /= control_volumes[:, None]
         return centroids
 
     def mark_default_subdomains(self):
@@ -629,19 +650,22 @@ class MeshTri(_base_mesh):
             edge_cells[edge_id].append(k % num_cells)
         return edge_cells
 
-    def _compute_cell_volumes_and_ce_ratios(self, edges):
-        cells_edges = edges[self.cells['edges']]
-        e0 = cells_edges[:, 0, :]
-        e1 = cells_edges[:, 1, :]
-        e2 = cells_edges[:, 2, :]
+    def _compute_cell_volumes_and_ce_ratios(self, e0, e1, e2):
+        # cells_edges = edges[self.cells['edges']]
+        # e0 = cells_edges[:, 0, :]
+        # e1 = cells_edges[:, 1, :]
+        # e2 = cells_edges[:, 2, :]
+        # e0 = half_edge_coords[:, 0, :]
+        # e1 = half_edge_coords[:, 1, :]
+        # e2 = half_edge_coords[:, 2, :]
         return compute_tri_areas_and_ce_ratios(e0, e1, e2)
 
-    def _compute_control_volumes(self, cell_ids, edges):
+    def _compute_control_volumes(self, cell_ids, half_edge_coords):
         # Compute the control volumes. Note that
         #   0.5 * (0.5 * edge_length) * covolume
         # = 0.25 * edge_length**2 * ce_ratio_edge_ratio
-        edge_lengths_squared = _row_dot(edges, edges)
-        el2 = edge_lengths_squared[self.cells['edges'][cell_ids]]
+        # TODO replace by something faster, e.g., einsum
+        el2 = numpy.sum(half_edge_coords[cell_ids]**2, axis=2)
 
         ids = self.edges['nodes'][self.cells['edges'][cell_ids]]
         v = 0.25 * el2 * self.ce_ratios_per_half_edge[cell_ids]
@@ -835,7 +859,8 @@ class MeshTri(_base_mesh):
     def num_delaunay_violations(self):
         # Delaunay violations are present exactly on the interior edges where
         # the ce_ratio is negative. Count those.
-        return numpy.sum(self.ce_ratios[~self.is_boundary_edge] < 0.0)
+        ce_ratios = self.compute_ce_ratios()
+        return numpy.sum(ce_ratios[~self.is_boundary_edge] < 0.0)
 
     def show(
             self,
@@ -882,7 +907,8 @@ class MeshTri(_base_mesh):
         # Get edges, cut off z-component.
         e = self.node_coords[self.edges['nodes']][:, :, :2]
         # Plot regular edges, mark those with negative ce-ratio red.
-        pos = self.ce_ratios >= 0
+        ce_ratios = self.compute_ce_ratios()
+        pos = ce_ratios >= 0
         line_segments0 = LineCollection(e[pos], color=mesh_color)
         ax.add_collection(line_segments0)
         #
