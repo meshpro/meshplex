@@ -486,21 +486,21 @@ class MeshTri(_base_mesh):
             self._compute_cell_volumes_and_ce_ratios(e0h, e1h, e2h)
 
         # Find out which boundary cells need special treatment
-        is_flat_boundary = numpy.logical_and(
+        is_flat_boundary_edge = numpy.logical_and(
             self.ce_ratios_per_half_edge < 0.0,
             self.is_boundary_edge[self.cells['edges']]
             )
-        cell_ids, local_edge_ids = numpy.where(is_flat_boundary)
+        cell_ids, local_edge_ids = numpy.where(is_flat_boundary_edge)
         # regular boundary cells
-        is_regular_boundary = numpy.logical_and(
+        is_regular_boundary_edge = numpy.logical_and(
             self.ce_ratios_per_half_edge >= 0.0,
             self.is_boundary_edge[self.cells['edges']]
             )
         self.regular_boundary_cell_ids, self.regular_local_edge_ids = \
-            numpy.where(is_regular_boundary)
+            numpy.where(is_regular_boundary_edge)
         # All rows which are completely not flat boundary
         self.regular_cell_ids = numpy.where(
-                numpy.all(numpy.logical_not(is_flat_boundary), axis=1)
+                numpy.all(numpy.logical_not(is_flat_boundary_edge), axis=1)
                 )[0]
 
         # control_volumes
