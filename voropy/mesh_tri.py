@@ -872,36 +872,38 @@ class MeshTri(_base_mesh):
         based on
 
         .. math::
-            n\cdot curl(F) = \lim_{A\\to 0} |A|^{-1} \int_{dGamma} F dr;
+            n\cdot curl(F) = \lim_{A\\to 0} |A|^{-1} <\int_{dGamma}, F> dr;
 
         see <https://en.wikipedia.org/wiki/Curl_(mathematics)>. Actually, to
         approximate the integral, one would only need the projection of the
         vector field onto the edges at the midpoint of the edges.
         '''
+        # Compute the projection of A on the edge at each edge midpoint.
         edge_coords = \
             self.node_coords[self.edges['nodes'][:, 1]] - \
             self.node_coords[self.edges['nodes'][:, 0]]
+        nodes = self.edges['nodes']
+        # Take the average of `vector_field` at the end endpoints to get the
+        # approximate value at the edge midpoint.
+        A = 0.5 * numpy.sum(vector_field[nodes], axis=1)
+        edge_dot_A = _row_dot(edge_coords, A)
 
+        # TODO speed up
+        # Get normalized vector orthogonal to triangle
         barycenters = 1./3. * numpy.sum(
                 self.node_coords[self.cells['nodes']],
                 axis=1
                 )
-
-        # Compute the projection of A on the edge at each edge midpoint.
-        nodes = self.edges['nodes']
         x = self.node_coords[nodes]
-        A = 0.5 * numpy.sum(vector_field[nodes], axis=1)
-        edge_dot_A = _row_dot(edge_coords, A)
-
-        directions = numpy.cross(
+        z = numpy.cross(
                 x[self.cells['edges'], 0] - barycenters[:, None, :],
                 x[self.cells['edges'], 1] - barycenters[:, None, :]
                 )
-        dir_nrms = numpy.sqrt(numpy.sum(directions**2, axis=2))
-        directions /= dir_nrms[..., None]
+        z_norms = numpy.sqrt(numpy.einsum('ijk, ijk->ij', z, z))
+        z /= z_norms[..., None]
 
         # a: directions scaled with edge_dot_a
-        a = directions * edge_dot_A[self.cells['edges']][..., None]
+        a = z * edge_dot_A[self.cells['edges']][..., None]
 
         # sum over all local edges
         curl = numpy.sum(a, axis=1)
