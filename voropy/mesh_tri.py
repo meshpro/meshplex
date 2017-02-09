@@ -584,7 +584,7 @@ class MeshTri(_base_mesh):
 
             control_volume_data.append(
                 self._compute_control_volumes(
-                    self.regular_cell_ids, self.half_edge_coords
+                    self.regular_cell_ids
                     )
                 )
 
@@ -649,7 +649,6 @@ class MeshTri(_base_mesh):
                 'vertices': boundary_vertices,
                 'edges': boundary_edges
                 }
-
         return
 
     def create_edges(self):
@@ -709,18 +708,23 @@ class MeshTri(_base_mesh):
     def _compute_cell_volumes_and_ce_ratios(self, e0, e1, e2):
         return compute_tri_areas_and_ce_ratios(e0, e1, e2)
 
-    def _compute_control_volumes(self, cell_ids, half_edge_coords):
+    def _compute_control_volumes(self, cell_ids):
         # Compute the control volumes. Note that
         #   0.5 * (0.5 * edge_length) * covolume
         # = 0.25 * edge_length**2 * ce_ratio_edge_ratio
-        c = half_edge_coords[cell_ids]
+        c = self.half_edge_coords[cell_ids]
         el2 = numpy.einsum('ijk, ijk->ij', c, c)
 
-        ids = self.edges['nodes'][self.cells['edges'][cell_ids]]
         v = 0.25 * el2 * self.ce_ratios_per_half_edge[cell_ids]
         vals = numpy.stack([v, v], axis=2)
 
-        return ids, vals
+        # get edge ids just like sorted in half_edge_coords
+        nds = self.cells['nodes'][cell_ids]
+        nds0 = numpy.column_stack([nds[:, 1], nds[:, 2], nds[:, 0]])
+        nds1 = numpy.column_stack([nds[:, 2], nds[:, 0], nds[:, 1]])
+        edge_nodes = numpy.stack([nds0, nds1], axis=-1)
+
+        return edge_nodes, vals
 
     def _compute_integral_x(self, cell_ids):
         '''Computes the integral of x,
