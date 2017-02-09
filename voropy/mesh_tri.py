@@ -508,10 +508,10 @@ class MeshTri(_base_mesh):
         self._cv_centroids = None
         self._surface_areas = None
 
-        self.compute_data(flat_boundary_correction=flat_boundary_correction)
+        self._compute_data(flat_boundary_correction=flat_boundary_correction)
         return
 
-    def compute_data(self, flat_boundary_correction=True):
+    def _compute_data(self, flat_boundary_correction=True):
         self.cell_circumcenters = compute_triangle_circumcenters(
                 self.node_coords[self.cells['nodes']]
                 )
@@ -596,7 +596,6 @@ class MeshTri(_base_mesh):
 
     def get_surface_areas(self):
         if self._surface_areas is None:
-            # surface areas
             surface_area_data = [self._compute_surface_areas(
                     self.regular_boundary_cell_ids,
                     self.regular_local_edge_ids
@@ -622,7 +621,7 @@ class MeshTri(_base_mesh):
         # by making use of the fact that the control volume around any vertex
         # v_0 is composed of right triangles, two for each adjacent cell.
         if self._cv_centroids is None:
-            centroid_data = [self.compute_integral_x(
+            centroid_data = [self._compute_integral_x(
                 self.cell_circumcenters,
                 self.regular_cell_ids
                 )]
@@ -711,13 +710,6 @@ class MeshTri(_base_mesh):
         return edge_cells
 
     def _compute_cell_volumes_and_ce_ratios(self, e0, e1, e2):
-        # cells_edges = edges[self.cells['edges']]
-        # e0 = cells_edges[:, 0, :]
-        # e1 = cells_edges[:, 1, :]
-        # e2 = cells_edges[:, 2, :]
-        # e0 = half_edge_coords[:, 0, :]
-        # e1 = half_edge_coords[:, 1, :]
-        # e2 = half_edge_coords[:, 2, :]
         return compute_tri_areas_and_ce_ratios(e0, e1, e2)
 
     def _compute_control_volumes(self, cell_ids, half_edge_coords):
@@ -733,7 +725,7 @@ class MeshTri(_base_mesh):
 
         return ids, vals
 
-    def compute_integral_x(self, cell_circumcenters, cell_ids):
+    def _compute_integral_x(self, cell_circumcenters, cell_ids):
         '''Computes the integral of x,
 
           \int_V x,
@@ -875,8 +867,9 @@ class MeshTri(_base_mesh):
 #         return gradient
 
     def compute_curl(self, vector_field):
-        '''Computes the curl of a vector field. While the vector field is
-        point-based, the curl will be cell-based. The approximation is based on
+        '''Computes the curl of a vector field over the mesh. While the vector
+        field is point-based, the curl will be cell-based. The approximation is
+        based on
 
         .. math::
             n\cdot curl(F) = \lim_{A\\to 0} |A|^{-1} \int_{dGamma} F dr;
