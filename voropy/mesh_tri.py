@@ -713,8 +713,8 @@ class MeshTri(_base_mesh):
         # Compute the control volumes. Note that
         #   0.5 * (0.5 * edge_length) * covolume
         # = 0.25 * edge_length**2 * ce_ratio_edge_ratio
-        # TODO replace by something faster, e.g., einsum
-        el2 = numpy.sum(half_edge_coords[cell_ids]**2, axis=2)
+        c = half_edge_coords[cell_ids]
+        el2 = numpy.einsum('ijk, ijk->ij', c, c)
 
         ids = self.edges['nodes'][self.cells['edges'][cell_ids]]
         v = 0.25 * el2 * self.ce_ratios_per_half_edge[cell_ids]
