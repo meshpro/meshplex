@@ -69,7 +69,7 @@ class MeshTetra(_base_mesh):
         self.mark_default_subdomains()
         return
 
-    def compute_ce_ratios(self):
+    def get_ce_ratios(self):
         return self.ce_ratios
 
     def mark_default_subdomains(self):

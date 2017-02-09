@@ -24,13 +24,13 @@ def lloyd_smoothing(mesh, tol, verbose=True, output_filetype=None):
 
     # If any of the covolume-edge length ratios is negative, it must be on the
     # interior. If we flip the edge, it should be positive.
-    ce_ratios = mesh.compute_ce_ratios()
+    ce_ratios = mesh.get_ce_ratios()
     if any(ce_ratios < 0.0):
         mesh = flip_edges(mesh, ce_ratios < 0.0)
 
     assert_ce_ratios = False
     if assert_ce_ratios:
-        assert all(mesh.compute_ce_ratios() >= 0.0)
+        assert all(mesh.get_ce_ratios() >= 0.0)
 
     boundary_verts = mesh.get_vertices('boundary')
 
@@ -106,13 +106,13 @@ def lloyd_smoothing(mesh, tol, verbose=True, output_filetype=None):
         # mesh.show()
         # plt.show()
 
-        ce_ratios = mesh.compute_ce_ratios()
+        ce_ratios = mesh.get_ce_ratios()
         if any(ce_ratios < 0.0):
             mesh = flip_edges(mesh, ce_ratios < 0.0)
 
         assert_ce_ratios = True
         if assert_ce_ratios:
-            assert all(mesh.compute_ce_ratios() >= 0.0)
+            assert all(mesh.get_ce_ratios() >= 0.0)
 
         if output_filetype:
             if output_filetype == 'png':
@@ -503,6 +503,7 @@ class MeshTri(_base_mesh):
         self.create_edges()
         self.mark_default_subdomains()
 
+        self._ce_ratios = None
         self._control_volumes = None
         self._surface_areas = None
 
@@ -562,12 +563,17 @@ class MeshTri(_base_mesh):
 
         return
 
-    def compute_ce_ratios(self):
-        # sum up from self.ce_ratios_per_half_edge
-        ce_ratios = numpy.zeros(len(self.edges['nodes']))
-        cells_edges = self.cells['edges']
-        numpy.add.at(ce_ratios, cells_edges, self.ce_ratios_per_half_edge)
-        return ce_ratios
+    def get_ce_ratios(self):
+        if self._ce_ratios is None:
+            # sum up from self.ce_ratios_per_half_edge
+            cells_edges = self.cells['edges']
+            self._ce_ratios = numpy.zeros(len(self.edges['nodes']))
+            numpy.add.at(
+                    self._ce_ratios,
+                    cells_edges,
+                    self.ce_ratios_per_half_edge
+                    )
+        return self._ce_ratios
 
     def get_control_volumes(self):
         if self._control_volumes is None:
@@ -912,7 +918,7 @@ class MeshTri(_base_mesh):
     def num_delaunay_violations(self):
         # Delaunay violations are present exactly on the interior edges where
         # the ce_ratio is negative. Count those.
-        ce_ratios = self.compute_ce_ratios()
+        ce_ratios = self.get_ce_ratios()
         return numpy.sum(ce_ratios[~self.is_boundary_edge] < 0.0)
 
     def show(
@@ -962,7 +968,7 @@ class MeshTri(_base_mesh):
         # Get edges, cut off z-component.
         e = self.node_coords[self.edges['nodes']][:, :, :2]
         # Plot regular edges, mark those with negative ce-ratio red.
-        ce_ratios = self.compute_ce_ratios()
+        ce_ratios = self.get_ce_ratios()
         pos = ce_ratios >= 0
         line_segments0 = LineCollection(e[pos], color=mesh_color)
         ax.add_collection(line_segments0)
