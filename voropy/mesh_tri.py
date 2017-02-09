@@ -68,18 +68,14 @@ def lloyd_smoothing(mesh, tol, verbose=True, output_filetype=None):
 
             # The cosines of the angles are the negative dot products of
             # the normalized edges adjacent to the angle.
-            e0 = mesh.half_edge_coords[:, 0, :]
-            e1 = mesh.half_edge_coords[:, 1, :]
-            e2 = mesh.half_edge_coords[:, 2, :]
-            #
-            e0 /= numpy.sqrt(_row_dot(e0, e0))[:, None]
-            e1 /= numpy.sqrt(_row_dot(e1, e1))[:, None]
-            e2 /= numpy.sqrt(_row_dot(e2, e2))[:, None]
-            #
-            e0_dot_e1 = _row_dot(e0, e1)
-            e1_dot_e2 = _row_dot(e1, e2)
-            e2_dot_e0 = _row_dot(e2, e0)
-            a = numpy.stack([e0_dot_e1, e1_dot_e2, e2_dot_e0])
+            v = mesh.half_edge_coords
+            # multiply and add along the third coordinate
+            norms = numpy.sqrt(numpy.einsum('ijk, ijk->ij', v, v))
+            e = v / norms[..., None]
+            # Compute the dot-products <e0, e1>, <e1, e2>, <e2, e0> with one
+            # einsum.
+            e_rot = numpy.stack([e[:, 1, :], e[:, 2, :], e[:, 0, :]], axis=1)
+            a = numpy.einsum('ijk, ijk->ij', e, e_rot)
             angles = numpy.arccos(-a) / (2 * numpy.pi) * 360.0
 
             hist, bin_edges = numpy.histogram(
