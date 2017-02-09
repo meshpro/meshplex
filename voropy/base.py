@@ -75,20 +75,20 @@ def compute_tri_areas_and_ce_ratios(e0, e1, e2):
     #   <e1 x e2, e1 x e3> = <e1, e1> <e2, e3> - <e1, e2> <e1, e3>.
     #
     e0_dot_e1 = _row_dot(e0, e1)
-    e0_dot_e2 = _row_dot(e0, e2)
     e1_dot_e2 = _row_dot(e1, e2)
+    e2_dot_e0 = _row_dot(e2, e0)
     #
     e0_dot_e0 = _row_dot(e0, e0)
     e1_dot_e1 = _row_dot(e1, e1)
     e2_dot_e2 = _row_dot(e2, e2)
     #
-    aa = e0_dot_e0 * e1_dot_e2 - e0_dot_e1 * e0_dot_e2
-    bb = e1_dot_e1 * e0_dot_e2 - e0_dot_e1 * e1_dot_e2
-    cc = e2_dot_e2 * e0_dot_e1 - e0_dot_e2 * e1_dot_e2
+    aa = e0_dot_e0 * e1_dot_e2 - e0_dot_e1 * e2_dot_e0
+    bb = e1_dot_e1 * e2_dot_e0 - e0_dot_e1 * e1_dot_e2
+    cc = e2_dot_e2 * e0_dot_e1 - e2_dot_e0 * e1_dot_e2
     # assert abs(aa) == abs(bb)
     # assert abs(bb) == abs(cc)
     a = e1_dot_e2 * 0.5 / numpy.sqrt(abs(aa)) * numpy.sign(aa)
-    b = e0_dot_e2 * 0.5 / numpy.sqrt(abs(bb)) * numpy.sign(bb)
+    b = e2_dot_e0 * 0.5 / numpy.sqrt(abs(bb)) * numpy.sign(bb)
     c = e0_dot_e1 * 0.5 / numpy.sqrt(abs(cc)) * numpy.sign(cc)
 
     # Any of aa, bb, cc are good for this. A more symmetric
