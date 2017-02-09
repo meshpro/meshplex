@@ -901,10 +901,9 @@ class MeshTri(_base_mesh):
         #
         # Since ||z|| = 2*|A|, one can save a sqrt and do
         #
-        #    curl = z * sum_edge_dot_A * 2 / ||z||^2.
+        #    curl = z * sum_edge_dot_A * 0.5 / |A|^2.
         #
-        z_dot_z = _row_dot(z, z)
-        curl = z * (2 * sum_edge_dot_A / z_dot_z)[..., None]
+        curl = z * (0.5 * sum_edge_dot_A / self.cell_volumes**2)[..., None]
         return curl
 
     def num_delaunay_violations(self):
