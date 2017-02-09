@@ -20,7 +20,7 @@ def lloyd_smoothing(mesh, tol, verbose=True, output_filetype=None):
 
     # 2D mesh
     assert all(mesh.node_coords[:, 2] == 0.0)
-    assert mesh.flat_boundary_correction
+    assert mesh.fbc is not None
 
     # If any of the covolume-edge length ratios is negative, it must be on the
     # interior. If we flip the edge, it should be positive.
@@ -530,8 +530,6 @@ class MeshTri(_base_mesh):
         self.cell_volumes, self.ce_ratios_per_half_edge = \
             self._compute_cell_volumes_and_ce_ratios(e0h, e1h, e2h)
 
-        self.flat_boundary_correction = flat_boundary_correction
-
         # Find out which boundary cells need special treatment
         is_flat_boundary_edge = numpy.logical_and(
             self.ce_ratios_per_half_edge < 0.0,
@@ -558,6 +556,7 @@ class MeshTri(_base_mesh):
             ids, vals = self.fbc.correct_ce_ratios()
             self.ce_ratios_per_half_edge[ids] = vals
         else:
+            self.fbc = None
             self.regular_cell_ids = range(len(self.cells['nodes']))
 
         return
@@ -574,7 +573,7 @@ class MeshTri(_base_mesh):
             return self._control_volumes
 
         control_volume_data = []
-        if self.flat_boundary_correction:
+        if self.fbc is not None:
             control_volume_data.append(self.fbc.control_volumes())
 
         control_volume_data.append(
@@ -595,7 +594,7 @@ class MeshTri(_base_mesh):
                 self.regular_boundary_cell_ids,
                 self.regular_local_edge_ids
                 )]
-        if self.flat_boundary_correction:
+        if self.fbc is not None:
             surface_area_data.append(self.fbc.surface_areas())
         # surface areas
         surface_areas = numpy.zeros(len(self.node_coords))
@@ -619,7 +618,7 @@ class MeshTri(_base_mesh):
             self.cell_circumcenters,
             self.regular_cell_ids
             )]
-        if self.flat_boundary_correction:
+        if self.fbc is not None:
             centroid_data.append(self.fbc.integral_x())
         # add it all up
         centroids = numpy.zeros((len(self.node_coords), 3))
