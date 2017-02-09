@@ -525,6 +525,11 @@ class MeshTri(_base_mesh):
             pts[cell_nodes[:, 0]] - pts[cell_nodes[:, 2]],
             pts[cell_nodes[:, 1]] - pts[cell_nodes[:, 0]],
             ], axis=1)
+        # Get nodes just like sorted in half_edge_coords
+        nds = self.cells['nodes']
+        nds0 = numpy.column_stack([nds[:, 1], nds[:, 2], nds[:, 0]])
+        nds1 = numpy.column_stack([nds[:, 2], nds[:, 0], nds[:, 1]])
+        self.cell_edge_nodes = numpy.stack([nds0, nds1], axis=-1)
 
         e0h = self.half_edge_coords[:, 0, :]
         e1h = self.half_edge_coords[:, 1, :]
@@ -718,13 +723,7 @@ class MeshTri(_base_mesh):
         v = 0.25 * el2 * self.ce_ratios_per_half_edge[cell_ids]
         vals = numpy.stack([v, v], axis=2)
 
-        # get edge ids just like sorted in half_edge_coords
-        nds = self.cells['nodes'][cell_ids]
-        nds0 = numpy.column_stack([nds[:, 1], nds[:, 2], nds[:, 0]])
-        nds1 = numpy.column_stack([nds[:, 2], nds[:, 0], nds[:, 1]])
-        edge_nodes = numpy.stack([nds0, nds1], axis=-1)
-
-        return edge_nodes, vals
+        return self.cell_edge_nodes[cell_ids], vals
 
     def _compute_integral_x(self, cell_ids):
         '''Computes the integral of x,
@@ -750,10 +749,7 @@ class MeshTri(_base_mesh):
 
         # get edge midpoints with the nodes just like sorted in
         # half_edge_coords
-        nds = self.cells['nodes'][cell_ids]
-        nds0 = numpy.column_stack([nds[:, 1], nds[:, 2], nds[:, 0]])
-        nds1 = numpy.column_stack([nds[:, 2], nds[:, 0], nds[:, 1]])
-        edge_nodes = numpy.stack([nds0, nds1], axis=-1)
+        edge_nodes = self.cell_edge_nodes[cell_ids]
         edge_midpoints = 0.5 * numpy.sum(self.node_coords[edge_nodes], axis=2)
 
         average = (
@@ -879,18 +875,14 @@ class MeshTri(_base_mesh):
         vector field onto the edges at the midpoint of the edges.
         '''
         # Compute the projection of A on the edge at each edge midpoint.
-        # Get nodes just like sorted in half_edge_coords
-        nds = self.cells['nodes']
-        nds0 = numpy.column_stack([nds[:, 1], nds[:, 2], nds[:, 0]])
-        nds1 = numpy.column_stack([nds[:, 2], nds[:, 0], nds[:, 1]])
-        edge_nodes = numpy.stack([nds0, nds1], axis=-1)
         # Take the average of `vector_field` at the endpoints to get the
         # approximate value at the edge midpoint.
-        A = 0.5 * numpy.sum(vector_field[edge_nodes], axis=2)
+        A = 0.5 * numpy.sum(vector_field[self.cell_edge_nodes], axis=2)
         # sum of <edge, A> for all three edges
         sum_edge_dot_A = numpy.einsum('ijk, ijk->i', self.half_edge_coords, A)
 
         # Get normalized vector orthogonal to triangle
+        nds = self.cells['nodes']
         e0 = self.node_coords[nds[:, 1]] - self.node_coords[nds[:, 0]]
         e1 = self.node_coords[nds[:, 2]] - self.node_coords[nds[:, 1]]
         z = numpy.cross(e0, e1)
