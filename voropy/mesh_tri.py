@@ -504,6 +504,7 @@ class MeshTri(_base_mesh):
         self.mark_default_subdomains()
 
         self._control_volumes = None
+        self._surface_areas = None
 
         self.compute_data(flat_boundary_correction=flat_boundary_correction)
         return
@@ -569,39 +570,38 @@ class MeshTri(_base_mesh):
         return ce_ratios
 
     def get_control_volumes(self):
-        if self._control_volumes is not None:
-            return self._control_volumes
+        if self._control_volumes is None:
+            control_volume_data = []
+            if self.fbc is not None:
+                control_volume_data.append(self.fbc.control_volumes())
 
-        control_volume_data = []
-        if self.fbc is not None:
-            control_volume_data.append(self.fbc.control_volumes())
-
-        control_volume_data.append(
-            self._compute_control_volumes(
-                self.regular_cell_ids, self.half_edge_coords
+            control_volume_data.append(
+                self._compute_control_volumes(
+                    self.regular_cell_ids, self.half_edge_coords
+                    )
                 )
-            )
 
-        # sum up from self.control_volume_data
-        self._control_volumes = numpy.zeros(len(self.node_coords))
-        for d in control_volume_data:
-            numpy.add.at(self._control_volumes, d[0], d[1])
+            # sum up from self.control_volume_data
+            self._control_volumes = numpy.zeros(len(self.node_coords))
+            for d in control_volume_data:
+                numpy.add.at(self._control_volumes, d[0], d[1])
         return self._control_volumes
 
-    def compute_surface_areas(self):
-        # surface areas
-        surface_area_data = [self._compute_surface_areas(
-                self.regular_boundary_cell_ids,
-                self.regular_local_edge_ids
-                )]
-        if self.fbc is not None:
-            surface_area_data.append(self.fbc.surface_areas())
-        # surface areas
-        surface_areas = numpy.zeros(len(self.node_coords))
-        for d in surface_area_data:
-            numpy.add.at(surface_areas, d[0], d[1])
+    def get_surface_areas(self):
+        if self._surface_areas is None:
+            # surface areas
+            surface_area_data = [self._compute_surface_areas(
+                    self.regular_boundary_cell_ids,
+                    self.regular_local_edge_ids
+                    )]
+            if self.fbc is not None:
+                surface_area_data.append(self.fbc.surface_areas())
+            # surface areas
+            self._surface_areas = numpy.zeros(len(self.node_coords))
+            for d in surface_area_data:
+                numpy.add.at(self._surface_areas, d[0], d[1])
 
-        return surface_areas
+        return self._surface_areas
 
     def compute_control_volume_centroids(self):
         # This function is necessary, e.g., for Lloyd's
