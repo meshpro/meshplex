@@ -304,7 +304,7 @@ class MeshTetra(_base_mesh):
 
         return s
 
-    def compute_control_volumes(self):
+    def get_control_volumes(self):
         return self.control_volumes
 
     def _compute_control_volumes(self):

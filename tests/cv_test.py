@@ -48,11 +48,11 @@ def _run(
 
     # Check the volume by summing over the absolute value of the control
     # volumes.
-    vol = fsum(mesh.compute_control_volumes())
+    vol = fsum(mesh.get_control_volumes())
     assert abs(volume - vol) < tol*volume
     # Check control volume norms.
-    norm2 = numpy.linalg.norm(mesh.compute_control_volumes(), ord=2)
-    norm_inf = numpy.linalg.norm(mesh.compute_control_volumes(), ord=numpy.Inf)
+    norm2 = numpy.linalg.norm(mesh.get_control_volumes(), ord=2)
+    norm_inf = numpy.linalg.norm(mesh.get_control_volumes(), ord=numpy.Inf)
     assert _near_equal(convol_norms, [norm2, norm_inf], tol)
 
     return
@@ -74,7 +74,7 @@ def test_regular_tri():
 
     # control volumes
     assert _near_equal(
-        mesh.compute_control_volumes(),
+        mesh.get_control_volumes(),
         [0.25, 0.125, 0.125],
         tol
         )
@@ -127,7 +127,7 @@ def test_regular_tri():
 #     alpha1 = 0.0625 * (3*h - 1.0/(4*h))
 #     alpha2 = 0.125 * (h + 1.0 / (4*h))
 #     assert _near_equal(
-#         mesh.compute_control_volumes(),
+#         mesh.get_control_volumes(),
 #         [alpha1, alpha1, alpha2],
 #         tol
 #         )
@@ -202,7 +202,7 @@ def test_degenerate_small0b(h):
     # control volumes
     cv12 = 0.25 * (1.0**2 * ce0 + (0.25 + h**2) * ce12)
     cv0 = 0.5 * (0.25 + h**2) * ce12
-    assert _near_equal(mesh.compute_control_volumes(), [cv12, cv12, cv0], tol)
+    assert _near_equal(mesh.get_control_volumes(), [cv12, cv12, cv0], tol)
 
     # cell volumes
     assert _near_equal(mesh.cell_volumes, [0.5 * h], tol)
@@ -250,7 +250,7 @@ def test_degenerate_small0b_fbc():
     alpha = 0.25 * edge_length * cv
     beta = 0.5*h - 2*alpha
     assert _near_equal(
-        mesh.compute_control_volumes(),
+        mesh.get_control_volumes(),
         [alpha, alpha, beta],
         tol
         )
@@ -309,11 +309,11 @@ def test_degenerate_small1(h, a):
     alpha2 = 0.25 * el2 * cv2
     beta = 0.5*h - (alpha1 + alpha2)
     assert _near_equal(
-        mesh.compute_control_volumes(),
+        mesh.get_control_volumes(),
         [alpha1, alpha2, beta],
         tol
         )
-    assert abs(sum(mesh.compute_control_volumes()) - 0.5*h) < tol
+    assert abs(sum(mesh.get_control_volumes()) - 0.5*h) < tol
 
     # cell volumes
     assert _near_equal(mesh.cell_volumes, [0.5 * h], tol)
@@ -361,7 +361,7 @@ def test_degenerate_small2(h):
     alpha1 = 0.125 * (3*h - 1.0/(4*h))
     alpha2 = 0.125 * (h + 1.0 / (4*h))
     assert _near_equal(
-        mesh.compute_control_volumes(),
+        mesh.get_control_volumes(),
         [alpha1, alpha1, alpha2, alpha2],
         tol
         )
@@ -417,7 +417,7 @@ def test_regular_tet0(a):
     # control volumes
     val = vol / 4.0
     assert _near_equal(
-        mesh.compute_control_volumes(),
+        mesh.get_control_volumes(),
         [val, val, val, val],
         tol
         )
@@ -459,7 +459,7 @@ def test_regular_tet1_algebraic(a):
 
     # control volumes
     assert _near_equal(
-        mesh.compute_control_volumes(),
+        mesh.get_control_volumes(),
         [a**3/12.0, a**3/36.0, a**3/36.0, a**3/36.0],
         tol
         )
@@ -497,7 +497,7 @@ def test_regular_tet1_geometric(a):
 
     # control volumes
     assert _near_equal(
-        mesh.compute_control_volumes(),
+        mesh.get_control_volumes(),
         [a**3/8.0, a**3/72.0, a**3/72.0, a**3/72.0],
         tol
         )
@@ -538,7 +538,7 @@ def test_degenerate_tet0(h):
         1.0/72.0 * (3*h - 1.0/(2*h)),
         1.0/36.0 * (h + 1.0/(2*h))
         ]
-    assert _near_equal(mesh.compute_control_volumes(), ref, tol)
+    assert _near_equal(mesh.get_control_volumes(), ref, tol)
 
     # cell volumes
     assert _near_equal(mesh.cell_volumes, [h/6.0], tol)
@@ -598,7 +598,7 @@ def test_rectanglesmall():
         tol
         )
     assert _near_equal(
-        mesh.compute_control_volumes(),
+        mesh.get_control_volumes(),
         [2.5, 2.5, 2.5, 2.5],
         tol
         )
