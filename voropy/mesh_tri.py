@@ -57,7 +57,7 @@ def lloyd_smoothing(mesh, tol, verbose=True, output_filetype=None):
         k += 1
 
         # move interior points into centroids
-        new_points = mesh.compute_control_volume_centroids()
+        new_points = mesh.get_control_volume_centroids()
         new_points[boundary_verts] = mesh.node_coords[boundary_verts]
         diff = new_points - mesh.node_coords
         max_move = numpy.sqrt(numpy.max(numpy.sum(diff*diff, axis=1)))
@@ -505,6 +505,7 @@ class MeshTri(_base_mesh):
 
         self._ce_ratios = None
         self._control_volumes = None
+        self._cv_centroids = None
         self._surface_areas = None
 
         self.compute_data(flat_boundary_correction=flat_boundary_correction)
@@ -609,7 +610,7 @@ class MeshTri(_base_mesh):
 
         return self._surface_areas
 
-    def compute_control_volume_centroids(self):
+    def get_control_volume_centroids(self):
         # This function is necessary, e.g., for Lloyd's
         # smoothing <https://en.wikipedia.org/wiki/Lloyd%27s_algorithm>.
         #
@@ -620,20 +621,20 @@ class MeshTri(_base_mesh):
         # The denominator is the control volume. The numerator can be computed
         # by making use of the fact that the control volume around any vertex
         # v_0 is composed of right triangles, two for each adjacent cell.
-        centroid_data = [self.compute_integral_x(
-            self.cell_circumcenters,
-            self.regular_cell_ids
-            )]
-        if self.fbc is not None:
-            centroid_data.append(self.fbc.integral_x())
-        # add it all up
-        centroids = numpy.zeros((len(self.node_coords), 3))
-        for d in centroid_data:
-            numpy.add.at(centroids, d[0], d[1])
-        # Divide by the control volume
-        control_volumes = self.get_control_volumes()
-        centroids /= control_volumes[:, None]
-        return centroids
+        if self._cv_centroids is None:
+            centroid_data = [self.compute_integral_x(
+                self.cell_circumcenters,
+                self.regular_cell_ids
+                )]
+            if self.fbc is not None:
+                centroid_data.append(self.fbc.integral_x())
+            # add it all up
+            self._cv_centroids = numpy.zeros((len(self.node_coords), 3))
+            for d in centroid_data:
+                numpy.add.at(self._cv_centroids, d[0], d[1])
+            # Divide by the control volume
+            self._cv_centroids /= self.get_control_volumes()[:, None]
+        return self._cv_centroids
 
     def mark_default_subdomains(self):
         self.subdomains = {}
@@ -1017,7 +1018,7 @@ class MeshTri(_base_mesh):
             ax.add_collection(line_segments1)
 
         if show_centroids:
-            centroids = self.compute_control_volume_centroids()
+            centroids = self.get_control_volume_centroids()
             ax.plot(
                 centroids[:, 0],
                 centroids[:, 1],
