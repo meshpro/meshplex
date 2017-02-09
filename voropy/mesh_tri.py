@@ -82,46 +82,16 @@ def lloyd_smoothing(mesh, tol, verbose=True, output_filetype=None):
             a = numpy.stack([e0_dot_e1, e1_dot_e2, e2_dot_e0])
             angles = numpy.arccos(-a) / (2 * numpy.pi) * 360.0
 
-            vals = angles.flat
-            counts = [
-                numpy.sum(vals < 10.0),
-                numpy.sum(numpy.logical_and(10.0 <= vals, vals < 20.0)),
-                numpy.sum(numpy.logical_and(20.0 <= vals, vals < 30.0)),
-                numpy.sum(numpy.logical_and(30.0 <= vals, vals < 40.0)),
-                numpy.sum(numpy.logical_and(40.0 <= vals, vals < 50.0)),
-                numpy.sum(numpy.logical_and(50.0 <= vals, vals < 60.0)),
-                numpy.sum(numpy.logical_and(60.0 <= vals, vals < 70.0)),
-                numpy.sum(numpy.logical_and(70.0 <= vals, vals < 80.0)),
-                numpy.sum(numpy.logical_and(80.0 <= vals, vals < 90.0)),
-                numpy.sum(numpy.logical_and(90.0 <= vals, vals < 100.0)),
-                numpy.sum(numpy.logical_and(100.0 <= vals, vals < 110.0)),
-                numpy.sum(numpy.logical_and(110.0 <= vals, vals < 120.0)),
-                numpy.sum(numpy.logical_and(120.0 <= vals, vals < 130.0)),
-                numpy.sum(numpy.logical_and(130.0 <= vals, vals < 140.0)),
-                numpy.sum(numpy.logical_and(140.0 <= vals, vals < 150.0)),
-                numpy.sum(numpy.logical_and(150.0 <= vals, vals < 160.0)),
-                numpy.sum(numpy.logical_and(160.0 <= vals, vals < 170.0)),
-                numpy.sum(170.0 <= vals),
-                ]
-            print('  angles:\n')
-            print('           ce <  10:   %d' % counts[0])
-            print('      10 < ce <  20:   %d' % counts[1])
-            print('      20 < ce <  30:   %d' % counts[2])
-            print('      30 < ce <  40:   %d' % counts[3])
-            print('      40 < ce <  50:   %d' % counts[4])
-            print('      50 < ce <  60:   %d' % counts[5])
-            print('      60 < ce <  70:   %d' % counts[6])
-            print('      70 < ce <  80:   %d' % counts[7])
-            print('      80 < ce <  90:   %d' % counts[8])
-            print('      90 < ce < 100:   %d' % counts[9])
-            print('     100 < ce < 110:   %d' % counts[10])
-            print('     110 < ce < 120:   %d' % counts[11])
-            print('     120 < ce < 130:   %d' % counts[12])
-            print('     130 < ce < 140:   %d' % counts[13])
-            print('     140 < ce < 150:   %d' % counts[14])
-            print('     150 < ce < 160:   %d' % counts[15])
-            print('     160 < ce < 170:   %d' % counts[16])
-            print('     170 < ce      :   %d' % counts[17])
+            hist, bin_edges = numpy.histogram(
+                angles,
+                bins=numpy.linspace(0.0, 180.0, num=19, endpoint=True)
+                )
+            print('  angles (in degrees):\n')
+            for k in range(len(hist)):
+                print(
+                    '         %3d < angle < %3d:   %d'
+                    % (bin_edges[k], bin_edges[k+1], hist[k])
+                    )
 
             # av_ce_ratios = numpy.sum(mesh.ce_ratios_per_half_edge.flat) \
             #     / len(mesh.ce_ratios_per_half_edge.flat)
