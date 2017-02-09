@@ -83,10 +83,10 @@ def lloyd_smoothing(mesh, tol, verbose=True, output_filetype=None):
                 bins=numpy.linspace(0.0, 180.0, num=19, endpoint=True)
                 )
             print('  angles (in degrees):\n')
-            for k in range(len(hist)):
+            for i in range(len(hist)):
                 print(
                     '         %3d < angle < %3d:   %d'
-                    % (bin_edges[k], bin_edges[k+1], hist[k])
+                    % (bin_edges[i], bin_edges[i+1], hist[i])
                     )
 
             # av_ce_ratios = numpy.sum(mesh.ce_ratios_per_half_edge.flat) \
@@ -588,9 +588,7 @@ class MeshTri(_base_mesh):
                 control_volume_data.append(self.fbc.control_volumes())
 
             control_volume_data.append(
-                self._compute_control_volumes(
-                    self.regular_cell_ids
-                    )
+                self._compute_control_volume_contribs(self.regular_cell_ids)
                 )
 
             # sum up from self.control_volume_data
@@ -713,7 +711,7 @@ class MeshTri(_base_mesh):
     def _compute_cell_volumes_and_ce_ratios(self, e0, e1, e2):
         return compute_tri_areas_and_ce_ratios(e0, e1, e2)
 
-    def _compute_control_volumes(self, cell_ids):
+    def _compute_control_volume_contribs(self, cell_ids):
         # Compute the control volumes. Note that
         #   0.5 * (0.5 * edge_length) * covolume
         # = 0.25 * edge_length**2 * ce_ratio_edge_ratio
@@ -736,28 +734,28 @@ class MeshTri(_base_mesh):
         # The integral of any linear function over a triangle is the average of
         # the values of the function in each of the three corners, times the
         # area of the triangle.
-
-        # The triangle area is
-        #
-        #  a = 0.5 * (0.5 * edge_length) * covolume
-        #    = 0.25 * edge_length^2 * (covolume/edge_length)
-        #
-        c = self.half_edge_coords[cell_ids]
-        el2 = numpy.einsum('ijk, ijk->ij', c, c)
-        right_triangle_vols = \
-            0.25 * el2 * self.ce_ratios_per_half_edge[cell_ids]
+        _, right_triangle_vols = \
+            self._compute_control_volume_contribs(cell_ids)
 
         # get edge midpoints with the nodes just like sorted in
         # half_edge_coords
+        # This used to be
+        # ```
+        # numpy.sum(self.node_coords[edge_nodes], axis=2)
+        # ```
+        # but it turns out that numpy.sum is quite slow.
         edge_nodes = self.cell_edge_nodes[cell_ids]
-        edge_midpoints = 0.5 * numpy.sum(self.node_coords[edge_nodes], axis=2)
+        edge_midpoints = 0.5 * (
+                self.node_coords[edge_nodes[:, :, 0]] +
+                self.node_coords[edge_nodes[:, :, 1]]
+                )
 
         average = (
             self.cell_circumcenters[cell_ids, None, None, :] +
             edge_midpoints[:, :, None, :] +
             self.node_coords[edge_nodes]
             ) / 3.0
-        contribs = right_triangle_vols[:, :, None, None] * average
+        contribs = right_triangle_vols[:, :, :, None] * average
 
         return edge_nodes, contribs
 
