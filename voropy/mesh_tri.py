@@ -621,10 +621,7 @@ class MeshTri(_base_mesh):
         # by making use of the fact that the control volume around any vertex
         # v_0 is composed of right triangles, two for each adjacent cell.
         if self._cv_centroids is None:
-            centroid_data = [self._compute_integral_x(
-                self.cell_circumcenters,
-                self.regular_cell_ids
-                )]
+            centroid_data = [self._compute_integral_x(self.regular_cell_ids)]
             if self.fbc is not None:
                 centroid_data.append(self.fbc.integral_x())
             # add it all up
@@ -725,45 +722,44 @@ class MeshTri(_base_mesh):
 
         return ids, vals
 
-    def _compute_integral_x(self, cell_circumcenters, cell_ids):
+    def _compute_integral_x(self, cell_ids):
         '''Computes the integral of x,
 
           \int_V x,
 
         over all "triangles", i.e., areas enclosed by half of an edge and the
-        covolume,
+        covolume.
         '''
         # The integral of any linear function over a triangle is the average of
         # the values of the function in each of the three corners, times the
         # area of the triangle.
-        edge_nodes = self.edges['nodes']
-        edges = \
-            self.node_coords[edge_nodes[:, 1]] - \
-            self.node_coords[edge_nodes[:, 0]]
-        edge_lengths_squared = _row_dot(edges, edges)
 
-        edge_midpoints = 0.5 * (
-            self.node_coords[edge_nodes[:, 1]] +
-            self.node_coords[edge_nodes[:, 0]]
-            )
-
-        cells_edges = self.cells['edges'][cell_ids]
-
-        edge_lengths_per_cell = edge_lengths_squared[cells_edges]
+        # The triangle area is
+        #
+        #  a = 0.5 * (0.5 * edge_length) * covolume
+        #    = 0.25 * edge_length^2 * (covolume/edge_length)
+        #
+        c = self.half_edge_coords[cell_ids]
+        el2 = numpy.einsum('ijk, ijk->ij', c, c)
         right_triangle_vols = \
-            0.25 * \
-            edge_lengths_per_cell * \
-            self.ce_ratios_per_half_edge[cell_ids]
+            0.25 * el2 * self.ce_ratios_per_half_edge[cell_ids]
 
-        pt_idx = self.edges['nodes'][cells_edges]
+        # get edge midpoints with the nodes just like sorted in
+        # half_edge_coords
+        nds = self.cells['nodes'][cell_ids]
+        nds0 = numpy.column_stack([nds[:, 1], nds[:, 2], nds[:, 0]])
+        nds1 = numpy.column_stack([nds[:, 2], nds[:, 0], nds[:, 1]])
+        edge_nodes = numpy.stack([nds0, nds1], axis=-1)
+        edge_midpoints = 0.5 * numpy.sum(self.node_coords[edge_nodes], axis=2)
+
         average = (
-            cell_circumcenters[cell_ids, None, None, :] +
-            edge_midpoints[cells_edges, None, :] +
-            self.node_coords[pt_idx]
+            self.cell_circumcenters[cell_ids, None, None, :] +
+            edge_midpoints[:, :, None, :] +
+            self.node_coords[edge_nodes]
             ) / 3.0
         contribs = right_triangle_vols[:, :, None, None] * average
 
-        return pt_idx, contribs
+        return edge_nodes, contribs
 
     def _compute_surface_areas(
             self, regular_boundary_cell_ids=None, local_edge_ids=None
