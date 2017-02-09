@@ -879,36 +879,32 @@ class MeshTri(_base_mesh):
         vector field onto the edges at the midpoint of the edges.
         '''
         # Compute the projection of A on the edge at each edge midpoint.
-        edge_coords = \
-            self.node_coords[self.edges['nodes'][:, 1]] - \
-            self.node_coords[self.edges['nodes'][:, 0]]
-        nodes = self.edges['nodes']
-        # Take the average of `vector_field` at the end endpoints to get the
+        # Get nodes just like sorted in half_edge_coords
+        nds = self.cells['nodes']
+        nds0 = numpy.column_stack([nds[:, 1], nds[:, 2], nds[:, 0]])
+        nds1 = numpy.column_stack([nds[:, 2], nds[:, 0], nds[:, 1]])
+        edge_nodes = numpy.stack([nds0, nds1], axis=-1)
+        # Take the average of `vector_field` at the endpoints to get the
         # approximate value at the edge midpoint.
-        A = 0.5 * numpy.sum(vector_field[nodes], axis=1)
-        edge_dot_A = _row_dot(edge_coords, A)
+        A = 0.5 * numpy.sum(vector_field[edge_nodes], axis=2)
+        # sum of <edge, A> for all three edges
+        sum_edge_dot_A = numpy.einsum('ijk, ijk->i', self.half_edge_coords, A)
 
-        # TODO speed up
         # Get normalized vector orthogonal to triangle
-        barycenters = 1./3. * numpy.sum(
-                self.node_coords[self.cells['nodes']],
-                axis=1
-                )
-        x = self.node_coords[nodes]
-        z = numpy.cross(
-                x[self.cells['edges'], 0] - barycenters[:, None, :],
-                x[self.cells['edges'], 1] - barycenters[:, None, :]
-                )
-        z_norms = numpy.sqrt(numpy.einsum('ijk, ijk->ij', z, z))
-        z /= z_norms[..., None]
+        e0 = self.node_coords[nds[:, 1]] - self.node_coords[nds[:, 0]]
+        e1 = self.node_coords[nds[:, 2]] - self.node_coords[nds[:, 1]]
+        z = numpy.cross(e0, e1)
 
-        # a: directions scaled with edge_dot_a
-        a = z * edge_dot_A[self.cells['edges']][..., None]
-
-        # sum over all local edges
-        curl = numpy.sum(a, axis=1)
-        # Divide by cell volumes
-        curl /= self.cell_volumes[..., None]
+        # Now compute
+        #
+        #    curl = z / ||z|| * sum_edge_dot_A / |A|.
+        #
+        # Since ||z|| = 2*|A|, one can save a sqrt and do
+        #
+        #    curl = z * sum_edge_dot_A * 2 / ||z||^2.
+        #
+        z_dot_z = _row_dot(z, z)
+        curl = z * (2 * sum_edge_dot_A / z_dot_z)[..., None]
         return curl
 
     def num_delaunay_violations(self):
