@@ -269,15 +269,6 @@ class MeshTetra(_base_mesh):
 
     def compute_ce_ratios_geometric(self):
 
-        v0 = self.faces['nodes'][self.cells['faces']][:, :, 0]
-        v1 = self.faces['nodes'][self.cells['faces']][:, :, 1]
-        v2 = self.faces['nodes'][self.cells['faces']][:, :, 2]
-        v_op = self.cells['opposing vertex']
-
-        x0 = self.node_coords[v0] - self.node_coords[v_op]
-        x1 = self.node_coords[v1] - self.node_coords[v_op]
-        x2 = self.node_coords[v2] - self.node_coords[v_op]
-
         # prepare face edges
         e = self.node_coords[self.edges['nodes'][self.faces['edges'], 1]] - \
             self.node_coords[self.edges['nodes'][self.faces['edges'], 0]]
@@ -288,6 +279,15 @@ class MeshTetra(_base_mesh):
         face_areas = areas[self.cells['faces']]
         fce_ratios = face_ce_ratios[self.cells['faces']]
 
+        v0 = self.faces['nodes'][self.cells['faces']][:, :, 0]
+        v1 = self.faces['nodes'][self.cells['faces']][:, :, 1]
+        v2 = self.faces['nodes'][self.cells['faces']][:, :, 2]
+        v_op = self.cells['opposing vertex']
+
+        x0 = self.node_coords[v0] - self.node_coords[v_op]
+        x1 = self.node_coords[v1] - self.node_coords[v_op]
+        x2 = self.node_coords[v2] - self.node_coords[v_op]
+
         x0_cross_x1 = numpy.cross(x0, x1)
         x1_cross_x2 = numpy.cross(x1, x2)
         x2_cross_x0 = numpy.cross(x2, x0)
@@ -295,14 +295,32 @@ class MeshTetra(_base_mesh):
         x1_dot_x1 = _my_dot(x1, x1)
         x2_dot_x2 = _my_dot(x2, x2)
 
+        # This is reference expression.
+        # a = (
+        #     2 * _my_dot(x0_cross_x1, x2)**2 -
+        #     _my_dot(
+        #         x0_cross_x1 + x1_cross_x2 + x2_cross_x0,
+        #         x0_cross_x1 * x2_dot_x2[..., None] +
+        #         x1_cross_x2 * x0_dot_x0[..., None] +
+        #         x2_cross_x0 * x1_dot_x1[..., None]
+        #     )) / (12.0 * face_areas)
+
+        # Note that
+        #
+        #    6*tet_volume = abs(<x0 x x1, x2>)
+        #                 = abs(<x1 x x2, x0>)
+        #                 = abs(<x2 x x0, x1>)
+        #
         a = (
-            2 * _my_dot(x0_cross_x1, x2)**2 -
-            _my_dot(
+            72.0 * self.cell_volumes[:, None]**2
+            - _my_dot(
                 x0_cross_x1 + x1_cross_x2 + x2_cross_x0,
                 x0_cross_x1 * x2_dot_x2[..., None] +
                 x1_cross_x2 * x0_dot_x0[..., None] +
                 x2_cross_x0 * x1_dot_x1[..., None]
-            )) / (12.0 * face_areas)
+            )
+            ) / (12.0 * face_areas)
+
         # Distances of the cell circumcenter to the faces.
         # (shape: num_cells x 4)
         d = 0.5 * a / self.cell_volumes[:, None]
