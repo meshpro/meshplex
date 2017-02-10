@@ -44,33 +44,35 @@ class MeshTetra(_base_mesh):
 
         self.create_adjacent_entities()
         self.edge_lengths = self.compute_edge_lengths()
-        num_edges = len(self.edges['nodes'])
-        self.ce_ratios = numpy.zeros(num_edges, dtype=float)
 
-        assert mode in ['geometric', 'algebraic']
-        if mode == 'geometric':
-            vals = self.compute_ce_ratios_geometric()
-            numpy.add.at(
-                    self.ce_ratios,
-                    self.faces['edges'][self.cells['faces']],
-                    vals
-                    )
-        else:  # 'algebraic'
-            vals = self.compute_ce_ratios_algebraic()
-            numpy.add.at(
-                    self.ce_ratios,
-                    self.cells['edges'],
-                    vals
-                    )
-            self.circumcenter_face_distances = None
-
+        self._mode = mode
+        self._ce_ratios = None
         self._control_volumes = None
 
         self.mark_default_subdomains()
         return
 
     def get_ce_ratios(self):
-        return self.ce_ratios
+        if self._ce_ratios is None:
+            num_edges = len(self.edges['nodes'])
+            self._ce_ratios = numpy.zeros(num_edges, dtype=float)
+            assert self._mode in ['geometric', 'algebraic']
+            if self._mode == 'geometric':
+                vals = self.compute_ce_ratios_geometric()
+                numpy.add.at(
+                        self._ce_ratios,
+                        self.faces['edges'][self.cells['faces']],
+                        vals
+                        )
+            else:  # 'algebraic'
+                vals = self.compute_ce_ratios_algebraic()
+                numpy.add.at(
+                        self._ce_ratios,
+                        self.cells['edges'],
+                        vals
+                        )
+                self.circumcenter_face_distances = None
+        return self._ce_ratios
 
     def mark_default_subdomains(self):
         self.subdomains = {}
@@ -276,13 +278,15 @@ class MeshTetra(_base_mesh):
         x1 = self.node_coords[v1] - self.node_coords[v_op]
         x2 = self.node_coords[v2] - self.node_coords[v_op]
 
-        e0 = x2 - x0
-        e1 = x1 - x0
-        e0_dot_e0 = _my_dot(e0, e0)
-        e1_dot_e1 = _my_dot(e1, e1)
-        e0_dot_e1 = _my_dot(e0, e1)
-        # area = <e0 x e1, e0 x e1>
-        face_areas = numpy.sqrt(e0_dot_e0 * e1_dot_e1 - e0_dot_e1**2)
+        # prepare face edges
+        e = self.node_coords[self.edges['nodes'][self.faces['edges'], 1]] - \
+            self.node_coords[self.edges['nodes'][self.faces['edges'], 0]]
+        e0 = e[:, 0, :]
+        e1 = e[:, 1, :]
+        e2 = e[:, 2, :]
+        areas, face_ce_ratios = compute_tri_areas_and_ce_ratios(e0, e1, e2)
+        face_areas = areas[self.cells['faces']]
+        fce_ratios = face_ce_ratios[self.cells['faces']]
 
         x0_cross_x1 = numpy.cross(x0, x1)
         x1_cross_x2 = numpy.cross(x1, x2)
@@ -299,23 +303,11 @@ class MeshTetra(_base_mesh):
                 x1_cross_x2 * x0_dot_x0[..., None] +
                 x2_cross_x0 * x1_dot_x1[..., None]
             )) / (12.0 * face_areas)
-
         # Distances of the cell circumcenter to the faces.
         # (shape: num_cells x 4)
-        d = a / self.cell_volumes[:, None]
+        d = 0.5 * a / self.cell_volumes[:, None]
 
         self.circumcenter_face_distances = d
-
-        # prepare face edges
-        e = self.node_coords[self.edges['nodes'][self.faces['edges'], 1]] - \
-            self.node_coords[self.edges['nodes'][self.faces['edges'], 0]]
-
-        e0 = e[:, 0, :]
-        e1 = e[:, 1, :]
-        e2 = e[:, 2, :]
-
-        _, face_ce_ratios = compute_tri_areas_and_ce_ratios(e0, e1, e2)
-        fce_ratios = face_ce_ratios[self.cells['faces']]
 
         # Multiply
         s = 0.5 * fce_ratios * d[..., None]
@@ -333,7 +325,7 @@ class MeshTetra(_base_mesh):
             # = 1/6 * edge_length**2 * ce_ratio_edge_ratio
             e = self.node_coords[self.edges['nodes'][:, 1]] - \
                 self.node_coords[self.edges['nodes'][:, 0]]
-            vals = _row_dot(e, e) * self.ce_ratios / 6.0
+            vals = _row_dot(e, e) * self.get_ce_ratios() / 6.0
 
             edge_nodes = self.edges['nodes']
             numpy.add.at(self._control_volumes, edge_nodes[:, 0], vals)
