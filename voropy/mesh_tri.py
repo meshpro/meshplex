@@ -28,7 +28,7 @@ def lloyd_smoothing(mesh, tol, verbose=True, output_filetype=None):
     if any(ce_ratios < 0.0):
         mesh = flip_edges(mesh, ce_ratios < 0.0)
 
-    assert_ce_ratios = False
+    assert_ce_ratios = True
     if assert_ce_ratios:
         assert all(mesh.get_ce_ratios() >= 0.0)
 
@@ -110,7 +110,6 @@ def lloyd_smoothing(mesh, tol, verbose=True, output_filetype=None):
         if any(ce_ratios < 0.0):
             mesh = flip_edges(mesh, ce_ratios < 0.0)
 
-        assert_ce_ratios = True
         if assert_ce_ratios:
             assert all(mesh.get_ce_ratios() >= 0.0)
 
