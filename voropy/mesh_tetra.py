@@ -288,7 +288,7 @@ class MeshTetra(_base_mesh):
         x1 = self.node_coords[v1] - self.node_coords[v_op]
         x2 = self.node_coords[v2] - self.node_coords[v_op]
 
-        # This is reference expression.
+        # This is the reference expression.
         # a = (
         #     2 * _my_dot(x0_cross_x1, x2)**2 -
         #     _my_dot(
@@ -308,31 +308,34 @@ class MeshTetra(_base_mesh):
         #
         #    <a x b, c x d> = <a, c> <b, d> - <a, d> <b, c>.
         #
+        # All those dot products can probably be cleaned up good.
+        # TODO simplify
         x0_dot_x0 = _my_dot(x0, x0)
         x1_dot_x1 = _my_dot(x1, x1)
         x2_dot_x2 = _my_dot(x2, x2)
         x0_dot_x1 = _my_dot(x0, x1)
         x1_dot_x2 = _my_dot(x1, x2)
         x2_dot_x0 = _my_dot(x2, x0)
-        # <x0_cross_x1 + x1_cross_x2 + x2_cross_x0, x0_cross_x1> = sum(alpha)
-        alpha0 = x0_dot_x0 * x1_dot_x1 - x0_dot_x1**2
-        alpha1 = x0_dot_x1 * x1_dot_x2 - x1_dot_x1 * x2_dot_x0
-        alpha2 = x2_dot_x0 * x0_dot_x1 - x1_dot_x2 * x0_dot_x0
-        # <x0_cross_x1 + x1_cross_x2 + x2_cross_x0, x1_cross_x2> = sum(beta)
-        beta0 = x0_dot_x1 * x1_dot_x2 - x2_dot_x0 * x1_dot_x1
-        beta1 = x1_dot_x1 * x2_dot_x2 - x1_dot_x2**2
-        beta2 = x1_dot_x2 * x2_dot_x0 - x2_dot_x2 * x0_dot_x1
-        # <x0_cross_x1 + x1_cross_x2 + x2_cross_x0, x2_cross_x0> = sum(gamma)
-        gamma0 = x2_dot_x0 * x0_dot_x1 - x0_dot_x0 * x1_dot_x2
-        gamma1 = x1_dot_x2 * x2_dot_x0 - x0_dot_x1 * x2_dot_x2
-        gamma2 = x0_dot_x0 * x2_dot_x2 - x2_dot_x0**2
-        # All those dot products can probably be cleaned up good.
-        # TODO simplify
+        # alpha = <x0_cross_x1 + x1_cross_x2 + x2_cross_x0, x0_cross_x1>
+        alpha = \
+            x0_dot_x0 * x1_dot_x1 - x0_dot_x1**2 + \
+            x0_dot_x1 * x1_dot_x2 - x1_dot_x1 * x2_dot_x0 + \
+            x2_dot_x0 * x0_dot_x1 - x1_dot_x2 * x0_dot_x0
+        # beta = <x0_cross_x1 + x1_cross_x2 + x2_cross_x0, x1_cross_x2>
+        beta = \
+            x0_dot_x1 * x1_dot_x2 - x2_dot_x0 * x1_dot_x1 + \
+            x1_dot_x1 * x2_dot_x2 - x1_dot_x2**2 + \
+            x1_dot_x2 * x2_dot_x0 - x2_dot_x2 * x0_dot_x1
+        # gamma = <x0_cross_x1 + x1_cross_x2 + x2_cross_x0, x2_cross_x0>
+        gamma = \
+            x2_dot_x0 * x0_dot_x1 - x0_dot_x0 * x1_dot_x2 + \
+            x1_dot_x2 * x2_dot_x0 - x0_dot_x1 * x2_dot_x2 + \
+            x0_dot_x0 * x2_dot_x2 - x2_dot_x0**2
         a = (
             72.0 * self.cell_volumes[:, None]**2
-            - (alpha0 + alpha1 + alpha2) * x2_dot_x2
-            - (beta0 + beta1 + beta2) * x0_dot_x0
-            - (gamma0 + gamma1 + gamma2) * x1_dot_x1
+            - alpha * x2_dot_x2
+            - beta * x0_dot_x0
+            - gamma * x1_dot_x1
             ) / (12.0 * face_areas)
 
         # Distances of the cell circumcenter to the faces.
