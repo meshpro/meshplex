@@ -40,12 +40,14 @@ class MeshTetra(_base_mesh):
             'nodes': cells
             }
 
-        self.create_adjacent_entities()
         self.create_cell_circumcenters_and_volumes()
-        self.edge_lengths = self.compute_edge_lengths()
 
+        self.create_adjacent_entities()
+        self.edge_lengths = self.compute_edge_lengths()
         num_edges = len(self.edges['nodes'])
         self.ce_ratios = numpy.zeros(num_edges, dtype=float)
+
+        assert mode in ['geometric', 'algebraic']
         if mode == 'geometric':
             vals = self.compute_ce_ratios_geometric()
             numpy.add.at(
@@ -53,7 +55,7 @@ class MeshTetra(_base_mesh):
                     self.faces['edges'][self.cells['faces']],
                     vals
                     )
-        elif mode == 'algebraic':
+        else:  # 'algebraic'
             vals = self.compute_ce_ratios_algebraic()
             numpy.add.at(
                     self.ce_ratios,
@@ -61,8 +63,6 @@ class MeshTetra(_base_mesh):
                     vals
                     )
             self.circumcenter_face_distances = None
-        else:
-            raise ValueError('Illegal mode \'%s\'.' % mode)
 
         self._compute_control_volumes()
 
@@ -102,10 +102,8 @@ class MeshTetra(_base_mesh):
         relations.
         '''
         self.cells['nodes'].sort(axis=1)
-
         self.create_cell_face_relationships()
         self.create_face_edge_relationships()
-
         return
 
     def create_cell_face_relationships(self):
@@ -183,21 +181,41 @@ class MeshTetra(_base_mesh):
     def create_cell_circumcenters_and_volumes(self):
         '''Computes the center of the circumsphere of each cell.
         '''
-        # TODO replace all cross products by dot-products
-        # (e.g., <a x b, c x d> = <a, c><b, d> - <...
-        #
         cell_coords = self.node_coords[self.cells['nodes']]
 
-        a = cell_coords[:, 1, :] - cell_coords[:, 0, :]
-        b = cell_coords[:, 2, :] - cell_coords[:, 0, :]
-        c = cell_coords[:, 3, :] - cell_coords[:, 0, :]
+        # This used to be
+        # ```
+        # a = cell_coords[:, 1, :] - cell_coords[:, 0, :]
+        # b = cell_coords[:, 2, :] - cell_coords[:, 0, :]
+        # c = cell_coords[:, 3, :] - cell_coords[:, 0, :]
+        # a_cross_b = numpy.cross(a, b)
+        # b_cross_c = numpy.cross(b, c)
+        # c_cross_a = numpy.cross(c, a)
+        # ```
+        # The array X below unified a, b, c.
+        X = cell_coords[:, [1, 2, 3], :] - cell_coords[:, [0], :]
+        X_dot_X = numpy.einsum('ijk, ijk->ij', X, X)
+        X_shift = cell_coords[:, [2, 3, 1], :] - cell_coords[:, [0], :]
+        X_cross_Y = numpy.cross(X, X_shift)
 
-        omega = _row_dot(a, numpy.cross(b, c))
+        a = X[:, 0, :]
+        a_dot_a = X_dot_X[:, 0]
+        b_dot_b = X_dot_X[:, 1]
+        c_dot_c = X_dot_X[:, 2]
+        a_cross_b = X_cross_Y[:, 0, :]
+        b_cross_c = X_cross_Y[:, 1, :]
+        c_cross_a = X_cross_Y[:, 2, :]
+
+        # Compute scalar triple product <a, b, c> = <b, c, a> = <c, a, b>.
+        # The product is highly symmetric, so it's a little funny if there
+        # should be no single einsum to compute it; see
+        # <http://stackoverflow.com/q/42158228/353337>.
+        omega = _row_dot(a, b_cross_c)
 
         self.cell_circumcenters = cell_coords[:, 0, :] + (
-                numpy.cross(b, c) * _row_dot(a, a)[:, None] +
-                numpy.cross(c, a) * _row_dot(b, b)[:, None] +
-                numpy.cross(a, b) * _row_dot(c, c)[:, None]
+                b_cross_c * a_dot_a[:, None] +
+                c_cross_a * b_dot_b[:, None] +
+                a_cross_b * c_dot_c[:, None]
                 ) / (2.0 * omega[:, None])
 
         # https://en.wikipedia.org/wiki/Tetrahedron#Volume
@@ -224,8 +242,8 @@ class MeshTetra(_base_mesh):
         #
         # |simplex| ||u||^2 = \sum_i \alpha_i <u,e_i> <e_i,u>
         #
-        # has to hold for all vectors u in the plane spanned by the edges,
-        # particularly by the edges themselves.
+        # has to hold for all vectors u spanned by the edges, particularly by
+        # the edges themselves.
         cells_edges = edges[self.cells['edges']]
         # <http://stackoverflow.com/a/38110345/353337>
         A = numpy.einsum('ijk,ilk->ijl', cells_edges, cells_edges)
