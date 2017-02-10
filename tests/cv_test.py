@@ -469,7 +469,7 @@ def test_regular_tet1_algebraic(a):
 
 @pytest.mark.parametrize(
         'a',  # basis edge length
-        [1.0]
+        [0.5, 1.0, 2.0]
         )
 def test_regular_tet1_geometric(a):
     points = numpy.array([
@@ -499,6 +499,12 @@ def test_regular_tet1_geometric(a):
     assert _near_equal(
         mesh.get_control_volumes(),
         [a**3/8.0, a**3/72.0, a**3/72.0, a**3/72.0],
+        tol
+        )
+
+    assert _near_equal(
+        mesh.circumcenter_face_distances,
+        [-0.5/numpy.sqrt(3)*a, 0.5*a, 0.5*a, 0.5*a],
         tol
         )
 
