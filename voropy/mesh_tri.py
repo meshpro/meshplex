@@ -510,25 +510,22 @@ class MeshTri(_base_mesh):
                 self.node_coords[self.cells['nodes']]
                 )
 
-        cell_nodes = self.cells['nodes']
-        pts = self.node_coords
-        # Make sure that the k-th edge is opposite of the k-th point in the
-        # triangle.
-        self.half_edge_coords = numpy.stack([
-            pts[cell_nodes[:, 2]] - pts[cell_nodes[:, 1]],
-            pts[cell_nodes[:, 0]] - pts[cell_nodes[:, 2]],
-            pts[cell_nodes[:, 1]] - pts[cell_nodes[:, 0]],
-            ], axis=1)
-        # Get nodes just like sorted in half_edge_coords
+        # Create the cells->edges->nodes hierarchy. Make sure that the k-th
+        # edge is opposite of the k-th point in the triangle.
         nds = self.cells['nodes']
-        nds0 = numpy.column_stack([nds[:, 1], nds[:, 2], nds[:, 0]])
-        nds1 = numpy.column_stack([nds[:, 2], nds[:, 0], nds[:, 1]])
-        self.cell_edge_nodes = numpy.stack([nds0, nds1], axis=-1)
+        nds0 = numpy.column_stack([nds[:, 1], nds[:, 2]])
+        nds1 = numpy.column_stack([nds[:, 2], nds[:, 0]])
+        nds2 = numpy.column_stack([nds[:, 0], nds[:, 1]])
+        self.cell_edge_nodes = numpy.stack([nds0, nds1, nds2], axis=1)
+
+        # Create the corresponding edge coordinates.
+        self.half_edge_coords = \
+            self.node_coords[self.cell_edge_nodes[..., 1]] - \
+            self.node_coords[self.cell_edge_nodes[..., 0]]
 
         e0h = self.half_edge_coords[:, 0, :]
         e1h = self.half_edge_coords[:, 1, :]
         e2h = self.half_edge_coords[:, 2, :]
-
         self.cell_volumes, self.ce_ratios_per_half_edge = \
             self._compute_cell_volumes_and_ce_ratios(e0h, e1h, e2h)
 
