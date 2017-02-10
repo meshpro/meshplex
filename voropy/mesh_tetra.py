@@ -288,13 +288,6 @@ class MeshTetra(_base_mesh):
         x1 = self.node_coords[v1] - self.node_coords[v_op]
         x2 = self.node_coords[v2] - self.node_coords[v_op]
 
-        x0_cross_x1 = numpy.cross(x0, x1)
-        x1_cross_x2 = numpy.cross(x1, x2)
-        x2_cross_x0 = numpy.cross(x2, x0)
-        x0_dot_x0 = _my_dot(x0, x0)
-        x1_dot_x1 = _my_dot(x1, x1)
-        x2_dot_x2 = _my_dot(x2, x2)
-
         # This is reference expression.
         # a = (
         #     2 * _my_dot(x0_cross_x1, x2)**2 -
@@ -309,26 +302,46 @@ class MeshTetra(_base_mesh):
         #
         #    6*tet_volume = abs(<x0 x x1, x2>)
         #                 = abs(<x1 x x2, x0>)
-        #                 = abs(<x2 x x0, x1>)
+        #                 = abs(<x2 x x0, x1>).
         #
+        # Also,
+        #
+        #    <a x b, c x d> = <a, c> <b, d> - <a, d> <b, c>.
+        #
+        x0_dot_x0 = _my_dot(x0, x0)
+        x1_dot_x1 = _my_dot(x1, x1)
+        x2_dot_x2 = _my_dot(x2, x2)
+        x0_dot_x1 = _my_dot(x0, x1)
+        x1_dot_x2 = _my_dot(x1, x2)
+        x2_dot_x0 = _my_dot(x2, x0)
+        # <x0_cross_x1 + x1_cross_x2 + x2_cross_x0, x0_cross_x1> = sum(alpha)
+        alpha0 = x0_dot_x0 * x1_dot_x1 - x0_dot_x1**2
+        alpha1 = x0_dot_x1 * x1_dot_x2 - x1_dot_x1 * x2_dot_x0
+        alpha2 = x2_dot_x0 * x0_dot_x1 - x1_dot_x2 * x0_dot_x0
+        # <x0_cross_x1 + x1_cross_x2 + x2_cross_x0, x1_cross_x2> = sum(beta)
+        beta0 = x0_dot_x1 * x1_dot_x2 - x2_dot_x0 * x1_dot_x1
+        beta1 = x1_dot_x1 * x2_dot_x2 - x1_dot_x2**2
+        beta2 = x1_dot_x2 * x2_dot_x0 - x2_dot_x2 * x0_dot_x1
+        # <x0_cross_x1 + x1_cross_x2 + x2_cross_x0, x2_cross_x0> = sum(gamma)
+        gamma0 = x2_dot_x0 * x0_dot_x1 - x0_dot_x0 * x1_dot_x2
+        gamma1 = x1_dot_x2 * x2_dot_x0 - x0_dot_x1 * x2_dot_x2
+        gamma2 = x0_dot_x0 * x2_dot_x2 - x2_dot_x0**2
+        # All those dot products can probably be cleaned up good.
+        # TODO simplify
         a = (
             72.0 * self.cell_volumes[:, None]**2
-            - _my_dot(
-                x0_cross_x1 + x1_cross_x2 + x2_cross_x0,
-                x0_cross_x1 * x2_dot_x2[..., None] +
-                x1_cross_x2 * x0_dot_x0[..., None] +
-                x2_cross_x0 * x1_dot_x1[..., None]
-            )
+            - (alpha0 + alpha1 + alpha2) * x2_dot_x2
+            - (beta0 + beta1 + beta2) * x0_dot_x0
+            - (gamma0 + gamma1 + gamma2) * x1_dot_x1
             ) / (12.0 * face_areas)
 
         # Distances of the cell circumcenter to the faces.
         # (shape: num_cells x 4)
-        d = 0.5 * a / self.cell_volumes[:, None]
-
-        self.circumcenter_face_distances = d
+        self.circumcenter_face_distances = \
+            0.5 * a / self.cell_volumes[:, None]
 
         # Multiply
-        s = 0.5 * fce_ratios * d[..., None]
+        s = 0.5 * fce_ratios * self.circumcenter_face_distances[..., None]
 
         return s
 
