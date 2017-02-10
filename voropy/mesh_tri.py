@@ -25,12 +25,9 @@ def lloyd_smoothing(mesh, tol, verbose=True, output_filetype=None):
     # If any of the covolume-edge length ratios is negative, it must be on the
     # interior. If we flip the edge, it should be positive.
     ce_ratios = mesh.get_ce_ratios()
-    if any(ce_ratios < 0.0):
+    while any(ce_ratios < 0.0):
         mesh = flip_edges(mesh, ce_ratios < 0.0)
-
-    assert_ce_ratios = True
-    if assert_ce_ratios:
-        assert all(mesh.get_ce_ratios() >= 0.0)
+        ce_ratios = mesh.get_ce_ratios()
 
     boundary_verts = mesh.get_vertices('boundary')
 
@@ -107,11 +104,9 @@ def lloyd_smoothing(mesh, tol, verbose=True, output_filetype=None):
         # plt.show()
 
         ce_ratios = mesh.get_ce_ratios()
-        if any(ce_ratios < 0.0):
+        while any(ce_ratios < 0.0):
             mesh = flip_edges(mesh, ce_ratios < 0.0)
-
-        if assert_ce_ratios:
-            assert all(mesh.get_ce_ratios() >= 0.0)
+            ce_ratios = mesh.get_ce_ratios()
 
         if output_filetype:
             if output_filetype == 'png':
