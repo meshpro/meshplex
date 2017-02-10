@@ -64,7 +64,7 @@ class MeshTetra(_base_mesh):
                     )
             self.circumcenter_face_distances = None
 
-        self._compute_control_volumes()
+        self._control_volumes = None
 
         self.mark_default_subdomains()
         return
@@ -323,23 +323,22 @@ class MeshTetra(_base_mesh):
         return s
 
     def get_control_volumes(self):
-        return self.control_volumes
-
-    def _compute_control_volumes(self):
         '''Compute the control volumes of all nodes in the mesh.
         '''
-        self.control_volumes = numpy.zeros(len(self.node_coords), dtype=float)
+        if self._control_volumes is None:
+            self._control_volumes = \
+                numpy.zeros(len(self.node_coords), dtype=float)
 
-        #   1/3. * (0.5 * edge_length) * covolume
-        # = 1/6 * edge_length**2 * ce_ratio_edge_ratio
-        e = self.node_coords[self.edges['nodes'][:, 1]] - \
-            self.node_coords[self.edges['nodes'][:, 0]]
-        vals = _row_dot(e, e) * self.ce_ratios / 6.0
+            #   1/3. * (0.5 * edge_length) * covolume
+            # = 1/6 * edge_length**2 * ce_ratio_edge_ratio
+            e = self.node_coords[self.edges['nodes'][:, 1]] - \
+                self.node_coords[self.edges['nodes'][:, 0]]
+            vals = _row_dot(e, e) * self.ce_ratios / 6.0
 
-        edge_nodes = self.edges['nodes']
-        numpy.add.at(self.control_volumes, edge_nodes[:, 0], vals)
-        numpy.add.at(self.control_volumes, edge_nodes[:, 1], vals)
-        return
+            edge_nodes = self.edges['nodes']
+            numpy.add.at(self._control_volumes, edge_nodes[:, 0], vals)
+            numpy.add.at(self._control_volumes, edge_nodes[:, 1], vals)
+        return self._control_volumes
 
     def num_delaunay_violations(self):
         # Delaunay violations are present exactly on the interior faces where
