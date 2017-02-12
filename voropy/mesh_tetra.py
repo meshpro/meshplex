@@ -42,8 +42,8 @@ class MeshTetra(_base_mesh):
 
         self.create_cell_circumcenters_and_volumes()
 
-        self.create_adjacent_entities()
-        self.edge_lengths = self.compute_edge_lengths()
+        # self.create_adjacent_entities()
+        self.create_cell_face_relationships()
 
         self._mode = mode
         self._ce_ratios = None
@@ -65,12 +65,8 @@ class MeshTetra(_base_mesh):
                         vals
                         )
             else:  # 'algebraic'
-                vals = self.compute_ce_ratios_algebraic()
-                numpy.add.at(
-                        self._ce_ratios,
-                        self.cells['edges'],
-                        vals
-                        )
+                idx, vals = self.compute_ce_ratios_algebraic()
+                numpy.add.at(self._ce_ratios, idx, vals)
                 self.circumcenter_face_distances = None
         return self._ce_ratios
 
@@ -78,7 +74,7 @@ class MeshTetra(_base_mesh):
         self.subdomains = {}
         self.subdomains['everywhere'] = {
                 'vertices': range(len(self.node_coords)),
-                'edges': range(len(self.edges['nodes'])),
+                # 'edges': range(len(self.edges['nodes'])),
                 'faces': range(len(self.faces['nodes']))
                 }
 
@@ -87,13 +83,13 @@ class MeshTetra(_base_mesh):
         boundary_vertices = numpy.unique(
                 self.faces['nodes'][boundary_faces].flatten()
                 )
-        boundary_edges = numpy.unique(
-                self.faces['edges'][boundary_faces].flatten()
-                )
+        # boundary_edges = numpy.unique(
+        #         self.faces['edges'][boundary_faces].flatten()
+        #         )
 
         self.subdomains['boundary'] = {
                 'vertices': boundary_vertices,
-                'edges': boundary_edges,
+                # 'edges': boundary_edges,
                 'faces': boundary_faces
                 }
 
@@ -225,19 +221,25 @@ class MeshTetra(_base_mesh):
         return
 
     def compute_ce_ratios_algebraic(self):
-        # Precompute edges.
-        edges = \
-            self.node_coords[self.edges['nodes'][:, 1]] - \
-            self.node_coords[self.edges['nodes'][:, 0]]
+        # # Precompute edges.
+        # edges = \
+        #     self.node_coords[self.edges['nodes'][:, 1]] - \
+        #     self.node_coords[self.edges['nodes'][:, 0]]
 
-        # create cells -> edges
-        num_cells = len(self.cells['nodes'])
-        cells_edges = numpy.empty((num_cells, 6), dtype=int)
-        for cell_id, face_ids in enumerate(self.cells['faces']):
-            edges_set = set(self.faces['edges'][face_ids].flatten())
-            cells_edges[cell_id] = list(edges_set)
+        v = self.cells['nodes']
+        idx = numpy.stack([
+            numpy.column_stack(v[:, 0], v[:, 1]),
+            numpy.column_stack(v[:, 0], v[:, 2]),
+            numpy.column_stack(v[:, 0], v[:, 3]),
+            numpy.column_stack(v[:, 1], v[:, 2]),
+            numpy.column_stack(v[:, 1], v[:, 3]),
+            numpy.column_stack(v[:, 2], v[:, 3]),
+            ], axis=1)
 
-        self.cells['edges'] = cells_edges
+        print(idx)
+        print(idx.shape)
+
+        exit(1)
 
         # Build the equation system:
         # The equation
@@ -246,9 +248,9 @@ class MeshTetra(_base_mesh):
         #
         # has to hold for all vectors u spanned by the edges, particularly by
         # the edges themselves.
-        cells_edges = edges[self.cells['edges']]
+        cells_edge_coords = edges[self.cells['edges']]
         # <http://stackoverflow.com/a/38110345/353337>
-        A = numpy.einsum('ijk,ilk->ijl', cells_edges, cells_edges)
+        A = numpy.einsum('ijk,ilk->ijl', cells_edge_coords, cells_edge_coords)
         A = A**2
 
         # Compute the RHS  cell_volume * <edge, edge>.
@@ -265,7 +267,7 @@ class MeshTetra(_base_mesh):
         # edge coefficients are 0, too. Hence, do nothing.
         sol = numpy.linalg.solve(A, rhs)
 
-        return sol
+        return ids, sol
 
     def compute_ce_ratios_geometric(self):
 
@@ -310,32 +312,55 @@ class MeshTetra(_base_mesh):
         #
         # All those dot products can probably be cleaned up good.
         # TODO simplify
+        # TODO can those perhaps be expressed as dot products of x_ - x_, i.e.,
+        #      edges of the considered face
         x0_dot_x0 = _my_dot(x0, x0)
         x1_dot_x1 = _my_dot(x1, x1)
         x2_dot_x2 = _my_dot(x2, x2)
         x0_dot_x1 = _my_dot(x0, x1)
         x1_dot_x2 = _my_dot(x1, x2)
         x2_dot_x0 = _my_dot(x2, x0)
-        # alpha = <x0_cross_x1 + x1_cross_x2 + x2_cross_x0, x0_cross_x1>
-        alpha = \
-            x0_dot_x0 * x1_dot_x1 - x0_dot_x1**2 + \
-            x0_dot_x1 * x1_dot_x2 - x1_dot_x1 * x2_dot_x0 + \
-            x2_dot_x0 * x0_dot_x1 - x1_dot_x2 * x0_dot_x0
-        # beta = <x0_cross_x1 + x1_cross_x2 + x2_cross_x0, x1_cross_x2>
-        beta = \
-            x0_dot_x1 * x1_dot_x2 - x2_dot_x0 * x1_dot_x1 + \
-            x1_dot_x1 * x2_dot_x2 - x1_dot_x2**2 + \
-            x1_dot_x2 * x2_dot_x0 - x2_dot_x2 * x0_dot_x1
-        # gamma = <x0_cross_x1 + x1_cross_x2 + x2_cross_x0, x2_cross_x0>
-        gamma = \
-            x2_dot_x0 * x0_dot_x1 - x0_dot_x0 * x1_dot_x2 + \
-            x1_dot_x2 * x2_dot_x0 - x0_dot_x1 * x2_dot_x2 + \
-            x0_dot_x0 * x2_dot_x2 - x2_dot_x0**2
+        # # alpha = <x0_cross_x1 + x1_cross_x2 + x2_cross_x0, x0_cross_x1>
+        # alpha = \
+        #     x0_dot_x0 * x1_dot_x1 - x0_dot_x1**2 + \
+        #     x0_dot_x1 * x1_dot_x2 - x1_dot_x1 * x2_dot_x0 + \
+        #     x2_dot_x0 * x0_dot_x1 - x1_dot_x2 * x0_dot_x0
+        # # beta = <x0_cross_x1 + x1_cross_x2 + x2_cross_x0, x1_cross_x2>
+        # beta = \
+        #     x0_dot_x1 * x1_dot_x2 - x2_dot_x0 * x1_dot_x1 + \
+        #     x1_dot_x1 * x2_dot_x2 - x1_dot_x2**2 + \
+        #     x1_dot_x2 * x2_dot_x0 - x2_dot_x2 * x0_dot_x1
+        # # gamma = <x0_cross_x1 + x1_cross_x2 + x2_cross_x0, x2_cross_x0>
+        # gamma = \
+        #     x2_dot_x0 * x0_dot_x1 - x0_dot_x0 * x1_dot_x2 + \
+        #     x1_dot_x2 * x2_dot_x0 - x0_dot_x1 * x2_dot_x2 + \
+        #     x0_dot_x0 * x2_dot_x2 - x2_dot_x0**2
+
+        delta = \
+            x0_dot_x0 * x1_dot_x1 * x2_dot_x2 - x2_dot_x2 * x0_dot_x1**2 + \
+            x0_dot_x1 * x1_dot_x2 * x2_dot_x2 - x2_dot_x2 * x1_dot_x1 * x2_dot_x0 + \
+            x2_dot_x0 * x0_dot_x1 * x2_dot_x2 - x2_dot_x2 * x1_dot_x2 * x0_dot_x0 + \
+            x0_dot_x1 * x1_dot_x2 * x0_dot_x0 - x0_dot_x0 * x2_dot_x0 * x1_dot_x1 + \
+            x1_dot_x1 * x2_dot_x2 * x0_dot_x0 - x0_dot_x0 * x1_dot_x2**2 + \
+            x1_dot_x2 * x2_dot_x0 * x0_dot_x0 - x0_dot_x0 * x2_dot_x2 * x0_dot_x1 + \
+            x2_dot_x0 * x0_dot_x1 * x1_dot_x1 - x1_dot_x1 * x0_dot_x0 * x1_dot_x2 + \
+            x1_dot_x2 * x2_dot_x0 * x1_dot_x1 - x1_dot_x1 * x0_dot_x1 * x2_dot_x2 + \
+            x0_dot_x0 * x2_dot_x2 * x1_dot_x1 - x1_dot_x1 * x2_dot_x0**2
+
+        # delta2 = \
+        #     _my_dot(x1 - x0, x2 - x1) * \
+        #     _my_dot(x2 - x1, x0 - x2) * \
+        #     _my_dot(x0 - x2, x1 - x0)
+        #
+        # print(delta - delta2)
+        #exit(1)
+
         a = (
             72.0 * self.cell_volumes[:, None]**2
-            - alpha * x2_dot_x2
-            - beta * x0_dot_x0
-            - gamma * x1_dot_x1
+            - delta
+            # - alpha * x2_dot_x2
+            # - beta * x0_dot_x0
+            # - gamma * x1_dot_x1
             ) / (12.0 * face_areas)
 
         # Distances of the cell circumcenter to the faces.

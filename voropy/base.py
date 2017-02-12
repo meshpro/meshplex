@@ -151,6 +151,7 @@ class _base_mesh(object):
                  cells_nodes
                  ):
         self.node_coords = nodes
+        self._edge_lengths = None
         return
 
     def write(self,
@@ -183,19 +184,23 @@ class _base_mesh(object):
             field_data=field_data
             )
 
-    def compute_edge_lengths(self, edge_ids=None):
-        if edge_ids is not None:
-            edges = self.node_coords[self.edges['nodes'][edge_ids, 1]] \
-                - self.node_coords[self.edges['nodes'][edge_ids, 0]]
-        else:
-            edges = self.node_coords[self.edges['nodes'][:, 1]] \
-                - self.node_coords[self.edges['nodes'][:, 0]]
-        return numpy.sqrt(_row_dot(edges, edges))
+    def get_edge_lengths(self):
+        if self._edge_lengths is None:
+            edges = self.node_coords[self.cell_edge_nodes[..., 1]] \
+                - self.node_coords[self.cell_edge_nodes[..., 0]]
+            self._edge_lengths = numpy.sqrt(_row_dot(edges, edges))
 
-    def get_edges(self, subdomain):
+        return self._edge_lengths
+
+    # def get_edges(self, subdomain):
+    #     if subdomain not in self.subdomains:
+    #         self.mark_subdomain(subdomain)
+    #     return self.subdomains[subdomain]['edges']
+
+    def get_cells(self, subdomain):
         if subdomain not in self.subdomains:
             self.mark_subdomain(subdomain)
-        return self.subdomains[subdomain]['edges']
+        return self.subdomains[subdomain]['cells']
 
     def get_vertices(self, subdomain):
         if subdomain not in self.subdomains:

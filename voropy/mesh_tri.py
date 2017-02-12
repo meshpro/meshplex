@@ -561,7 +561,12 @@ class MeshTri(_base_mesh):
 
         return
 
-    def get_ce_ratios(self):
+    def get_ce_ratios(self, cell_ids=None):
+        if cell_ids is not None:
+            return self.ce_ratios_per_half_edge[cell_ids]
+        return self.ce_ratios_per_half_edge
+
+    def get_ce_ratios_per_edge(self):
         if self._ce_ratios is None:
             # sum up from self.ce_ratios_per_half_edge
             cells_edges = self.cells['edges']
@@ -631,7 +636,8 @@ class MeshTri(_base_mesh):
         self.subdomains = {}
         self.subdomains['everywhere'] = {
                 'vertices': range(len(self.node_coords)),
-                'edges': range(len(self.edges['nodes']))
+                'edges': range(len(self.edges['nodes'])),
+                'cells': range(len(self.cells)),
                 }
 
         # Get vertices on the boundary edges
