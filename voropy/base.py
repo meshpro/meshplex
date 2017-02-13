@@ -192,10 +192,10 @@ class _base_mesh(object):
 
         return self._edge_lengths
 
-    # def get_edges(self, subdomain):
-    #     if subdomain not in self.subdomains:
-    #         self.mark_subdomain(subdomain)
-    #     return self.subdomains[subdomain]['edges']
+    def get_edges(self, subdomain):
+        if subdomain not in self.subdomains:
+            self.mark_subdomain(subdomain)
+        return self.subdomains[subdomain]['edges']
 
     def get_cells(self, subdomain):
         if subdomain not in self.subdomains:

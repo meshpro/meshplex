@@ -38,12 +38,12 @@ def _run(
     # Unfortunately, this isn't always the case.
     # ```
     # total_ce_ratio = \
-    #     fsum(mesh.edge_lengths**2 * mesh.get_ce_ratios() / dim)
+    #     fsum(mesh.edge_lengths**2 * mesh.get_ce_ratios_per_edge() / dim)
     # self.assertAlmostEqual(volume, total_ce_ratio, delta=tol * volume)
     # ```
     # Check ce_ratio norms.
-    alpha2 = fsum(mesh.get_ce_ratios()**2)
-    alpha_inf = max(abs(mesh.get_ce_ratios()))
+    alpha2 = fsum(mesh.get_ce_ratios_per_edge()**2)
+    alpha_inf = max(abs(mesh.get_ce_ratios_per_edge()))
     assert _near_equal(ce_ratio_norms, [alpha2, alpha_inf], tol)
 
     # Check the volume by summing over the absolute value of the control
@@ -70,7 +70,7 @@ def test_regular_tri():
     tol = 1.0e-14
 
     # ce_ratios
-    assert _near_equal(mesh.get_ce_ratios(), [0.5, 0.5, 0.0], tol)
+    assert _near_equal(mesh.get_ce_ratios_per_edge(), [0.5, 0.5, 0.0], tol)
 
     # control volumes
     assert _near_equal(
@@ -119,9 +119,9 @@ def test_regular_tri():
 #     # ce_ratios
 #     alpha = 0.5 * h - 1.0 / (8*h)
 #     beta = 1.0 / (4*h)
-#     assertAlmostEqual(mesh.get_ce_ratios()[0], alpha, delta=tol)
-#     self.assertAlmostEqual(mesh.get_ce_ratios()[1], beta, delta=tol)
-#     self.assertAlmostEqual(mesh.get_ce_ratios()[2], beta, delta=tol)
+#     assertAlmostEqual(mesh.get_ce_ratios_per_edge()[0], alpha, delta=tol)
+#     self.assertAlmostEqual(mesh.get_ce_ratios_per_edge()[1], beta, delta=tol)
+#     self.assertAlmostEqual(mesh.get_ce_ratios_per_edge()[2], beta, delta=tol)
 
 #     # control volumes
 #     alpha1 = 0.0625 * (3*h - 1.0/(4*h))
@@ -197,7 +197,7 @@ def test_degenerate_small0b(h):
     # ce_ratios
     ce0 = 0.5/h * (h**2 - 0.25)
     ce12 = 0.25/h
-    assert _near_equal(mesh.get_ce_ratios(), [ce0, ce12, ce12], tol)
+    assert _near_equal(mesh.get_ce_ratios_per_edge(), [ce0, ce12, ce12], tol)
 
     # control volumes
     cv12 = 0.25 * (1.0**2 * ce0 + (0.25 + h**2) * ce12)
@@ -243,7 +243,7 @@ def test_degenerate_small0b_fbc():
 
     # ce_ratios
     ce = h
-    assert _near_equal(mesh.get_ce_ratios(), [0.0, ce, ce], tol)
+    assert _near_equal(mesh.get_ce_ratios_per_edge(), [0.0, ce, ce], tol)
 
     # control volumes
     cv = ce * edge_length
@@ -300,7 +300,7 @@ def test_degenerate_small1(h, a):
     # ce_ratios
     ce1 = 0.5 * h / a
     ce2 = 0.5 * h / (1.0 - a)
-    assert _near_equal(mesh.get_ce_ratios(), [0.0, ce1, ce2], tol)
+    assert _near_equal(mesh.get_ce_ratios_per_edge(), [0.0, ce1, ce2], tol)
 
     # control volumes
     cv1 = ce1 * el1
@@ -352,7 +352,7 @@ def test_degenerate_small2(h):
     alpha = h - 1.0 / (4*h)
     beta = 1.0 / (4*h)
     assert _near_equal(
-        mesh.get_ce_ratios(),
+        mesh.get_ce_ratios_per_edge(),
         [alpha, beta, beta, beta, beta],
         tol
         )
@@ -405,7 +405,7 @@ def test_regular_tet0(a):
     # covolume/edge length ratios
     val = a / 12.0 / numpy.sqrt(2)
     assert _near_equal(
-        mesh.get_ce_ratios(),
+        mesh.get_ce_ratios_per_edge(),
         [val, val, val, val, val, val],
         tol
         )
@@ -449,7 +449,7 @@ def test_regular_tet1_algebraic(a):
 
     # covolume/edge length ratios
     assert _near_equal(
-        mesh.get_ce_ratios(),
+        mesh.get_ce_ratios_per_edge(),
         [a/6.0, a/6.0, a/6.0, 0.0, 0.0, 0.0],
         tol
         )
@@ -487,7 +487,7 @@ def test_regular_tet1_geometric(a):
 
     # covolume/edge length ratios
     assert _near_equal(
-        mesh.get_ce_ratios(),
+        mesh.get_ce_ratios_per_edge(),
         [a/4.0, a/4.0, a/4.0, -a/24.0, -a/24.0, -a/24.0],
         tol
         )
@@ -532,7 +532,7 @@ def test_degenerate_tet0(h):
 
     # covolume/edge length ratios
     assert _near_equal(
-        mesh.get_ce_ratios(),
+        mesh.get_ce_ratios_per_edge(),
         [h / 6.0, h / 6.0, 0.0, -1.0/24/h, 1.0/12/h, 1.0/12/h],
         tol
         )
@@ -599,7 +599,7 @@ def test_rectanglesmall():
     tol = 1.0e-14
 
     assert _near_equal(
-        mesh.get_ce_ratios(),
+        mesh.get_ce_ratios_per_edge(),
         [0.05, 0.0, 5.0, 5.0, 0.05],
         tol
         )
@@ -783,14 +783,14 @@ def test_toy_algebraic():
         diff_coords = mesh.node_coords - mesh2.node_coords
         max_diff_coords = max(diff_coords.flatten())
         print('||coords_1 - coords_2||_inf  =  %e' % max_diff_coords)
-        diff_ce_ratios = mesh.get_ce_ratios() - mesh2.ce_ratios
+        diff_ce_ratios = mesh.get_ce_ratios_per_edge() - mesh2.ce_ratios
         print(
             '||ce_ratios_1 - ce_ratios_2||_inf  =  %e'
             % max(diff_ce_ratios)
             )
         from matplotlib import pyplot as plt
         plt.figure()
-        n = len(mesh.get_ce_ratios())
+        n = len(mesh.get_ce_ratios_per_edge())
         plt.semilogy(range(n), diff_ce_ratios)
         plt.show()
         exit(1)

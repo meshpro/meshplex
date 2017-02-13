@@ -20,14 +20,14 @@ def lloyd_smoothing(mesh, tol, verbose=True, output_filetype=None):
 
     # 2D mesh
     assert all(mesh.node_coords[:, 2] == 0.0)
-    assert mesh.fbc is not None
+    assert mesh.fcc is not None
 
     # If any of the covolume-edge length ratios is negative, it must be on the
     # interior. If we flip the edge, it should be positive.
-    ce_ratios = mesh.get_ce_ratios()
+    ce_ratios = mesh.get_ce_ratios_per_edge()
     while any(ce_ratios < 0.0):
         mesh = flip_edges(mesh, ce_ratios < 0.0)
-        ce_ratios = mesh.get_ce_ratios()
+        ce_ratios = mesh.get_ce_ratios_per_edge()
 
     boundary_verts = mesh.get_vertices('boundary')
 
@@ -103,10 +103,10 @@ def lloyd_smoothing(mesh, tol, verbose=True, output_filetype=None):
         # mesh.show()
         # plt.show()
 
-        ce_ratios = mesh.get_ce_ratios()
+        ce_ratios = mesh.get_ce_ratios_per_edge()
         while any(ce_ratios < 0.0):
             mesh = flip_edges(mesh, ce_ratios < 0.0)
-            ce_ratios = mesh.get_ce_ratios()
+            ce_ratios = mesh.get_ce_ratios_per_edge()
 
         if output_filetype:
             if output_filetype == 'png':
@@ -192,10 +192,7 @@ class FlatCellCorrector(object):
         self.node_coords = node_coords
         self.cell_ids = cell_ids
         self.local_edge_ids = local_edge_ids
-        self.create_data()
-        return
 
-    def create_data(self):
         # In each cell, edge k is opposite of vertex k.
         self.p0_local_id = self.local_edge_ids.copy()
         self.p1_local_id = (self.local_edge_ids + 1) % 3
@@ -249,8 +246,8 @@ class FlatCellCorrector(object):
                                _^_
                            ___/ | \___
                    e2  ___/ /   |   \ \___  e1
-                   ___/ p0 /    |    \ p0 \___
-               ___/  \    /     |     \    /  \___
+                   ___/    /    |    \    \___
+               ___/  \ p0 /     |     \ p0 /  \___
            ___/   p1  \  /  p0  | p0   \  /  p2   \___
           /____________\/_______|_______\/____________\
          p1                                           p2
@@ -284,17 +281,16 @@ class FlatCellCorrector(object):
 
                                p0
                                _^_
-                           ___//|\\___
-                       ___/   / | \   \___
-                   ___/     _/  |  \_     \___
-               ___/   \    /    |    \    /   \___
-           ___/        \  /     |     \  /        \___
-          /_____________\/__cv1_|_cv2__\/_____________\
-         p1                     q                     p2
-                             OUTSIDE
+                           ___/ | \___
+                       ___/ /   |   \ \___
+                   ___/    /    |    \    \___
+               ___/  \    /     |     \    /  \___
+           ___/       \  /      |      \  /       \___
+          /____________\/__cv1__|__cv2__\/____________\
+         p1            q1       q       q2            p2
 
-        associate the lenght dist(p1, q1) with p1, dist(q2, p2) to p2, and
-        dist(q1, q2) to p0.
+        associate the lenght dist(p1, q1) with p1, dist(q2, p2) with p2, and
+        dist(q1, q2) with p0.
         '''
         ghostedge_length = numpy.sqrt(self.ghostedge_length_2)
 
@@ -323,13 +319,13 @@ class FlatCellCorrector(object):
 
                                p0
                                _^_
-                           ___//|\\___
-                       ___/   / | \   \___
-                   _em2     _/  |  \_     em1_
-               ___/   \    /    |    \    /   \___
-           ___/        \  /     |     \  /        \___
-          /_____________\/______|______\/_____________\
-         p1             q1      q      q2             p2
+                           ___/ | \___
+                       ___/ /   |   \ \___
+                   _em2    /    |    \    em1_
+               ___/  \    /     |     \    /  \___
+           ___/       \  /      |      \  /       \___
+          /____________\/_______|_______\/____________\
+         p1            q1       q       q2            p2
         '''
         # The long edge is opposite of p0 and has the same local index,
         # likewise for the other edges.
@@ -891,7 +887,7 @@ class MeshTri(_base_mesh):
     def num_delaunay_violations(self):
         # Delaunay violations are present exactly on the interior edges where
         # the ce_ratio is negative. Count those.
-        ce_ratios = self.get_ce_ratios()
+        ce_ratios = self.get_ce_ratios_per_edge()
         return numpy.sum(ce_ratios[~self.is_boundary_edge] < 0.0)
 
     def show(
@@ -941,7 +937,7 @@ class MeshTri(_base_mesh):
         # Get edges, cut off z-component.
         e = self.node_coords[self.edges['nodes']][:, :, :2]
         # Plot regular edges, mark those with negative ce-ratio red.
-        ce_ratios = self.get_ce_ratios()
+        ce_ratios = self.get_ce_ratios_per_edge()
         pos = ce_ratios >= 0
         line_segments0 = LineCollection(e[pos], color=mesh_color)
         ax.add_collection(line_segments0)
