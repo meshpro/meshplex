@@ -55,7 +55,7 @@ def compute_tri_areas_and_ce_ratios(e0, e1, e2):
     #
     #   e1 + s2*e2 + s3*e3 = 0
     #
-    # where the s_ are signs. (We assume s1=1 w.l.o.g.) Since
+    # where the s_ are signs. Since
     #
     #   <e1 x e2, e1 x e3> = <e1 x e2, e1 x (-s1*s3*e1-s2*s3*e2)>
     #                      = -s2*s3 * <e1 x e2, e1 x e2>,

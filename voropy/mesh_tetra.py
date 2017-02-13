@@ -9,7 +9,6 @@ from voropy.base import \
 
 __all__ = ['MeshTetra']
 
-
 def _my_dot(a, b):
     return numpy.einsum('ijk, ijk->ij', a, b)
 
@@ -60,12 +59,8 @@ class MeshTetra(_base_mesh):
             self._ce_ratios = numpy.zeros(num_edges, dtype=float)
             assert self._mode in ['geometric', 'algebraic']
             if self._mode == 'geometric':
-                vals = self.compute_ce_ratios_geometric()
-                numpy.add.at(
-                        self._ce_ratios,
-                        self.faces['edges'][self.cells['faces']],
-                        vals
-                        )
+                idx, vals = self.compute_ce_ratios_geometric()
+                numpy.add.at(self._ce_ratios, idx, vals)
             else:  # 'algebraic'
                 idx, vals = self.compute_ce_ratios_algebraic()
                 numpy.add.at(self._ce_ratios, idx, vals)
@@ -141,6 +136,7 @@ class MeshTetra(_base_mesh):
         return
 
     def create_face_edge_relationships(self):
+        # TODO [1,2], [2,0], [0,1]
         a = numpy.vstack([
             self.faces['nodes'][:, [0, 1]],
             self.faces['nodes'][:, [0, 2]],
@@ -214,36 +210,30 @@ class MeshTetra(_base_mesh):
         return
 
     def compute_ce_ratios_algebraic(self):
-        # # Precompute edges.
-        # edges = \
-        #     self.node_coords[self.edges['nodes'][:, 1]] - \
-        #     self.node_coords[self.edges['nodes'][:, 0]]
+        # Precompute edges.
+        edges = \
+            self.node_coords[self.edges['nodes'][:, 1]] - \
+            self.node_coords[self.edges['nodes'][:, 0]]
 
-        v = self.cells['nodes']
-        idx = numpy.stack([
-            v[:, [0, 1]],
-            v[:, [0, 2]],
-            v[:, [0, 3]],
-            v[:, [1, 2]],
-            v[:, [1, 3]],
-            v[:, [2, 3]],
-            ], axis=1)
+        # create cells -> edges
+        num_cells = len(self.cells['nodes'])
+        cells_edges = numpy.empty((num_cells, 6), dtype=int)
+        for cell_id, face_ids in enumerate(self.cells['faces']):
+            edges_set = set(self.faces['edges'][face_ids].flatten())
+            cells_edges[cell_id] = list(edges_set)
 
-        print(idx)
-        print(idx.shape)
-
-        exit(1)
+        self.cells['edges'] = cells_edges
 
         # Build the equation system:
         # The equation
         #
         # |simplex| ||u||^2 = \sum_i \alpha_i <u,e_i> <e_i,u>
         #
-        # has to hold for all vectors u spanned by the edges, particularly by
-        # the edges themselves.
-        cells_edge_coords = edges[self.cells['edges']]
+        # has to hold for all vectors u in the plane spanned by the edges,
+        # particularly by the edges themselves.
+        cells_edges = edges[self.cells['edges']]
         # <http://stackoverflow.com/a/38110345/353337>
-        A = numpy.einsum('ijk,ilk->ijl', cells_edge_coords, cells_edge_coords)
+        A = numpy.einsum('ijk,ilk->ijl', cells_edges, cells_edges)
         A = A**2
 
         # Compute the RHS  cell_volume * <edge, edge>.
@@ -260,7 +250,7 @@ class MeshTetra(_base_mesh):
         # edge coefficients are 0, too. Hence, do nothing.
         sol = numpy.linalg.solve(A, rhs)
 
-        return ids, sol
+        return self.cells['edges'], sol
 
     def compute_ce_ratios_geometric(self):
 
@@ -364,7 +354,8 @@ class MeshTetra(_base_mesh):
         # Multiply
         s = 0.5 * fce_ratios * self.circumcenter_face_distances[..., None]
 
-        return s
+        idx = self.faces['edges'][self.cells['faces']]
+        return idx, s
 
     def get_control_volumes(self):
         '''Compute the control volumes of all nodes in the mesh.
