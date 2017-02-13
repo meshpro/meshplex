@@ -180,12 +180,12 @@ def _isosceles_ce_ratios(p0, p1, p2):
     return ce_ratios[:, [0, 1]]
 
 
-class FlatBoundaryCorrector(object):
+class FlatCellCorrector(object):
     '''For flat elements on the boundary, a couple of things need to be
     adjusted: The covolume-edge length ratio, the control volumes
     contributions, the centroid contributions etc. Since all of these
     computations share some data, that we could pass around, we might as well
-    do that as part of a class. Enter `FlatBoundaryCorrector`.
+    do that as part of a class. Enter `FlatCellCorrector`.
     '''
     def __init__(self, cells, node_coords, cell_ids, local_edge_ids):
         self.cells = cells
@@ -247,12 +247,12 @@ class FlatBoundaryCorrector(object):
 
                                p0
                                _^_
-                           ___//|\\___
-                   e2  ___/   / | \   \___  e1
-                   ___/  p0 _/  |  \_ p0  \___
-               ___/   \    /    |    \    /   \___
-           ___/   p1   \  /  p0 | p0  \  /  p2    \___
-          /_____________\/______|______\/_____________\
+                           ___/ | \___
+                   e2  ___/ /   |   \ \___  e1
+                   ___/ p0 /    |    \ p0 \___
+               ___/  \    /     |     \    /  \___
+           ___/   p1  \  /  p0  | p0   \  /  p2   \___
+          /____________\/_______|_______\/____________\
          p1                                           p2
         '''
         e1 = self.p0 - self.p2
@@ -550,13 +550,13 @@ class MeshTri(_base_mesh):
                     numpy.all(numpy.logical_not(is_flat_boundary_edge), axis=1)
                     )[0]
             #
-            self.fbc = FlatBoundaryCorrector(
+            self.fcc = FlatCellCorrector(
                     self.cells, self.node_coords, cell_ids, local_edge_ids
                     )
-            ids, vals = self.fbc.correct_ce_ratios()
+            ids, vals = self.fcc.correct_ce_ratios()
             self.ce_ratios_per_half_edge[ids] = vals
         else:
-            self.fbc = None
+            self.fcc = None
             self.regular_cell_ids = range(len(self.cells['nodes']))
 
         return
@@ -581,8 +581,8 @@ class MeshTri(_base_mesh):
     def get_control_volumes(self):
         if self._control_volumes is None:
             control_volume_data = []
-            if self.fbc is not None:
-                control_volume_data.append(self.fbc.control_volumes())
+            if self.fcc is not None:
+                control_volume_data.append(self.fcc.control_volumes())
 
             control_volume_data.append(
                 self._compute_control_volume_contribs(self.regular_cell_ids)
@@ -596,16 +596,13 @@ class MeshTri(_base_mesh):
 
     def get_surface_areas(self):
         if self._surface_areas is None:
-            surface_area_data = [self._compute_surface_areas(
-                    self.regular_boundary_cell_ids,
-                    self.regular_local_edge_ids
-                    )]
-            if self.fbc is not None:
-                surface_area_data.append(self.fbc.surface_areas())
-            # surface areas
-            self._surface_areas = numpy.zeros(len(self.node_coords))
-            for d in surface_area_data:
-                numpy.add.at(self._surface_areas, d[0], d[1])
+            self._surface_areas = self._compute_surface_areas()
+            if self.fcc is not None:
+                surface_area_data.append(self.fcc.surface_areas())
+            # # surface areas
+            # self._surface_areas = numpy.zeros(len(self.node_coords))
+            # for d in surface_area_data:
+            #     numpy.add.at(self._surface_areas, d[0], d[1])
 
         return self._surface_areas
 
@@ -622,8 +619,8 @@ class MeshTri(_base_mesh):
         # v_0 is composed of right triangles, two for each adjacent cell.
         if self._cv_centroids is None:
             centroid_data = [self._compute_integral_x(self.regular_cell_ids)]
-            if self.fbc is not None:
-                centroid_data.append(self.fbc.integral_x())
+            if self.fcc is not None:
+                centroid_data.append(self.fcc.integral_x())
             # add it all up
             self._cv_centroids = numpy.zeros((len(self.node_coords), 3))
             for d in centroid_data:
@@ -637,7 +634,7 @@ class MeshTri(_base_mesh):
         self.subdomains['everywhere'] = {
                 'vertices': range(len(self.node_coords)),
                 'edges': range(len(self.edges['nodes'])),
-                'cells': range(len(self.cells)),
+                'cells': range(len(self.cells['nodes'])),
                 }
 
         # Get vertices on the boundary edges
@@ -757,16 +754,13 @@ class MeshTri(_base_mesh):
 
         return edge_nodes, contribs
 
-    def _compute_surface_areas(
-            self, regular_boundary_cell_ids=None, local_edge_ids=None
-            ):
-        edge_ids = \
-            self.cells['edges'][regular_boundary_cell_ids, local_edge_ids]
-
-        el = self.compute_edge_lengths(edge_ids)
-
-        ids = self.edges['nodes'][edge_ids]
-        vals = _column_stack(0.5 * el, 0.5 * el)
+    def _compute_surface_areas(self):
+        '''For each edge, one half of the the edge goes to each of the end
+        points. Used for Neumann boundary conditions if on the boundary of the
+        mesh and transition conditions if in the interior.
+        '''
+        ids = self.cell_edge_nodes
+        vals = 0.5 * self.compute_edge_lengths()
         return ids, vals
 
 #     def compute_gradient(self, u):
