@@ -177,7 +177,7 @@ def test_degenerate_small0b(h):
     mesh = voropy.mesh_tri.MeshTri(
             points,
             cells,
-            flat_boundary_correction=False
+            flat_cell_correction=False
             )
 
     tol = 1.0e-14
@@ -220,7 +220,7 @@ def test_degenerate_small0b_fcc():
     mesh = voropy.mesh_tri.MeshTri(
             points,
             cells,
-            flat_boundary_correction=True
+            flat_cell_correction=True
             )
 
     tol = 1.0e-14
@@ -275,7 +275,7 @@ def test_degenerate_small1(h, a):
     mesh = voropy.mesh_tri.MeshTri(
             points,
             cells,
-            flat_boundary_correction=True
+            flat_cell_correction=True
             )
 
     tol = 1.0e-14
@@ -656,7 +656,7 @@ def test_pacman():
             'pacman.msh',
             '2da8ff96537f844a95a83abb48471b6a'
             )
-    mesh, _, _, _ = voropy.read(filename, flat_boundary_correction=True)
+    mesh, _, _, _ = voropy.read(filename, flat_cell_correction=True)
 
     _run(
         mesh,

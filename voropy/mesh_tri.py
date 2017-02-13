@@ -98,7 +98,7 @@ def lloyd_smoothing(mesh, tol, verbose=True, output_filetype=None):
         mesh = MeshTri(
                 new_points,
                 mesh.cells['nodes'],
-                flat_boundary_correction=True
+                flat_cell_correction=True
                 )
         # mesh.show()
         # plt.show()
@@ -181,17 +181,45 @@ def _isosceles_ce_ratios(p0, p1, p2):
 
 
 class FlatCellCorrector(object):
-    '''For flat elements on the boundary, a couple of things need to be
-    adjusted: The covolume-edge length ratio, the control volumes
-    contributions, the centroid contributions etc. Since all of these
-    computations share some data, that we could pass around, we might as well
-    do that as part of a class. Enter `FlatCellCorrector`.
+    '''Cells can be flat such that the circumcenter is outside the cell, e.g.,
+
+                               p0
+                               _^_
+                           ___/   \___
+                       ___/           \___
+                   ___/                   \___
+               ___/  \                     /  \___
+           ___/       \                   /       \___
+          /____________\________________ /____________\
+         p1             \       |       /               p2
+                         \      |      /
+                          \     |     /
+                           \    |    /
+                            \   |   /
+                             \  |  /
+                              \ | /
+                               \|/
+                                V
+
+    This has some funny consequences: The covolume along this edge is negative,
+    the area "belonging" to p0 can be overly large etc. While this is mostly of
+    cosmetical interest, some applications suffer. For example, Lloyd smoothing
+    will fail if a flat edge is on the boundary: p0 will be dragged further
+    towards the outside, making the edge even flatter. Also, when building an
+    FVM equation system with a negative covolume, the wrong sign might appear
+    on the diagonal, rendering the spectrum indefinite.
+
+    Altogether, it sometimes makes sense to adjust a few things: The
+    covolume-edge length ratio, the control volumes contributions, the centroid
+    contributions etc. Since all of these computations share some data, that we
+    could pass around, we might as well do that as part of a class. Enter
+    `FlatCellCorrector`.
     '''
-    def __init__(self, cells, node_coords, cell_ids, local_edge_ids):
+    def __init__(self, cells, node_coords):
         self.cells = cells
         self.node_coords = node_coords
-        self.cell_ids = cell_ids
-        self.local_edge_ids = local_edge_ids
+        # self.cell_ids = cell_ids
+        # self.local_edge_ids = local_edge_ids
 
         # In each cell, edge k is opposite of vertex k.
         self.p0_local_id = self.local_edge_ids.copy()
@@ -229,7 +257,7 @@ class FlatCellCorrector(object):
                 )
         return
 
-    def correct_ce_ratios(self):
+    def get_ce_ratios(self):
         '''Return the covolume-edge length ratios for the flat boundary cells.
         '''
         vals = numpy.empty((len(self.cell_ids), 3), dtype=float)
@@ -456,7 +484,7 @@ def flip_edges(mesh, is_flip_edge):
         mesh.node_coords,
         mesh.cells['nodes'],
         # Don't actually need that last bit here.
-        flat_boundary_correction=True
+        flat_cell_correction=True
         )
 
     return new_mesh
@@ -467,7 +495,7 @@ class MeshTri(_base_mesh):
 
     .. inheritance-diagram:: MeshTri
     '''
-    def __init__(self, nodes, cells, flat_boundary_correction=False):
+    def __init__(self, nodes, cells, flat_cell_correction=False):
         '''Initialization.
         '''
         super(MeshTri, self).__init__(nodes, cells)
@@ -490,21 +518,19 @@ class MeshTri(_base_mesh):
                 )
         self.cells['nodes'] = cells
 
-        self.create_edges()
-        self.mark_default_subdomains()
-
         self._ce_ratios = None
         self._control_volumes = None
         self._cv_centroids = None
         self._surface_areas = None
+        self.edges = None
 
-        self._compute_data(flat_boundary_correction=flat_boundary_correction)
-        return
-
-    def _compute_data(self, flat_boundary_correction=True):
+        # compute data
         self.cell_circumcenters = compute_triangle_circumcenters(
                 self.node_coords[self.cells['nodes']]
                 )
+
+        self.create_edges()
+        self.mark_default_subdomains()
 
         # Create the cells->edges->nodes hierarchy. Make sure that the k-th
         # edge is opposite of the k-th point in the triangle.
@@ -526,34 +552,36 @@ class MeshTri(_base_mesh):
         self.cell_volumes, self.ce_ratios_per_half_edge = \
             self._compute_cell_volumes_and_ce_ratios(e0h, e1h, e2h)
 
-        # Find out which boundary cells need special treatment
-        is_flat_boundary_edge = numpy.logical_and(
-            self.ce_ratios_per_half_edge < 0.0,
-            self.is_boundary_edge[self.cells['edges']]
-            )
-        cell_ids, local_edge_ids = numpy.where(is_flat_boundary_edge)
-        # regular boundary cells
-        is_regular_boundary_edge = numpy.logical_and(
-            self.ce_ratios_per_half_edge >= 0.0,
-            self.is_boundary_edge[self.cells['edges']]
-            )
-        self.regular_boundary_cell_ids, self.regular_local_edge_ids = \
-            numpy.where(is_regular_boundary_edge)
+        if flat_cell_correction is not None:
+            assert flat_cell_correction in ['full', 'boundary']
+            if flat_cell_correction == 'full':
+                # All cells with a negative c/e ratio are redone.
+                self.cell_needs_fcc = \
+                    numpy.any(self.ce_ratios_per_half_edge < 0.0)
 
-        if flat_boundary_correction:
-            # All rows which are completely not flat boundary
-            self.regular_cell_ids = numpy.where(
-                    numpy.all(numpy.logical_not(is_flat_boundary_edge), axis=1)
-                    )[0]
-            #
+            else:  # 'boundary'
+                # This best imitates the classical notion of control volumes.
+                # Only cells with a negative c/e ratio on the boundary are
+                # redone. Of course, this requires identifying boundary edges
+                # first.
+                if self.edges is None:
+                    self.create_edges()
+                self.cell_needs_fcc = numpy.any(numpy.logical_and(
+                    self.ce_ratios_per_half_edge < 0.0,
+                    self.is_boundary_edge[self.cells['edges']]
+                    ))
+
             self.fcc = FlatCellCorrector(
-                    self.cells, self.node_coords, cell_ids, local_edge_ids
+                    self.cells[self.cell_needs_fcc], self.node_coords
                     )
-            ids, vals = self.fcc.correct_ce_ratios()
+            ids, vals = self.fcc.get_ce_ratios()
             self.ce_ratios_per_half_edge[ids] = vals
         else:
             self.fcc = None
-            self.regular_cell_ids = range(len(self.cells['nodes']))
+            self.cell_needs_fcc = numpy.zeros(
+                    len(self.cells['nodes']),
+                    dtype=bool
+                    )
 
         return
 
@@ -756,7 +784,10 @@ class MeshTri(_base_mesh):
         mesh and transition conditions if in the interior.
         '''
         ids = self.cell_edge_nodes
-        vals = 0.5 * self.get_edge_lengths()
+
+        half_el = 0.5 * self.get_edge_lengths()
+        vals = numpy.stack([half_el, half_el], axis=-1)
+
         return ids, vals
 
 #     def compute_gradient(self, u):

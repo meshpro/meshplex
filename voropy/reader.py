@@ -12,7 +12,7 @@ import voropy
 __all__ = ['read']
 
 
-def read(filename, flat_boundary_correction=False):
+def read(filename, flat_cell_correction=False):
     '''Reads an unstructured mesh with added data.
 
     :param filenames: The files to read from.
@@ -32,7 +32,7 @@ def read(filename, flat_boundary_correction=False):
     elif 'triangle' in cells_nodes:
         return voropy.mesh_tri.MeshTri(
                points, cells_nodes['triangle'],
-               flat_boundary_correction=flat_boundary_correction
+               flat_cell_correction=flat_cell_correction
                ), \
                point_data, cell_data, field_data
     else:
