@@ -756,7 +756,7 @@ class MeshTri(_base_mesh):
         mesh and transition conditions if in the interior.
         '''
         ids = self.cell_edge_nodes
-        vals = 0.5 * self.compute_edge_lengths()
+        vals = 0.5 * self.get_edge_lengths()
         return ids, vals
 
 #     def compute_gradient(self, u):

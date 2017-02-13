@@ -93,10 +93,6 @@ def test_regular_tri():
 
     assert mesh.num_delaunay_violations() == 0
 
-    # edge_cells
-    edge_cells = mesh.compute_edge_cells()
-    assert edge_cells == [[0], [0], [0]]
-
     return
 
 
@@ -187,12 +183,8 @@ def test_degenerate_small0b(h):
     tol = 1.0e-14
 
     # edge lengths
-    edge_length = numpy.sqrt(0.5**2 + h**2)
-    assert _near_equal(
-        mesh.compute_edge_lengths(),
-        [1.0, edge_length, edge_length],
-        tol
-        )
+    el = numpy.sqrt(0.5**2 + h**2)
+    assert _near_equal(mesh.get_edge_lengths(), [[el, el, 1.0]], tol)
 
     # ce_ratios
     ce0 = 0.5/h * (h**2 - 0.25)
@@ -208,8 +200,8 @@ def test_degenerate_small0b(h):
     assert _near_equal(mesh.cell_volumes, [0.5 * h], tol)
 
     # surface areas
-    alpha = 0.5 + 0.5*edge_length
-    beta = edge_length
+    alpha = 0.5 + 0.5*el
+    beta = el
     assert _near_equal(mesh.get_surface_areas(), [alpha, alpha, beta], tol)
 
     assert mesh.num_delaunay_violations() == 0
@@ -217,7 +209,7 @@ def test_degenerate_small0b(h):
 
 
 # don't parametrize with flat boundary correction
-def test_degenerate_small0b_fbc():
+def test_degenerate_small0b_fcc():
     h = 1.0e-3
     points = numpy.array([
         [0, 0, 0],
@@ -234,20 +226,16 @@ def test_degenerate_small0b_fbc():
     tol = 1.0e-14
 
     # edge lengths
-    edge_length = numpy.sqrt(0.5**2 + h**2)
-    assert _near_equal(
-        mesh.compute_edge_lengths(),
-        [1.0, edge_length, edge_length],
-        tol
-        )
+    el = numpy.sqrt(0.5**2 + h**2)
+    assert _near_equal(mesh.get_edge_lengths(), [el, el, 1.0], tol)
 
     # ce_ratios
     ce = h
     assert _near_equal(mesh.get_ce_ratios_per_edge(), [0.0, ce, ce], tol)
 
     # control volumes
-    cv = ce * edge_length
-    alpha = 0.25 * edge_length * cv
+    cv = ce * el
+    alpha = 0.25 * el * cv
     beta = 0.5*h - 2*alpha
     assert _near_equal(
         mesh.get_control_volumes(),
@@ -259,9 +247,9 @@ def test_degenerate_small0b_fbc():
     assert _near_equal(mesh.cell_volumes, [0.5 * h], tol)
 
     # surface areas
-    g = numpy.sqrt((0.5 * edge_length)**2 + (ce * edge_length)**2)
-    alpha = 0.5 * edge_length + g
-    beta = edge_length + (1.0 - 2*g)
+    g = numpy.sqrt((0.5 * el)**2 + (ce * el)**2)
+    alpha = 0.5 * el + g
+    beta = el + (1.0 - 2*g)
     assert _near_equal(mesh.get_surface_areas(), [alpha, alpha, beta], tol)
 
     # centroids
@@ -295,7 +283,7 @@ def test_degenerate_small1(h, a):
     # edge lengths
     el1 = numpy.sqrt(a**2 + h**2)
     el2 = numpy.sqrt((1.0 - a)**2 + h**2)
-    assert _near_equal(mesh.compute_edge_lengths(), [1.0, el1, el2], tol)
+    assert _near_equal(mesh.get_edge_lengths(), [[el2, el1, 1.0]], tol)
 
     # ce_ratios
     ce1 = 0.5 * h / a
@@ -370,10 +358,6 @@ def test_degenerate_small2(h):
     assert _near_equal(mesh.cell_volumes, [0.5*h, 0.5*h], tol)
 
     assert mesh.num_delaunay_violations() == 1
-
-    # edge_cells
-    edge_cells = mesh.compute_edge_cells()
-    assert edge_cells == [[0, 1], [0], [1], [0], [1]]
 
     return
 
