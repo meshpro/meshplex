@@ -10,6 +10,8 @@ def test_get_edges():
             '2da8ff96537f844a95a83abb48471b6a'
             )
     mesh, _, _, _ = voropy.read(filename)
+    mesh.create_edges()
+    mesh.mark_default_subdomains()
     edges = mesh.get_edges('everywhere')
     assert len(edges) == 1276
     return

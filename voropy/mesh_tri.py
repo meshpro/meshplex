@@ -29,7 +29,7 @@ def lloyd_smoothing(
     assert all(mesh.node_coords[:, 2] == 0.0)
     assert mesh.fcc is not fcc_type
 
-    boundary_verts = mesh.get_vertices('boundary')
+    boundary_verts = mesh.get_boundary_vertices()
 
     max_move = tol + 1
 
@@ -544,13 +544,14 @@ class MeshTri(_base_mesh):
         self._surface_areas = None
         self.edges = None
 
+        # TODO don't create by default
+        self.create_edges()
+        self.mark_default_subdomains()
+
         # compute data
         self.cell_circumcenters = compute_triangle_circumcenters(
                 self.node_coords[self.cells['nodes']]
                 )
-
-        self.create_edges()
-        self.mark_default_subdomains()
 
         # Create the cells->edges->nodes hierarchy. Make sure that the k-th
         # edge is opposite of the k-th point in the triangle.
@@ -606,6 +607,11 @@ class MeshTri(_base_mesh):
             self.regular_cells = range(len(self.cells['nodes']))
 
         return
+
+    def get_boundary_vertices(self):
+        self.create_edges()
+        self.mark_default_subdomains()
+        return self.subdomains['boundary']['vertices']
 
     def get_ce_ratios(self, cell_ids=None):
         if cell_ids is not None:
