@@ -94,19 +94,25 @@ def lloyd_smoothing(mesh, tol, verbose=True, output_filetype=None):
             #     (min_ce_ratios, av_ce_ratios, max_ce_ratios)
             #     )
 
-        # create new mesh and flip edges if necessary
+        # Flip the edges every so often.
+        if k % 100 == 0:
+            # We need boundary flat cell correction for flipping. If `full`,
+            # all c/e ratios will be positive.
+            mesh = MeshTri(
+                    new_points,
+                    mesh.cells['nodes'],
+                    flat_cell_correction='boundary'
+                    )
+            ce_ratios = mesh.get_ce_ratios_per_edge()
+            while any(ce_ratios < 0.0):
+                mesh = flip_edges(mesh, ce_ratios < 0.0)
+                ce_ratios = mesh.get_ce_ratios_per_edge()
+
         mesh = MeshTri(
                 new_points,
                 mesh.cells['nodes'],
-                flat_cell_correction='boundary'
+                flat_cell_correction='full'
                 )
-        # mesh.show()
-        # plt.show()
-
-        ce_ratios = mesh.get_ce_ratios_per_edge()
-        while any(ce_ratios < 0.0):
-            mesh = flip_edges(mesh, ce_ratios < 0.0)
-            ce_ratios = mesh.get_ce_ratios_per_edge()
 
         if output_filetype:
             if output_filetype == 'png':
