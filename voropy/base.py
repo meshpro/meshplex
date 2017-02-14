@@ -141,7 +141,34 @@ def compute_triangle_circumcenters(X):
     N = a * alpha[..., None] + b * beta[..., None]
     # <a x b, a x b> = <a, a> <b, b> - <a, b>^2
     a_cross_b2 = a_dot_a * b_dot_b - a_dot_b**2
-    return 0.5 * N / a_cross_b2[..., None] + X[:, 2, :]
+    cc = 0.5 * N / a_cross_b2[..., None] + X[:, 2, :]
+    # The trilinear coordinates of the circumcenter are
+    #
+    #   cos(alpha0) : cos(alpha1) : cos(alpha2)
+    #
+    # where alpha_k is the angle at point k, opposite of edge k. The Cartesian
+    # coordinates are (see
+    # <https://en.wikipedia.org/wiki/Trilinear_coordinates#Between_Cartesian_and_trilinear_coordinates>)
+    #
+    #     C = sum_i ||e_i|| * cos(alpha_i)/beta * P_i
+    #
+    # with
+    #
+    #     beta = sum ||e_i||*cos(alpha_i)
+    #
+    # Incidentally, the cosines are
+    #
+    #    cos(alpha0) = <e1, e2> / ||e1|| / ||e2||,
+    #
+    # so in total
+    #
+    #    C = ||e_0||^2 <e1, e2> / sum_i (||e_i||^2 <e{i+1}, e{i+2}>) P0
+    #      + ...
+    #
+    # By virtue of e0 + e1 + e2 = 0, the squared norms can even be replaced by
+    # the dot products.
+    # TODO do that
+    return cc
 
 
 class _base_mesh(object):
