@@ -83,7 +83,11 @@ def test_regular_tri():
     assert _near_equal(mesh.cell_volumes, [0.5], tol)
 
     # circumcenters
-    assert _near_equal(mesh.cell_circumcenters[0], [0.5, 0.5, 0.0], tol)
+    assert _near_equal(
+        mesh.get_cell_circumcenters(),
+        [0.5, 0.5, 0.0],
+        tol
+        )
 
     # centroids
     centroids = mesh.get_control_volume_centroids()
@@ -392,7 +396,7 @@ def test_regular_tet0(a):
     tol = 1.0e-10
 
     z = a / numpy.sqrt(24.0)
-    assert _near_equal(mesh.cell_circumcenters, [0.0, 0.0, z], tol)
+    assert _near_equal(mesh.get_cell_circumcenters(), [0.0, 0.0, z], tol)
 
     # covolume/edge length ratios
     val = a / 12.0 / numpy.sqrt(2)
@@ -434,7 +438,7 @@ def test_regular_tet1_algebraic(a):
     mesh = voropy.mesh_tetra.MeshTetra(points, cells, mode='algebraic')
 
     assert _near_equal(
-        mesh.cell_circumcenters,
+        mesh.get_cell_circumcenters(),
         [[a/2.0, a/2.0, a/2.0]],
         tol
         )
@@ -475,7 +479,11 @@ def test_regular_tet1_geometric(a):
 
     mesh = voropy.mesh_tetra.MeshTetra(points, cells, mode='geometric')
 
-    assert _near_equal(mesh.cell_circumcenters, [a/2.0, a/2.0, a/2.0], tol)
+    assert _near_equal(
+        mesh.get_cell_circumcenters(),
+        [a/2.0, a/2.0, a/2.0],
+        tol
+        )
 
     # covolume/edge length ratios
     assert _near_equal(
@@ -520,7 +528,11 @@ def test_degenerate_tet0(h):
     tol = 1.0e-7
 
     z = 0.5 * h - 1.0 / (4*h)
-    assert _near_equal(mesh.cell_circumcenters, [[0.5, 0.5, z]], tol)
+    assert _near_equal(
+        mesh.get_cell_circumcenters(),
+        [[0.5, 0.5, z]],
+        tol
+        )
 
     # covolume/edge length ratios
     assert _near_equal(

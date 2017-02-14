@@ -357,6 +357,9 @@ class MeshTetra(_base_mesh):
         idx = self.faces['edges'][self.cells['faces']]
         return idx, s
 
+    def get_cell_circumcenters(self):
+        return self.cell_circumcenters
+
     def get_control_volumes(self):
         '''Compute the control volumes of all nodes in the mesh.
         '''

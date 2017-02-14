@@ -543,16 +543,13 @@ class MeshTri(_base_mesh):
         self._cv_centroids = None
         self._surface_areas = None
         self.edges = None
+        self.cell_circumcenters = None
 
         # TODO don't create by default
         self.create_edges()
         self.mark_default_subdomains()
 
         # compute data
-        self.cell_circumcenters = compute_triangle_circumcenters(
-                self.node_coords[self.cells['nodes']]
-                )
-
         # Create the cells->edges->nodes hierarchy. Make sure that the k-th
         # edge is opposite of the k-th point in the triangle.
         nds = self.cells['nodes']
@@ -783,6 +780,13 @@ class MeshTri(_base_mesh):
                 0.25 * el2 * self.ce_ratios_per_half_edge
         return self._control_volume_contribs
 
+    def get_cell_circumcenters(self):
+        if self.cell_circumcenters is None:
+            self.cell_circumcenters = compute_triangle_circumcenters(
+                    self.node_coords[self.cells['nodes']]
+                    )
+        return self.cell_circumcenters
+
     def _compute_integral_x(self, cell_ids):
         '''Computes the integral of x,
 
@@ -810,8 +814,10 @@ class MeshTri(_base_mesh):
                 self.node_coords[edge_nodes[:, :, 1]]
                 )
 
+        cc = self.get_cell_circumcenters()
+
         average = (
-            self.cell_circumcenters[cell_ids, None, None, :] +
+            cc[cell_ids, None, None, :] +
             edge_midpoints[:, :, None, :] +
             self.node_coords[edge_nodes]
             ) / 3.0
@@ -1030,10 +1036,7 @@ class MeshTri(_base_mesh):
 
         if show_ce_ratios:
             # Connect all cell circumcenters with the edge midpoints
-            if self.cell_circumcenters is None:
-                X = self.node_coords[self.cells['nodes']]
-                self.cell_circumcenters = \
-                    self.compute_triangle_circumcenters(X)
+            cc = self.get_cell_circumcenters()
 
             edge_midpoints = 0.5 * (
                 self.node_coords[self.edges['nodes'][:, 0]] +
@@ -1043,15 +1046,15 @@ class MeshTri(_base_mesh):
             # Plot connection of the circumcenter to the midpoint of all three
             # axes.
             a = numpy.stack([
-                    self.cell_circumcenters[:, :2],
+                    cc[:, :2],
                     edge_midpoints[self.cells['edges'][:, 0], :2]
                     ], axis=1)
             b = numpy.stack([
-                    self.cell_circumcenters[:, :2],
+                    cc[:, :2],
                     edge_midpoints[self.cells['edges'][:, 1], :2]
                     ], axis=1)
             c = numpy.stack([
-                    self.cell_circumcenters[:, :2],
+                    cc[:, :2],
                     edge_midpoints[self.cells['edges'][:, 2], :2]
                     ], axis=1)
 
