@@ -12,7 +12,7 @@ import voropy
 __all__ = ['read']
 
 
-def read(filename, flat_cell_correction=False):
+def read(filename, flat_cell_correction=None):
     '''Reads an unstructured mesh with added data.
 
     :param filenames: The files to read from.

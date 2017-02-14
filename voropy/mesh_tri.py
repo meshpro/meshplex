@@ -98,7 +98,7 @@ def lloyd_smoothing(mesh, tol, verbose=True, output_filetype=None):
         mesh = MeshTri(
                 new_points,
                 mesh.cells['nodes'],
-                flat_cell_correction=True
+                flat_cell_correction='boundary'
                 )
         # mesh.show()
         # plt.show()
@@ -124,26 +124,19 @@ def lloyd_smoothing(mesh, tol, verbose=True, output_filetype=None):
 
 
 def _mirror_point(p0, p1, p2):
-    '''For any given triangle and local edge
-
-            p0
-          _/  \__
-        _/       \__
-       /            \
-      p1-------------p2
-
-     this method creates the point p0, mirrored along the edge, and the point q
-     at the perpendicular intersection of the mirror
+    '''For any given triangle p0--p1--p2, this method creates the point p0',
+    namely p0 mirrored along the edge p1--p2, and the point q at the
+    perpendicular intersection of the mirror.
 
             p0
           _/| \__
         _/  |    \__
-       /    |q      \
-      p1----|--------p2
+       /    |       \
+      p1----|q-------p2
        \_   |     __/
          \_ |  __/
            \| /
-           mirror
+           p0'
 
     '''
     # Create the mirror.
@@ -155,15 +148,15 @@ def _mirror_point(p0, p1, p2):
         return numpy.empty(p0.shape), numpy.empty(p0.shape)
     alpha = _row_dot(p0-p1, p2-p1)/_row_dot(p2-p1, p2-p1)
     q = p1 + alpha[:, None] * (p2-p1)
-    # mirror = p0 + 2*(q - p0)
-    mirror = 2 * q - p0
-    return mirror, q
+    # p0d = p0 + 2*(q - p0)
+    p0d = 2 * q - p0
+    return p0d, q
 
 
 def _isosceles_ce_ratios(p0, p1, p2):
     '''Compute the _two_ covolume-edge length ratios of the isosceles
     triaingle p0, p1, p2; the edges p0---p1 and p0---p2 are assumed to be
-    equally long.:
+    equally long.
                p0
              _/ \_
            _/     \_
@@ -213,22 +206,33 @@ class FlatCellCorrector(object):
     covolume-edge length ratio, the control volumes contributions, the centroid
     contributions etc. Since all of these computations share some data, that we
     could pass around, we might as well do that as part of a class. Enter
-    `FlatCellCorrector`.
+    `FlatCellCorrector` to "cut off" the tail.
+
+                               p0
+                               _^_
+                           ___/   \___
+                       ___/           \___
+                   ___/                   \___
+               ___/  \                     /  \___
+           ___/       \                   /       \___
+          /____________\________________ /____________\
+         p1                                             p2
     '''
-    def __init__(self, cells, node_coords):
+    def __init__(self, cells, flat_edge_local_id, node_coords):
         self.cells = cells
+        self.flat_edge_local_id = flat_edge_local_id
         self.node_coords = node_coords
-        # self.cell_ids = cell_ids
-        # self.local_edge_ids = local_edge_ids
 
-        # In each cell, edge k is opposite of vertex k.
-        self.p0_local_id = self.local_edge_ids.copy()
-        self.p1_local_id = (self.local_edge_ids + 1) % 3
-        self.p2_local_id = (self.local_edge_ids + 2) % 3
+        # In each cell, edge k is opposite of vertex k, so p0 is the point
+        # opposite of the flat edge.
+        self.p0_local_id = self.flat_edge_local_id.copy()
+        self.p1_local_id = (self.flat_edge_local_id + 1) % 3
+        self.p2_local_id = (self.flat_edge_local_id + 2) % 3
 
-        self.p0_id = self.cells['nodes'][self.cell_ids, self.p0_local_id]
-        self.p1_id = self.cells['nodes'][self.cell_ids, self.p1_local_id]
-        self.p2_id = self.cells['nodes'][self.cell_ids, self.p2_local_id]
+        i = range(len(self.cells))
+        self.p0_id = self.cells[i, self.p0_local_id]
+        self.p1_id = self.cells[i, self.p1_local_id]
+        self.p2_id = self.cells[i, self.p2_local_id]
 
         self.p0 = self.node_coords[self.p0_id]
         self.p1 = self.node_coords[self.p1_id]
@@ -251,23 +255,20 @@ class FlatCellCorrector(object):
         # assert (self.ce_ratios1 > 0.0).all()
         # assert (self.ce_ratios2 > 0.0).all()
 
-        self.ghostedge_length_2 = _row_dot(
-                ghost - self.p0,
-                ghost - self.p0
-                )
+        self.ghostedge_length_2 = _row_dot(ghost - self.p0, ghost - self.p0)
         return
 
     def get_ce_ratios(self):
         '''Return the covolume-edge length ratios for the flat boundary cells.
         '''
-        vals = numpy.empty((len(self.cell_ids), 3), dtype=float)
+        vals = numpy.empty((len(self.cells), 3), dtype=float)
         i = numpy.arange(len(vals))
         vals[i, self.p0_local_id] = 0.0
         vals[i, self.p1_local_id] = self.ce_ratios2[:, 1]
         vals[i, self.p2_local_id] = self.ce_ratios1[:, 1]
-        return self.cell_ids, vals
+        return vals
 
-    def control_volumes(self):
+    def get_control_volumes(self):
         '''Control volume contributions
 
                                p0
@@ -484,7 +485,7 @@ def flip_edges(mesh, is_flip_edge):
         mesh.node_coords,
         mesh.cells['nodes'],
         # Don't actually need that last bit here.
-        flat_cell_correction=True
+        flat_cell_correction='boundary'
         )
 
     return new_mesh
@@ -495,7 +496,7 @@ class MeshTri(_base_mesh):
 
     .. inheritance-diagram:: MeshTri
     '''
-    def __init__(self, nodes, cells, flat_cell_correction=False):
+    def __init__(self, nodes, cells, flat_cell_correction=None):
         '''Initialization.
         '''
         super(MeshTri, self).__init__(nodes, cells)
@@ -556,9 +557,7 @@ class MeshTri(_base_mesh):
             assert flat_cell_correction in ['full', 'boundary']
             if flat_cell_correction == 'full':
                 # All cells with a negative c/e ratio are redone.
-                self.cell_needs_fcc = \
-                    numpy.any(self.ce_ratios_per_half_edge < 0.0)
-
+                edge_needs_fcc = self.ce_ratios_per_half_edge < 0.0
             else:  # 'boundary'
                 # This best imitates the classical notion of control volumes.
                 # Only cells with a negative c/e ratio on the boundary are
@@ -566,22 +565,26 @@ class MeshTri(_base_mesh):
                 # first.
                 if self.edges is None:
                     self.create_edges()
-                self.cell_needs_fcc = numpy.any(numpy.logical_and(
+                edge_needs_fcc = numpy.logical_and(
                     self.ce_ratios_per_half_edge < 0.0,
                     self.is_boundary_edge[self.cells['edges']]
-                    ))
+                    )
+
+            fcc_cells, fcc_local_edge = numpy.where(edge_needs_fcc)
+            self.regular_cells = numpy.where(numpy.logical_not(
+                numpy.any(edge_needs_fcc, axis=1)
+                ))[0]
 
             self.fcc = FlatCellCorrector(
-                    self.cells[self.cell_needs_fcc], self.node_coords
+                    self.cells['nodes'][fcc_cells],
+                    fcc_local_edge,
+                    self.node_coords
                     )
-            ids, vals = self.fcc.get_ce_ratios()
-            self.ce_ratios_per_half_edge[ids] = vals
+            vals = self.fcc.get_ce_ratios()
+            self.ce_ratios_per_half_edge[fcc_cells] = vals
         else:
             self.fcc = None
-            self.cell_needs_fcc = numpy.zeros(
-                    len(self.cells['nodes']),
-                    dtype=bool
-                    )
+            self.regular_cells = range(len(self.cells['nodes']))
 
         return
 
@@ -604,13 +607,11 @@ class MeshTri(_base_mesh):
 
     def get_control_volumes(self):
         if self._control_volumes is None:
-            control_volume_data = []
+            control_volume_data = [
+                self._compute_control_volume_contribs(self.regular_cells)
+                ]
             if self.fcc is not None:
-                control_volume_data.append(self.fcc.control_volumes())
-
-            control_volume_data.append(
-                self._compute_control_volume_contribs(self.regular_cell_ids)
-                )
+                control_volume_data.append(self.fcc.get_control_volumes())
 
             # sum up from self.control_volume_data
             self._control_volumes = numpy.zeros(len(self.node_coords))
@@ -642,7 +643,7 @@ class MeshTri(_base_mesh):
         # by making use of the fact that the control volume around any vertex
         # v_0 is composed of right triangles, two for each adjacent cell.
         if self._cv_centroids is None:
-            centroid_data = [self._compute_integral_x(self.regular_cell_ids)]
+            centroid_data = [self._compute_integral_x(self.regular_cells)]
             if self.fcc is not None:
                 centroid_data.append(self.fcc.integral_x())
             # add it all up

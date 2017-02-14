@@ -177,7 +177,7 @@ def test_degenerate_small0b(h):
     mesh = voropy.mesh_tri.MeshTri(
             points,
             cells,
-            flat_cell_correction=False
+            flat_cell_correction=None
             )
 
     tol = 1.0e-14
@@ -200,15 +200,19 @@ def test_degenerate_small0b(h):
     assert _near_equal(mesh.cell_volumes, [0.5 * h], tol)
 
     # surface areas
-    alpha = 0.5 + 0.5*el
-    beta = el
-    assert _near_equal(mesh.get_surface_areas(), [alpha, alpha, beta], tol)
+    ids, vals = mesh.get_surface_areas()
+    assert numpy.all(ids == [[1, 2], [2, 0], [0, 1]])
+    assert _near_equal(
+        vals,
+        [[0.5*el, 0.5*el], [0.5*el, 0.5*el], [0.5, 0.5]],
+        tol
+        )
 
     assert mesh.num_delaunay_violations() == 0
     return
 
 
-# don't parametrize with flat boundary correction
+# TODO parametrize with flat boundary correction
 def test_degenerate_small0b_fcc():
     h = 1.0e-3
     points = numpy.array([
@@ -220,7 +224,7 @@ def test_degenerate_small0b_fcc():
     mesh = voropy.mesh_tri.MeshTri(
             points,
             cells,
-            flat_cell_correction=True
+            flat_cell_correction='full'
             )
 
     tol = 1.0e-14
@@ -231,7 +235,7 @@ def test_degenerate_small0b_fcc():
 
     # ce_ratios
     ce = h
-    assert _near_equal(mesh.get_ce_ratios_per_edge(), [0.0, ce, ce], tol)
+    assert _near_equal(mesh.get_ce_ratios(), [ce, ce, 0.0], tol)
 
     # control volumes
     cv = ce * el
@@ -275,7 +279,7 @@ def test_degenerate_small1(h, a):
     mesh = voropy.mesh_tri.MeshTri(
             points,
             cells,
-            flat_cell_correction=True
+            flat_cell_correction='full'
             )
 
     tol = 1.0e-14
@@ -656,7 +660,7 @@ def test_pacman():
             'pacman.msh',
             '2da8ff96537f844a95a83abb48471b6a'
             )
-    mesh, _, _, _ = voropy.read(filename, flat_cell_correction=True)
+    mesh, _, _, _ = voropy.read(filename, flat_cell_correction='boundary')
 
     _run(
         mesh,
