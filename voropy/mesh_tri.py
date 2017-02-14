@@ -668,7 +668,17 @@ class MeshTri(_base_mesh):
         # by making use of the fact that the control volume around any vertex
         # v_0 is composed of right triangles, two for each adjacent cell.
         if self._cv_centroids is None:
-            centroid_data = [self._compute_integral_x(self.regular_cells)]
+            _, v = self._compute_integral_x(self.regular_cells)
+            # Again, make use of the fact that edge k is opposite of node k in
+            # every cell. Adding the arrays first makes the work for
+            # numpy.add.at lighter.
+            ids = self.cells['nodes'][self.regular_cells]
+            vals = numpy.stack([
+                v[:, 1, 1] + v[:, 2, 0],
+                v[:, 2, 1] + v[:, 0, 0],
+                v[:, 0, 1] + v[:, 1, 0],
+                ], axis=1)
+            centroid_data = [(ids, vals)]
             if self.fcc is not None:
                 centroid_data.append(self.fcc.integral_x())
             # add it all up
@@ -772,13 +782,13 @@ class MeshTri(_base_mesh):
 
           \int_V x,
 
-        over all "triangles", i.e., areas enclosed by half of an edge and the
-        covolume.
+        over all atomic "triangles", i.e., areas cornerd by a node, an edge
+        midpoint, and a circumcenter.
         '''
         # The integral of any linear function over a triangle is the average of
         # the values of the function in each of the three corners, times the
         # area of the triangle.
-        v = self._get_control_volume_contribs()[self.regular_cells]
+        v = self._get_control_volume_contribs()[cell_ids]
         right_triangle_vols = numpy.stack([v, v], axis=2)
 
         # get edge midpoints with the nodes just like sorted in
