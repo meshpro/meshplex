@@ -201,10 +201,14 @@ def test_degenerate_small0b(h):
 
     # surface areas
     ids, vals = mesh.get_surface_areas()
-    assert numpy.all(ids == [[1, 2], [2, 0], [0, 1]])
+    assert numpy.all(ids == [[0, 1, 2], [0, 1, 2], [0, 1, 2]])
     assert _near_equal(
         vals,
-        [[0.5*el, 0.5*el], [0.5*el, 0.5*el], [0.5, 0.5]],
+        [
+            [0.0, 0.5*el, 0.5*el],
+            [0.5*el, 0.0, 0.5*el],
+            [0.5, 0.5, 0.0],
+        ],
         tol
         )
 

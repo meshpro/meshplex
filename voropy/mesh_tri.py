@@ -570,18 +570,18 @@ class MeshTri(_base_mesh):
                     self.is_boundary_edge[self.cells['edges']]
                     )
 
-            fcc_cells, fcc_local_edge = numpy.where(edge_needs_fcc)
+            self.fcc_cells, fcc_local_edge = numpy.where(edge_needs_fcc)
             self.regular_cells = numpy.where(numpy.logical_not(
                 numpy.any(edge_needs_fcc, axis=1)
                 ))[0]
 
             self.fcc = FlatCellCorrector(
-                    self.cells['nodes'][fcc_cells],
+                    self.cells['nodes'][self.fcc_cells],
                     fcc_local_edge,
                     self.node_coords
                     )
-            vals = self.fcc.get_ce_ratios()
-            self.ce_ratios_per_half_edge[fcc_cells] = vals
+            self.ce_ratios_per_half_edge[self.fcc_cells] = \
+                self.fcc.get_ce_ratios()
         else:
             self.fcc = None
             self.regular_cells = range(len(self.cells['nodes']))
@@ -621,14 +621,12 @@ class MeshTri(_base_mesh):
 
     def get_surface_areas(self):
         if self._surface_areas is None:
-            self._surface_areas = self._compute_surface_areas()
+            self._surface_areas = \
+                self._compute_surface_areas(self.regular_cells)
             if self.fcc is not None:
-                surface_area_data.append(self.fcc.surface_areas())
-            # # surface areas
-            # self._surface_areas = numpy.zeros(len(self.node_coords))
-            # for d in surface_area_data:
-            #     numpy.add.at(self._surface_areas, d[0], d[1])
-
+                ffc_ids, ffc_vals = self.fcc.surface_areas()
+                numpy.append(self._surface_areas[0], ffc_ids)
+                numpy.append(self._surface_areas[1], ffc_vals)
         return self._surface_areas
 
     def get_control_volume_centroids(self):
@@ -779,15 +777,25 @@ class MeshTri(_base_mesh):
 
         return edge_nodes, contribs
 
-    def _compute_surface_areas(self):
+    def _compute_surface_areas(self, cell_ids):
         '''For each edge, one half of the the edge goes to each of the end
         points. Used for Neumann boundary conditions if on the boundary of the
         mesh and transition conditions if in the interior.
         '''
-        ids = self.cell_edge_nodes
+        # Each of the three edges may contribute to the surface areas of all
+        # three vertices. Here, only the two adjacent nodes receive a
+        # contribution, but other approaches (e.g., the flat cell corrector),
+        # may contribute to all three nodes.
+        cn = self.cells['nodes'][cell_ids]
+        ids = numpy.stack([cn, cn, cn], axis=1)
 
-        half_el = 0.5 * self.get_edge_lengths()
-        vals = numpy.stack([half_el, half_el], axis=-1)
+        half_el = 0.5 * self.get_edge_lengths()[cell_ids]
+        zero = numpy.zeros([half_el.shape[0]])
+        vals = numpy.stack([
+            numpy.column_stack([zero, half_el[:, 0], half_el[:, 0]]),
+            numpy.column_stack([half_el[:, 1], zero, half_el[:, 1]]),
+            numpy.column_stack([half_el[:, 2], half_el[:, 2], zero]),
+            ], axis=1)
 
         return ids, vals
 
