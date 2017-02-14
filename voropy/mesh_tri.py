@@ -539,6 +539,7 @@ class MeshTri(_base_mesh):
 
         self._ce_ratios = None
         self._control_volumes = None
+        self._control_volume_contribs = None
         self._cv_centroids = None
         self._surface_areas = None
         self.edges = None
@@ -625,7 +626,7 @@ class MeshTri(_base_mesh):
 
     def get_control_volumes(self):
         if self._control_volumes is None:
-            v = self._compute_control_volume_contribs(self.regular_cells)
+            v = self._get_control_volume_contribs()[self.regular_cells]
             # Again, make use of the fact that edge k is opposite of node k in
             # every cell. Adding the arrays first makes the work for
             # numpy.add.at lighter.
@@ -755,13 +756,16 @@ class MeshTri(_base_mesh):
     def _compute_cell_volumes_and_ce_ratios(self, e0, e1, e2):
         return compute_tri_areas_and_ce_ratios(e0, e1, e2)
 
-    def _compute_control_volume_contribs(self, cell_ids):
-        # Compute the control volumes. Note that
-        #   0.5 * (0.5 * edge_length) * covolume
-        # = 0.25 * edge_length**2 * ce_ratio_edge_ratio
-        c = self.half_edge_coords[cell_ids]
-        el2 = numpy.einsum('ijk, ijk->ij', c, c)
-        return 0.25 * el2 * self.ce_ratios_per_half_edge[cell_ids]
+    def _get_control_volume_contribs(self):
+        if self._control_volume_contribs is None:
+            # Compute the control volumes. Note that
+            #   0.5 * (0.5 * edge_length) * covolume
+            # = 0.25 * edge_length**2 * ce_ratio_edge_ratio
+            c = self.half_edge_coords
+            el2 = numpy.einsum('ijk, ijk->ij', c, c)
+            self._control_volume_contribs = \
+                0.25 * el2 * self.ce_ratios_per_half_edge
+        return self._control_volume_contribs
 
     def _compute_integral_x(self, cell_ids):
         '''Computes the integral of x,
@@ -774,7 +778,7 @@ class MeshTri(_base_mesh):
         # The integral of any linear function over a triangle is the average of
         # the values of the function in each of the three corners, times the
         # area of the triangle.
-        v = self._compute_control_volume_contribs(self.regular_cells)
+        v = self._get_control_volume_contribs()[self.regular_cells]
         right_triangle_vols = numpy.stack([v, v], axis=2)
 
         # get edge midpoints with the nodes just like sorted in
