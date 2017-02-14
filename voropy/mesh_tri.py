@@ -625,9 +625,17 @@ class MeshTri(_base_mesh):
 
     def get_control_volumes(self):
         if self._control_volumes is None:
-            control_volume_data = [
-                self._compute_control_volume_contribs(self.regular_cells)
-                ]
+            v = self._compute_control_volume_contribs(self.regular_cells)
+            # Again, make use of the fact that edge k is opposite of node k in
+            # every cell. Adding the arrays first makes the work for
+            # numpy.add.at lighter.
+            ids = self.cells['nodes'][self.regular_cells]
+            vals = numpy.column_stack([
+                v[:, 1] + v[:, 2],
+                v[:, 2] + v[:, 0],
+                v[:, 0] + v[:, 1],
+                ])
+            control_volume_data = [(ids, vals)]
             if self.fcc is not None:
                 control_volume_data.append(self.fcc.get_control_volumes())
 
@@ -753,11 +761,7 @@ class MeshTri(_base_mesh):
         # = 0.25 * edge_length**2 * ce_ratio_edge_ratio
         c = self.half_edge_coords[cell_ids]
         el2 = numpy.einsum('ijk, ijk->ij', c, c)
-
-        v = 0.25 * el2 * self.ce_ratios_per_half_edge[cell_ids]
-        vals = numpy.stack([v, v], axis=2)
-
-        return self.cell_edge_nodes[cell_ids], vals
+        return 0.25 * el2 * self.ce_ratios_per_half_edge[cell_ids]
 
     def _compute_integral_x(self, cell_ids):
         '''Computes the integral of x,
@@ -770,8 +774,8 @@ class MeshTri(_base_mesh):
         # The integral of any linear function over a triangle is the average of
         # the values of the function in each of the three corners, times the
         # area of the triangle.
-        _, right_triangle_vols = \
-            self._compute_control_volume_contribs(cell_ids)
+        v = self._compute_control_volume_contribs(self.regular_cells)
+        right_triangle_vols = numpy.stack([v, v], axis=2)
 
         # get edge midpoints with the nodes just like sorted in
         # half_edge_coords
