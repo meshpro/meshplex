@@ -16,6 +16,8 @@ def test_pacman_lloyd():
     mesh = voropy.mesh_tri.lloyd_smoothing(
             mesh,
             1.0e-2,
+            fcc_type='boundary',
+            flip_frequency=1,
             verbose=False
             )
 
