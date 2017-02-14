@@ -15,19 +15,19 @@ def _column_stack(a, b):
     return numpy.concatenate([a[:, None], b[:, None]], axis=1)
 
 
-def lloyd_smoothing(mesh, tol, verbose=True, output_filetype=None):
+def lloyd_smoothing(
+        mesh,
+        tol,
+        fcc_type='full',
+        flip_frequency=100,
+        verbose=True,
+        output_filetype=None
+        ):
     from matplotlib import pyplot as plt
 
     # 2D mesh
     assert all(mesh.node_coords[:, 2] == 0.0)
-    assert mesh.fcc is not None
-
-    # If any of the covolume-edge length ratios is negative, it must be on the
-    # interior. If we flip the edge, it should be positive.
-    ce_ratios = mesh.get_ce_ratios_per_edge()
-    while any(ce_ratios < 0.0):
-        mesh = flip_edges(mesh, ce_ratios < 0.0)
-        ce_ratios = mesh.get_ce_ratios_per_edge()
+    assert mesh.fcc is not fcc_type
 
     boundary_verts = mesh.get_vertices('boundary')
 
@@ -37,27 +37,48 @@ def lloyd_smoothing(mesh, tol, verbose=True, output_filetype=None):
     # mesh.show()
     # plt.show()
 
+    max_steps = 10000
     k = 0
-    if output_filetype:
-        if output_filetype == 'png':
-            fig = mesh.show(
-                    show_ce_ratios=False,
-                    show_centroids=False,
-                    show_axes=False
-                    )
-            plt.savefig('lloyd%04d.png' % k)
-            plt.close(fig)
-        else:
-            mesh.write('lloyd%04d.vtu' % k)
+    for k in range(max_steps):
+        if max_move < tol:
+            break
+        if output_filetype:
+            if output_filetype == 'png':
+                fig = mesh.show(
+                        show_ce_ratios=False,
+                        show_centroids=False,
+                        show_axes=False
+                        )
+                plt.savefig('lloyd%04d.png' % k)
+                plt.close(fig)
+            else:
+                mesh.write('lloyd%04d.vtu' % k)
 
-    while max_move > tol:
-        k += 1
+        # Flip the edges every so often.
+        if k % flip_frequency == 0:
+            # We need boundary flat cell correction for flipping. If `full`,
+            # all c/e ratios will be positive.
+            mesh = MeshTri(
+                    mesh.node_coords,
+                    mesh.cells['nodes'],
+                    flat_cell_correction='boundary'
+                    )
+            ce_ratios = mesh.get_ce_ratios_per_edge()
+            while any(ce_ratios < 0.0):
+                mesh = flip_edges(mesh, ce_ratios < 0.0)
+                ce_ratios = mesh.get_ce_ratios_per_edge()
 
         # move interior points into centroids
         new_points = mesh.get_control_volume_centroids()
         new_points[boundary_verts] = mesh.node_coords[boundary_verts]
         diff = new_points - mesh.node_coords
         max_move = numpy.sqrt(numpy.max(numpy.sum(diff*diff, axis=1)))
+
+        mesh = MeshTri(
+                new_points,
+                mesh.cells['nodes'],
+                flat_cell_correction='full'
+                )
 
         if verbose:
             print('\nstep: %d' % k)
@@ -94,37 +115,28 @@ def lloyd_smoothing(mesh, tol, verbose=True, output_filetype=None):
             #     (min_ce_ratios, av_ce_ratios, max_ce_ratios)
             #     )
 
-        # Flip the edges every so often.
-        if k % 100 == 0:
-            # We need boundary flat cell correction for flipping. If `full`,
-            # all c/e ratios will be positive.
-            mesh = MeshTri(
-                    new_points,
-                    mesh.cells['nodes'],
-                    flat_cell_correction='boundary'
+    # Flip one last time.
+    mesh = MeshTri(
+            mesh.node_coords,
+            mesh.cells['nodes'],
+            flat_cell_correction='boundary'
+            )
+    ce_ratios = mesh.get_ce_ratios_per_edge()
+    while any(ce_ratios < 0.0):
+        mesh = flip_edges(mesh, ce_ratios < 0.0)
+        ce_ratios = mesh.get_ce_ratios_per_edge()
+
+    if output_filetype:
+        if output_filetype == 'png':
+            fig = mesh.show(
+                    show_ce_ratios=False,
+                    show_centroids=False,
+                    show_axes=False
                     )
-            ce_ratios = mesh.get_ce_ratios_per_edge()
-            while any(ce_ratios < 0.0):
-                mesh = flip_edges(mesh, ce_ratios < 0.0)
-                ce_ratios = mesh.get_ce_ratios_per_edge()
-
-        mesh = MeshTri(
-                new_points,
-                mesh.cells['nodes'],
-                flat_cell_correction='full'
-                )
-
-        if output_filetype:
-            if output_filetype == 'png':
-                fig = mesh.show(
-                        show_ce_ratios=False,
-                        show_centroids=False,
-                        show_axes=False
-                        )
-                plt.savefig('lloyd%04d.png' % k)
-                plt.close(fig)
-            else:
-                mesh.write('lloyd%04d.vtu' % k)
+            plt.savefig('lloyd%04d.png' % (k+1))
+            plt.close(fig)
+        else:
+            mesh.write('lloyd%04d.vtu' % (k+1))
 
     return mesh
 

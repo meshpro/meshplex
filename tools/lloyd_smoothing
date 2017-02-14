@@ -60,11 +60,13 @@ if __name__ == '__main__':
     uvertices, uidx = numpy.unique(cells, return_inverse=True)
     cells = uidx.reshape(cells.shape)
     pts = pts[uvertices]
-    mesh = voropy.mesh_tri.MeshTri(pts, cells, flat_cell_correction='full')
+    fcc_type = 'boundary'
+    mesh = voropy.mesh_tri.MeshTri(pts, cells, flat_cell_correction=fcc_type)
 
     out_mesh = voropy.mesh_tri.lloyd_smoothing(
         mesh,
         args.tolerance,
+        fcc_type=fcc_type,
         verbose=args.verbose,
         output_filetype=args.output_steps
         )
