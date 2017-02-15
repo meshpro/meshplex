@@ -244,6 +244,13 @@ def test_degenerate_small0b(h):
     # cell volumes
     assert _near_equal(mesh.cell_volumes, [0.5 * h], tol)
 
+    # circumcenters
+    assert _near_equal(
+        mesh.get_cell_circumcenters(),
+        [0.5, 0.375, 0.0],
+        tol
+        )
+
     # surface areas
     ids, vals = mesh.get_surface_areas()
     assert numpy.all(ids == [[0, 1, 2], [0, 1, 2], [0, 1, 2]])
@@ -404,6 +411,16 @@ def test_degenerate_small2(h):
     assert _near_equal(
         mesh.get_control_volumes(),
         [alpha1, alpha1, alpha2, alpha2],
+        tol
+        )
+
+    # circumcenters
+    assert _near_equal(
+        mesh.get_cell_circumcenters(),
+        [
+            [0.5, -12.495, 0.0],
+            [0.5, +12.495, 0.0],
+        ],
         tol
         )
 
@@ -910,4 +927,10 @@ def test_toy_geometric():
         cellvol_norms=[0.091903119589148916, 0.0019959463063558944],
         tol=1.0e-6
         )
+
+    cc = mesh.get_cell_circumcenters()
+    cc_norm_2 = fsum(cc.flat)
+    cc_norm_inf = max(cc.flat)
+    assert abs(cc_norm_2 - 1103.7038287583791) < 1.0e-14
+    assert abs(cc_norm_inf - 3.4234008596539662) < 1.0e-14
     return

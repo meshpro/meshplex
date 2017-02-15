@@ -30,8 +30,8 @@ def compute_tri_areas_and_ce_ratios(e0, e1, e2):
     # covolume-edgelength ratios.
     #
     #
-    #   * The covolume-edge ratios for the edges of each cell is the solution of
-    #     the equation system
+    #   * The covolume-edge ratios for the edges of each cell is the solution
+    #     of the equation system
     #
     #       |simplex| ||u||^2 = \sum_i \alpha_i <u,e_i> <e_i,u>,
     #
@@ -49,7 +49,7 @@ def compute_tri_areas_and_ce_ratios(e0, e1, e2):
     #     <https://en.wikipedia.org/wiki/Trilinear_coordinates>, the
     #     circumcenter is
     #
-    #         cos(alpha0) : cos(alpha1) : cos(alpha2).
+    #         cos(alpha0) : cos(alpha1) : cos(alpha2)
     #
     #     where the alpha_i are the angles opposite of the respective edge.
     #     With
@@ -125,9 +125,27 @@ def compute_triangle_circumcenters(X):
     #    C = ||e_0||^2 <e1, e2> / sum_i (||e_i||^2 <e{i+1}, e{i+2}>) P0
     #      + ...
     #
-    # By virtue of e0 + e1 + e2 = 0, the squared norms can even be replaced by
-    # the dot products.
     # TODO do that
+    # e0 = X[:, 2, :] - X[:, 1, :]
+    # e1 = X[:, 0, :] - X[:, 2, :]
+    # e2 = X[:, 1, :] - X[:, 0, :]
+    # #
+    # e0_dot_e0 = _row_dot(e0, e0)
+    # e1_dot_e1 = _row_dot(e1, e1)
+    # e2_dot_e2 = _row_dot(e2, e2)
+    # #
+    # e0_dot_e1 = _row_dot(e0, e1)
+    # e1_dot_e2 = _row_dot(e1, e2)
+    # e2_dot_e0 = _row_dot(e2, e0)
+    # #
+    # alpha = \
+    #     e0_dot_e0 * e1_dot_e2 + \
+    #     e1_dot_e1 * e2_dot_e0 + \
+    #     e2_dot_e2 * e0_dot_e1
+    # cc = \
+    #     (e0_dot_e0 * e1_dot_e2 / alpha)[:, None] * X[:, 0, :] + \
+    #     (e1_dot_e1 * e2_dot_e0 / alpha)[:, None] * X[:, 1, :] + \
+    #     (e2_dot_e2 * e0_dot_e1 / alpha)[:, None] * X[:, 2, :]
     return cc
 
 
