@@ -944,15 +944,15 @@ class MeshTri(_base_mesh):
         # Compute the projection of A on the edge at each edge midpoint.
         # Take the average of `vector_field` at the endpoints to get the
         # approximate value at the edge midpoint.
-        A = 0.5 * numpy.sum(vector_field[self.cell_edge_nodes], axis=2)
+        A = 0.5 * numpy.sum(vector_field[self.node_edge_cells], axis=0)
         # sum of <edge, A> for all three edges
-        sum_edge_dot_A = numpy.einsum('ijk, ijk->i', self.half_edge_coords, A)
+        sum_edge_dot_A = numpy.einsum('ijk, ijk->j', self.half_edge_coords, A)
 
         # Get normalized vector orthogonal to triangle
-        nds = self.cells['nodes']
-        e0 = self.node_coords[nds[:, 1]] - self.node_coords[nds[:, 0]]
-        e1 = self.node_coords[nds[:, 2]] - self.node_coords[nds[:, 1]]
-        z = numpy.cross(e0, e1)
+        z = numpy.cross(
+            self.half_edge_coords[0],
+            self.half_edge_coords[1]
+            )
 
         # Now compute
         #

@@ -138,8 +138,6 @@ def compute_triangle_circumcenters(X, ei_dot_ei, ei_dot_ej):
 
     beta = alpha / alpha_sum[None]
 
-    # Don't use numpy.sum, it's slow. (Perhaps because we're summing over a
-    # mid-index.)
     a = X * beta[..., None]
     cc = a[0] + a[1] + a[2]
 
