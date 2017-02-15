@@ -43,9 +43,9 @@ def _run(
     # ```
     # Check ce_ratio norms.
     # TODO reinstate
-    # alpha2 = fsum(mesh.get_ce_ratios_per_edge()**2)
-    # alpha_inf = max(abs(mesh.get_ce_ratios_per_edge()))
-    # assert _near_equal(ce_ratio_norms, [alpha2, alpha_inf], tol)
+    alpha2 = fsum((mesh.get_ce_ratios()**2).flat)
+    alpha_inf = max(abs(mesh.get_ce_ratios()).flat)
+    assert _near_equal(ce_ratio_norms, [alpha2, alpha_inf], tol)
 
     # Check the volume by summing over the absolute value of the control
     # volumes.
@@ -683,6 +683,52 @@ def test_rectanglesmall():
     return
 
 
+def test_cubesmall():
+    points = numpy.array([
+        [-0.5, -0.5, -5.0],
+        [-0.5,  0.5, -5.0],
+        [0.5, -0.5, -5.0],
+        [-0.5, -0.5,  5.0],
+        [0.5,  0.5, -5.0],
+        [0.5,  0.5,  5.0],
+        [-0.5,  0.5,  5.0],
+        [0.5, -0.5,  5.0]
+        ])
+    cells = numpy.array([
+        [0, 1, 2, 3],
+        [1, 2, 4, 5],
+        [1, 2, 3, 5],
+        [1, 3, 5, 6],
+        [2, 3, 5, 7]
+        ])
+    mesh = voropy.mesh_tetra.MeshTetra(points, cells)
+
+    tol = 1.0e-14
+
+    cv = numpy.ones(8) * 5.0 / 4.0
+    cellvols = [5.0/3.0, 5.0/3.0, 10.0/3.0, 5.0/3.0, 5.0/3.0]
+
+    assert _near_equal(mesh.get_control_volumes(), cv, tol)
+    assert _near_equal(mesh.cell_volumes, cellvols, tol)
+
+    cv_norms = [
+        numpy.linalg.norm(cv, ord=2),
+        numpy.linalg.norm(cv, ord=numpy.Inf),
+        ]
+    cellvol_norms = [
+        numpy.linalg.norm(cellvols, ord=2),
+        numpy.linalg.norm(cellvols, ord=numpy.Inf),
+        ]
+    _run(
+        mesh,
+        10.0,
+        cv_norms,
+        [28.095851618771825, 1.25],
+        cellvol_norms,
+        )
+    return
+
+
 # def test_arrow3d():
 #     nodes = numpy.array([
 #         [0.0,  0.0, 0.0],
@@ -730,7 +776,8 @@ def test_tetrahedron():
         mesh,
         64.1500299099584,
         [17.07120343309435, 7.5899731568813653],
-        [33.87181266432331, 1.6719101545282922],
+        # [33.87181266432331, 1.6719101545282922],
+        [6.898476155562042, 0.34400453539215242],
         [11.571692332290635, 2.9699087921277054]
         )
     return
@@ -801,35 +848,6 @@ def test_sphere():
     # assertEqual(mesh.num_delaunay_violations(), 60)
 
     return
-
-
-# def test_cubesmall():
-#     points = numpy.array([
-#         [-0.5, -0.5, -5.0],
-#         [-0.5,  0.5, -5.0],
-#         [0.5, -0.5, -5.0],
-#         [-0.5, -0.5,  5.0],
-#         [0.5,  0.5, -5.0],
-#         [0.5,  0.5,  5.0],
-#         [-0.5,  0.5,  5.0],
-#         [0.5, -0.5,  5.0]
-#         ])
-#     cells = numpy.array([
-#         [0, 1, 2, 3],
-#         [1, 2, 4, 5],
-#         [1, 2, 3, 5],
-#         [1, 3, 5, 6],
-#         [2, 3, 5, 7]
-#         ])
-#     mesh = voropy.mesh_tetra.MeshTetra(points, cells, mode='algebraic')
-#     _run(
-#         mesh,
-#         10.0,
-#         [numpy.sqrt(5.0) * 5.0/3.0, 5.0/3.0],
-#         [27.72375, 5.0/3.0],
-#         [numpy.sqrt(2.0) * 10.0/3.0, 10.0/3.0]
-#         )
-#     return
 
 
 # def test_toy_algebraic():
