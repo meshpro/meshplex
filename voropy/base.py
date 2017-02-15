@@ -81,15 +81,13 @@ def compute_tri_areas_and_ce_ratios(ei_dot_ej):
     #
     #   e1 + e2 + e3 = 0.
     #
-    sqrt_alpha = numpy.sqrt(
+    cell_volumes = 0.5 * numpy.sqrt(
         + ei_dot_ej[..., 2] * ei_dot_ej[..., 0]
         + ei_dot_ej[..., 0] * ei_dot_ej[..., 1]
         + ei_dot_ej[..., 1] * ei_dot_ej[..., 2]
         )
 
-    cell_volumes = 0.5 * sqrt_alpha
-
-    sol = -ei_dot_ej * 0.5 / sqrt_alpha[..., None]
+    sol = -ei_dot_ej * 0.25 / cell_volumes[..., None]
 
     return cell_volumes, sol
 
@@ -131,16 +129,19 @@ def compute_triangle_circumcenters(X, ei_dot_ei, ei_dot_ej):
     #
     # so in total
     #
-    #    C = ||e_0||^2 <e1, e2> / sum_i (||e_i||^2 <e{i+1}, e{i+2}>) P0
+    #    C = <e_0, e0> <e1, e2> / sum_i (<e_i, e_i> <e{i+1}, e{i+2}>) P0
     #      + ... P1
     #      + ... P2.
     #
     alpha = ei_dot_ei * ei_dot_ej
-    alpha_sum = numpy.sum(alpha, axis=-1)
+    alpha_sum = alpha[..., 0] + alpha[..., 1] + alpha[..., 2]
 
     beta = alpha / alpha_sum[:, None]
 
-    cc = numpy.sum(beta[..., None] * X, axis=1)
+    # Don't use numpy.sum, it's slow. (Perhaps because we're summing over a
+    # mid-index.)
+    a = beta[..., None] * X
+    cc = a[:, 0, :] + a[:, 1, :] + a[:, 2, :]
 
     return cc
 
