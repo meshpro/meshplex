@@ -807,7 +807,7 @@ class MeshTri(_base_mesh):
 
           \int_V x,
 
-        over all atomic "triangles", i.e., areas cornerd by a node, an edge
+        over all atomic "triangles", i.e., areas cornered by a node, an edge
         midpoint, and a circumcenter.
         '''
         # The integral of any linear function over a triangle is the average of
@@ -828,10 +828,10 @@ class MeshTri(_base_mesh):
                 self.node_coords[edge_nodes[..., 1]]
                 )
 
-        cc = self.get_cell_circumcenters()
+        cc = self.get_cell_circumcenters()[cell_ids]
 
         average = (
-            cc[cell_ids, None, None, :] +
+            cc[:, None, None, :] +
             edge_midpoints[:, :, None, :] +
             self.node_coords[edge_nodes]
             ) / 3.0
