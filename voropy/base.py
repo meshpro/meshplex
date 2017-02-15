@@ -26,101 +26,58 @@ def compute_tri_areas_and_ce_ratios(e0, e1, e2):
     # e2: x2 -> x0
     assert numpy.allclose(e0 + e1, -e2, rtol=0.0, atol=1.0e-14)
 
-    # The covolume-edge ratios for the edges of each cell is the solution of
-    # the equation system
+    # There are multiple ways of deriving a closed form for the
+    # covolume-edgelength ratios.
     #
-    # |simplex| ||u||^2 = \sum_i \alpha_i <u,e_i> <e_i,u>,
     #
-    # where alpha_i are the covolume contributions for the edges. This
-    # equation system to hold for all vectors u in the plane spanned by the
-    # edges, particularly by the edges themselves.
+    #   * The covolume-edge ratios for the edges of each cell is the solution of
+    #     the equation system
     #
-    # For triangles, the exact solution of the system is
+    #       |simplex| ||u||^2 = \sum_i \alpha_i <u,e_i> <e_i,u>,
     #
-    #  x_1 = <e_2, e_3> / <e1 x e2, e1 x e3> * |simplex|;
+    #     where alpha_i are the covolume contributions for the edges. This
+    #     equation system to hold for all vectors u in the plane spanned by the
+    #     edges, particularly by the edges themselves.
     #
-    # see <http://math.stackexchange.com/a/1855380/36678>.
+    #     For triangles, the exact solution of the system is
     #
-    # e0_cross_e1 = numpy.cross(e0, e1)
-    # e1_cross_e2 = numpy.cross(e1, e2)
-    # e2_cross_e0 = numpy.cross(e2, e0)
-    # cell_volumes = 0.5 * numpy.sqrt(
-    #         _row_dot(e0_cross_e1, e0_cross_e1)
-    #         )
-    # a = _row_dot(e1, e2) / _row_dot(e0_cross_e1, -e2_cross_e0)
-    # b = _row_dot(e2, e0) / _row_dot(e1_cross_e2, -e0_cross_e1)
-    # c = _row_dot(e0, e1) / _row_dot(e2_cross_e0, -e1_cross_e2)
+    #       x_1 = <e_2, e_3> / <e1 x e2, e1 x e3> * |simplex|;
     #
-    # Note that the edges are connected by the relationship
+    #     see <http://math.stackexchange.com/a/1855380/36678>.
+    #
+    #   * In trilinear coordinates
+    #     <https://en.wikipedia.org/wiki/Trilinear_coordinates>, the
+    #     circumcenter is
+    #
+    #         cos(alpha0) : cos(alpha1) : cos(alpha2).
+    #
+    #     where the alpha_i are the angles opposite of the respective edge.
+    #     With
+    #
+    #       cos(alpha0) = <e1, e2> / ||e1|| / ||e2||
+    #
+    #     and the conversion formula to Cartesian coordinates, ones gets the
+    #     expressions in the code below.
+    #
+    # Note that some simplifications are achieved by virtue of
     #
     #   e1 + e2 + e3 = 0.
-    #
-    # Since
-    #
-    #   <e1 x e2, e1 x e3> = <e1 x e2, e1 x (-e1-e2)>
-    #                      = - <e1 x e2, e1 x e2>,
-    #
-    # we have that
-    #
-    #   |simplex| = 0.5 * sqrt(-<e1 x e2, e1 x e3>)
-    #
-    # so
-    #
-    #   x_1 = -0.5 * <e_2, e_3> / sqrt(-<e1 x e2, e1 x e3>)
-    #
-    # Since dot-products are computed much faster than cross-products, we
-    # rewrite the former as
-    #
-    #   <e1 x e2, e1 x e3> = <e1, e1> <e2, e3> - <e1, e2> <e1, e3>.
-    #
-    # With
-    #
-    #   e1 + e2 + e3 = 0
-    #
-    # we get the nice and symmetric
-    #
-    #   |area|^2 = <e0 x e1, e0 x e2> =
-    #     -<e0, e1> <e1, e2> - <e2, e0> <e1, e2> - <e0, e1> <e2, e0>.
     #
     e0_dot_e1 = _row_dot(e0, e1)
     e1_dot_e2 = _row_dot(e1, e2)
     e2_dot_e0 = _row_dot(e2, e0)
-    #
+
     sqrt_alpha = numpy.sqrt(
         + e0_dot_e1 * e1_dot_e2
         + e1_dot_e2 * e2_dot_e0
         + e2_dot_e0 * e0_dot_e1
         )
+
+    cell_volumes = 0.5 * sqrt_alpha
+
     a = -e1_dot_e2 * 0.5 / sqrt_alpha
     b = -e2_dot_e0 * 0.5 / sqrt_alpha
     c = -e0_dot_e1 * 0.5 / sqrt_alpha
-
-    # Any of aa, bb, cc are good for this. A more symmetric
-    # variant like
-    #   s = numpy.sqrt(abs(
-    #       e0_dot_e1 * e1_dot_e2 +
-    #       e0_dot_e2 * e1_dot_e2 +
-    #       e0_dot_e1 * e0_dot_e2
-    #       ))
-    # might be preferable (if only for the fact that we don't need to compute
-    # e0_dot_e0).
-    #
-    cell_volumes = 0.5 * sqrt_alpha
-    #
-    # TODO We could dodge computing <e1, e1> by noting that
-    #
-    #   <e1, e1> = -s2 * <e1, e2> - s3 * <e1, e3>,
-    #
-    # so
-    #
-    #   <e1 x e2, e1 x e3> =\
-    #       -s2 * <e1, e2> * <e2, e3> \
-    #       -s3 * <e1, e3> * <e2, e3> \
-    #       -     <e1, e2> <e1, e3>.
-    #
-    # This would require finding out about s2, s3 though. Perhaps we can get
-    # this from the input data.
-    #
     sol = numpy.stack((a, b, c), axis=-1)
 
     return cell_volumes, sol
