@@ -779,9 +779,6 @@ class MeshTri(_base_mesh):
             edge_cells[edge_id].append(k % num_cells)
         return edge_cells
 
-    def _compute_cell_volumes_and_ce_ratios(self, e0, e1, e2):
-        return compute_tri_areas_and_ce_ratios(ei_dot_ej)
-
     def _get_control_volume_contribs(self):
         if self._control_volume_contribs is None:
             # Compute the control volumes. Note that
@@ -800,6 +797,7 @@ class MeshTri(_base_mesh):
                     self.half_edge_coords[:, 0, :],
                     self.half_edge_coords[:, 1, :],
                     self.half_edge_coords[:, 2, :],
+                    self.ei_dot_ej
                     )
         return self.cell_circumcenters
 
@@ -1131,6 +1129,7 @@ class MeshTri(_base_mesh):
                             self.half_edge_coords[:, 0, :],
                             self.half_edge_coords[:, 1, :],
                             self.half_edge_coords[:, 2, :],
+                            self.ei_dot_ej
                             )
 
             # Find the cells that contain the vertex

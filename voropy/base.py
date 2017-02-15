@@ -93,7 +93,7 @@ def compute_tri_areas_and_ce_ratios(ei_dot_ej):
     return cell_volumes, sol
 
 
-def compute_triangle_circumcenters(X, e0, e1, e2):
+def compute_triangle_circumcenters(X, e0, e1, e2, ei_dot_ej):
     '''Computes the center of the circumcenter of all given triangles.
     '''
     # Make sure the edges are sorted such that
@@ -128,13 +128,9 @@ def compute_triangle_circumcenters(X, e0, e1, e2):
     e1_dot_e1 = _row_dot(e1, e1)
     e2_dot_e2 = _row_dot(e2, e2)
 
-    e0_dot_e1 = _row_dot(e0, e1)
-    e1_dot_e2 = _row_dot(e1, e2)
-    e2_dot_e0 = _row_dot(e2, e0)
-
-    alpha0 = e0_dot_e0 * e1_dot_e2
-    alpha1 = e1_dot_e1 * e2_dot_e0
-    alpha2 = e2_dot_e2 * e0_dot_e1
+    alpha0 = e0_dot_e0 * ei_dot_ej[:, 0]
+    alpha1 = e1_dot_e1 * ei_dot_ej[:, 1]
+    alpha2 = e2_dot_e2 * ei_dot_ej[:, 2]
     alpha_sum = alpha0 + alpha1 + alpha2
 
     cc = \
