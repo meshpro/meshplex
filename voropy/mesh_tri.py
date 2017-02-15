@@ -568,16 +568,11 @@ class MeshTri(_base_mesh):
             self.node_coords[self.node_edge_cells[1]] - \
             self.node_coords[self.node_edge_cells[0]]
 
-        e0 = self.half_edge_coords[0]
-        e1 = self.half_edge_coords[1]
-        e2 = self.half_edge_coords[2]
-
-        e_shift1 = numpy.array([e1, e2, e0])
-        e_shift2 = numpy.array([e2, e0, e1])
-
+        e_shift1 = self.half_edge_coords[[1, 2, 0]]
+        e_shift2 = self.half_edge_coords[[2, 0, 1]]
         self.ei_dot_ej = numpy.einsum('ijk, ijk->ij', e_shift1, e_shift2)
 
-        e = numpy.array([e0, e1, e2])
+        e = self.half_edge_coords
         self.ei_dot_ei = numpy.einsum('ijk, ijk->ij', e, e)
 
         self.cell_volumes, self.ce_ratios_per_half_edge = \
