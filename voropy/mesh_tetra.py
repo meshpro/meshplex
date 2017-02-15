@@ -586,22 +586,26 @@ class MeshTetra(_base_mesh):
 
         # connect the face circumcenters with the corresponding cell
         # circumcenters
+        X = self.node_coords
         for cell_id in adj_cell_ids:
             cc = self.cell_circumcenters[cell_id]
-            for face_id in self.cells['faces'][cell_id]:
-                if edge_id in self.faces['edges'][face_id]:
-                    # draw the connection
-                    #   tet circumcenter---face circumcenter
-                    X = self.node_coords[self.faces['nodes'][[face_id]]]
-                    fcc = compute_triangle_circumcenters(X)
-                    ax.plot(
-                        [cc[0], fcc[0, 0]],
-                        [cc[1], fcc[0, 1]],
-                        [cc[2], fcc[0, 2]],
-                        'b-'
-                        )
-                    # draw the face circumcenter
-                    ax.plot(fcc[:, 0], fcc[:, 1], fcc[:, 2], 'go')
+            x = X[self.cell_face_nodes[cell_id]]
+            e = X[self.cell_face_edge_nodes[cell_id, ..., 1]] - \
+                X[self.cell_face_edge_nodes[cell_id, ..., 0]]
+            face_ccs = compute_triangle_circumcenters(
+                    x, e[:, 0, :], e[:, 1, :], e[:, 2, :]
+                    )
+            # draw the face circumcenters
+            ax.plot(face_ccs[:, 0], face_ccs[:, 1], face_ccs[:, 2], 'go')
+            # draw the connections
+            #   tet circumcenter---face circumcenter
+            for face_cc in face_ccs:
+                ax.plot(
+                    [cc[0], face_cc[0]],
+                    [cc[1], face_cc[1]],
+                    [cc[2], face_cc[2]],
+                    'b-'
+                    )
 
         # draw the cell circumcenters
         cc = self.cell_circumcenters[adj_cell_ids]

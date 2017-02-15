@@ -83,25 +83,14 @@ def compute_tri_areas_and_ce_ratios(e0, e1, e2):
     return cell_volumes, sol
 
 
-def compute_triangle_circumcenters(X):
+def compute_triangle_circumcenters(X, e0, e1, e2):
     '''Computes the center of the circumcenter of all given triangles.
     '''
-    # https://en.wikipedia.org/wiki/Circumscribed_circle#Higher_dimensions
-    a = X[:, 0, :] - X[:, 2, :]
-    b = X[:, 1, :] - X[:, 2, :]
-    a_dot_a = _row_dot(a, a)
-    b_dot_b = _row_dot(b, b)
-    a_dot_b = _row_dot(a, b)
-    # N = (<a,a> b - <b,b> a) x (a x b)
-    #   = <a,a> (b x (a x b)) - <b,b> (a x (a x b))
-    #   = <a,a> (a <b,b> - b <b,a>) - <b,b> (a <a,b> - b <a,a>)
-    #   = a <b,b> (<a,a> - <a,b>) + b <a,a> (<b,b> - <b,a>)
-    alpha = b_dot_b * (a_dot_a - a_dot_b)
-    beta = a_dot_a * (b_dot_b - a_dot_b)
-    N = a * alpha[..., None] + b * beta[..., None]
-    # <a x b, a x b> = <a, a> <b, b> - <a, b>^2
-    a_cross_b2 = a_dot_a * b_dot_b - a_dot_b**2
-    cc = 0.5 * N / a_cross_b2[..., None] + X[:, 2, :]
+    # Make sure the edges are sorted such that
+    # e0: x0 -> x1
+    # e1: x1 -> x2
+    # e2: x2 -> x0
+    assert numpy.allclose(e0 + e1, -e2, rtol=0.0, atol=1.0e-14)
     # The trilinear coordinates of the circumcenter are
     #
     #   cos(alpha0) : cos(alpha1) : cos(alpha2)
@@ -125,27 +114,24 @@ def compute_triangle_circumcenters(X):
     #    C = ||e_0||^2 <e1, e2> / sum_i (||e_i||^2 <e{i+1}, e{i+2}>) P0
     #      + ...
     #
-    # TODO do that
-    # e0 = X[:, 2, :] - X[:, 1, :]
-    # e1 = X[:, 0, :] - X[:, 2, :]
-    # e2 = X[:, 1, :] - X[:, 0, :]
-    # #
-    # e0_dot_e0 = _row_dot(e0, e0)
-    # e1_dot_e1 = _row_dot(e1, e1)
-    # e2_dot_e2 = _row_dot(e2, e2)
-    # #
-    # e0_dot_e1 = _row_dot(e0, e1)
-    # e1_dot_e2 = _row_dot(e1, e2)
-    # e2_dot_e0 = _row_dot(e2, e0)
-    # #
-    # alpha = \
-    #     e0_dot_e0 * e1_dot_e2 + \
-    #     e1_dot_e1 * e2_dot_e0 + \
-    #     e2_dot_e2 * e0_dot_e1
-    # cc = \
-    #     (e0_dot_e0 * e1_dot_e2 / alpha)[:, None] * X[:, 0, :] + \
-    #     (e1_dot_e1 * e2_dot_e0 / alpha)[:, None] * X[:, 1, :] + \
-    #     (e2_dot_e2 * e0_dot_e1 / alpha)[:, None] * X[:, 2, :]
+    e0_dot_e0 = _row_dot(e0, e0)
+    e1_dot_e1 = _row_dot(e1, e1)
+    e2_dot_e2 = _row_dot(e2, e2)
+
+    e0_dot_e1 = _row_dot(e0, e1)
+    e1_dot_e2 = _row_dot(e1, e2)
+    e2_dot_e0 = _row_dot(e2, e0)
+
+    alpha0 = e0_dot_e0 * e1_dot_e2
+    alpha1 = e1_dot_e1 * e2_dot_e0
+    alpha2 = e2_dot_e2 * e0_dot_e1
+    alpha_sum = alpha0 + alpha1 + alpha2
+
+    cc = \
+        (alpha0 / alpha_sum)[:, None] * X[:, 0, :] + \
+        (alpha1 / alpha_sum)[:, None] * X[:, 1, :] + \
+        (alpha2 / alpha_sum)[:, None] * X[:, 2, :]
+
     return cc
 
 

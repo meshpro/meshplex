@@ -61,9 +61,9 @@ def _run(
 
 def test_regular_tri():
     points = numpy.array([
-        [0, 0, 0],
-        [1, 0, 0],
-        [0, 1, 0]
+        [0.0, 0.0, 0.0],
+        [1.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0]
         ])
     cells = numpy.array([[0, 1, 2]])
     mesh = voropy.mesh_tri.MeshTri(points, cells)

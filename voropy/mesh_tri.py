@@ -786,7 +786,10 @@ class MeshTri(_base_mesh):
     def get_cell_circumcenters(self):
         if self.cell_circumcenters is None:
             self.cell_circumcenters = compute_triangle_circumcenters(
-                    self.node_coords[self.cells['nodes']]
+                    self.node_coords[self.cells['nodes']],
+                    self.half_edge_coords[:, 0, :],
+                    self.half_edge_coords[:, 1, :],
+                    self.half_edge_coords[:, 2, :],
                     )
         return self.cell_circumcenters
 
@@ -1113,7 +1116,12 @@ class MeshTri(_base_mesh):
             if self.cell_circumcenters is None:
                 X = self.node_coords[self.cells['nodes']]
                 self.cell_circumcenters = \
-                    self.compute_triangle_circumcenters(X)
+                    self.compute_triangle_circumcenters(
+                            X,
+                            self.half_edge_coords[:, 0, :],
+                            self.half_edge_coords[:, 1, :],
+                            self.half_edge_coords[:, 2, :],
+                            )
 
             # Find the cells that contain the vertex
             cell_ids = numpy.where(
