@@ -186,10 +186,7 @@ class _base_mesh(object):
 
     def get_edge_lengths(self):
         if self._edge_lengths is None:
-            edges = self.node_coords[self.cell_edge_nodes[..., 1]] \
-                - self.node_coords[self.cell_edge_nodes[..., 0]]
-            self._edge_lengths = numpy.sqrt(_row_dot(edges, edges))
-
+            self._edge_lengths = numpy.sqrt(self.ei_dot_ei)
         return self._edge_lengths
 
     def get_edges(self, subdomain):

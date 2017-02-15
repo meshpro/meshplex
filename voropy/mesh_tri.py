@@ -830,12 +830,12 @@ class MeshTri(_base_mesh):
         cn = self.cells['nodes'][cell_ids]
         ids = numpy.stack([cn, cn, cn], axis=1)
 
-        half_el = 0.5 * self.get_edge_lengths()[cell_ids]
-        zero = numpy.zeros([half_el.shape[0]])
+        half_el = 0.5 * self.get_edge_lengths()[..., cell_ids]
+        zero = numpy.zeros([half_el.shape[1]])
         vals = numpy.stack([
-            numpy.column_stack([zero, half_el[:, 0], half_el[:, 0]]),
-            numpy.column_stack([half_el[:, 1], zero, half_el[:, 1]]),
-            numpy.column_stack([half_el[:, 2], half_el[:, 2], zero]),
+            numpy.column_stack([zero, half_el[0], half_el[0]]),
+            numpy.column_stack([half_el[1], zero, half_el[1]]),
+            numpy.column_stack([half_el[2], half_el[2], zero]),
             ], axis=1)
 
         return ids, vals

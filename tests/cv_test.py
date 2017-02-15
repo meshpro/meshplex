@@ -229,7 +229,7 @@ def test_degenerate_small0b(h):
 
     # edge lengths
     el = numpy.sqrt(0.5**2 + h**2)
-    assert _near_equal(mesh.get_edge_lengths(), [[el, el, 1.0]], tol)
+    assert _near_equal(mesh.get_edge_lengths().T, [el, el, 1.0], tol)
 
     # ce_ratios
     ce0 = 0.5/h * (h**2 - 0.25)
@@ -287,11 +287,11 @@ def test_degenerate_small0b_fcc():
 
     # edge lengths
     el = numpy.sqrt(0.5**2 + h**2)
-    assert _near_equal(mesh.get_edge_lengths(), [el, el, 1.0], tol)
+    assert _near_equal(mesh.get_edge_lengths().T, [el, el, 1.0], tol)
 
     # ce_ratios
     ce = h
-    assert _near_equal(mesh.get_ce_ratios(), [ce, ce, 0.0], tol)
+    assert _near_equal(mesh.get_ce_ratios().T, [ce, ce, 0.0], tol)
 
     # control volumes
     cv = ce * el
@@ -343,7 +343,7 @@ def test_degenerate_small1(h, a):
     # edge lengths
     el1 = numpy.sqrt(a**2 + h**2)
     el2 = numpy.sqrt((1.0 - a)**2 + h**2)
-    assert _near_equal(mesh.get_edge_lengths(), [[el2, el1, 1.0]], tol)
+    assert _near_equal(mesh.get_edge_lengths().T, [[el2, el1, 1.0]], tol)
 
     # ce_ratios
     ce1 = 0.5 * h / a
