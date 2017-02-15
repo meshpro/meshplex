@@ -132,21 +132,15 @@ def compute_triangle_circumcenters(X, ei_dot_ei, ei_dot_ej):
     # so in total
     #
     #    C = ||e_0||^2 <e1, e2> / sum_i (||e_i||^2 <e{i+1}, e{i+2}>) P0
-    #      + ...
+    #      + ... P1
+    #      + ... P2.
     #
-    e0_dot_e0 = ei_dot_ei[:, 0]
-    e1_dot_e1 = ei_dot_ei[:, 1]
-    e2_dot_e2 = ei_dot_ei[:, 2]
+    alpha = ei_dot_ei * ei_dot_ej
+    alpha_sum = numpy.sum(alpha, axis=-1)
 
-    alpha0 = e0_dot_e0 * ei_dot_ej[:, 0]
-    alpha1 = e1_dot_e1 * ei_dot_ej[:, 1]
-    alpha2 = e2_dot_e2 * ei_dot_ej[:, 2]
-    alpha_sum = alpha0 + alpha1 + alpha2
+    beta = alpha / alpha_sum[:, None]
 
-    cc = \
-        (alpha0 / alpha_sum)[:, None] * X[:, 0, :] + \
-        (alpha1 / alpha_sum)[:, None] * X[:, 1, :] + \
-        (alpha2 / alpha_sum)[:, None] * X[:, 2, :]
+    cc = numpy.sum(beta[..., None] * X, axis=1)
 
     return cc
 
