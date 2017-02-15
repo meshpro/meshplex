@@ -580,6 +580,9 @@ class MeshTri(_base_mesh):
         e_shift2 = numpy.stack([e2, e0, e1], axis=-1)
         self.ei_dot_ej = numpy.einsum('ijk, ijk->ik', e_shift1, e_shift2)
 
+        e = numpy.stack([e0, e1, e2], axis=-1)
+        self.ei_dot_ei = numpy.einsum('ijk, ijk->ik', e, e)
+
         self.cell_volumes, self.ce_ratios_per_half_edge = \
             compute_tri_areas_and_ce_ratios(self.ei_dot_ej)
 
@@ -794,9 +797,7 @@ class MeshTri(_base_mesh):
         if self.cell_circumcenters is None:
             self.cell_circumcenters = compute_triangle_circumcenters(
                     self.node_coords[self.cells['nodes']],
-                    self.half_edge_coords[:, 0, :],
-                    self.half_edge_coords[:, 1, :],
-                    self.half_edge_coords[:, 2, :],
+                    self.ei_dot_ei,
                     self.ei_dot_ej
                     )
         return self.cell_circumcenters
@@ -1126,9 +1127,7 @@ class MeshTri(_base_mesh):
                 self.cell_circumcenters = \
                     self.compute_triangle_circumcenters(
                             X,
-                            self.half_edge_coords[:, 0, :],
-                            self.half_edge_coords[:, 1, :],
-                            self.half_edge_coords[:, 2, :],
+                            self.ei_dot_ei,
                             self.ei_dot_ej
                             )
 

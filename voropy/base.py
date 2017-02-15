@@ -32,6 +32,7 @@ def compute_tri_areas_and_ce_ratios(ei_dot_ej):
     #   e1: x2->x0,
     #   e2: x0->x1.
     #
+    # Note that edge e_i is opposite of node i and the edges add up to 0.
     # (Those quantities can be shared between numerous methods, so share them.)
     #
 
@@ -93,14 +94,23 @@ def compute_tri_areas_and_ce_ratios(ei_dot_ej):
     return cell_volumes, sol
 
 
-def compute_triangle_circumcenters(X, e0, e1, e2, ei_dot_ej):
+def compute_triangle_circumcenters(X, ei_dot_ei, ei_dot_ej):
     '''Computes the center of the circumcenter of all given triangles.
     '''
-    # Make sure the edges are sorted such that
-    # e0: x0 -> x1
-    # e1: x1 -> x2
-    # e2: x2 -> x0
-    assert numpy.allclose(e0 + e1, -e2, rtol=0.0, atol=1.0e-14)
+    # The input argument are the dot products
+    #
+    #   <e1, e2>
+    #   <e2, e0>
+    #   <e0, e1>
+    #
+    # of the edges
+    #
+    #   e0: x1->x2,
+    #   e1: x2->x0,
+    #   e2: x0->x1.
+    #
+    # Note that edge e_i is opposite of node i and the edges add up to 0.
+
     # The trilinear coordinates of the circumcenter are
     #
     #   cos(alpha0) : cos(alpha1) : cos(alpha2)
@@ -124,9 +134,9 @@ def compute_triangle_circumcenters(X, e0, e1, e2, ei_dot_ej):
     #    C = ||e_0||^2 <e1, e2> / sum_i (||e_i||^2 <e{i+1}, e{i+2}>) P0
     #      + ...
     #
-    e0_dot_e0 = _row_dot(e0, e0)
-    e1_dot_e1 = _row_dot(e1, e1)
-    e2_dot_e2 = _row_dot(e2, e2)
+    e0_dot_e0 = ei_dot_ei[:, 0]
+    e1_dot_e1 = ei_dot_ei[:, 1]
+    e2_dot_e2 = ei_dot_ei[:, 2]
 
     alpha0 = e0_dot_e0 * ei_dot_ej[:, 0]
     alpha1 = e1_dot_e1 * ei_dot_ej[:, 1]

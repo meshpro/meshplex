@@ -600,13 +600,14 @@ class MeshTetra(_base_mesh):
             e1 = e[:, 1, :]
             e2 = e[:, 2, :]
             #
+            e = numpy.stack([e0, e1, e2], axis=-1)
+            ei_dot_ei = numpy.einsum('ijk, ijk->ij', e, e)
+            #
             e_shift1 = numpy.stack([e1, e2, e0], axis=-1)
             e_shift2 = numpy.stack([e2, e0, e1], axis=-1)
             ei_dot_ej = numpy.einsum('ijk, ijk->ij', e_shift1, e_shift2)
             #
-            face_ccs = compute_triangle_circumcenters(
-                    x, e0, e1, e2, ei_dot_ej
-                    )
+            face_ccs = compute_triangle_circumcenters(x, ei_dot_ei, ei_dot_ej)
             # draw the face circumcenters
             ax.plot(face_ccs[:, 0], face_ccs[:, 1], face_ccs[:, 2], 'go')
             # draw the connections
