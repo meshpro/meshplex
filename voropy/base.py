@@ -15,16 +15,25 @@ def _row_dot(a, b):
     return inner1d(a, b)
 
 
-def compute_tri_areas_and_ce_ratios(e0, e1, e2):
+def compute_tri_areas_and_ce_ratios(ei_dot_ej):
     '''Given triangles (specified by their edges), this routine will return the
     triangle areas and the signed distances of the triangle circumcenters to
     the edge midpoints.
     '''
-    # Make sure the edges are sorted such that
-    # e0: x0 -> x1
-    # e1: x1 -> x2
-    # e2: x2 -> x0
-    assert numpy.allclose(e0 + e1, -e2, rtol=0.0, atol=1.0e-14)
+    # The input argument are the dot products
+    #
+    #   <e1, e2>
+    #   <e2, e0>
+    #   <e0, e1>
+    #
+    # of the edges
+    #
+    #   e0: x1->x2,
+    #   e1: x2->x0,
+    #   e2: x0->x1.
+    #
+    # (Those quantities can be shared between numerous methods, so share them.)
+    #
 
     # There are multiple ways of deriving a closed form for the
     # covolume-edgelength ratios.
@@ -57,28 +66,29 @@ def compute_tri_areas_and_ce_ratios(e0, e1, e2):
     #       cos(alpha0) = <e1, e2> / ||e1|| / ||e2||
     #
     #     and the conversion formula to Cartesian coordinates, ones gets the
-    #     expressions in the code below.
+    #     expression
+    #
+    #         ce0 = e1_dot_e2 * 0.5 / sqrt(alpha)
+    #
+    #     with
+    #
+    #         alpha = e1_dot_e2 * e0_dot_e1
+    #               + e2_dot_e0 * e1_dot_e2
+    #               + e0_dot_e1 * e2_dot_e0.
     #
     # Note that some simplifications are achieved by virtue of
     #
     #   e1 + e2 + e3 = 0.
     #
-    e0_dot_e1 = _row_dot(e0, e1)
-    e1_dot_e2 = _row_dot(e1, e2)
-    e2_dot_e0 = _row_dot(e2, e0)
-
     sqrt_alpha = numpy.sqrt(
-        + e0_dot_e1 * e1_dot_e2
-        + e1_dot_e2 * e2_dot_e0
-        + e2_dot_e0 * e0_dot_e1
+        + ei_dot_ej[..., 2] * ei_dot_ej[..., 0]
+        + ei_dot_ej[..., 0] * ei_dot_ej[..., 1]
+        + ei_dot_ej[..., 1] * ei_dot_ej[..., 2]
         )
 
     cell_volumes = 0.5 * sqrt_alpha
 
-    a = -e1_dot_e2 * 0.5 / sqrt_alpha
-    b = -e2_dot_e0 * 0.5 / sqrt_alpha
-    c = -e0_dot_e1 * 0.5 / sqrt_alpha
-    sol = numpy.stack((a, b, c), axis=-1)
+    sol = -ei_dot_ej * 0.5 / sqrt_alpha[..., None]
 
     return cell_volumes, sol
 

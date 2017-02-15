@@ -186,7 +186,12 @@ def _isosceles_ce_ratios(p0, p1, p2):
     e1 = p0 - p2
     e2 = p1 - p0
     assert all(abs(_row_dot(e2, e2) - _row_dot(e1, e1)) < 1.0e-14)
-    _, ce_ratios = compute_tri_areas_and_ce_ratios(e0, e1, e2)
+
+    e_shift1 = numpy.stack([e1, e2, e0], axis=-1)
+    e_shift2 = numpy.stack([e2, e0, e1], axis=-1)
+    ei_dot_ej = numpy.einsum('ijk, ijk->ik', e_shift1, e_shift2)
+
+    _, ce_ratios = compute_tri_areas_and_ce_ratios(ei_dot_ej)
     assert all(abs(ce_ratios[:, 1] - ce_ratios[:, 2]) < 1.0e-12)
     return ce_ratios[:, [0, 1]]
 
@@ -567,11 +572,16 @@ class MeshTri(_base_mesh):
             self.node_coords[self.cell_edge_nodes[..., 1]] - \
             self.node_coords[self.cell_edge_nodes[..., 0]]
 
-        e0h = self.half_edge_coords[:, 0, :]
-        e1h = self.half_edge_coords[:, 1, :]
-        e2h = self.half_edge_coords[:, 2, :]
+        e0 = self.half_edge_coords[:, 0, :]
+        e1 = self.half_edge_coords[:, 1, :]
+        e2 = self.half_edge_coords[:, 2, :]
+
+        e_shift1 = numpy.stack([e1, e2, e0], axis=-1)
+        e_shift2 = numpy.stack([e2, e0, e1], axis=-1)
+        self.ei_dot_ej = numpy.einsum('ijk, ijk->ik', e_shift1, e_shift2)
+
         self.cell_volumes, self.ce_ratios_per_half_edge = \
-            self._compute_cell_volumes_and_ce_ratios(e0h, e1h, e2h)
+            compute_tri_areas_and_ce_ratios(self.ei_dot_ej)
 
         if flat_cell_correction is not None:
             assert flat_cell_correction in ['full', 'boundary']
@@ -770,7 +780,7 @@ class MeshTri(_base_mesh):
         return edge_cells
 
     def _compute_cell_volumes_and_ce_ratios(self, e0, e1, e2):
-        return compute_tri_areas_and_ce_ratios(e0, e1, e2)
+        return compute_tri_areas_and_ce_ratios(ei_dot_ej)
 
     def _get_control_volume_contribs(self):
         if self._control_volume_contribs is None:

@@ -290,8 +290,11 @@ class MeshTetra(_base_mesh):
         e0 = e[:, :, 0, :]
         e1 = e[:, :, 1, :]
         e2 = e[:, :, 2, :]
+        e_shift1 = numpy.stack([e1, e2, e0], axis=-1)
+        e_shift2 = numpy.stack([e2, e0, e1], axis=-1)
+        ei_dot_ej = numpy.einsum('ijkl, ijkl->ijl', e_shift1, e_shift2)
         face_areas, face_ce_ratios = \
-            compute_tri_areas_and_ce_ratios(e0, e1, e2)
+            compute_tri_areas_and_ce_ratios(ei_dot_ej)
 
         v0 = self.cell_face_nodes[:, :, 0]
         v1 = self.cell_face_nodes[:, :, 1]
@@ -592,6 +595,7 @@ class MeshTetra(_base_mesh):
             x = X[self.cell_face_nodes[cell_id]]
             e = X[self.cell_face_edge_nodes[cell_id, ..., 1]] - \
                 X[self.cell_face_edge_nodes[cell_id, ..., 0]]
+            #
             face_ccs = compute_triangle_circumcenters(
                     x, e[:, 0, :], e[:, 1, :], e[:, 2, :]
                     )
