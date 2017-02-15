@@ -813,8 +813,7 @@ class MeshTri(_base_mesh):
         # The integral of any linear function over a triangle is the average of
         # the values of the function in each of the three corners, times the
         # area of the triangle.
-        v = self._get_control_volume_contribs()[cell_ids]
-        right_triangle_vols = numpy.stack([v, v], axis=2)
+        right_triangle_vols = self._get_control_volume_contribs()[cell_ids]
 
         # get edge midpoints with the nodes just like sorted in
         # half_edge_coords
@@ -825,8 +824,8 @@ class MeshTri(_base_mesh):
         # but it turns out that numpy.sum is quite slow.
         edge_nodes = self.cell_edge_nodes[cell_ids]
         edge_midpoints = 0.5 * (
-                self.node_coords[edge_nodes[:, :, 0]] +
-                self.node_coords[edge_nodes[:, :, 1]]
+                self.node_coords[edge_nodes[..., 0]] +
+                self.node_coords[edge_nodes[..., 1]]
                 )
 
         cc = self.get_cell_circumcenters()
@@ -836,7 +835,7 @@ class MeshTri(_base_mesh):
             edge_midpoints[:, :, None, :] +
             self.node_coords[edge_nodes]
             ) / 3.0
-        contribs = right_triangle_vols[:, :, :, None] * average
+        contribs = right_triangle_vols[:, :, None, None] * average
 
         return edge_nodes, contribs
 
