@@ -806,21 +806,13 @@ class MeshTri(_base_mesh):
         # area of the triangle.
         right_triangle_vols = self._get_control_volume_contribs()[:, cell_ids]
 
-        # get edge midpoints with the nodes just like sorted in
-        # half_edge_coords
         node_edges = self.node_edge_cells[..., cell_ids]
-        edge_midpoints = 0.5 * (
-                self.node_coords[node_edges[0]] +
-                self.node_coords[node_edges[1]]
-                )
 
+        corner = self.node_coords[node_edges]
+        edge_midpoints = 0.5 * (corner[0] + corner[1])
         cc = self.get_cell_circumcenters()[cell_ids]
 
-        average = (
-            cc[None, None] +
-            edge_midpoints[None] +
-            self.node_coords[node_edges]
-            ) / 3.0
+        average = (corner + edge_midpoints[None] + cc[None, None]) / 3.0
 
         contribs = right_triangle_vols[None, :, :, None] * average
 
