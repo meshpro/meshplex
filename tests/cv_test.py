@@ -705,7 +705,7 @@ def test_cubesmall():
 
     tol = 1.0e-14
 
-    cv = numpy.ones(8) * 5.0 / 4.0
+    cv = numpy.ones(8) * 1.25
     cellvols = [5.0/3.0, 5.0/3.0, 10.0/3.0, 5.0/3.0, 5.0/3.0]
 
     assert _near_equal(mesh.get_control_volumes(), cv, tol)
@@ -729,40 +729,34 @@ def test_cubesmall():
     return
 
 
-# def test_arrow3d():
-#     nodes = numpy.array([
-#         [0.0,  0.0, 0.0],
-#         [2.0, -1.0, 0.0],
-#         [2.0,  0.0, 0.0],
-#         [2.0,  1.0, 0.0],
-#         [0.5,  0.0, -0.9],
-#         [0.5,  0.0, 0.9]
-#         ])
-#     cellsNodes = numpy.array([
-#         [1, 2, 4, 5],
-#         [2, 3, 4, 5],
-#         [0, 1, 4, 5],
-#         [0, 3, 4, 5]
-#         ])
-#     mesh = voropy.mesh_tetra.MeshTetra(nodes, cellsNodes, mode='algebraic')
-#
-#     # # pull this to see what a negative ce_ratio looks like
-#     # mesh.show()
-#     # mesh.show_edge(12)
-#     # from matplotlib import pyplot as plt
-#     # plt.show()
-#
-#     _run(
-#         mesh,
-#         1.2,
-#         [numpy.sqrt(0.30104), 0.354],
-#         [14.281989026063275, 2.4],
-#         [numpy.sqrt(0.45), 0.45]
-#         )
-#
-#     assert mesh.num_delaunay_violations() == 2
-#
-#     return
+def test_arrow3d():
+    nodes = numpy.array([
+        [0.0,  0.0, 0.0],
+        [2.0, -1.0, 0.0],
+        [2.0,  0.0, 0.0],
+        [2.0,  1.0, 0.0],
+        [0.5,  0.0, -0.9],
+        [0.5,  0.0, 0.9]
+        ])
+    cellsNodes = numpy.array([
+        [1, 2, 4, 5],
+        [2, 3, 4, 5],
+        [0, 1, 4, 5],
+        [0, 3, 4, 5]
+        ])
+    mesh = voropy.mesh_tetra.MeshTetra(nodes, cellsNodes)
+
+    _run(
+        mesh,
+        1.2,
+        [0.58276428453480922, 0.459],
+        [0.40826901831985885, 0.2295],
+        [numpy.sqrt(0.45), 0.45]
+        )
+
+    assert mesh.num_delaunay_violations() == 2
+
+    return
 
 
 def test_tetrahedron():
@@ -775,8 +769,7 @@ def test_tetrahedron():
     _run(
         mesh,
         64.1500299099584,
-        [17.07120343309435, 7.5899731568813653],
-        # [33.87181266432331, 1.6719101545282922],
+        [16.308991595922095, 7.0264329635751395],
         [6.898476155562042, 0.34400453539215242],
         [11.571692332290635, 2.9699087921277054]
         )
@@ -794,7 +787,7 @@ def test_pacman():
         mesh,
         73.64573933105898,
         [3.5908322974649631, 0.26638548094154707],
-        [669.3501944927655, 1.8142648825759053],
+        [354.8184824409405, 0.94690319745399243],
         [2.6213234038171014, 0.13841739494523228]
         )
 
@@ -818,13 +811,16 @@ def test_shell():
         [0, 1, 4]
         ])
     mesh = voropy.mesh_tri.MeshTri(points, cells)
-    _run(
-        mesh,
-        2 * numpy.sqrt(3),
-        [2 * numpy.sqrt(2.0/3.0), 2.0/numpy.sqrt(3.0)],
-        [5.0 / 3.0, numpy.sqrt(1.0 / 3.0)],
-        [numpy.sqrt(3.0), numpy.sqrt(3.0) / 2.0]
-        )
+
+    tol = 1.0e-14
+    ce_ratios = 0.5/numpy.sqrt(3.0) * numpy.ones((4, 3))
+    assert _near_equal(mesh.get_ce_ratios(), ce_ratios, tol)
+
+    cv = numpy.array([2.0, 1.0, 1.0, 1.0, 1.0]) / numpy.sqrt(3.0)
+    assert _near_equal(mesh.get_control_volumes(), cv, tol)
+
+    cell_vols = numpy.sqrt(3.0) / 2.0 * numpy.ones(4)
+    assert _near_equal(mesh.cell_volumes, cell_vols, tol)
 
     assert mesh.num_delaunay_violations() == 0
 
