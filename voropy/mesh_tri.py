@@ -554,9 +554,12 @@ class MeshTri(_base_mesh):
         # edge is opposite of the k-th point in the triangle.
         nds = self.cells['nodes']
         self.cell_edge_nodes = numpy.stack([
-            numpy.column_stack([nds[:, 1], nds[:, 2]]),
-            numpy.column_stack([nds[:, 2], nds[:, 0]]),
-            numpy.column_stack([nds[:, 0], nds[:, 1]]),
+            # numpy.column_stack([nds[:, 1], nds[:, 2]]),
+            # numpy.column_stack([nds[:, 2], nds[:, 0]]),
+            # numpy.column_stack([nds[:, 0], nds[:, 1]]),
+            nds[:, [1, 2]],
+            nds[:, [2, 0]],
+            nds[:, [0, 1]],
             ], axis=1)
 
         # Create the corresponding edge coordinates.

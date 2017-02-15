@@ -9,6 +9,7 @@ from voropy.base import \
 
 __all__ = ['MeshTetra']
 
+
 def _my_dot(a, b):
     return numpy.einsum('ijk, ijk->ij', a, b)
 
@@ -18,7 +19,7 @@ class MeshTetra(_base_mesh):
 
     .. inheritance-diagram:: MeshTetra
     '''
-    def __init__(self, node_coords, cells, mode='algebraic'):
+    def __init__(self, node_coords, cells, mode='geometric'):
         '''Initialization.
         '''
         # Assert that all vertices are used.
@@ -51,17 +52,44 @@ class MeshTetra(_base_mesh):
         self._control_volumes = None
 
         self.mark_default_subdomains()
+
+        # Arrange the cell_face_nodes such that node k is opposite of face k in
+        # each cell.
+        nds = self.cells['nodes']
+        self.cell_face_nodes = numpy.stack([
+            nds[:, [1, 2, 3]],
+            nds[:, [2, 3, 0]],
+            nds[:, [3, 0, 1]],
+            nds[:, [0, 1, 2]],
+            ], axis=1)
+        # Arrange the cell_face_edge_nodes such that node k is opposite of edge
+        # k in each face.
+        self.cell_face_edge_nodes = numpy.stack([
+            numpy.stack([
+                nds[:, [2, 3]], nds[:, [3, 1]], nds[:, [1, 2]]
+                ], axis=1),
+            numpy.stack([
+                nds[:, [3, 0]], nds[:, [0, 2]], nds[:, [2, 3]]
+                ], axis=1),
+            numpy.stack([
+                nds[:, [0, 1]], nds[:, [1, 3]], nds[:, [3, 0]]
+                ], axis=1),
+            numpy.stack([
+                nds[:, [1, 2]], nds[:, [2, 0]], nds[:, [0, 1]]
+                ], axis=1),
+            ], axis=1)
+
         return
 
-    def get_ce_ratios_per_edge(self):
+    def get_ce_ratios(self):
         if self._ce_ratios is None:
-            num_edges = len(self.edges['nodes'])
-            self._ce_ratios = numpy.zeros(num_edges, dtype=float)
             assert self._mode in ['geometric', 'algebraic']
             if self._mode == 'geometric':
-                idx, vals = self.compute_ce_ratios_geometric()
-                numpy.add.at(self._ce_ratios, idx, vals)
+                return self.compute_ce_ratios_geometric()
             else:  # 'algebraic'
+                num_edges = len(self.edges['nodes'])
+                self._ce_ratios = numpy.zeros(num_edges, dtype=float)
+                raise RuntimeError('Disabled')
                 idx, vals = self.compute_ce_ratios_algebraic()
                 numpy.add.at(self._ce_ratios, idx, vals)
                 self.circumcenter_face_distances = None
@@ -209,65 +237,67 @@ class MeshTetra(_base_mesh):
         self.cell_volumes = abs(omega) / 6.0
         return
 
-    def compute_ce_ratios_algebraic(self):
-        # Precompute edges.
-        edges = \
-            self.node_coords[self.edges['nodes'][:, 1]] - \
-            self.node_coords[self.edges['nodes'][:, 0]]
-
-        # create cells -> edges
-        num_cells = len(self.cells['nodes'])
-        cells_edges = numpy.empty((num_cells, 6), dtype=int)
-        for cell_id, face_ids in enumerate(self.cells['faces']):
-            edges_set = set(self.faces['edges'][face_ids].flatten())
-            cells_edges[cell_id] = list(edges_set)
-
-        self.cells['edges'] = cells_edges
-
-        # Build the equation system:
-        # The equation
-        #
-        # |simplex| ||u||^2 = \sum_i \alpha_i <u,e_i> <e_i,u>
-        #
-        # has to hold for all vectors u in the plane spanned by the edges,
-        # particularly by the edges themselves.
-        cells_edges = edges[self.cells['edges']]
-        # <http://stackoverflow.com/a/38110345/353337>
-        A = numpy.einsum('ijk,ilk->ijl', cells_edges, cells_edges)
-        A = A**2
-
-        # Compute the RHS  cell_volume * <edge, edge>.
-        # The dot product <edge, edge> is also on the diagonals of A (before
-        # squaring), but simply computing it again is cheaper than extracting
-        # it from A.
-        edge_dot_edge = _row_dot(edges, edges)
-        rhs = edge_dot_edge[self.cells['edges']] * self.cell_volumes[..., None]
-
-        # Solve all k-by-k systems at once ("broadcast"). (`k` is the number of
-        # edges per simplex here.)
-        # If the matrix A is (close to) singular if and only if the cell is
-        # (close to being) degenerate. Hence, it has volume 0, and so all the
-        # edge coefficients are 0, too. Hence, do nothing.
-        sol = numpy.linalg.solve(A, rhs)
-
-        return self.cells['edges'], sol
+#     def compute_ce_ratios_algebraic(self):
+#         # Precompute edges.
+#         edges = \
+#             self.node_coords[self.edges['nodes'][:, 1]] - \
+#             self.node_coords[self.edges['nodes'][:, 0]]
+#
+#         # create cells -> edges
+#         num_cells = len(self.cells['nodes'])
+#         cells_edges = numpy.empty((num_cells, 6), dtype=int)
+#         for cell_id, face_ids in enumerate(self.cells['faces']):
+#             edges_set = set(self.faces['edges'][face_ids].flatten())
+#             cells_edges[cell_id] = list(edges_set)
+#
+#         self.cells['edges'] = cells_edges
+#
+#         # Build the equation system:
+#         # The equation
+#         #
+#         # |simplex| ||u||^2 = \sum_i \alpha_i <u,e_i> <e_i,u>
+#         #
+#         # has to hold for all vectors u in the plane spanned by the edges,
+#         # particularly by the edges themselves.
+#         cells_edges = edges[self.cells['edges']]
+#         # <http://stackoverflow.com/a/38110345/353337>
+#         A = numpy.einsum('ijk,ilk->ijl', cells_edges, cells_edges)
+#         A = A**2
+#
+#         # Compute the RHS  cell_volume * <edge, edge>.
+#         # The dot product <edge, edge> is also on the diagonals of A (before
+#         # squaring), but simply computing it again is cheaper than extracting
+#         # it from A.
+#         edge_dot_edge = _row_dot(edges, edges)
+#         rhs = edge_dot_edge[self.cells['edges']] \
+#             * self.cell_volumes[..., None]
+#
+#         # Solve all k-by-k systems at once ("broadcast"). (`k` is the number
+#         # of edges per simplex here.)
+#         # If the matrix A is (close to) singular if and only if the cell is
+#         # (close to being) degenerate. Hence, it has volume 0, and so all the
+#         # edge coefficients are 0, too. Hence, do nothing.
+#         sol = numpy.linalg.solve(A, rhs)
+#
+#         return self.cells['edges'], sol
 
     def compute_ce_ratios_geometric(self):
 
         # prepare face edges
-        e = self.node_coords[self.edges['nodes'][self.faces['edges'], 1]] - \
-            self.node_coords[self.edges['nodes'][self.faces['edges'], 0]]
-        e0 = e[:, 0, :]
-        e1 = e[:, 1, :]
-        e2 = e[:, 2, :]
-        areas, face_ce_ratios = compute_tri_areas_and_ce_ratios(e0, e1, e2)
-        face_areas = areas[self.cells['faces']]
-        fce_ratios = face_ce_ratios[self.cells['faces']]
+        e = self.node_coords[self.cell_face_edge_nodes[..., 1]] - \
+            self.node_coords[self.cell_face_edge_nodes[..., 0]]
 
-        v0 = self.faces['nodes'][self.cells['faces']][:, :, 0]
-        v1 = self.faces['nodes'][self.cells['faces']][:, :, 1]
-        v2 = self.faces['nodes'][self.cells['faces']][:, :, 2]
-        v_op = self.cells['opposing vertex']
+        e0 = e[:, :, 0, :]
+        e1 = e[:, :, 1, :]
+        e2 = e[:, :, 2, :]
+        face_areas, face_ce_ratios = \
+            compute_tri_areas_and_ce_ratios(e0, e1, e2)
+
+        v0 = self.cell_face_nodes[:, :, 0]
+        v1 = self.cell_face_nodes[:, :, 1]
+        v2 = self.cell_face_nodes[:, :, 2]
+        # opposing node
+        v_op = self.cells['nodes']
 
         x0 = self.node_coords[v0] - self.node_coords[v_op]
         x1 = self.node_coords[v1] - self.node_coords[v_op]
@@ -336,7 +366,7 @@ class MeshTetra(_base_mesh):
         #     _my_dot(x0 - x2, x1 - x0)
         #
         # print(delta - delta2)
-        #exit(1)
+        # exit(1)
 
         a = (
             72.0 * self.cell_volumes[:, None]**2
@@ -352,10 +382,114 @@ class MeshTetra(_base_mesh):
             0.5 * a / self.cell_volumes[:, None]
 
         # Multiply
-        s = 0.5 * fce_ratios * self.circumcenter_face_distances[..., None]
+        s = 0.5 * face_ce_ratios * self.circumcenter_face_distances[..., None]
 
-        idx = self.faces['edges'][self.cells['faces']]
-        return idx, s
+        return s
+
+#     def compute_ce_ratios_geometric_back(self):
+#
+#         # prepare face edges
+#         e = self.node_coords[self.edges['nodes'][self.faces['edges'], 1]] - \
+#             self.node_coords[self.edges['nodes'][self.faces['edges'], 0]]
+#         e0 = e[:, 0, :]
+#         e1 = e[:, 1, :]
+#         e2 = e[:, 2, :]
+#         areas, face_ce_ratios = compute_tri_areas_and_ce_ratios(e0, e1, e2)
+#         face_areas = areas[self.cells['faces']]
+#         fce_ratios = face_ce_ratios[self.cells['faces']]
+#
+#         v0 = self.faces['nodes'][self.cells['faces']][:, :, 0]
+#         v1 = self.faces['nodes'][self.cells['faces']][:, :, 1]
+#         v2 = self.faces['nodes'][self.cells['faces']][:, :, 2]
+#         v_op = self.cells['opposing vertex']
+#
+#         x0 = self.node_coords[v0] - self.node_coords[v_op]
+#         x1 = self.node_coords[v1] - self.node_coords[v_op]
+#         x2 = self.node_coords[v2] - self.node_coords[v_op]
+#
+#         # This is the reference expression.
+#         # a = (
+#         #     2 * _my_dot(x0_cross_x1, x2)**2 -
+#         #     _my_dot(
+#         #         x0_cross_x1 + x1_cross_x2 + x2_cross_x0,
+#         #         x0_cross_x1 * x2_dot_x2[..., None] +
+#         #         x1_cross_x2 * x0_dot_x0[..., None] +
+#         #         x2_cross_x0 * x1_dot_x1[..., None]
+#         #     )) / (12.0 * face_areas)
+#
+#         # Note that
+#         #
+#         #    6*tet_volume = abs(<x0 x x1, x2>)
+#         #                 = abs(<x1 x x2, x0>)
+#         #                 = abs(<x2 x x0, x1>).
+#         #
+#         # Also,
+#         #
+#         #    <a x b, c x d> = <a, c> <b, d> - <a, d> <b, c>.
+#         #
+#         # All those dot products can probably be cleaned up good.
+#         # TODO simplify
+#         # TODO can those perhaps be expressed as dot products of x_ - x_, i.e.,
+#         #      edges of the considered face
+#         x0_dot_x0 = _my_dot(x0, x0)
+#         x1_dot_x1 = _my_dot(x1, x1)
+#         x2_dot_x2 = _my_dot(x2, x2)
+#         x0_dot_x1 = _my_dot(x0, x1)
+#         x1_dot_x2 = _my_dot(x1, x2)
+#         x2_dot_x0 = _my_dot(x2, x0)
+#         # # alpha = <x0_cross_x1 + x1_cross_x2 + x2_cross_x0, x0_cross_x1>
+#         # alpha = \
+#         #     x0_dot_x0 * x1_dot_x1 - x0_dot_x1**2 + \
+#         #     x0_dot_x1 * x1_dot_x2 - x1_dot_x1 * x2_dot_x0 + \
+#         #     x2_dot_x0 * x0_dot_x1 - x1_dot_x2 * x0_dot_x0
+#         # # beta = <x0_cross_x1 + x1_cross_x2 + x2_cross_x0, x1_cross_x2>
+#         # beta = \
+#         #     x0_dot_x1 * x1_dot_x2 - x2_dot_x0 * x1_dot_x1 + \
+#         #     x1_dot_x1 * x2_dot_x2 - x1_dot_x2**2 + \
+#         #     x1_dot_x2 * x2_dot_x0 - x2_dot_x2 * x0_dot_x1
+#         # # gamma = <x0_cross_x1 + x1_cross_x2 + x2_cross_x0, x2_cross_x0>
+#         # gamma = \
+#         #     x2_dot_x0 * x0_dot_x1 - x0_dot_x0 * x1_dot_x2 + \
+#         #     x1_dot_x2 * x2_dot_x0 - x0_dot_x1 * x2_dot_x2 + \
+#         #     x0_dot_x0 * x2_dot_x2 - x2_dot_x0**2
+#
+#         delta = \
+#             x0_dot_x0 * x1_dot_x1 * x2_dot_x2 - x2_dot_x2 * x0_dot_x1**2 + \
+#             x0_dot_x1 * x1_dot_x2 * x2_dot_x2 - x2_dot_x2 * x1_dot_x1 * x2_dot_x0 + \
+#             x2_dot_x0 * x0_dot_x1 * x2_dot_x2 - x2_dot_x2 * x1_dot_x2 * x0_dot_x0 + \
+#             x0_dot_x1 * x1_dot_x2 * x0_dot_x0 - x0_dot_x0 * x2_dot_x0 * x1_dot_x1 + \
+#             x1_dot_x1 * x2_dot_x2 * x0_dot_x0 - x0_dot_x0 * x1_dot_x2**2 + \
+#             x1_dot_x2 * x2_dot_x0 * x0_dot_x0 - x0_dot_x0 * x2_dot_x2 * x0_dot_x1 + \
+#             x2_dot_x0 * x0_dot_x1 * x1_dot_x1 - x1_dot_x1 * x0_dot_x0 * x1_dot_x2 + \
+#             x1_dot_x2 * x2_dot_x0 * x1_dot_x1 - x1_dot_x1 * x0_dot_x1 * x2_dot_x2 + \
+#             x0_dot_x0 * x2_dot_x2 * x1_dot_x1 - x1_dot_x1 * x2_dot_x0**2
+#
+#         # delta2 = \
+#         #     _my_dot(x1 - x0, x2 - x1) * \
+#         #     _my_dot(x2 - x1, x0 - x2) * \
+#         #     _my_dot(x0 - x2, x1 - x0)
+#         #
+#         # print(delta - delta2)
+#         #exit(1)
+#
+#         a = (
+#             72.0 * self.cell_volumes[:, None]**2
+#             - delta
+#             # - alpha * x2_dot_x2
+#             # - beta * x0_dot_x0
+#             # - gamma * x1_dot_x1
+#             ) / (12.0 * face_areas)
+#
+#         # Distances of the cell circumcenter to the faces.
+#         # (shape: num_cells x 4)
+#         self.circumcenter_face_distances = \
+#             0.5 * a / self.cell_volumes[:, None]
+#
+#         # Multiply
+#         s = 0.5 * fce_ratios * self.circumcenter_face_distances[..., None]
+#
+#         idx = self.faces['edges'][self.cells['faces']]
+#         return idx, s
 
     def get_cell_circumcenters(self):
         return self.cell_circumcenters
@@ -364,18 +498,21 @@ class MeshTetra(_base_mesh):
         '''Compute the control volumes of all nodes in the mesh.
         '''
         if self._control_volumes is None:
-            self._control_volumes = \
-                numpy.zeros(len(self.node_coords), dtype=float)
 
             #   1/3. * (0.5 * edge_length) * covolume
             # = 1/6 * edge_length**2 * ce_ratio_edge_ratio
-            e = self.node_coords[self.edges['nodes'][:, 1]] - \
-                self.node_coords[self.edges['nodes'][:, 0]]
-            vals = _row_dot(e, e) * self.get_ce_ratios_per_edge() / 6.0
+            ce = self.compute_ce_ratios_geometric()
+            idx = self.cell_face_edge_nodes
+            e = self.node_coords[idx[..., 1]] - \
+                self.node_coords[idx[..., 0]]
+            vals = _row_dot(e, e) * ce / 6.0
+            vals = numpy.stack([vals, vals], axis=-1)
+            # TODO explicitly sum up contributions per cell first
+            #      (like mesh_tri)
 
-            edge_nodes = self.edges['nodes']
-            numpy.add.at(self._control_volumes, edge_nodes[:, 0], vals)
-            numpy.add.at(self._control_volumes, edge_nodes[:, 1], vals)
+            self._control_volumes = \
+                numpy.zeros(len(self.node_coords), dtype=float)
+            numpy.add.at(self._control_volumes, idx, vals)
         return self._control_volumes
 
     def num_delaunay_violations(self):

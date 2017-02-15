@@ -24,7 +24,7 @@ def compute_tri_areas_and_ce_ratios(e0, e1, e2):
     # e0: x0 -> x1
     # e1: x1 -> x2
     # e2: x2 -> x0
-    # assert numpy.allclose(e0 + e1, -e2, rtol=0.0, atol=1.0e-14)
+    assert numpy.allclose(e0 + e1, -e2, rtol=0.0, atol=1.0e-14)
 
     # The covolume-edge ratios for the edges of each cell is the solution of
     # the equation system
@@ -117,8 +117,7 @@ def compute_tri_areas_and_ce_ratios(e0, e1, e2):
     # This would require finding out about s2, s3 though. Perhaps we can get
     # this from the input data.
     #
-
-    sol = numpy.column_stack((a, b, c))
+    sol = numpy.stack((a, b, c), axis=-1)
 
     return cell_volumes, sol
 
