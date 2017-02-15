@@ -86,15 +86,14 @@ def lloyd_smoothing(
 
             # The cosines of the angles are the negative dot products of
             # the normalized edges adjacent to the angle.
-            v = mesh.half_edge_coords
-            # multiply and add along the third coordinate
-            norms = numpy.sqrt(numpy.einsum('ijk, ijk->ij', v, v))
-            e = v / norms[..., None]
-            # Compute the dot-products <e0, e1>, <e1, e2>, <e2, e0> with one
-            # einsum.
-            e_rot = numpy.stack([e[:, 1, :], e[:, 2, :], e[:, 0, :]], axis=1)
-            a = numpy.einsum('ijk, ijk->ij', e, e_rot)
-            angles = numpy.arccos(-a) / (2 * numpy.pi) * 360.0
+            norms = numpy.sqrt(mesh.ei_dot_ei)
+            normalized_ei_dot_ej = numpy.array([
+                mesh.ei_dot_ej[0] / norms[1] / norms[2],
+                mesh.ei_dot_ej[1] / norms[2] / norms[0],
+                mesh.ei_dot_ej[2] / norms[0] / norms[1],
+                ])
+            angles = numpy.arccos(-normalized_ei_dot_ej) \
+                / (2 * numpy.pi) * 360.0
 
             hist, bin_edges = numpy.histogram(
                 angles,
@@ -187,13 +186,13 @@ def _isosceles_ce_ratios(p0, p1, p2):
     e2 = p1 - p0
     assert all(abs(_row_dot(e2, e2) - _row_dot(e1, e1)) < 1.0e-14)
 
-    e_shift1 = numpy.stack([e1, e2, e0], axis=-1)
-    e_shift2 = numpy.stack([e2, e0, e1], axis=-1)
-    ei_dot_ej = numpy.einsum('ijk, ijk->ik', e_shift1, e_shift2)
+    e_shift1 = numpy.array([e1, e2, e0])
+    e_shift2 = numpy.array([e2, e0, e1])
+    ei_dot_ej = numpy.einsum('ijk, ijk->ij', e_shift1, e_shift2)
 
     _, ce_ratios = compute_tri_areas_and_ce_ratios(ei_dot_ej)
-    assert all(abs(ce_ratios[:, 1] - ce_ratios[:, 2]) < 1.0e-12)
-    return ce_ratios[:, [0, 1]]
+    assert all(abs(ce_ratios[1] - ce_ratios[2]) < 1.0e-12)
+    return ce_ratios[[0, 1]]
 
 
 class FlatCellCorrector(object):
@@ -270,8 +269,8 @@ class FlatCellCorrector(object):
                 )
 
         n = len(self.p0)
-        self.ce_ratios1 = ce[:n]
-        self.ce_ratios2 = ce[n:]
+        self.ce_ratios1 = ce[:, :n]
+        self.ce_ratios2 = ce[:, n:]
 
         # The ce_ratios should all be greater than 0, but due to round-off
         # errors can be slightly smaller sometimes.
@@ -287,8 +286,8 @@ class FlatCellCorrector(object):
         vals = numpy.empty((len(self.cells), 3), dtype=float)
         i = numpy.arange(len(vals))
         vals[i, self.p0_local_id] = 0.0
-        vals[i, self.p1_local_id] = self.ce_ratios2[:, 1]
-        vals[i, self.p2_local_id] = self.ce_ratios1[:, 1]
+        vals[i, self.p1_local_id] = self.ce_ratios2[1]
+        vals[i, self.p2_local_id] = self.ce_ratios1[1]
         return vals
 
     def get_control_volumes(self):
@@ -316,10 +315,10 @@ class FlatCellCorrector(object):
             _column_stack(self.p0_id, self.p2_id)
             ], axis=1)
 
-        a = 0.25 * self.ce_ratios1[:, 0] * self.ghostedge_length_2
-        b = 0.25 * self.ce_ratios2[:, 0] * self.ghostedge_length_2
-        c = 0.25 * self.ce_ratios1[:, 1] * e2_length2
-        d = 0.25 * self.ce_ratios2[:, 1] * e1_length2
+        a = 0.25 * self.ce_ratios1[0] * self.ghostedge_length_2
+        b = 0.25 * self.ce_ratios2[0] * self.ghostedge_length_2
+        c = 0.25 * self.ce_ratios1[1] * e2_length2
+        d = 0.25 * self.ce_ratios2[1] * e1_length2
         vals = numpy.stack([
             _column_stack(a, b),
             _column_stack(c, c),
@@ -411,11 +410,11 @@ class FlatCellCorrector(object):
 
         # triangle areas
         # TODO take from control volume contributions
-        area_p0_q_q1 = 0.25 * self.ce_ratios1[:, 0] * self.ghostedge_length_2
-        area_p0_q_q2 = 0.25 * self.ce_ratios2[:, 0] * self.ghostedge_length_2
-        area_p0_q1_em2 = 0.25 * self.ce_ratios1[:, 1] * e2_length2
+        area_p0_q_q1 = 0.25 * self.ce_ratios1[0] * self.ghostedge_length_2
+        area_p0_q_q2 = 0.25 * self.ce_ratios2[0] * self.ghostedge_length_2
+        area_p0_q1_em2 = 0.25 * self.ce_ratios1[1] * e2_length2
         area_p1_q1_em2 = area_p0_q1_em2
-        area_p0_q2_em1 = 0.25 * self.ce_ratios2[:, 1] * e1_length2
+        area_p0_q2_em1 = 0.25 * self.ce_ratios2[1] * e1_length2
         area_p2_q2_em1 = area_p0_q2_em1
 
         # The integral of any linear function over a triangle is the average of
@@ -558,30 +557,28 @@ class MeshTri(_base_mesh):
         # Create the cells->edges->nodes hierarchy. Make sure that the k-th
         # edge is opposite of the k-th point in the triangle.
         nds = self.cells['nodes']
-        self.cell_edge_nodes = numpy.stack([
-            # numpy.column_stack([nds[:, 1], nds[:, 2]]),
-            # numpy.column_stack([nds[:, 2], nds[:, 0]]),
-            # numpy.column_stack([nds[:, 0], nds[:, 1]]),
-            nds[:, [1, 2]],
-            nds[:, [2, 0]],
-            nds[:, [0, 1]],
+        self.node_edge_cells = numpy.stack([
+            nds[:, [1, 2]].T,
+            nds[:, [2, 0]].T,
+            nds[:, [0, 1]].T,
             ], axis=1)
 
         # Create the corresponding edge coordinates.
         self.half_edge_coords = \
-            self.node_coords[self.cell_edge_nodes[..., 1]] - \
-            self.node_coords[self.cell_edge_nodes[..., 0]]
+            self.node_coords[self.node_edge_cells[1]] - \
+            self.node_coords[self.node_edge_cells[0]]
 
-        e0 = self.half_edge_coords[:, 0, :]
-        e1 = self.half_edge_coords[:, 1, :]
-        e2 = self.half_edge_coords[:, 2, :]
+        e0 = self.half_edge_coords[0]
+        e1 = self.half_edge_coords[1]
+        e2 = self.half_edge_coords[2]
 
-        e_shift1 = numpy.stack([e1, e2, e0], axis=-1)
-        e_shift2 = numpy.stack([e2, e0, e1], axis=-1)
-        self.ei_dot_ej = numpy.einsum('ijk, ijk->ik', e_shift1, e_shift2)
+        e_shift1 = numpy.array([e1, e2, e0])
+        e_shift2 = numpy.array([e2, e0, e1])
 
-        e = numpy.stack([e0, e1, e2], axis=-1)
-        self.ei_dot_ei = numpy.einsum('ijk, ijk->ik', e, e)
+        self.ei_dot_ej = numpy.einsum('ijk, ijk->ij', e_shift1, e_shift2)
+
+        e = numpy.array([e0, e1, e2])
+        self.ei_dot_ei = numpy.einsum('ijk, ijk->ij', e, e)
 
         self.cell_volumes, self.ce_ratios_per_half_edge = \
             compute_tri_areas_and_ce_ratios(self.ei_dot_ej)
@@ -600,12 +597,12 @@ class MeshTri(_base_mesh):
                     self.create_edges()
                 edge_needs_fcc = numpy.logical_and(
                     self.ce_ratios_per_half_edge < 0.0,
-                    self.is_boundary_edge[self.cells['edges']]
+                    self.is_boundary_edge[self.cells['edges']].T
                     )
 
-            self.fcc_cells, fcc_local_edge = numpy.where(edge_needs_fcc)
+            fcc_local_edge, self.fcc_cells = numpy.where(edge_needs_fcc)
             self.regular_cells = numpy.where(numpy.logical_not(
-                numpy.any(edge_needs_fcc, axis=1)
+                numpy.any(edge_needs_fcc, axis=0)
                 ))[0]
 
             self.fcc = FlatCellCorrector(
@@ -613,8 +610,8 @@ class MeshTri(_base_mesh):
                     fcc_local_edge,
                     self.node_coords
                     )
-            self.ce_ratios_per_half_edge[self.fcc_cells] = \
-                self.fcc.get_ce_ratios()
+            self.ce_ratios_per_half_edge[:, self.fcc_cells] = \
+                self.fcc.get_ce_ratios().T
         else:
             self.fcc = None
             self.regular_cells = range(len(self.cells['nodes']))
@@ -634,7 +631,7 @@ class MeshTri(_base_mesh):
     def get_ce_ratios_per_edge(self):
         if self._ce_ratios is None:
             # sum up from self.ce_ratios_per_half_edge
-            cells_edges = self.cells['edges']
+            cells_edges = self.cells['edges'].T
             self._ce_ratios = numpy.zeros(len(self.edges['nodes']))
             numpy.add.at(
                     self._ce_ratios,
@@ -645,15 +642,15 @@ class MeshTri(_base_mesh):
 
     def get_control_volumes(self):
         if self._control_volumes is None:
-            v = self._get_control_volume_contribs()[self.regular_cells]
+            v = self._get_control_volume_contribs()[..., self.regular_cells]
             # Again, make use of the fact that edge k is opposite of node k in
             # every cell. Adding the arrays first makes the work for
             # numpy.add.at lighter.
-            ids = self.cells['nodes'][self.regular_cells]
-            vals = numpy.column_stack([
-                v[:, 1] + v[:, 2],
-                v[:, 2] + v[:, 0],
-                v[:, 0] + v[:, 1],
+            ids = self.cells['nodes'][self.regular_cells].T
+            vals = numpy.array([
+                v[1] + v[2],
+                v[2] + v[0],
+                v[0] + v[1],
                 ])
             control_volume_data = [(ids, vals)]
             if self.fcc is not None:
@@ -691,12 +688,12 @@ class MeshTri(_base_mesh):
             # Again, make use of the fact that edge k is opposite of node k in
             # every cell. Adding the arrays first makes the work for
             # numpy.add.at lighter.
-            ids = self.cells['nodes'][self.regular_cells]
-            vals = numpy.stack([
-                v[:, 1, 1] + v[:, 2, 0],
-                v[:, 2, 1] + v[:, 0, 0],
-                v[:, 0, 1] + v[:, 1, 0],
-                ], axis=1)
+            ids = self.cells['nodes'][self.regular_cells].T
+            vals = numpy.array([
+                v[1, 1] + v[0, 2],
+                v[1, 2] + v[0, 0],
+                v[1, 0] + v[0, 1],
+                ])
             centroid_data = [(ids, vals)]
             if self.fcc is not None:
                 centroid_data.append(self.fcc.integral_x())
@@ -787,16 +784,15 @@ class MeshTri(_base_mesh):
             # Compute the control volumes. Note that
             #   0.5 * (0.5 * edge_length) * covolume
             # = 0.25 * edge_length**2 * ce_ratio_edge_ratio
-            c = self.half_edge_coords
-            el2 = numpy.einsum('ijk, ijk->ij', c, c)
             self._control_volume_contribs = \
-                0.25 * el2 * self.ce_ratios_per_half_edge
+                0.25 * self.ei_dot_ei * self.ce_ratios_per_half_edge
         return self._control_volume_contribs
 
     def get_cell_circumcenters(self):
         if self.cell_circumcenters is None:
+            node_cells = self.cells['nodes'].T
             self.cell_circumcenters = compute_triangle_circumcenters(
-                    self.node_coords[self.cells['nodes']],
+                    self.node_coords[node_cells],
                     self.ei_dot_ei,
                     self.ei_dot_ej
                     )
@@ -813,31 +809,27 @@ class MeshTri(_base_mesh):
         # The integral of any linear function over a triangle is the average of
         # the values of the function in each of the three corners, times the
         # area of the triangle.
-        right_triangle_vols = self._get_control_volume_contribs()[cell_ids]
+        right_triangle_vols = self._get_control_volume_contribs()[:, cell_ids]
 
         # get edge midpoints with the nodes just like sorted in
         # half_edge_coords
-        # This used to be
-        # ```
-        # numpy.sum(self.node_coords[edge_nodes], axis=2)
-        # ```
-        # but it turns out that numpy.sum is quite slow.
-        edge_nodes = self.cell_edge_nodes[cell_ids]
+        node_edges = self.node_edge_cells[..., cell_ids]
         edge_midpoints = 0.5 * (
-                self.node_coords[edge_nodes[..., 0]] +
-                self.node_coords[edge_nodes[..., 1]]
+                self.node_coords[node_edges[0]] +
+                self.node_coords[node_edges[1]]
                 )
 
         cc = self.get_cell_circumcenters()[cell_ids]
 
         average = (
-            cc[:, None, None, :] +
-            edge_midpoints[:, :, None, :] +
-            self.node_coords[edge_nodes]
+            cc[None, None] +
+            edge_midpoints[None] +
+            self.node_coords[node_edges]
             ) / 3.0
-        contribs = right_triangle_vols[:, :, None, None] * average
 
-        return edge_nodes, contribs
+        contribs = right_triangle_vols[None, :, :, None] * average
+
+        return node_edges, contribs
 
     def _compute_surface_areas(self, cell_ids):
         '''For each edge, one half of the the edge goes to each of the end
