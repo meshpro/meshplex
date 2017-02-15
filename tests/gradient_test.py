@@ -39,7 +39,7 @@ import unittest
 #                 'pacman.msh',
 #                 '2da8ff96537f844a95a83abb48471b6a'
 #                 )
-#         mesh, _, _, _ = voropy.reader.read(filename)
+#         mesh, _, _, _ = voropy.read(filename)
 #         self._run_test(mesh)
 #         return
 #

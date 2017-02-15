@@ -15,127 +15,134 @@ def _row_dot(a, b):
     return inner1d(a, b)
 
 
-def compute_tri_areas_and_ce_ratios(e0, e1, e2):
+def compute_tri_areas_and_ce_ratios(ei_dot_ej):
     '''Given triangles (specified by their edges), this routine will return the
     triangle areas and the signed distances of the triangle circumcenters to
     the edge midpoints.
     '''
-    # The covolume-edge ratios for the edges of each cell is the solution of
-    # the equation system
+    # The input argument are the dot products
     #
-    # |simplex| ||u||^2 = \sum_i \alpha_i <u,e_i> <e_i,u>,
+    #   <e1, e2>
+    #   <e2, e0>
+    #   <e0, e1>
     #
-    # where alpha_i are the covolume contributions for the edges. This
-    # equation system to hold for all vectors u in the plane spanned by the
-    # edges, particularly by the edges themselves.
+    # of the edges
     #
-    # For triangles, the exact solution of the system is
+    #   e0: x1->x2,
+    #   e1: x2->x0,
+    #   e2: x0->x1.
     #
-    #  x_1 = <e_2, e_3> / <e1 x e2, e1 x e3> * |simplex|;
-    #
-    # see <http://math.stackexchange.com/a/1855380/36678>.
-    #
-    # e0_cross_e1 = numpy.cross(e0, e1)
-    # e1_cross_e2 = numpy.cross(e1, e2)
-    # e2_cross_e0 = numpy.cross(e2, e0)
-    # cell_volumes = 0.5 * numpy.sqrt(
-    #         _row_dot(e0_cross_e1, e0_cross_e1)
-    #         )
-    # a = _row_dot(e1, e2) / _row_dot(e0_cross_e1, -e2_cross_e0)
-    # b = _row_dot(e2, e0) / _row_dot(e1_cross_e2, -e0_cross_e1)
-    # c = _row_dot(e0, e1) / _row_dot(e2_cross_e0, -e1_cross_e2)
-    #
-    # Note that the edges are connected by the relationship
-    #
-    #   e1 + s2*e2 + s3*e3 = 0
-    #
-    # where the s_ are signs. (We assume s1=1 w.l.o.g.) Since
-    #
-    #   <e1 x e2, e1 x e3> = <e1 x e2, e1 x (-s1*s3*e1-s2*s3*e2)>
-    #                      = -s2*s3 * <e1 x e2, e1 x e2>,
-    #
-    # we have that
-    #
-    #   |simplex| = 0.5 * sqrt(abs(<e1 x e2, e1 x e3>))
-    #
-    # so
-    #
-    #   x_1 = 0.5 * <e_2, e_3> / sqrt(abs(<e1 x e2, e1 x e3>))
-    #       * sign(<e1 x e2, e1 x e3>)
-    #
-    # Since dot-products are much faster computed than cross-products, we
-    # rewrite the former as
-    #
-    #   <e1 x e2, e1 x e3> = <e1, e1> <e2, e3> - <e1, e2> <e1, e3>.
-    #
-    e0_dot_e1 = _row_dot(e0, e1)
-    e0_dot_e2 = _row_dot(e0, e2)
-    e1_dot_e2 = _row_dot(e1, e2)
-    #
-    e0_dot_e0 = _row_dot(e0, e0)
-    e1_dot_e1 = _row_dot(e1, e1)
-    e2_dot_e2 = _row_dot(e2, e2)
-    #
-    aa = e0_dot_e0 * e1_dot_e2 - e0_dot_e1 * e0_dot_e2
-    bb = e1_dot_e1 * e0_dot_e2 - e0_dot_e1 * e1_dot_e2
-    cc = e2_dot_e2 * e0_dot_e1 - e0_dot_e2 * e1_dot_e2
-    # assert abs(aa) == abs(bb)
-    # assert abs(bb) == abs(cc)
-    a = e1_dot_e2 * 0.5 / numpy.sqrt(abs(aa)) * numpy.sign(aa)
-    b = e0_dot_e2 * 0.5 / numpy.sqrt(abs(bb)) * numpy.sign(bb)
-    c = e0_dot_e1 * 0.5 / numpy.sqrt(abs(cc)) * numpy.sign(cc)
-
-    # Any of aa, bb, cc are good for this. A more symmetric
-    # variant like
-    #   s = numpy.sqrt(abs(
-    #       e0_dot_e1 * e1_dot_e2 +
-    #       e0_dot_e2 * e1_dot_e2 +
-    #       e0_dot_e1 * e0_dot_e2
-    #       ))
-    # might be preferable (if only for the fact that we don't need to compute
-    # e0_dot_e0).
-    #
-    cell_volumes = 0.5 * numpy.sqrt(abs(aa))
-    #
-    # TODO We could dodge computing <e1, e1> by noting that
-    #
-    #   <e1, e1> = -s2 * <e1, e2> - s3 * <e1, e3>,
-    #
-    # so
-    #
-    #   <e1 x e2, e1 x e3> =\
-    #       -s2 * <e1, e2> * <e2, e3> \
-    #       -s3 * <e1, e3> * <e2, e3> \
-    #       -     <e1, e2> <e1, e3>.
-    #
-    # This would require finding out about s2, s3 though. Perhaps we can get
-    # this from the input data.
+    # Note that edge e_i is opposite of node i and the edges add up to 0.
+    # (Those quantities can be shared between numerous methods, so share them.)
     #
 
-    sol = numpy.column_stack((a, b, c))
+    # There are multiple ways of deriving a closed form for the
+    # covolume-edgelength ratios.
+    #
+    #
+    #   * The covolume-edge ratios for the edges of each cell is the solution
+    #     of the equation system
+    #
+    #       |simplex| ||u||^2 = \sum_i \alpha_i <u,e_i> <e_i,u>,
+    #
+    #     where alpha_i are the covolume contributions for the edges. This
+    #     equation system to hold for all vectors u in the plane spanned by the
+    #     edges, particularly by the edges themselves.
+    #
+    #     For triangles, the exact solution of the system is
+    #
+    #       x_1 = <e_2, e_3> / <e1 x e2, e1 x e3> * |simplex|;
+    #
+    #     see <http://math.stackexchange.com/a/1855380/36678>.
+    #
+    #   * In trilinear coordinates
+    #     <https://en.wikipedia.org/wiki/Trilinear_coordinates>, the
+    #     circumcenter is
+    #
+    #         cos(alpha0) : cos(alpha1) : cos(alpha2)
+    #
+    #     where the alpha_i are the angles opposite of the respective edge.
+    #     With
+    #
+    #       cos(alpha0) = <e1, e2> / ||e1|| / ||e2||
+    #
+    #     and the conversion formula to Cartesian coordinates, ones gets the
+    #     expression
+    #
+    #         ce0 = e1_dot_e2 * 0.5 / sqrt(alpha)
+    #
+    #     with
+    #
+    #         alpha = e1_dot_e2 * e0_dot_e1
+    #               + e2_dot_e0 * e1_dot_e2
+    #               + e0_dot_e1 * e2_dot_e0.
+    #
+    # Note that some simplifications are achieved by virtue of
+    #
+    #   e1 + e2 + e3 = 0.
+    #
+    sqrt_alpha = numpy.sqrt(
+        + ei_dot_ej[..., 2] * ei_dot_ej[..., 0]
+        + ei_dot_ej[..., 0] * ei_dot_ej[..., 1]
+        + ei_dot_ej[..., 1] * ei_dot_ej[..., 2]
+        )
+
+    cell_volumes = 0.5 * sqrt_alpha
+
+    sol = -ei_dot_ej * 0.5 / sqrt_alpha[..., None]
 
     return cell_volumes, sol
 
 
-def compute_triangle_circumcenters(X):
+def compute_triangle_circumcenters(X, ei_dot_ei, ei_dot_ej):
     '''Computes the center of the circumcenter of all given triangles.
     '''
-    # https://en.wikipedia.org/wiki/Circumscribed_circle#Higher_dimensions
-    a = X[:, 0, :] - X[:, 2, :]
-    b = X[:, 1, :] - X[:, 2, :]
-    a_dot_a = _row_dot(a, a)
-    b_dot_b = _row_dot(b, b)
-    a_dot_b = _row_dot(a, b)
-    # N = (<a,a> b - <b,b> a) x (a x b)
-    #   = <a,a> (b x (a x b)) - <b,b> (a x (a x b))
-    #   = <a,a> (a <b,b> - b <b,a>) - <b,b> (a <a,b> - b <a,a>)
-    #   = a <b,b> (<a,a> - <a,b>) + b <a,a> (<b,b> - <b,a>)
-    alpha = b_dot_b * (a_dot_a - a_dot_b)
-    beta = a_dot_a * (b_dot_b - a_dot_b)
-    N = a * alpha[..., None] + b * beta[..., None]
-    # <a x b, a x b> = <a, a> <b, b> - <a, b>^2
-    a_cross_b2 = a_dot_a * b_dot_b - a_dot_b**2
-    return 0.5 * N / a_cross_b2[..., None] + X[:, 2, :]
+    # The input argument are the dot products
+    #
+    #   <e1, e2>
+    #   <e2, e0>
+    #   <e0, e1>
+    #
+    # of the edges
+    #
+    #   e0: x1->x2,
+    #   e1: x2->x0,
+    #   e2: x0->x1.
+    #
+    # Note that edge e_i is opposite of node i and the edges add up to 0.
+
+    # The trilinear coordinates of the circumcenter are
+    #
+    #   cos(alpha0) : cos(alpha1) : cos(alpha2)
+    #
+    # where alpha_k is the angle at point k, opposite of edge k. The Cartesian
+    # coordinates are (see
+    # <https://en.wikipedia.org/wiki/Trilinear_coordinates#Between_Cartesian_and_trilinear_coordinates>)
+    #
+    #     C = sum_i ||e_i|| * cos(alpha_i)/beta * P_i
+    #
+    # with
+    #
+    #     beta = sum ||e_i||*cos(alpha_i)
+    #
+    # Incidentally, the cosines are
+    #
+    #    cos(alpha0) = <e1, e2> / ||e1|| / ||e2||,
+    #
+    # so in total
+    #
+    #    C = ||e_0||^2 <e1, e2> / sum_i (||e_i||^2 <e{i+1}, e{i+2}>) P0
+    #      + ... P1
+    #      + ... P2.
+    #
+    alpha = ei_dot_ei * ei_dot_ej
+    alpha_sum = numpy.sum(alpha, axis=-1)
+
+    beta = alpha / alpha_sum[:, None]
+
+    cc = numpy.sum(beta[..., None] * X, axis=1)
+
+    return cc
 
 
 class _base_mesh(object):
@@ -145,6 +152,7 @@ class _base_mesh(object):
                  cells_nodes
                  ):
         self.node_coords = nodes
+        self._edge_lengths = None
         return
 
     def write(self,
@@ -177,19 +185,23 @@ class _base_mesh(object):
             field_data=field_data
             )
 
-    def compute_edge_lengths(self, edge_ids=None):
-        if edge_ids is not None:
-            edges = self.node_coords[self.edges['nodes'][edge_ids, 1]] \
-                - self.node_coords[self.edges['nodes'][edge_ids, 0]]
-        else:
-            edges = self.node_coords[self.edges['nodes'][:, 1]] \
-                - self.node_coords[self.edges['nodes'][:, 0]]
-        return numpy.sqrt(_row_dot(edges, edges))
+    def get_edge_lengths(self):
+        if self._edge_lengths is None:
+            edges = self.node_coords[self.cell_edge_nodes[..., 1]] \
+                - self.node_coords[self.cell_edge_nodes[..., 0]]
+            self._edge_lengths = numpy.sqrt(_row_dot(edges, edges))
+
+        return self._edge_lengths
 
     def get_edges(self, subdomain):
         if subdomain not in self.subdomains:
             self.mark_subdomain(subdomain)
         return self.subdomains[subdomain]['edges']
+
+    def get_cells(self, subdomain):
+        if subdomain not in self.subdomains:
+            self.mark_subdomain(subdomain)
+        return self.subdomains[subdomain]['cells']
 
     def get_vertices(self, subdomain):
         if subdomain not in self.subdomains:
