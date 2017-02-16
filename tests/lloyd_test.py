@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 #
-import fetch_data
+from helpers import download_mesh
 import voropy
 
 import numpy
 
 
 def test_pacman_lloyd():
-    filename = fetch_data.download_mesh(
+    filename = download_mesh(
             'pacman.msh',
             '2da8ff96537f844a95a83abb48471b6a'
             )
@@ -16,6 +16,7 @@ def test_pacman_lloyd():
     mesh = voropy.mesh_tri.lloyd_smoothing(
             mesh,
             1.0e-2,
+            max_steps=1000,
             fcc_type='boundary',
             flip_frequency=1,
             verbose=False
@@ -28,6 +29,8 @@ def test_pacman_lloyd():
     normi = numpy.linalg.norm(nc, ord=numpy.inf)
 
     tol = 1.0e-12
+    # assert abs(norm1 - 1944.49523751269) < tol
+    # assert abs(norm2 - 76.097893244864181) < tol
     assert abs(norm1 - 1939.1198108068188) < tol
     assert abs(norm2 - 75.949652079323229) < tol
     assert abs(normi - 5.0) < tol

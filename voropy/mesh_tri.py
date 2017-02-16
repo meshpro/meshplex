@@ -547,8 +547,11 @@ class MeshTri(_base_mesh):
         self.edges = None
         self.cell_circumcenters = None
 
-        # TODO remove
-        self.cells['nodes'].sort(axis=1)
+        # # TODO remove
+        # print(cells)
+        # print
+        # # self.cells['nodes'].sort(axis=1)
+        # print(cells)
 
         # compute data
         # Create the cells->edges->nodes hierarchy. Make sure that the k-th
@@ -559,6 +562,9 @@ class MeshTri(_base_mesh):
             nds[[2, 0]],
             nds[[0, 1]],
             ], axis=1)
+
+        print(self.node_edge_cells[..., 0])
+        print
 
         # Create the corresponding edge coordinates.
         self.half_edge_coords = \
@@ -572,8 +578,12 @@ class MeshTri(_base_mesh):
         e = self.half_edge_coords
         self.ei_dot_ei = numpy.einsum('ijk, ijk->ij', e, e)
 
+        print(self.ei_dot_ei)
+        print(self.ei_dot_ej)
+
         self.cell_volumes, self.ce_ratios_per_half_edge = \
             compute_tri_areas_and_ce_ratios(self.ei_dot_ej)
+        print(self.ce_ratios_per_half_edge)
 
         if flat_cell_correction is not None:
             assert flat_cell_correction in ['full', 'boundary']
@@ -724,16 +734,19 @@ class MeshTri(_base_mesh):
     def create_edges(self):
         '''Setup edge-node and edge-cell relations.
         '''
-        self.cells['nodes'].sort(axis=1)
         # Order the edges such that node 0 doesn't occur in edge 0 etc., i.e.,
         # node k is opposite of edge k.
-        a = numpy.concatenate([
-            self.cells['nodes'][:, [1, 2]],
-            self.cells['nodes'][:, [0, 2]],
-            self.cells['nodes'][:, [0, 1]]
-            ])
+        nds = self.cells['nodes'].T
+        a = numpy.hstack([
+            nds[[1, 2]],
+            nds[[2, 0]],
+            nds[[0, 1]]
+            ]).T
 
-        # Find the unique edges
+        # Find the unique edges.
+        # First sort...
+        a.sort(axis=1)
+        # ... then find unique rows.
         b = numpy.ascontiguousarray(a).view(
                 numpy.dtype((numpy.void, a.dtype.itemsize * a.shape[1]))
                 )
@@ -754,11 +767,7 @@ class MeshTri(_base_mesh):
         # cell->edges relationship
         num_cells = len(self.cells['nodes'])
         cells_edges = inv.reshape([3, num_cells]).T
-        cells_nodes = self.cells['nodes']
-        self.cells = {
-            'nodes': cells_nodes,
-            'edges': cells_edges
-            }
+        self.cells['edges'] = cells_edges
 
         # store inv for possible later use in create_edge_cells
         self._inv = inv

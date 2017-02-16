@@ -19,7 +19,7 @@ def test_regular_tri():
     tol = 1.0e-14
 
     # ce_ratios
-    assert near_equal(mesh.get_ce_ratios_per_edge(), [0.5, 0.5, 0.0], tol)
+    assert near_equal(mesh.get_ce_ratios().T, [0.0, 0.5, 0.5], tol)
 
     # control volumes
     assert near_equal(
@@ -39,10 +39,54 @@ def test_regular_tri():
         )
 
     # centroids
-    centroids = mesh.get_control_volume_centroids()
-    assert near_equal(centroids[0], [0.25, 0.25, 0.0], tol)
-    assert near_equal(centroids[1], [2.0/3.0, 1.0/6.0, 0.0], tol)
-    assert near_equal(centroids[2], [1.0/6.0, 2.0/3.0, 0.0], tol)
+    assert near_equal(mesh.get_control_volume_centroids(), [
+            [0.25, 0.25, 0.0],
+            [2.0/3.0, 1.0/6.0, 0.0],
+            [1.0/6.0, 2.0/3.0, 0.0],
+            ], tol)
+
+    assert mesh.num_delaunay_violations() == 0
+
+    return
+
+
+def test_regular_tri_order():
+    points = numpy.array([
+        [0.0, 0.0, 0.0],
+        [1.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0]
+        ])
+    cells = numpy.array([[1, 2, 0]])
+    mesh = voropy.mesh_tri.MeshTri(points, cells)
+
+    tol = 1.0e-14
+
+    # ce_ratios
+    assert near_equal(mesh.get_ce_ratios_per_edge().T, [0.5, 0.5, 0.0], tol)
+
+    # control volumes
+    assert near_equal(
+        mesh.get_control_volumes(),
+        [0.25, 0.125, 0.125],
+        tol
+        )
+
+    # cell volumes
+    assert near_equal(mesh.cell_volumes, [0.5], tol)
+
+    # circumcenters
+    assert near_equal(
+        mesh.get_cell_circumcenters(),
+        [0.5, 0.5, 0.0],
+        tol
+        )
+
+    # centroids
+    assert near_equal(mesh.get_control_volume_centroids(), [
+            [0.25, 0.25, 0.0],
+            [2.0/3.0, 1.0/6.0, 0.0],
+            [1.0/6.0, 2.0/3.0, 0.0],
+            ], tol)
 
     assert mesh.num_delaunay_violations() == 0
 
