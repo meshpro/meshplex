@@ -547,12 +547,6 @@ class MeshTri(_base_mesh):
         self.edges = None
         self.cell_circumcenters = None
 
-        # # TODO remove
-        # print(cells)
-        # print
-        # # self.cells['nodes'].sort(axis=1)
-        # print(cells)
-
         # compute data
         # Create the cells->edges->nodes hierarchy. Make sure that the k-th
         # edge is opposite of the k-th point in the triangle.
@@ -562,9 +556,6 @@ class MeshTri(_base_mesh):
             nds[[2, 0]],
             nds[[0, 1]],
             ], axis=1)
-
-        print(self.node_edge_cells[..., 0])
-        print
 
         # Create the corresponding edge coordinates.
         self.half_edge_coords = \
@@ -578,12 +569,8 @@ class MeshTri(_base_mesh):
         e = self.half_edge_coords
         self.ei_dot_ei = numpy.einsum('ijk, ijk->ij', e, e)
 
-        print(self.ei_dot_ei)
-        print(self.ei_dot_ej)
-
         self.cell_volumes, self.ce_ratios_per_half_edge = \
             compute_tri_areas_and_ce_ratios(self.ei_dot_ej)
-        print(self.ce_ratios_per_half_edge)
 
         if flat_cell_correction is not None:
             assert flat_cell_correction in ['full', 'boundary']
