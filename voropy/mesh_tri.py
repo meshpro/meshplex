@@ -18,6 +18,7 @@ def _column_stack(a, b):
 def lloyd_smoothing(
         mesh,
         tol,
+        max_steps=10000,
         fcc_type='full',
         flip_frequency=100,
         verbose=True,
@@ -37,7 +38,6 @@ def lloyd_smoothing(
     # mesh.show()
     # plt.show()
 
-    max_steps = 10000
     k = 0
     for k in range(max_steps):
         if max_move < tol:
