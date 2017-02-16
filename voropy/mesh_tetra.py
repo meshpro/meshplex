@@ -126,7 +126,6 @@ class MeshTetra(_base_mesh):
         return
 
     def create_cell_face_relationships(self):
-
         # All possible faces.
         # Face k is opposite of node k in each cell.
         # Make sure that the indices in each row are in ascending order. This

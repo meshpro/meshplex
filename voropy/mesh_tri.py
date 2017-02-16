@@ -57,7 +57,7 @@ def lloyd_smoothing(
         # Flip the edges every so often.
         if k % flip_frequency == 0:
             # We need boundary flat cell correction for flipping. If `full`,
-            # all c/e ratios will be positive.
+            # all c/e ratios are nonnegative.
             mesh = MeshTri(
                     mesh.node_coords,
                     mesh.cells['nodes'],
@@ -535,11 +535,9 @@ class MeshTri(_base_mesh):
         is_used[cells.flat] = True
         assert all(is_used)
 
-        self.cells = numpy.empty(
-                len(cells),
-                dtype=numpy.dtype([('nodes', (int, 3))])
-                )
-        self.cells['nodes'] = cells
+        self.cells = {
+            'nodes': cells
+            }
 
         self._ce_ratios = None
         self._control_volumes = None
