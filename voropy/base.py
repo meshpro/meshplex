@@ -87,9 +87,9 @@ def compute_tri_areas_and_ce_ratios(ei_dot_ej):
         + ei_dot_ej[1] * ei_dot_ej[2]
         )
 
-    sol = -ei_dot_ej * 0.25 / cell_volumes[None]
+    ce = -ei_dot_ej * 0.25 / cell_volumes[None]
 
-    return cell_volumes, sol
+    return cell_volumes, ce
 
 
 def compute_triangle_circumcenters(X, ei_dot_ei, ei_dot_ej):

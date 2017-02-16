@@ -42,16 +42,9 @@ class MeshTetra(_base_mesh):
 
         self.create_cell_circumcenters_and_volumes()
 
-        # adjacent entities
-        self.cells['nodes'].sort(axis=1)
-        self.create_cell_face_relationships()
-        self.create_face_edge_relationships()
-
         self._mode = mode
         self._ce_ratios = None
         self._control_volumes = None
-
-        self.mark_default_subdomains()
 
         # Arrange the cell_face_nodes such that node k is opposite of face k in
         # each cell.
@@ -84,6 +77,12 @@ class MeshTetra(_base_mesh):
         e_shift1 = self.edge_coords[[1, 2, 0]]
         e_shift2 = self.edge_coords[[2, 0, 1]]
         self.ei_dot_ej = numpy.einsum('ijkl, ijkl->ijk', e_shift1, e_shift2)
+
+        # adjacent entities
+        self.cells['nodes'].sort(axis=1)
+        self.create_cell_face_relationships()
+        self.create_face_edge_relationships()
+        self.mark_default_subdomains()
 
         return
 
@@ -127,10 +126,12 @@ class MeshTetra(_base_mesh):
         return
 
     def create_cell_face_relationships(self):
-        self.cells['nodes'].sort(axis=1)
 
         # All possible faces.
         # Face k is opposite of node k in each cell.
+        # Make sure that the indices in each row are in ascending order. This
+        # makes it easier to find unique rows
+        self.cells['nodes'].sort(axis=1)
         a = numpy.vstack([
             self.cells['nodes'][:, [1, 2, 3]],
             self.cells['nodes'][:, [0, 2, 3]],
@@ -170,11 +171,10 @@ class MeshTetra(_base_mesh):
         return
 
     def create_face_edge_relationships(self):
-        # TODO [1,2], [2,0], [0,1]
         a = numpy.vstack([
-            self.faces['nodes'][:, [0, 1]],
-            self.faces['nodes'][:, [0, 2]],
-            self.faces['nodes'][:, [1, 2]]
+            self.faces['nodes'][:, [1, 2]],
+            self.faces['nodes'][:, [2, 0]],
+            self.faces['nodes'][:, [0, 1]]
             ])
 
         # Find the unique edges
@@ -330,21 +330,6 @@ class MeshTetra(_base_mesh):
         e0_dot_e1 = _my_dot(e0, e1)
         e1_dot_e2 = _my_dot(e1, e2)
         e2_dot_e0 = _my_dot(e2, e0)
-        # # alpha = <x0_cross_x1 + x1_cross_x2 + x2_cross_x0, x0_cross_x1>
-        # alpha = \
-        #     x0_dot_x0 * x1_dot_x1 - x0_dot_x1**2 + \
-        #     x0_dot_x1 * x1_dot_x2 - x1_dot_x1 * x2_dot_x0 + \
-        #     x2_dot_x0 * x0_dot_x1 - x1_dot_x2 * x0_dot_x0
-        # # beta = <x0_cross_x1 + x1_cross_x2 + x2_cross_x0, x1_cross_x2>
-        # beta = \
-        #     x0_dot_x1 * x1_dot_x2 - x2_dot_x0 * x1_dot_x1 + \
-        #     x1_dot_x1 * x2_dot_x2 - x1_dot_x2**2 + \
-        #     x1_dot_x2 * x2_dot_x0 - x2_dot_x2 * x0_dot_x1
-        # # gamma = <x0_cross_x1 + x1_cross_x2 + x2_cross_x0, x2_cross_x0>
-        # gamma = \
-        #     x2_dot_x0 * x0_dot_x1 - x0_dot_x0 * x1_dot_x2 + \
-        #     x1_dot_x2 * x2_dot_x0 - x0_dot_x1 * x2_dot_x2 + \
-        #     x0_dot_x0 * x2_dot_x2 - x2_dot_x0**2
 
         delta = (
             # - alpha * x2_dot_x2
@@ -373,111 +358,6 @@ class MeshTetra(_base_mesh):
         s = 0.5 * face_ce_ratios * self.circumcenter_face_distances[None]
 
         return s
-
-#     def compute_ce_ratios_geometric_back(self):
-#
-#         # prepare face edges
-#         e = self.node_coords[self.edges['nodes'][self.faces['edges'], 1]] - \
-#             self.node_coords[self.edges['nodes'][self.faces['edges'], 0]]
-#         e0 = e[:, 0, :]
-#         e1 = e[:, 1, :]
-#         e2 = e[:, 2, :]
-#         areas, face_ce_ratios = compute_tri_areas_and_ce_ratios(e0, e1, e2)
-#         face_areas = areas[self.cells['faces']]
-#         fce_ratios = face_ce_ratios[self.cells['faces']]
-#
-#         v0 = self.faces['nodes'][self.cells['faces']][:, :, 0]
-#         v1 = self.faces['nodes'][self.cells['faces']][:, :, 1]
-#         v2 = self.faces['nodes'][self.cells['faces']][:, :, 2]
-#         v_op = self.cells['opposing vertex']
-#
-#         x0 = self.node_coords[v0] - self.node_coords[v_op]
-#         x1 = self.node_coords[v1] - self.node_coords[v_op]
-#         x2 = self.node_coords[v2] - self.node_coords[v_op]
-#
-#         # This is the reference expression.
-#         # a = (
-#         #     2 * _my_dot(x0_cross_x1, x2)**2 -
-#         #     _my_dot(
-#         #         x0_cross_x1 + x1_cross_x2 + x2_cross_x0,
-#         #         x0_cross_x1 * x2_dot_x2[..., None] +
-#         #         x1_cross_x2 * x0_dot_x0[..., None] +
-#         #         x2_cross_x0 * x1_dot_x1[..., None]
-#         #     )) / (12.0 * face_areas)
-#
-#         # Note that
-#         #
-#         #    6*tet_volume = abs(<x0 x x1, x2>)
-#         #                 = abs(<x1 x x2, x0>)
-#         #                 = abs(<x2 x x0, x1>).
-#         #
-#         # Also,
-#         #
-#         #    <a x b, c x d> = <a, c> <b, d> - <a, d> <b, c>.
-#         #
-#         # All those dot products can probably be cleaned up good.
-#         # TODO simplify
-#         # TODO can those perhaps be expressed as dot products of x_ - x_, i.e.,
-#         #      edges of the considered face
-#         x0_dot_x0 = _my_dot(x0, x0)
-#         x1_dot_x1 = _my_dot(x1, x1)
-#         x2_dot_x2 = _my_dot(x2, x2)
-#         x0_dot_x1 = _my_dot(x0, x1)
-#         x1_dot_x2 = _my_dot(x1, x2)
-#         x2_dot_x0 = _my_dot(x2, x0)
-#         # # alpha = <x0_cross_x1 + x1_cross_x2 + x2_cross_x0, x0_cross_x1>
-#         # alpha = \
-#         #     x0_dot_x0 * x1_dot_x1 - x0_dot_x1**2 + \
-#         #     x0_dot_x1 * x1_dot_x2 - x1_dot_x1 * x2_dot_x0 + \
-#         #     x2_dot_x0 * x0_dot_x1 - x1_dot_x2 * x0_dot_x0
-#         # # beta = <x0_cross_x1 + x1_cross_x2 + x2_cross_x0, x1_cross_x2>
-#         # beta = \
-#         #     x0_dot_x1 * x1_dot_x2 - x2_dot_x0 * x1_dot_x1 + \
-#         #     x1_dot_x1 * x2_dot_x2 - x1_dot_x2**2 + \
-#         #     x1_dot_x2 * x2_dot_x0 - x2_dot_x2 * x0_dot_x1
-#         # # gamma = <x0_cross_x1 + x1_cross_x2 + x2_cross_x0, x2_cross_x0>
-#         # gamma = \
-#         #     x2_dot_x0 * x0_dot_x1 - x0_dot_x0 * x1_dot_x2 + \
-#         #     x1_dot_x2 * x2_dot_x0 - x0_dot_x1 * x2_dot_x2 + \
-#         #     x0_dot_x0 * x2_dot_x2 - x2_dot_x0**2
-#
-#         delta = \
-#             x0_dot_x0 * x1_dot_x1 * x2_dot_x2 - x2_dot_x2 * x0_dot_x1**2 + \
-#             x0_dot_x1 * x1_dot_x2 * x2_dot_x2 - x2_dot_x2 * x1_dot_x1 * x2_dot_x0 + \
-#             x2_dot_x0 * x0_dot_x1 * x2_dot_x2 - x2_dot_x2 * x1_dot_x2 * x0_dot_x0 + \
-#             x0_dot_x1 * x1_dot_x2 * x0_dot_x0 - x0_dot_x0 * x2_dot_x0 * x1_dot_x1 + \
-#             x1_dot_x1 * x2_dot_x2 * x0_dot_x0 - x0_dot_x0 * x1_dot_x2**2 + \
-#             x1_dot_x2 * x2_dot_x0 * x0_dot_x0 - x0_dot_x0 * x2_dot_x2 * x0_dot_x1 + \
-#             x2_dot_x0 * x0_dot_x1 * x1_dot_x1 - x1_dot_x1 * x0_dot_x0 * x1_dot_x2 + \
-#             x1_dot_x2 * x2_dot_x0 * x1_dot_x1 - x1_dot_x1 * x0_dot_x1 * x2_dot_x2 + \
-#             x0_dot_x0 * x2_dot_x2 * x1_dot_x1 - x1_dot_x1 * x2_dot_x0**2
-#
-#         # delta2 = \
-#         #     _my_dot(x1 - x0, x2 - x1) * \
-#         #     _my_dot(x2 - x1, x0 - x2) * \
-#         #     _my_dot(x0 - x2, x1 - x0)
-#         #
-#         # print(delta - delta2)
-#         #exit(1)
-#
-#         a = (
-#             72.0 * self.cell_volumes[:, None]**2
-#             - delta
-#             # - alpha * x2_dot_x2
-#             # - beta * x0_dot_x0
-#             # - gamma * x1_dot_x1
-#             ) / (12.0 * face_areas)
-#
-#         # Distances of the cell circumcenter to the faces.
-#         # (shape: num_cells x 4)
-#         self.circumcenter_face_distances = \
-#             0.5 * a / self.cell_volumes[:, None]
-#
-#         # Multiply
-#         s = 0.5 * fce_ratios * self.circumcenter_face_distances[..., None]
-#
-#         idx = self.faces['edges'][self.cells['faces']]
-#         return idx, s
 
     def get_cell_circumcenters(self):
         return self.cell_circumcenters
@@ -509,7 +389,7 @@ class MeshTetra(_base_mesh):
         sums = numpy.zeros(len(self.faces['nodes']))
         numpy.add.at(
                 sums,
-                self.cells['faces'],
+                self.cells['faces'].T,
                 self.circumcenter_face_distances
                 )
 
