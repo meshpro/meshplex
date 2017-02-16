@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-import fetch_data
+from helpers import download_mesh
 import voropy
 
 import numpy
@@ -36,7 +36,7 @@ class CurlTest(unittest.TestCase):
         return
 
     def test_pacman(self):
-        filename = fetch_data.download_mesh(
+        filename = download_mesh(
                 'pacman.msh',
                 '2da8ff96537f844a95a83abb48471b6a'
                 )

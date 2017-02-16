@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 #
-import fetch_data
+from helpers import download_mesh
 import voropy
 
 
 def test_get_edges():
-    filename = fetch_data.download_mesh(
+    filename = download_mesh(
             'pacman.msh',
             '2da8ff96537f844a95a83abb48471b6a'
             )
@@ -18,11 +18,12 @@ def test_get_edges():
 
 
 def test_mark_subdomain():
-    filename = fetch_data.download_mesh(
+    filename = download_mesh(
             'pacman.msh',
             '2da8ff96537f844a95a83abb48471b6a'
             )
     mesh, _, _, _ = voropy.read(filename)
+    mesh.mark_default_subdomains()
 
     class Subdomain(object):
         def __init__(self):

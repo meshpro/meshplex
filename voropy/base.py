@@ -81,17 +81,15 @@ def compute_tri_areas_and_ce_ratios(ei_dot_ej):
     #
     #   e1 + e2 + e3 = 0.
     #
-    sqrt_alpha = numpy.sqrt(
-        + ei_dot_ej[..., 2] * ei_dot_ej[..., 0]
-        + ei_dot_ej[..., 0] * ei_dot_ej[..., 1]
-        + ei_dot_ej[..., 1] * ei_dot_ej[..., 2]
+    cell_volumes = 0.5 * numpy.sqrt(
+        + ei_dot_ej[2] * ei_dot_ej[0]
+        + ei_dot_ej[0] * ei_dot_ej[1]
+        + ei_dot_ej[1] * ei_dot_ej[2]
         )
 
-    cell_volumes = 0.5 * sqrt_alpha
+    ce = -ei_dot_ej * 0.25 / cell_volumes[None]
 
-    sol = -ei_dot_ej * 0.5 / sqrt_alpha[..., None]
-
-    return cell_volumes, sol
+    return cell_volumes, ce
 
 
 def compute_triangle_circumcenters(X, ei_dot_ei, ei_dot_ej):
@@ -131,16 +129,17 @@ def compute_triangle_circumcenters(X, ei_dot_ei, ei_dot_ej):
     #
     # so in total
     #
-    #    C = ||e_0||^2 <e1, e2> / sum_i (||e_i||^2 <e{i+1}, e{i+2}>) P0
+    #    C = <e_0, e0> <e1, e2> / sum_i (<e_i, e_i> <e{i+1}, e{i+2}>) P0
     #      + ... P1
     #      + ... P2.
     #
     alpha = ei_dot_ei * ei_dot_ej
-    alpha_sum = numpy.sum(alpha, axis=-1)
+    alpha_sum = alpha[0] + alpha[1] + alpha[2]
 
-    beta = alpha / alpha_sum[:, None]
+    beta = alpha / alpha_sum[None]
 
-    cc = numpy.sum(beta[..., None] * X, axis=1)
+    a = X * beta[..., None]
+    cc = a[0] + a[1] + a[2]
 
     return cc
 
@@ -187,10 +186,7 @@ class _base_mesh(object):
 
     def get_edge_lengths(self):
         if self._edge_lengths is None:
-            edges = self.node_coords[self.cell_edge_nodes[..., 1]] \
-                - self.node_coords[self.cell_edge_nodes[..., 0]]
-            self._edge_lengths = numpy.sqrt(_row_dot(edges, edges))
-
+            self._edge_lengths = numpy.sqrt(self.ei_dot_ei)
         return self._edge_lengths
 
     def get_edges(self, subdomain):
