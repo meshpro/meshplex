@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-from helpers import near_equal, run, fetch_data
+from helpers import download_mesh, near_equal, run
 import pytest
 import voropy
 
@@ -413,7 +413,7 @@ def test_rectanglesmall():
 
 
 def test_pacman():
-    filename = fetch_data.download_mesh(
+    filename = download_mesh(
             'pacman.msh',
             '2da8ff96537f844a95a83abb48471b6a'
             )
@@ -464,7 +464,7 @@ def test_shell():
 
 
 def test_sphere():
-    filename = fetch_data.download_mesh(
+    filename = download_mesh(
             'sphere.msh',
             '70a5dbf79c3b259ed993458ff4aa2e93'
             )

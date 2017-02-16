@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-from helpers import fetch_data, near_equal, run
+from helpers import download_mesh, near_equal, run
 import pytest
 import voropy
 
@@ -317,7 +317,7 @@ def test_arrow3d():
 
 
 def test_tetrahedron():
-    filename = fetch_data.download_mesh(
+    filename = download_mesh(
             'tetrahedron.msh',
             '27a5d7e102e6613a1e58629c252cb293'
             )
@@ -338,7 +338,7 @@ def test_tetrahedron():
 
 
 # def test_toy_algebraic():
-#     filename = fetch_data.download_mesh(
+#     filename = download_mesh(
 #         'toy.msh',
 #         '1d125d3fa9f373823edd91ebae5f7a81'
 #         )
@@ -381,7 +381,7 @@ def test_tetrahedron():
 
 
 def test_toy_geometric():
-    filename = fetch_data.download_mesh(
+    filename = download_mesh(
         'toy.msh',
         '1d125d3fa9f373823edd91ebae5f7a81'
         )
