@@ -52,6 +52,6 @@ setup(
         'Topic :: Scientific/Engineering :: Mathematics'
         ],
     scripts=[
-        'tools/lloyd_smoothing'
+        'tools/mesh_smoothing'
         ]
     )

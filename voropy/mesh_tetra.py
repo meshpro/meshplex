@@ -78,11 +78,6 @@ class MeshTetra(_base_mesh):
         e_shift2 = self.edge_coords[[2, 0, 1]]
         self.ei_dot_ej = numpy.einsum('ijkl, ijkl->ijk', e_shift1, e_shift2)
 
-        # adjacent entities
-        self.create_cell_face_relationships()
-        self.create_face_edge_relationships()
-        self.mark_default_subdomains()
-
         return
 
     def get_ce_ratios(self):
@@ -245,6 +240,12 @@ class MeshTetra(_base_mesh):
         self.cell_volumes = abs(omega) / 6.0
         return
 
+# Question:
+# We're looking for an explicit expression for the algebraic c/e ratios. Might
+# it be that, analogous to the triangle dot product, the "triple product" has
+# something to do with it?
+# "triple product": Project one edge onto the plane spanned by the two others.
+#
 #     def compute_ce_ratios_algebraic(self):
 #         # Precompute edges.
 #         edges = \
@@ -387,6 +388,9 @@ class MeshTetra(_base_mesh):
         if self.circumcenter_face_distances is None:
             self.compute_ce_ratios_geometric()
 
+        if 'faces' not in self.cells:
+            self.create_cell_face_relationships()
+
         sums = numpy.zeros(len(self.faces['nodes']))
         numpy.add.at(
                 sums,
@@ -404,9 +408,25 @@ class MeshTetra(_base_mesh):
         ax = fig.gca(projection='3d')
         plt.axis('equal')
 
-        for edge_nodes in self.edges['nodes']:
-            x = self.node_coords[edge_nodes]
-            ax.plot(x[:, 0], x[:, 1], x[:, 2], 'k')
+        X = self.node_coords
+        for cell_id in range(len(self.cells['nodes'])):
+            cc = self.cell_circumcenters[cell_id]
+            #
+            x = X[self.node_face_cells[..., [cell_id]]]
+            face_ccs = compute_triangle_circumcenters(
+                    x, self.ei_dot_ei, self.ei_dot_ej
+                    )
+            # draw the face circumcenters
+            ax.plot(face_ccs[..., 0], face_ccs[..., 1], face_ccs[..., 2], 'go')
+            # draw the connections
+            #   tet circumcenter---face circumcenter
+            for face_cc in face_ccs:
+                ax.plot(
+                    [cc[..., 0], face_cc[..., 0]],
+                    [cc[..., 1], face_cc[..., 1]],
+                    [cc[..., 2], face_cc[..., 2]],
+                    'b-'
+                    )
         return
 
     def show_edge(self, edge_id):
@@ -417,6 +437,11 @@ class MeshTetra(_base_mesh):
         '''
         from mpl_toolkits.mplot3d import Axes3D
         from matplotlib import pyplot as plt
+
+        if 'faces' not in self.cells:
+            self.create_cell_face_relationships()
+        if 'edges' not in self.faces:
+            self.create_face_edge_relationships()
 
         fig = plt.figure()
         ax = fig.gca(projection='3d')
