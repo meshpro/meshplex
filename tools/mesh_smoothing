@@ -9,7 +9,7 @@ import voropy
 
 def _parse_input_arguments():
     parser = argparse.ArgumentParser(
-        description='Perform Lloyd smoothing on a 2D mesh.'
+        description='Smoothen 2D meshes.'
         )
 
     parser.add_argument(
@@ -24,6 +24,14 @@ def _parse_input_arguments():
         metavar='OUTPUT',
         type=str,
         help='Output file'
+        )
+
+    parser.add_argument(
+        '--method', '-m',
+        metavar='METHOD',
+        choices=['lloyd', 'lloyd_modified'],
+        help='smoothing method (default: lloyd_modified)',
+        default='lloyd_modified'
         )
 
     parser.add_argument(
@@ -60,7 +68,13 @@ if __name__ == '__main__':
     uvertices, uidx = numpy.unique(cells, return_inverse=True)
     cells = uidx.reshape(cells.shape)
     pts = pts[uvertices]
-    fcc_type = 'boundary'
+
+    assert args.method in ['lloyd', 'lloyd_modified']
+    if args.method == 'lloyd':
+        fcc_type = 'boundary'
+    else:  # 'lloyd_modified'
+        fcc_type = 'full'
+
     mesh = voropy.mesh_tri.MeshTri(pts, cells, flat_cell_correction=fcc_type)
 
     out_mesh = voropy.mesh_tri.lloyd_smoothing(
