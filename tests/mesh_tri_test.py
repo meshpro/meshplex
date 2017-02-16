@@ -1,55 +1,10 @@
 # -*- coding: utf-8 -*-
 #
-import fetch_data
+from helpers import near_equal, run, fetch_data
 import pytest
 import voropy
 
-from math import fsum
 import numpy
-
-
-def _near_equal(a, b, tol):
-    return numpy.allclose(a, b, rtol=0.0, atol=tol)
-
-
-def _run(
-        mesh,
-        volume,
-        convol_norms, ce_ratio_norms, cellvol_norms,
-        tol=1.0e-12
-        ):
-    # Check cell volumes.
-    total_cellvolume = fsum(mesh.cell_volumes)
-    assert abs(volume - total_cellvolume) < tol * volume
-    norm2 = numpy.linalg.norm(mesh.cell_volumes, ord=2)
-    norm_inf = numpy.linalg.norm(mesh.cell_volumes, ord=numpy.Inf)
-    assert _near_equal(cellvol_norms, [norm2, norm_inf], tol)
-
-    # If everything is Delaunay and the boundary elements aren't flat, the
-    # volume of the domain is given by
-    #   1/n * edge_lengths * ce_ratios.
-    # Unfortunately, this isn't always the case.
-    # ```
-    # total_ce_ratio = \
-    #     fsum(mesh.edge_lengths**2 * mesh.get_ce_ratios_per_edge() / dim)
-    # self.assertAlmostEqual(volume, total_ce_ratio, delta=tol * volume)
-    # ```
-    # Check ce_ratio norms.
-    # TODO reinstate
-    alpha2 = fsum((mesh.get_ce_ratios()**2).flat)
-    alpha_inf = max(abs(mesh.get_ce_ratios()).flat)
-    assert _near_equal(ce_ratio_norms, [alpha2, alpha_inf], tol)
-
-    # Check the volume by summing over the absolute value of the control
-    # volumes.
-    vol = fsum(mesh.get_control_volumes())
-    assert abs(volume - vol) < tol*volume
-    # Check control volume norms.
-    norm2 = numpy.linalg.norm(mesh.get_control_volumes(), ord=2)
-    norm_inf = numpy.linalg.norm(mesh.get_control_volumes(), ord=numpy.Inf)
-    assert _near_equal(convol_norms, [norm2, norm_inf], tol)
-
-    return
 
 
 def test_regular_tri():
@@ -64,20 +19,20 @@ def test_regular_tri():
     tol = 1.0e-14
 
     # ce_ratios
-    assert _near_equal(mesh.get_ce_ratios_per_edge(), [0.5, 0.5, 0.0], tol)
+    assert near_equal(mesh.get_ce_ratios_per_edge(), [0.5, 0.5, 0.0], tol)
 
     # control volumes
-    assert _near_equal(
+    assert near_equal(
         mesh.get_control_volumes(),
         [0.25, 0.125, 0.125],
         tol
         )
 
     # cell volumes
-    assert _near_equal(mesh.cell_volumes, [0.5], tol)
+    assert near_equal(mesh.cell_volumes, [0.5], tol)
 
     # circumcenters
-    assert _near_equal(
+    assert near_equal(
         mesh.get_cell_circumcenters(),
         [0.5, 0.5, 0.0],
         tol
@@ -85,9 +40,9 @@ def test_regular_tri():
 
     # centroids
     centroids = mesh.get_control_volume_centroids()
-    assert _near_equal(centroids[0], [0.25, 0.25, 0.0], tol)
-    assert _near_equal(centroids[1], [2.0/3.0, 1.0/6.0, 0.0], tol)
-    assert _near_equal(centroids[2], [1.0/6.0, 2.0/3.0, 0.0], tol)
+    assert near_equal(centroids[0], [0.25, 0.25, 0.0], tol)
+    assert near_equal(centroids[1], [2.0/3.0, 1.0/6.0, 0.0], tol)
+    assert near_equal(centroids[2], [1.0/6.0, 2.0/3.0, 0.0], tol)
 
     assert mesh.num_delaunay_violations() == 0
 
@@ -111,21 +66,21 @@ def test_regular_tri2(a):
 
     # ce_ratios
     val = 0.5 / numpy.sqrt(3.0)
-    assert _near_equal(mesh.get_ce_ratios(), [val, val, val], tol)
+    assert near_equal(mesh.get_ce_ratios(), [val, val, val], tol)
 
     # control volumes
     vol = numpy.sqrt(3.0) / 4 * a**2
-    assert _near_equal(
+    assert near_equal(
         mesh.get_control_volumes(),
         [vol / 3.0, vol / 3.0, vol / 3.0],
         tol
         )
 
     # cell volumes
-    assert _near_equal(mesh.cell_volumes, [vol], tol)
+    assert near_equal(mesh.cell_volumes, [vol], tol)
 
     # circumcenters
-    assert _near_equal(
+    assert near_equal(
         mesh.get_cell_circumcenters(),
         [0.0, 0.0, 0.0],
         tol
@@ -160,7 +115,7 @@ def test_regular_tri2(a):
 #     # control volumes
 #     alpha1 = 0.0625 * (3*h - 1.0/(4*h))
 #     alpha2 = 0.125 * (h + 1.0 / (4*h))
-#     assert _near_equal(
+#     assert near_equal(
 #         mesh.get_control_volumes(),
 #         [alpha1, alpha1, alpha2],
 #         tol
@@ -222,23 +177,23 @@ def test_degenerate_small0b(h):
 
     # edge lengths
     el = numpy.sqrt(0.5**2 + h**2)
-    assert _near_equal(mesh.get_edge_lengths().T, [el, el, 1.0], tol)
+    assert near_equal(mesh.get_edge_lengths().T, [el, el, 1.0], tol)
 
     # ce_ratios
     ce0 = 0.5/h * (h**2 - 0.25)
     ce12 = 0.25/h
-    assert _near_equal(mesh.get_ce_ratios_per_edge(), [ce0, ce12, ce12], tol)
+    assert near_equal(mesh.get_ce_ratios_per_edge(), [ce0, ce12, ce12], tol)
 
     # control volumes
     cv12 = 0.25 * (1.0**2 * ce0 + (0.25 + h**2) * ce12)
     cv0 = 0.5 * (0.25 + h**2) * ce12
-    assert _near_equal(mesh.get_control_volumes(), [cv12, cv12, cv0], tol)
+    assert near_equal(mesh.get_control_volumes(), [cv12, cv12, cv0], tol)
 
     # cell volumes
-    assert _near_equal(mesh.cell_volumes, [0.5 * h], tol)
+    assert near_equal(mesh.cell_volumes, [0.5 * h], tol)
 
     # circumcenters
-    assert _near_equal(
+    assert near_equal(
         mesh.get_cell_circumcenters(),
         [0.5, 0.375, 0.0],
         tol
@@ -247,7 +202,7 @@ def test_degenerate_small0b(h):
     # surface areas
     ids, vals = mesh.get_surface_areas()
     assert numpy.all(ids == [[0, 1, 2], [0, 1, 2], [0, 1, 2]])
-    assert _near_equal(
+    assert near_equal(
         vals,
         [
             [0.0, 0.5*el, 0.5*el],
@@ -280,38 +235,38 @@ def test_degenerate_small0b_fcc():
 
     # edge lengths
     el = numpy.sqrt(0.5**2 + h**2)
-    assert _near_equal(mesh.get_edge_lengths().T, [el, el, 1.0], tol)
+    assert near_equal(mesh.get_edge_lengths().T, [el, el, 1.0], tol)
 
     # ce_ratios
     ce = h
-    assert _near_equal(mesh.get_ce_ratios().T, [ce, ce, 0.0], tol)
+    assert near_equal(mesh.get_ce_ratios().T, [ce, ce, 0.0], tol)
 
     # control volumes
     cv = ce * el
     alpha = 0.25 * el * cv
     beta = 0.5*h - 2*alpha
-    assert _near_equal(
+    assert near_equal(
         mesh.get_control_volumes(),
         [alpha, alpha, beta],
         tol
         )
 
     # cell volumes
-    assert _near_equal(mesh.cell_volumes, [0.5 * h], tol)
+    assert near_equal(mesh.cell_volumes, [0.5 * h], tol)
 
     # surface areas
     g = numpy.sqrt((0.5 * el)**2 + (ce * el)**2)
     alpha = 0.5 * el + g
     beta = el + (1.0 - 2*g)
-    assert _near_equal(mesh.get_surface_areas(), [alpha, alpha, beta], tol)
+    assert near_equal(mesh.get_surface_areas(), [alpha, alpha, beta], tol)
 
     # centroids
     centroids = mesh.get_control_volume_centroids()
     alpha = 1.0 / 6000.0
     gamma = 0.00038888918518558031
-    assert _near_equal(centroids[0], [0.166667, alpha, 0.0], tol)
-    assert _near_equal(centroids[1], [0.833333, alpha, 0.0], tol)
-    assert _near_equal(centroids[2], [0.5, gamma, 0.0], tol)
+    assert near_equal(centroids[0], [0.166667, alpha, 0.0], tol)
+    assert near_equal(centroids[1], [0.833333, alpha, 0.0], tol)
+    assert near_equal(centroids[2], [0.5, gamma, 0.0], tol)
 
     assert mesh.num_delaunay_violations() == 0
     return
@@ -336,12 +291,12 @@ def test_degenerate_small1(h, a):
     # edge lengths
     el1 = numpy.sqrt(a**2 + h**2)
     el2 = numpy.sqrt((1.0 - a)**2 + h**2)
-    assert _near_equal(mesh.get_edge_lengths().T, [[el2, el1, 1.0]], tol)
+    assert near_equal(mesh.get_edge_lengths().T, [[el2, el1, 1.0]], tol)
 
     # ce_ratios
     ce1 = 0.5 * h / a
     ce2 = 0.5 * h / (1.0 - a)
-    assert _near_equal(mesh.get_ce_ratios_per_edge(), [0.0, ce1, ce2], tol)
+    assert near_equal(mesh.get_ce_ratios_per_edge(), [0.0, ce1, ce2], tol)
 
     # control volumes
     cv1 = ce1 * el1
@@ -349,7 +304,7 @@ def test_degenerate_small1(h, a):
     cv2 = ce2 * el2
     alpha2 = 0.25 * el2 * cv2
     beta = 0.5*h - (alpha1 + alpha2)
-    assert _near_equal(
+    assert near_equal(
         mesh.get_control_volumes(),
         [alpha1, alpha2, beta],
         tol
@@ -357,7 +312,7 @@ def test_degenerate_small1(h, a):
     assert abs(sum(mesh.get_control_volumes()) - 0.5*h) < tol
 
     # cell volumes
-    assert _near_equal(mesh.cell_volumes, [0.5 * h], tol)
+    assert near_equal(mesh.cell_volumes, [0.5 * h], tol)
 
     # surface areas
     b1 = numpy.sqrt((0.5*el1)**2 + cv1**2)
@@ -367,7 +322,7 @@ def test_degenerate_small1(h, a):
     total = 1.0 + el1 + el2
     alpha2 = total - alpha0 - alpha1
     surf = mesh.get_surface_areas()
-    assert _near_equal(surf, [alpha0, alpha1, alpha2], tol)
+    assert near_equal(surf, [alpha0, alpha1, alpha2], tol)
 
     assert mesh.num_delaunay_violations() == 0
     return
@@ -392,7 +347,7 @@ def test_degenerate_small2(h):
     # ce_ratios
     alpha = h - 1.0 / (4*h)
     beta = 1.0 / (4*h)
-    assert _near_equal(
+    assert near_equal(
         mesh.get_ce_ratios_per_edge(),
         [alpha, beta, beta, beta, beta],
         tol
@@ -401,14 +356,14 @@ def test_degenerate_small2(h):
     # control volumes
     alpha1 = 0.125 * (3*h - 1.0/(4*h))
     alpha2 = 0.125 * (h + 1.0 / (4*h))
-    assert _near_equal(
+    assert near_equal(
         mesh.get_control_volumes(),
         [alpha1, alpha1, alpha2, alpha2],
         tol
         )
 
     # circumcenters
-    assert _near_equal(
+    assert near_equal(
         mesh.get_cell_circumcenters(),
         [
             [0.5, -12.495, 0.0],
@@ -418,7 +373,7 @@ def test_degenerate_small2(h):
         )
 
     # cell volumes
-    assert _near_equal(mesh.cell_volumes, [0.5*h, 0.5*h], tol)
+    assert near_equal(mesh.cell_volumes, [0.5*h, 0.5*h], tol)
 
     assert mesh.num_delaunay_violations() == 1
 
@@ -441,17 +396,17 @@ def test_rectanglesmall():
 
     tol = 1.0e-14
 
-    assert _near_equal(
+    assert near_equal(
         mesh.get_ce_ratios_per_edge(),
         [0.05, 0.0, 5.0, 5.0, 0.05],
         tol
         )
-    assert _near_equal(
+    assert near_equal(
         mesh.get_control_volumes(),
         [2.5, 2.5, 2.5, 2.5],
         tol
         )
-    assert _near_equal(mesh.cell_volumes, [5.0, 5.0], tol)
+    assert near_equal(mesh.cell_volumes, [5.0, 5.0], tol)
     assert mesh.num_delaunay_violations() == 0
 
     return
@@ -464,7 +419,7 @@ def test_pacman():
             )
     mesh, _, _, _ = voropy.read(filename, flat_cell_correction='boundary')
 
-    _run(
+    run(
         mesh,
         73.64573933105898,
         [3.5908322974649631, 0.26638548094154707],
@@ -495,13 +450,13 @@ def test_shell():
 
     tol = 1.0e-14
     ce_ratios = 0.5/numpy.sqrt(3.0) * numpy.ones((4, 3))
-    assert _near_equal(mesh.get_ce_ratios(), ce_ratios, tol)
+    assert near_equal(mesh.get_ce_ratios(), ce_ratios, tol)
 
     cv = numpy.array([2.0, 1.0, 1.0, 1.0, 1.0]) / numpy.sqrt(3.0)
-    assert _near_equal(mesh.get_control_volumes(), cv, tol)
+    assert near_equal(mesh.get_control_volumes(), cv, tol)
 
     cell_vols = numpy.sqrt(3.0) / 2.0 * numpy.ones(4)
-    assert _near_equal(mesh.cell_volumes, cell_vols, tol)
+    assert near_equal(mesh.cell_volumes, cell_vols, tol)
 
     assert mesh.num_delaunay_violations() == 0
 
@@ -514,7 +469,7 @@ def test_sphere():
             '70a5dbf79c3b259ed993458ff4aa2e93'
             )
     mesh, _, _, _ = voropy.read(filename)
-    _run(
+    run(
         mesh,
         12.273645818711595,
         [1.0177358705967492, 0.10419690304323895],
