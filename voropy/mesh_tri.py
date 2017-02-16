@@ -556,11 +556,11 @@ class MeshTri(_base_mesh):
         # compute data
         # Create the cells->edges->nodes hierarchy. Make sure that the k-th
         # edge is opposite of the k-th point in the triangle.
-        nds = self.cells['nodes']
+        nds = self.cells['nodes'].T
         self.node_edge_cells = numpy.stack([
-            nds[:, [1, 2]].T,
-            nds[:, [2, 0]].T,
-            nds[:, [0, 1]].T,
+            nds[[1, 2]],
+            nds[[2, 0]],
+            nds[[0, 1]],
             ], axis=1)
 
         # Create the corresponding edge coordinates.

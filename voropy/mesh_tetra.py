@@ -55,29 +55,35 @@ class MeshTetra(_base_mesh):
 
         # Arrange the cell_face_nodes such that node k is opposite of face k in
         # each cell.
-        nds = self.cells['nodes']
-        self.cell_face_nodes = numpy.stack([
-            nds[:, [1, 2, 3]],
-            nds[:, [2, 3, 0]],
-            nds[:, [3, 0, 1]],
-            nds[:, [0, 1, 2]],
+        nds = self.cells['nodes'].T
+        self.node_face_cells = numpy.stack([
+            nds[[1, 2, 3]],
+            nds[[2, 3, 0]],
+            nds[[3, 0, 1]],
+            nds[[0, 1, 2]],
             ], axis=1)
-        # Arrange the cell_face_edge_nodes such that node k is opposite of edge
+
+        # Arrange the node_edge_face_cells such that node k is opposite of edge
         # k in each face.
-        self.cell_face_edge_nodes = numpy.stack([
-            numpy.stack([
-                nds[:, [2, 3]], nds[:, [3, 1]], nds[:, [1, 2]]
-                ], axis=1),
-            numpy.stack([
-                nds[:, [3, 0]], nds[:, [0, 2]], nds[:, [2, 3]]
-                ], axis=1),
-            numpy.stack([
-                nds[:, [0, 1]], nds[:, [1, 3]], nds[:, [3, 0]]
-                ], axis=1),
-            numpy.stack([
-                nds[:, [1, 2]], nds[:, [2, 0]], nds[:, [0, 1]]
-                ], axis=1),
-            ], axis=1)
+        self.node_edge_face_cells = numpy.stack([
+            numpy.stack([nds[[2, 3]], nds[[3, 1]], nds[[1, 2]]], axis=1),
+            numpy.stack([nds[[3, 0]], nds[[0, 2]], nds[[2, 3]]], axis=1),
+            numpy.stack([nds[[0, 1]], nds[[1, 3]], nds[[3, 0]]], axis=1),
+            numpy.stack([nds[[1, 2]], nds[[2, 0]], nds[[0, 1]]], axis=1),
+            ], axis=2)
+
+        # create ei_dot_ei, ei_dot_ej
+        self.edge_coords = \
+            self.node_coords[self.node_edge_face_cells[1]] - \
+            self.node_coords[self.node_edge_face_cells[0]]
+        self.ei_dot_ei = numpy.einsum(
+                'ijkl, ijkl->ijk',
+                self.edge_coords,
+                self.edge_coords
+                )
+        e_shift1 = self.edge_coords[[1, 2, 0]]
+        e_shift2 = self.edge_coords[[2, 0, 1]]
+        self.ei_dot_ej = numpy.einsum('ijkl, ijkl->ijk', e_shift1, e_shift2)
 
         return
 
@@ -283,28 +289,16 @@ class MeshTetra(_base_mesh):
 
     def compute_ce_ratios_geometric(self):
 
-        # prepare face edges
-        e = self.node_coords[self.cell_face_edge_nodes[..., 1]] - \
-            self.node_coords[self.cell_face_edge_nodes[..., 0]]
-
-        e0 = e[:, :, 0, :]
-        e1 = e[:, :, 1, :]
-        e2 = e[:, :, 2, :]
-        e_shift1 = numpy.stack([e1, e2, e0], axis=-1)
-        e_shift2 = numpy.stack([e2, e0, e1], axis=-1)
-        ei_dot_ej = numpy.einsum('ijkl, ijkl->ijl', e_shift1, e_shift2)
         face_areas, face_ce_ratios = \
-            compute_tri_areas_and_ce_ratios(ei_dot_ej)
+            compute_tri_areas_and_ce_ratios(self.ei_dot_ej)
 
-        v0 = self.cell_face_nodes[:, :, 0]
-        v1 = self.cell_face_nodes[:, :, 1]
-        v2 = self.cell_face_nodes[:, :, 2]
-        # opposing node
-        v_op = self.cells['nodes']
+        # opposing nodes, faces
+        v_op = self.cells['nodes'].T
+        v = self.node_face_cells
 
-        x0 = self.node_coords[v0] - self.node_coords[v_op]
-        x1 = self.node_coords[v1] - self.node_coords[v_op]
-        x2 = self.node_coords[v2] - self.node_coords[v_op]
+        e0 = self.node_coords[v[0]] - self.node_coords[v_op]
+        e1 = self.node_coords[v[1]] - self.node_coords[v_op]
+        e2 = self.node_coords[v[2]] - self.node_coords[v_op]
 
         # This is the reference expression.
         # a = (
@@ -330,12 +324,12 @@ class MeshTetra(_base_mesh):
         # TODO simplify
         # TODO can those perhaps be expressed as dot products of x_ - x_, i.e.,
         #      edges of the considered face
-        x0_dot_x0 = _my_dot(x0, x0)
-        x1_dot_x1 = _my_dot(x1, x1)
-        x2_dot_x2 = _my_dot(x2, x2)
-        x0_dot_x1 = _my_dot(x0, x1)
-        x1_dot_x2 = _my_dot(x1, x2)
-        x2_dot_x0 = _my_dot(x2, x0)
+        e0_dot_e0 = _my_dot(e0, e0)
+        e1_dot_e1 = _my_dot(e1, e1)
+        e2_dot_e2 = _my_dot(e2, e2)
+        e0_dot_e1 = _my_dot(e0, e1)
+        e1_dot_e2 = _my_dot(e1, e2)
+        e2_dot_e0 = _my_dot(e2, e0)
         # # alpha = <x0_cross_x1 + x1_cross_x2 + x2_cross_x0, x0_cross_x1>
         # alpha = \
         #     x0_dot_x0 * x1_dot_x1 - x0_dot_x1**2 + \
@@ -352,27 +346,22 @@ class MeshTetra(_base_mesh):
         #     x1_dot_x2 * x2_dot_x0 - x0_dot_x1 * x2_dot_x2 + \
         #     x0_dot_x0 * x2_dot_x2 - x2_dot_x0**2
 
-        delta = \
-            x0_dot_x0 * x1_dot_x1 * x2_dot_x2 - x2_dot_x2 * x0_dot_x1**2 + \
-            x0_dot_x1 * x1_dot_x2 * x2_dot_x2 - x2_dot_x2 * x1_dot_x1 * x2_dot_x0 + \
-            x2_dot_x0 * x0_dot_x1 * x2_dot_x2 - x2_dot_x2 * x1_dot_x2 * x0_dot_x0 + \
-            x0_dot_x1 * x1_dot_x2 * x0_dot_x0 - x0_dot_x0 * x2_dot_x0 * x1_dot_x1 + \
-            x1_dot_x1 * x2_dot_x2 * x0_dot_x0 - x0_dot_x0 * x1_dot_x2**2 + \
-            x1_dot_x2 * x2_dot_x0 * x0_dot_x0 - x0_dot_x0 * x2_dot_x2 * x0_dot_x1 + \
-            x2_dot_x0 * x0_dot_x1 * x1_dot_x1 - x1_dot_x1 * x0_dot_x0 * x1_dot_x2 + \
-            x1_dot_x2 * x2_dot_x0 * x1_dot_x1 - x1_dot_x1 * x0_dot_x1 * x2_dot_x2 + \
-            x0_dot_x0 * x2_dot_x2 * x1_dot_x1 - x1_dot_x1 * x2_dot_x0**2
-
-        # delta2 = \
-        #     _my_dot(x1 - x0, x2 - x1) * \
-        #     _my_dot(x2 - x1, x0 - x2) * \
-        #     _my_dot(x0 - x2, x1 - x0)
-        #
-        # print(delta - delta2)
-        # exit(1)
+        delta = (
+            e0_dot_e0 * e1_dot_e1 * e2_dot_e2 - e2_dot_e2 * e0_dot_e1**2 +
+            e0_dot_e1 * e1_dot_e2 * e2_dot_e2 - e2_dot_e2 * e1_dot_e1 * e2_dot_e0 +
+            e2_dot_e0 * e0_dot_e1 * e2_dot_e2 - e2_dot_e2 * e1_dot_e2 * e0_dot_e0 +
+            #
+            e0_dot_e1 * e1_dot_e2 * e0_dot_e0 - e0_dot_e0 * e2_dot_e0 * e1_dot_e1 +
+            e1_dot_e1 * e2_dot_e2 * e0_dot_e0 - e0_dot_e0 * e1_dot_e2**2 +
+            e1_dot_e2 * e2_dot_e0 * e0_dot_e0 - e0_dot_e0 * e2_dot_e2 * e0_dot_e1 +
+            #
+            e2_dot_e0 * e0_dot_e1 * e1_dot_e1 - e1_dot_e1 * e0_dot_e0 * e1_dot_e2 +
+            e1_dot_e2 * e2_dot_e0 * e1_dot_e1 - e1_dot_e1 * e0_dot_e1 * e2_dot_e2 +
+            e0_dot_e0 * e2_dot_e2 * e1_dot_e1 - e1_dot_e1 * e2_dot_e0**2
+            )
 
         a = (
-            72.0 * self.cell_volumes[:, None]**2
+            72.0 * self.cell_volumes[None]**2
             - delta
             # - alpha * x2_dot_x2
             # - beta * x0_dot_x0
@@ -380,12 +369,11 @@ class MeshTetra(_base_mesh):
             ) / (12.0 * face_areas)
 
         # Distances of the cell circumcenter to the faces.
-        # (shape: num_cells x 4)
-        self.circumcenter_face_distances = \
-            0.5 * a / self.cell_volumes[:, None]
+        # (shape: 4 x num_cells)
+        self.circumcenter_face_distances = 0.5 * a / self.cell_volumes[None]
 
         # Multiply
-        s = 0.5 * face_ce_ratios * self.circumcenter_face_distances[..., None]
+        s = 0.5 * face_ce_ratios * self.circumcenter_face_distances[None]
 
         return s
 
@@ -592,31 +580,20 @@ class MeshTetra(_base_mesh):
         X = self.node_coords
         for cell_id in adj_cell_ids:
             cc = self.cell_circumcenters[cell_id]
-            x = X[self.cell_face_nodes[cell_id]]
-            e = X[self.cell_face_edge_nodes[cell_id, ..., 1]] - \
-                X[self.cell_face_edge_nodes[cell_id, ..., 0]]
             #
-            e0 = e[:, 0, :]
-            e1 = e[:, 1, :]
-            e2 = e[:, 2, :]
-            #
-            e = numpy.stack([e0, e1, e2], axis=-1)
-            ei_dot_ei = numpy.einsum('ijk, ijk->ij', e, e)
-            #
-            e_shift1 = numpy.stack([e1, e2, e0], axis=-1)
-            e_shift2 = numpy.stack([e2, e0, e1], axis=-1)
-            ei_dot_ej = numpy.einsum('ijk, ijk->ij', e_shift1, e_shift2)
-            #
-            face_ccs = compute_triangle_circumcenters(x, ei_dot_ei, ei_dot_ej)
+            x = X[self.node_face_cells[..., [cell_id]]]
+            face_ccs = compute_triangle_circumcenters(
+                    x, self.ei_dot_ei, self.ei_dot_ej
+                    )
             # draw the face circumcenters
-            ax.plot(face_ccs[:, 0], face_ccs[:, 1], face_ccs[:, 2], 'go')
+            ax.plot(face_ccs[..., 0], face_ccs[..., 1], face_ccs[..., 2], 'go')
             # draw the connections
             #   tet circumcenter---face circumcenter
             for face_cc in face_ccs:
                 ax.plot(
-                    [cc[0], face_cc[0]],
-                    [cc[1], face_cc[1]],
-                    [cc[2], face_cc[2]],
+                    [cc[..., 0], face_cc[..., 0]],
+                    [cc[..., 1], face_cc[..., 1]],
+                    [cc[..., 2], face_cc[..., 2]],
                     'b-'
                     )
 
