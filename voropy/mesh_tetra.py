@@ -123,20 +123,16 @@ class MeshTetra(_base_mesh):
         # All possible faces.
         # Face k is opposite of node k in each cell.
         # Make sure that the indices in each row are in ascending order. This
-        # makes it easier to find unique rows
-        nds = self.cells['nodes'].T
+        # makes it easier to find unique rows.
+        sorted_nds = numpy.sort(self.cells['nodes'], axis=1).T
         a = numpy.hstack([
-            nds[[1, 2, 3]],
-            nds[[0, 2, 3]],
-            nds[[0, 1, 3]],
-            nds[[0, 1, 2]]
+            sorted_nds[[1, 2, 3]],
+            sorted_nds[[0, 2, 3]],
+            sorted_nds[[0, 1, 3]],
+            sorted_nds[[0, 1, 2]]
             ]).T
 
         # Find the unique faces
-        # First sort...
-        # TODO sort nds for less work
-        a.sort(axis=1)
-        # ... then find unique rows.
         b = numpy.ascontiguousarray(a).view(
                 numpy.dtype((numpy.void, a.dtype.itemsize * a.shape[1]))
                 )

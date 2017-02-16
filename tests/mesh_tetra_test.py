@@ -368,28 +368,21 @@ def test_arrow3d():
     return
 
 
-# TODO enable
-# def test_tetrahedron():
-#     filename = download_mesh(
-#             'tetrahedron.msh',
-#             '27a5d7e102e6613a1e58629c252cb293'
-#             )
-#     mesh, _, _, _ = voropy.read(filename)
-#
-#     print(mesh.cell_volumes)
-#     print(sum(mesh.cell_volumes))
-#     print
-#     print(mesh.get_control_volumes())
-#     print(sum(mesh.get_control_volumes()))
-#     # mesh.show_edge(54)
-#     run(
-#         mesh,
-#         64.1500299099584,
-#         [16.308991595922095, 7.0264329635751395],
-#         [15.622787827281265, 0.65212756309069242],
-#         [11.571692332290635, 2.9699087921277054]
-#         )
-#     return
+def test_tetrahedron():
+    filename = download_mesh(
+            'tetrahedron.msh',
+            '27a5d7e102e6613a1e58629c252cb293'
+            )
+    mesh, _, _, _ = voropy.read(filename)
+
+    run(
+        mesh,
+        64.1500299099584,
+        [16.308991595922095, 7.0264329635751395],
+        [6.898476155562041, 0.34400453539215237],
+        [11.571692332290635, 2.9699087921277054]
+        )
+    return
 
 
 # def test_toy_algebraic():
