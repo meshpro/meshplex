@@ -29,7 +29,7 @@ def test_regular_tet0(a):
     # from matplotlib import pyplot as plt
     # plt.show()
 
-    tol = 1.0e-10
+    tol = 1.0e-14
 
     z = a / numpy.sqrt(24.0)
     assert near_equal(mesh.get_cell_circumcenters(), [0.0, 0.0, z], tol)
@@ -80,7 +80,7 @@ def test_regular_tet0(a):
 #         [0, 0, a]
 #         ])
 #     cells = numpy.array([[0, 1, 2, 3]])
-#     tol = 1.0e-10
+#     tol = 1.0e-14
 #
 #     mesh = voropy.mesh_tetra.MeshTetra(points, cells, mode='algebraic')
 #
@@ -122,7 +122,7 @@ def test_regular_tet1_geometric(a):
         [0, 0, a]
         ])
     cells = numpy.array([[0, 1, 2, 3]])
-    tol = 1.0e-10
+    tol = 1.0e-14
 
     mesh = voropy.mesh_tetra.MeshTetra(points, cells, mode='geometric')
 
@@ -170,7 +170,7 @@ def test_regular_tet1_geometric_order():
         [0, 0, a]
         ])
     cells = numpy.array([[1, 2, 3, 0]])
-    tol = 1.0e-10
+    tol = 1.0e-14
 
     mesh = voropy.mesh_tetra.MeshTetra(points, cells.copy(), mode='geometric')
 
@@ -223,7 +223,7 @@ def test_regular_tet1_geometric_order():
 #     cells = numpy.array([[0, 1, 2, 3]])
 #     mesh = voropy.mesh_tetra.MeshTetra(points, cells, mode='algebraic')
 #
-#     tol = 1.0e-12
+#     tol = 1.0e-14
 #
 #     z = 0.5 * h - 1.0 / (4*h)
 #     assert near_equal(
