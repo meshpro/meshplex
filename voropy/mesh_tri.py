@@ -618,14 +618,9 @@ class MeshTri(_base_mesh):
             self.fcc = None
             self.regular_cells = range(len(self.cells['nodes']))
 
-        # TODO don't create by default
-        self.create_edges()
-        self.mark_default_subdomains()
-
         return
 
     def get_boundary_vertices(self):
-        self.create_edges()
         self.mark_default_subdomains()
         return self.subdomains['boundary']['vertices']
 
@@ -635,6 +630,8 @@ class MeshTri(_base_mesh):
         return self.ce_ratios_per_half_edge
 
     def get_ce_ratios_per_edge(self):
+        if 'edges' not in self.cells:
+            self.create_edges()
         if self._ce_ratios is None:
             # sum up from self.ce_ratios_per_half_edge
             cells_edges = self.cells['edges'].T
@@ -712,6 +709,9 @@ class MeshTri(_base_mesh):
         return self._cv_centroids
 
     def mark_default_subdomains(self):
+        if 'edges' not in self.cells:
+            self.create_edges()
+
         self.subdomains = {}
         self.subdomains['everywhere'] = {
                 'vertices': range(len(self.node_coords)),

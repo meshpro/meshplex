@@ -23,6 +23,7 @@ def test_mark_subdomain():
             '2da8ff96537f844a95a83abb48471b6a'
             )
     mesh, _, _, _ = voropy.read(filename)
+    mesh.mark_default_subdomains()
 
     class Subdomain(object):
         def __init__(self):
