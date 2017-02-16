@@ -57,7 +57,8 @@ def test_regular_tri_order():
         [0.0, 1.0, 0.0]
         ])
     cells = numpy.array([[1, 2, 0]])
-    mesh = voropy.mesh_tri.MeshTri(points, cells)
+    mesh = voropy.mesh_tri.MeshTri(points, cells.copy())
+    assert all((mesh.cells['nodes'] == cells).flat)
 
     tol = 1.0e-14
 

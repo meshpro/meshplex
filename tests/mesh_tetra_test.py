@@ -20,7 +20,9 @@ def test_regular_tet0(a):
         [0.0, 0.0, numpy.sqrt(2.0)],
         ]) / numpy.sqrt(3.0) * a
     cells = numpy.array([[0, 1, 2, 3]])
-    mesh = voropy.mesh_tetra.MeshTetra(points, cells)
+    mesh = voropy.mesh_tetra.MeshTetra(points, cells.copy())
+
+    assert all((mesh.cells['nodes'] == cells).flat)
 
     mesh.show()
     mesh.show_edge(0)
@@ -124,6 +126,8 @@ def test_regular_tet1_geometric(a):
 
     mesh = voropy.mesh_tetra.MeshTetra(points, cells, mode='geometric')
 
+    assert all((mesh.cells['nodes'] == cells).flat)
+
     assert near_equal(
         mesh.get_cell_circumcenters(),
         [a/2.0, a/2.0, a/2.0],
@@ -151,6 +155,54 @@ def test_regular_tet1_geometric(a):
     assert near_equal(
         mesh.circumcenter_face_distances.T,
         [-0.5/numpy.sqrt(3)*a, 0.5*a, 0.5*a, 0.5*a],
+        tol
+        )
+
+    return
+
+
+def test_regular_tet1_geometric_order():
+    a = 1.0
+    points = numpy.array([
+        [0, 0, 0],
+        [a, 0, 0],
+        [0, a, 0],
+        [0, 0, a]
+        ])
+    cells = numpy.array([[1, 2, 3, 0]])
+    tol = 1.0e-10
+
+    mesh = voropy.mesh_tetra.MeshTetra(points, cells.copy(), mode='geometric')
+
+    assert all((mesh.cells['nodes'] == cells).flat)
+
+    assert near_equal(
+        mesh.get_cell_circumcenters(),
+        [a/2.0, a/2.0, a/2.0],
+        tol
+        )
+
+    # covolume/edge length ratios
+    ref = numpy.array([
+        [[a/8.0], [a/8.0], [0.0], [-a/24.0]],
+        [[a/8.0], [0.0], [a/8.0], [-a/24.0]],
+        [[0.0], [a/8.0], [a/8.0], [-a/24.0]],
+        ])
+    assert near_equal(mesh.get_ce_ratios(), ref, tol)
+
+    # cell volumes
+    assert near_equal(mesh.cell_volumes, [a**3/6.0], tol)
+
+    # control volumes
+    assert near_equal(
+        mesh.get_control_volumes(),
+        [a**3/8.0, a**3/72.0, a**3/72.0, a**3/72.0],
+        tol
+        )
+
+    assert near_equal(
+        mesh.circumcenter_face_distances.T,
+        [0.5*a, 0.5*a, 0.5*a, -0.5/numpy.sqrt(3)*a],
         tol
         )
 

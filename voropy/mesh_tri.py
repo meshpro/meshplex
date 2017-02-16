@@ -745,6 +745,7 @@ class MeshTri(_base_mesh):
 
         # Find the unique edges.
         # First sort...
+        # TODO sort nds for less work
         a.sort(axis=1)
         # ... then find unique rows.
         b = numpy.ascontiguousarray(a).view(

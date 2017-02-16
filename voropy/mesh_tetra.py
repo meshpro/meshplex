@@ -79,7 +79,6 @@ class MeshTetra(_base_mesh):
         self.ei_dot_ej = numpy.einsum('ijkl, ijkl->ijk', e_shift1, e_shift2)
 
         # adjacent entities
-        self.cells['nodes'].sort(axis=1)
         self.create_cell_face_relationships()
         self.create_face_edge_relationships()
         self.mark_default_subdomains()
@@ -130,15 +129,19 @@ class MeshTetra(_base_mesh):
         # Face k is opposite of node k in each cell.
         # Make sure that the indices in each row are in ascending order. This
         # makes it easier to find unique rows
-        self.cells['nodes'].sort(axis=1)
-        a = numpy.vstack([
-            self.cells['nodes'][:, [1, 2, 3]],
-            self.cells['nodes'][:, [0, 2, 3]],
-            self.cells['nodes'][:, [0, 1, 3]],
-            self.cells['nodes'][:, [0, 1, 2]]
-            ])
+        nds = self.cells['nodes'].T
+        a = numpy.hstack([
+            nds[[1, 2, 3]],
+            nds[[0, 2, 3]],
+            nds[[0, 1, 3]],
+            nds[[0, 1, 2]]
+            ]).T
 
         # Find the unique faces
+        # First sort...
+        # TODO sort nds for less work
+        a.sort(axis=1)
+        # ... then find unique rows.
         b = numpy.ascontiguousarray(a).view(
                 numpy.dtype((numpy.void, a.dtype.itemsize * a.shape[1]))
                 )
