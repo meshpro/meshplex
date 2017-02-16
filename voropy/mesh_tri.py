@@ -549,7 +549,6 @@ class MeshTri(_base_mesh):
 
         # TODO don't create by default
         self.create_edges()
-        self.mark_default_subdomains()
 
         # compute data
         # Create the cells->edges->nodes hierarchy. Make sure that the k-th
@@ -608,6 +607,9 @@ class MeshTri(_base_mesh):
         else:
             self.fcc = None
             self.regular_cells = range(len(self.cells['nodes']))
+
+        # TODO don't create by default
+        self.mark_default_subdomains()
 
         return
 
