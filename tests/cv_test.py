@@ -555,16 +555,12 @@ def test_regular_tet1_geometric(a):
         )
 
     # covolume/edge length ratios
-    assert _near_equal(
-        mesh.get_ce_ratios(),
-        [[
-            [-a/24.0, -a/24.0, -a/24.0],
-            [a/8.0, a/8.0, 0.0],
-            [a/8.0, 0.0, a/8.0],
-            [0.0, a/8.0, a/8.0],
-        ]],
-        tol
-        )
+    ref = numpy.array([
+        [[-a/24.0], [a/8.0], [a/8.0], [0.0]],
+        [[-a/24.0], [a/8.0], [0.0], [a/8.0]],
+        [[-a/24.0], [0.0], [a/8.0], [a/8.0]],
+        ])
+    assert _near_equal(mesh.get_ce_ratios(), ref, tol)
 
     # cell volumes
     assert _near_equal(mesh.cell_volumes, [a**3/6.0], tol)
@@ -577,7 +573,7 @@ def test_regular_tet1_geometric(a):
         )
 
     assert _near_equal(
-        mesh.circumcenter_face_distances,
+        mesh.circumcenter_face_distances.T,
         [-0.5/numpy.sqrt(3)*a, 0.5*a, 0.5*a, 0.5*a],
         tol
         )

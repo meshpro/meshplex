@@ -347,26 +347,23 @@ class MeshTetra(_base_mesh):
         #     x0_dot_x0 * x2_dot_x2 - x2_dot_x0**2
 
         delta = (
+            # - alpha * x2_dot_x2
             e0_dot_e0 * e1_dot_e1 * e2_dot_e2 - e2_dot_e2 * e0_dot_e1**2 +
             e0_dot_e1 * e1_dot_e2 * e2_dot_e2 - e2_dot_e2 * e1_dot_e1 * e2_dot_e0 +
             e2_dot_e0 * e0_dot_e1 * e2_dot_e2 - e2_dot_e2 * e1_dot_e2 * e0_dot_e0 +
             #
+            # - beta * x0_dot_x0
             e0_dot_e1 * e1_dot_e2 * e0_dot_e0 - e0_dot_e0 * e2_dot_e0 * e1_dot_e1 +
             e1_dot_e1 * e2_dot_e2 * e0_dot_e0 - e0_dot_e0 * e1_dot_e2**2 +
             e1_dot_e2 * e2_dot_e0 * e0_dot_e0 - e0_dot_e0 * e2_dot_e2 * e0_dot_e1 +
             #
+            # - gamma * x1_dot_x1
             e2_dot_e0 * e0_dot_e1 * e1_dot_e1 - e1_dot_e1 * e0_dot_e0 * e1_dot_e2 +
             e1_dot_e2 * e2_dot_e0 * e1_dot_e1 - e1_dot_e1 * e0_dot_e1 * e2_dot_e2 +
             e0_dot_e0 * e2_dot_e2 * e1_dot_e1 - e1_dot_e1 * e2_dot_e0**2
             )
 
-        a = (
-            72.0 * self.cell_volumes[None]**2
-            - delta
-            # - alpha * x2_dot_x2
-            # - beta * x0_dot_x0
-            # - gamma * x1_dot_x1
-            ) / (12.0 * face_areas)
+        a = (72.0 * self.cell_volumes[None]**2 - delta) / (12.0 * face_areas)
 
         # Distances of the cell circumcenter to the faces.
         # (shape: 4 x num_cells)
@@ -489,18 +486,14 @@ class MeshTetra(_base_mesh):
         '''Compute the control volumes of all nodes in the mesh.
         '''
         if self._control_volumes is None:
-
             #   1/3. * (0.5 * edge_length) * covolume
             # = 1/6 * edge_length**2 * ce_ratio_edge_ratio
             ce = self.compute_ce_ratios_geometric()
-            idx = self.cell_face_edge_nodes
-            e = self.node_coords[idx[..., 1]] - \
-                self.node_coords[idx[..., 0]]
-            vals = _row_dot(e, e) * ce / 6.0
-            vals = numpy.stack([vals, vals], axis=-1)
+            idx = self.node_edge_face_cells
+            vals = self.ei_dot_ei * ce / 6.0
+            vals = numpy.array([vals, vals])
             # TODO explicitly sum up contributions per cell first
             #      (like mesh_tri)
-
             self._control_volumes = \
                 numpy.zeros(len(self.node_coords), dtype=float)
             numpy.add.at(self._control_volumes, idx, vals)
