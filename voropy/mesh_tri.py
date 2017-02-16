@@ -26,6 +26,56 @@ def lloyd_smoothing(
         ):
     from matplotlib import pyplot as plt
 
+    def flip_until_delaunay(mesh):
+        # We need boundary flat cell correction for flipping. If `full`,
+        # all c/e ratios are nonnegative.
+        mesh = MeshTri(
+                mesh.node_coords,
+                mesh.cells['nodes'],
+                flat_cell_correction='boundary'
+                )
+        ce_ratios = mesh.get_ce_ratios_per_edge()
+        while any(ce_ratios < 0.0):
+            mesh = flip_edges(mesh, ce_ratios < 0.0)
+            ce_ratios = mesh.get_ce_ratios_per_edge()
+        return mesh
+
+    def print_stats(mesh):
+        # The cosines of the angles are the negative dot products of
+        # the normalized edges adjacent to the angle.
+        norms = numpy.sqrt(mesh.ei_dot_ei)
+        normalized_ei_dot_ej = numpy.array([
+            mesh.ei_dot_ej[0] / norms[1] / norms[2],
+            mesh.ei_dot_ej[1] / norms[2] / norms[0],
+            mesh.ei_dot_ej[2] / norms[0] / norms[1],
+            ])
+        angles = numpy.arccos(-normalized_ei_dot_ej) \
+            / (2 * numpy.pi) * 360.0
+
+        hist, bin_edges = numpy.histogram(
+            angles,
+            bins=numpy.linspace(0.0, 180.0, num=19, endpoint=True)
+            )
+        print('  angles (in degrees):\n')
+        for i in range(len(hist)):
+            print(
+                '         %3d < angle < %3d:   %d'
+                % (bin_edges[i], bin_edges[i+1], hist[i])
+                )
+        return
+
+    def write(mesh, k):
+        if output_filetype == 'png':
+            fig = mesh.show(
+                    show_ce_ratios=False,
+                    show_centroids=False,
+                    show_axes=False
+                    )
+            plt.savefig('lloyd%04d.png' % k)
+            plt.close(fig)
+        else:
+            mesh.write('lloyd%04d.vtu' % k)
+
     # 2D mesh
     assert all(mesh.node_coords[:, 2] == 0.0)
     assert mesh.fcc is not fcc_type
@@ -43,30 +93,11 @@ def lloyd_smoothing(
         if max_move < tol:
             break
         if output_filetype:
-            if output_filetype == 'png':
-                fig = mesh.show(
-                        show_ce_ratios=False,
-                        show_centroids=False,
-                        show_axes=False
-                        )
-                plt.savefig('lloyd%04d.png' % k)
-                plt.close(fig)
-            else:
-                mesh.write('lloyd%04d.vtu' % k)
+            write(mesh, k)
 
         # Flip the edges every so often.
         if k % flip_frequency == 0:
-            # We need boundary flat cell correction for flipping. If `full`,
-            # all c/e ratios are nonnegative.
-            mesh = MeshTri(
-                    mesh.node_coords,
-                    mesh.cells['nodes'],
-                    flat_cell_correction='boundary'
-                    )
-            ce_ratios = mesh.get_ce_ratios_per_edge()
-            while any(ce_ratios < 0.0):
-                mesh = flip_edges(mesh, ce_ratios < 0.0)
-                ce_ratios = mesh.get_ce_ratios_per_edge()
+            mesh = flip_until_delaunay(mesh)
 
         # move interior points into centroids
         new_points = mesh.get_control_volume_centroids()
@@ -83,59 +114,17 @@ def lloyd_smoothing(
         if verbose:
             print('\nstep: %d' % k)
             print('  maximum move: %.15e' % max_move)
-
-            # The cosines of the angles are the negative dot products of
-            # the normalized edges adjacent to the angle.
-            norms = numpy.sqrt(mesh.ei_dot_ei)
-            normalized_ei_dot_ej = numpy.array([
-                mesh.ei_dot_ej[0] / norms[1] / norms[2],
-                mesh.ei_dot_ej[1] / norms[2] / norms[0],
-                mesh.ei_dot_ej[2] / norms[0] / norms[1],
-                ])
-            angles = numpy.arccos(-normalized_ei_dot_ej) \
-                / (2 * numpy.pi) * 360.0
-
-            hist, bin_edges = numpy.histogram(
-                angles,
-                bins=numpy.linspace(0.0, 180.0, num=19, endpoint=True)
-                )
-            print('  angles (in degrees):\n')
-            for i in range(len(hist)):
-                print(
-                    '         %3d < angle < %3d:   %d'
-                    % (bin_edges[i], bin_edges[i+1], hist[i])
-                    )
-
-            # av_ce_ratios = numpy.sum(mesh.ce_ratios_per_half_edge.flat) \
-            #     / len(mesh.ce_ratios_per_half_edge.flat)
-            # max_ce_ratios = numpy.max(mesh.ce_ratios_per_half_edge.flat)
-            # print(
-            #     '  c/e ratios (min, av, max): %.15e  %.15e  %.15e' %
-            #     (min_ce_ratios, av_ce_ratios, max_ce_ratios)
-            #     )
+            print_stats(mesh)
 
     # Flip one last time.
-    mesh = MeshTri(
-            mesh.node_coords,
-            mesh.cells['nodes'],
-            flat_cell_correction='boundary'
-            )
-    ce_ratios = mesh.get_ce_ratios_per_edge()
-    while any(ce_ratios < 0.0):
-        mesh = flip_edges(mesh, ce_ratios < 0.0)
-        ce_ratios = mesh.get_ce_ratios_per_edge()
+    mesh = flip_until_delaunay(mesh)
+
+    if verbose:
+        print('\nFinal:')
+        print_stats(mesh)
 
     if output_filetype:
-        if output_filetype == 'png':
-            fig = mesh.show(
-                    show_ce_ratios=False,
-                    show_centroids=False,
-                    show_axes=False
-                    )
-            plt.savefig('lloyd%04d.png' % (k+1))
-            plt.close(fig)
-        else:
-            mesh.write('lloyd%04d.vtu' % (k+1))
+        write(mesh, k+1)
 
     return mesh
 
