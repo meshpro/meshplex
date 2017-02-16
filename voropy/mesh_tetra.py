@@ -369,11 +369,10 @@ class MeshTetra(_base_mesh):
             #   1/3. * (0.5 * edge_length) * covolume
             # = 1/6 * edge_length**2 * ce_ratio_edge_ratio
             ce = self.compute_ce_ratios_geometric()
-            idx = self.node_edge_face_cells
-            vals = self.ei_dot_ei * ce / 6.0
-            vals = numpy.array([vals, vals])
+            v = self.ei_dot_ei * ce / 6.0
             # TODO explicitly sum up contributions per cell first
-            #      (like mesh_tri)
+            vals = numpy.array([v, v])
+            idx = self.node_edge_face_cells
             self._control_volumes = \
                 numpy.zeros(len(self.node_coords), dtype=float)
             numpy.add.at(self._control_volumes, idx, vals)

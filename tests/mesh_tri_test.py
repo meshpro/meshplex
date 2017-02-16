@@ -450,7 +450,7 @@ def test_shell():
 
     tol = 1.0e-14
     ce_ratios = 0.5/numpy.sqrt(3.0) * numpy.ones((4, 3))
-    assert near_equal(mesh.get_ce_ratios(), ce_ratios, tol)
+    assert near_equal(mesh.get_ce_ratios().T, ce_ratios, tol)
 
     cv = numpy.array([2.0, 1.0, 1.0, 1.0, 1.0]) / numpy.sqrt(3.0)
     assert near_equal(mesh.get_control_volumes(), cv, tol)
