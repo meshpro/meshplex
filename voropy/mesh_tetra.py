@@ -14,6 +14,26 @@ def _my_dot(a, b):
     return numpy.einsum('ijk, ijk->ij', a, b)
 
 
+def _scalar_triple_product(v1, v2, v3):
+    # Compute the scalar triple product without the use of the (slow) cross
+    # product; cf. <http://math.stackexchange.com/a/2148866/36678>.
+    v1_dot_v2 = _my_dot(v1, v2)
+    v2_dot_v3 = _my_dot(v2, v3)
+    v3_dot_v1 = _my_dot(v3, v1)
+
+    v1_dot_v1 = _my_dot(v1, v1)
+    v2_dot_v2 = _my_dot(v2, v2)
+    v3_dot_v3 = _my_dot(v3, v3)
+
+    return (
+        v3_dot_v3 * v1_dot_v1 * v2_dot_v2
+        + 2 * v1_dot_v2 * v2_dot_v3 * v3_dot_v1
+        - v3_dot_v3 * v1_dot_v2**2
+        - v3_dot_v1**2 * v2_dot_v2
+        - v2_dot_v3**2 * v1_dot_v1
+        )
+
+
 class MeshTetra(_base_mesh):
     '''Class for handling tetrahedral meshes.
 
