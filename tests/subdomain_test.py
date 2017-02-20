@@ -11,8 +11,7 @@ def test_get_edges():
             )
     mesh, _, _, _ = voropy.read(filename)
     mesh.create_edges()
-    mesh.mark_default_subdomains()
-    edges = mesh.get_edges('everywhere')
+    edges = mesh.get_edges()
     assert len(edges) == 1276
     return
 
@@ -23,7 +22,7 @@ def test_mark_subdomain():
             '2da8ff96537f844a95a83abb48471b6a'
             )
     mesh, _, _, _ = voropy.read(filename)
-    mesh.mark_default_subdomains()
+    # mesh.mark_default_subdomains()
 
     class Subdomain(object):
         def __init__(self):

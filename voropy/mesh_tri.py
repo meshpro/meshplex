@@ -535,12 +535,13 @@ class MeshTri(_base_mesh):
         self._surface_areas = None
         self.edges = None
         self.cell_circumcenters = None
+        self.subdomains = {}
 
         # compute data
-        # Create the cells->edges->nodes hierarchy. Make sure that the k-th
-        # edge is opposite of the k-th point in the triangle.
+        # Create the idx_hierarchy (nodes->edges->cells). Make sure that the
+        # k-th edge is opposite of the k-th point in the triangle.
         nds = self.cells['nodes'].T
-        self.node_edge_cells = numpy.stack([
+        self.idx_hierarchy = numpy.stack([
             nds[[1, 2]],
             nds[[2, 0]],
             nds[[0, 1]],
@@ -548,8 +549,8 @@ class MeshTri(_base_mesh):
 
         # Create the corresponding edge coordinates.
         self.half_edge_coords = \
-            self.node_coords[self.node_edge_cells[1]] - \
-            self.node_coords[self.node_edge_cells[0]]
+            self.node_coords[self.idx_hierarchy[1]] - \
+            self.node_coords[self.idx_hierarchy[0]]
 
         e_shift1 = self.half_edge_coords[[1, 2, 0]]
         e_shift2 = self.half_edge_coords[[2, 0, 1]]
@@ -597,7 +598,7 @@ class MeshTri(_base_mesh):
         return
 
     def get_boundary_vertices(self):
-        self.mark_default_subdomains()
+        self.mark_boundary()
         return self.subdomains['boundary']['vertices']
 
     def get_ce_ratios(self, cell_ids=None):
@@ -684,16 +685,9 @@ class MeshTri(_base_mesh):
             self._cv_centroids /= self.get_control_volumes()[:, None]
         return self._cv_centroids
 
-    def mark_default_subdomains(self):
-        if 'edges' not in self.cells:
+    def mark_boundary(self):
+        if self.edges is None:
             self.create_edges()
-
-        self.subdomains = {}
-        self.subdomains['everywhere'] = {
-                'vertices': range(len(self.node_coords)),
-                'edges': range(len(self.edges['nodes'])),
-                'cells': range(len(self.cells['nodes'])),
-                }
 
         # Get vertices on the boundary edges
         boundary_edges = numpy.where(self.is_boundary_edge)[0]
@@ -793,7 +787,7 @@ class MeshTri(_base_mesh):
         # area of the triangle.
         right_triangle_vols = self._get_control_volume_contribs()[:, cell_ids]
 
-        node_edges = self.node_edge_cells[..., cell_ids]
+        node_edges = self.idx_hierarchy[..., cell_ids]
 
         corner = self.node_coords[node_edges]
         edge_midpoints = 0.5 * (corner[0] + corner[1])
@@ -931,7 +925,7 @@ class MeshTri(_base_mesh):
         # Compute the projection of A on the edge at each edge midpoint.
         # Take the average of `vector_field` at the endpoints to get the
         # approximate value at the edge midpoint.
-        A = 0.5 * numpy.sum(vector_field[self.node_edge_cells], axis=0)
+        A = 0.5 * numpy.sum(vector_field[self.idx_hierarchy], axis=0)
         # sum of <edge, A> for all three edges
         sum_edge_dot_A = numpy.einsum('ijk, ijk->j', self.half_edge_coords, A)
 

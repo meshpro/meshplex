@@ -189,57 +189,56 @@ class _base_mesh(object):
             self._edge_lengths = numpy.sqrt(self.ei_dot_ei)
         return self._edge_lengths
 
-    def get_edges(self, subdomain):
+    def get_edges(self, subdomain=None):
         if subdomain not in self.subdomains:
             self.mark_subdomain(subdomain)
         return self.subdomains[subdomain]['edges']
 
-    def get_cells(self, subdomain):
+    def get_cells(self, subdomain=None):
+        if subdomain is None:
+            return range(len(self.cells['nodes']))
         if subdomain not in self.subdomains:
             self.mark_subdomain(subdomain)
         return self.subdomains[subdomain]['cells']
 
-    def get_vertices(self, subdomain):
+    def get_vertices(self, subdomain=None):
+        if subdomain is None:
+            return range(len(self.node_coords))
         if subdomain not in self.subdomains:
-            self.mark_subdomain(subdomain)
+            self.mark_vertices(subdomain)
         return self.subdomains[subdomain]['vertices']
 
-    def mark_subdomain(self, subdomain):
-        # find vertices in subdomain
-        if subdomain.is_boundary_only:
-            nodes = self.get_vertices('boundary')
-        else:
-            nodes = self.get_vertices('everywhere')
+    def mark_cells(self, subdomain):
+        '''Mark cells which are fully in subdomain.
+        '''
+        is_inside = numpy.all(subdomain.is_inside(
+            self.node_coords[self.cells['nodes']].T
+            ).T, axis=1
+            )
+        cell_ids = numpy.where(is_inside)[0]
 
-        subdomain_vertices = []
-        for vertex_id in nodes:
-            if subdomain.is_inside(self.node_coords[vertex_id]):
-                subdomain_vertices.append(vertex_id)
-        subdomain_vertices = numpy.unique(subdomain_vertices)
-
-        # extract all edges which are completely or half in the subdomain
-        if subdomain.is_boundary_only:
-            edges = self.get_edges('boundary')
-        else:
-            edges = self.get_edges('everywhere')
-
-        subdomain_edges = []
-        subdomain_split_edges = []
-        for edge_id in edges:
-            verts = self.edges['nodes'][edge_id]
-            if verts[0] in subdomain_vertices:
-                if verts[1] in subdomain_vertices:
-                    subdomain_edges.append(edge_id)
-                else:
-                    subdomain_split_edges.append(edge_id)
-
-        subdomain_edges = numpy.unique(subdomain_edges)
-        subdomain_split_edges = numpy.unique(subdomain_split_edges)
+        vertex_ids = numpy.unique(self.cells['nodes'][cell_ids])
 
         self.subdomains[subdomain] = {
-                'vertices': subdomain_vertices,
-                'edges': subdomain_edges,
-                'split_edges': subdomain_split_edges
+                'cells': cell_ids,
+                'vertices': vertex_ids,
                 }
+        return
 
+    def mark_vertices(self, subdomain):
+        '''Mark faces/edges which are fully in subdomain.
+        '''
+        print(self.node_coords.shape)
+        if subdomain.is_boundary_only:
+            self.mark_boundary()
+            idx = self.subdomains['boundary']['vertices']
+            is_inside = subdomain.is_inside(self.node_coords[idx].T).T
+            vertex_ids = idx[is_inside]
+        else:
+            is_inside = subdomain.is_inside(self.node_coords.T).T
+            vertex_ids = numpy.where(is_inside)[0]
+
+        self.subdomains[subdomain] = {
+                'vertices': vertex_ids,
+                }
         return

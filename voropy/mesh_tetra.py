@@ -14,7 +14,7 @@ def _my_dot(a, b):
     return numpy.einsum('ijk, ijk->ij', a, b)
 
 
-def _scalar_triple_product(v1, v2, v3):
+def _scalar_triple_product_squared(v1, v2, v3):
     # Compute the scalar triple product without the use of the (slow) cross
     # product; cf. <http://math.stackexchange.com/a/2148866/36678>.
     v1_dot_v2 = _my_dot(v1, v2)
@@ -65,6 +65,7 @@ class MeshTetra(_base_mesh):
         self._mode = mode
         self._ce_ratios = None
         self._control_volumes = None
+        self.subdomains = {}
 
         # Arrange the cell_face_nodes such that node k is opposite of face k in
         # each cell.
@@ -76,9 +77,9 @@ class MeshTetra(_base_mesh):
             nds[[0, 1, 2]],
             ], axis=1)
 
-        # Arrange the node_edge_face_cells such that node k is opposite of edge
-        # k in each face.
-        self.node_edge_face_cells = numpy.stack([
+        # Arrange the idx_hierarchy (node->edge->face->cells) such that node k
+        # is opposite of edge k in each face.
+        self.idx_hierarchy = numpy.stack([
             numpy.stack([nds[[2, 3]], nds[[3, 1]], nds[[1, 2]]], axis=1),
             numpy.stack([nds[[3, 0]], nds[[0, 2]], nds[[2, 3]]], axis=1),
             numpy.stack([nds[[0, 1]], nds[[1, 3]], nds[[3, 0]]], axis=1),
@@ -87,8 +88,8 @@ class MeshTetra(_base_mesh):
 
         # create ei_dot_ei, ei_dot_ej
         self.edge_coords = \
-            self.node_coords[self.node_edge_face_cells[1]] - \
-            self.node_coords[self.node_edge_face_cells[0]]
+            self.node_coords[self.idx_hierarchy[1]] - \
+            self.node_coords[self.idx_hierarchy[0]]
         self.ei_dot_ei = numpy.einsum(
                 'ijkl, ijkl->ijk',
                 self.edge_coords,
@@ -114,13 +115,9 @@ class MeshTetra(_base_mesh):
                 self.circumcenter_face_distances = None
         return self._ce_ratios
 
-    def mark_default_subdomains(self):
-        self.subdomains = {}
-        self.subdomains['everywhere'] = {
-                'vertices': range(len(self.node_coords)),
-                # 'edges': range(len(self.edges['nodes'])),
-                'faces': range(len(self.faces['nodes']))
-                }
+    def mark_boundary(self):
+        if 'faces' not in self.cells:
+            self.create_cell_face_relationships()
 
         # Get vertices on the boundary faces
         boundary_faces = numpy.where(self.is_boundary_face)[0]
@@ -136,7 +133,6 @@ class MeshTetra(_base_mesh):
                 # 'edges': boundary_edges,
                 'faces': boundary_faces
                 }
-
         return
 
     def create_cell_face_relationships(self):
@@ -240,7 +236,7 @@ class MeshTetra(_base_mesh):
         b_cross_c = X_cross_Y[:, 1, :]
         c_cross_a = X_cross_Y[:, 2, :]
 
-        # Compute scalar triple product <a, b, c> = <b, c, a> = <c, a, b>.
+        # Compute scalar triple product without using cross.
         # The product is highly symmetric, so it's a little funny if there
         # should be no single einsum to compute it; see
         # <http://stackoverflow.com/q/42158228/353337>.
@@ -391,7 +387,7 @@ class MeshTetra(_base_mesh):
             v = self.ei_dot_ei * ce / 6.0
             # TODO explicitly sum up contributions per cell first
             vals = numpy.array([v, v])
-            idx = self.node_edge_face_cells
+            idx = self.idx_hierarchy
             self._control_volumes = \
                 numpy.zeros(len(self.node_coords), dtype=float)
             numpy.add.at(self._control_volumes, idx, vals)
