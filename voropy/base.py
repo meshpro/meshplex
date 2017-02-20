@@ -228,7 +228,6 @@ class _base_mesh(object):
     def mark_vertices(self, subdomain):
         '''Mark faces/edges which are fully in subdomain.
         '''
-        print(self.node_coords.shape)
         if subdomain.is_boundary_only:
             self.mark_boundary()
             idx = self.subdomains['boundary']['vertices']
