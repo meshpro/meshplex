@@ -510,6 +510,13 @@ class MeshTri(_base_mesh):
     def __init__(self, nodes, cells, flat_cell_correction=None):
         '''Initialization.
         '''
+        # Sort cells and nodes, first every row, then the rows themselves. This
+        # helps in many downstream applications, e.g., when constructing linear
+        # systems with the cells/edges. (When converting to CSR format, the
+        # I/J entries must be sorted.)
+        cells.sort(axis=1)
+        cells = cells[cells[:, 0].argsort()]
+
         super(MeshTri, self).__init__(nodes, cells)
 
         # Assert that all vertices are used.
@@ -552,9 +559,11 @@ class MeshTri(_base_mesh):
             self.node_coords[self.idx_hierarchy[1]] - \
             self.node_coords[self.idx_hierarchy[0]]
 
-        e_shift1 = self.half_edge_coords[[1, 2, 0]]
-        e_shift2 = self.half_edge_coords[[2, 0, 1]]
-        self.ei_dot_ej = numpy.einsum('ijk, ijk->ij', e_shift1, e_shift2)
+        self.ei_dot_ej = numpy.einsum(
+                'ijk, ijk->ij',
+                self.half_edge_coords[[1, 2, 0]],
+                self.half_edge_coords[[2, 0, 1]]
+                )
 
         e = self.half_edge_coords
         self.ei_dot_ei = numpy.einsum('ijk, ijk->ij', e, e)
