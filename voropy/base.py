@@ -196,14 +196,14 @@ class _base_mesh(object):
 
     def get_cells(self, subdomain=None):
         if subdomain is None:
-            return range(len(self.cells['nodes']))
+            return Ellipsis
         if subdomain not in self.subdomains:
             self.mark_subdomain(subdomain)
         return self.subdomains[subdomain]['cells']
 
     def get_vertices(self, subdomain=None):
         if subdomain is None:
-            return range(len(self.node_coords))
+            return Ellipsis
         if subdomain not in self.subdomains:
             self.mark_vertices(subdomain)
         return self.subdomains[subdomain]['vertices']

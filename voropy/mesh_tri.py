@@ -571,7 +571,10 @@ class MeshTri(_base_mesh):
         self.cell_volumes, self.ce_ratios_per_half_edge = \
             compute_tri_areas_and_ce_ratios(self.ei_dot_ej)
 
-        if flat_cell_correction is not None:
+        if flat_cell_correction is None:
+            self.fcc = None
+            self.regular_cells = None
+        else:
             assert flat_cell_correction in ['full', 'boundary']
             if flat_cell_correction == 'full':
                 # All cells with a negative c/e ratio are redone.
@@ -600,9 +603,6 @@ class MeshTri(_base_mesh):
                     )
             self.ce_ratios_per_half_edge[:, self.fcc_cells] = \
                 self.fcc.get_ce_ratios().T
-        else:
-            self.fcc = None
-            self.regular_cells = range(len(self.cells['nodes']))
 
         return
 
@@ -649,6 +649,7 @@ class MeshTri(_base_mesh):
             self._control_volumes = numpy.zeros(len(self.node_coords))
             for d in control_volume_data:
                 numpy.add.at(self._control_volumes, d[0], d[1])
+
         return self._control_volumes
 
     def get_surface_areas(self):
@@ -759,7 +760,7 @@ class MeshTri(_base_mesh):
         relatively expensive to compute and hardly ever necessary.
         '''
         num_cells = len(self.cells['nodes'])
-        edge_cells = [[] for k in range(len(self.edges['nodes']))]
+        edge_cells = len(self.edges['nodes']) * [[]]
         for k, edge_id in enumerate(self._inv):
             edge_cells[edge_id].append(k % num_cells)
         return edge_cells
