@@ -34,7 +34,7 @@ def test_regular_tet0(a):
     z = a / numpy.sqrt(24.0)
     assert near_equal(mesh.get_cell_circumcenters(), [0.0, 0.0, z], tol)
 
-    mesh.compute_ce_ratios_geometric()
+    mesh._compute_ce_ratios_geometric()
     assert near_equal(mesh.circumcenter_face_distances, [z, z, z, z], tol)
 
     # covolume/edge length ratios

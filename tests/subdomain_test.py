@@ -11,8 +11,9 @@ def test_get_edges():
             )
     mesh, _, _, _ = voropy.read(filename)
     mesh.create_edges()
-    edges = mesh.get_edges()
-    assert len(edges) == 1276
+    edge_ids = mesh.get_edges()
+    edge_nodes = mesh.edges['nodes'][edge_ids]
+    assert len(edge_nodes) == 1276
     return
 
 
@@ -33,6 +34,6 @@ def test_mark_subdomain():
             return x[0] < 0.0
 
     sd = Subdomain()
-    mesh.mark_subdomain(sd)
+    mesh.mark_vertices(sd)
     assert len(mesh.subdomains[sd]['vertices']) == 27
     return

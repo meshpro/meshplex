@@ -190,6 +190,9 @@ class _base_mesh(object):
         return self._edge_lengths
 
     def get_edges(self, subdomain=None):
+        if subdomain is None:
+            # http://stackoverflow.com/a/42392791/353337
+            return numpy.s_[:]
         if subdomain not in self.subdomains:
             self.mark_subdomain(subdomain)
         return self.subdomains[subdomain]['edges']
