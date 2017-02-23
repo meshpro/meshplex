@@ -42,6 +42,15 @@ class MeshTetra(_base_mesh):
     def __init__(self, node_coords, cells, mode='geometric'):
         '''Initialization.
         '''
+        # Sort cells and nodes, first every row, then the rows themselves. This
+        # helps in many downstream applications, e.g., when constructing linear
+        # systems with the cells/edges. (When converting to CSR format, the
+        # I/J entries must be sorted.)
+        cells.sort(axis=1)
+        cells = cells[cells[:, 0].argsort()]
+
+        super(MeshTetra, self).__init__(node_coords, cells)
+
         # Assert that all vertices are used.
         # If there are vertices which do not appear in the cells list, this
         # ```
@@ -53,8 +62,6 @@ class MeshTetra(_base_mesh):
         is_used = numpy.zeros(len(node_coords), dtype=bool)
         is_used[cells.flat] = True
         assert all(is_used)
-
-        super(MeshTetra, self).__init__(node_coords, cells)
 
         self.cells = {
             'nodes': cells
