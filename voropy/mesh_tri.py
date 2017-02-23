@@ -67,7 +67,7 @@ def lloyd_smoothing(
     def write(mesh, k):
         if output_filetype == 'png':
             fig = mesh.plot(
-                    show_ce_ratios=False,
+                    show_coedges=False,
                     show_centroids=False,
                     show_axes=False
                     )

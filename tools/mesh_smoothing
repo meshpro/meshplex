@@ -51,7 +51,7 @@ def _parse_input_arguments():
 
     parser.add_argument(
         '--output-step-filetype', '-s',
-        dest='output_steps',
+        dest='output_steps_filetype',
         default=None,
         help='write mesh after each Lloyd step'
         )
@@ -82,6 +82,6 @@ if __name__ == '__main__':
         args.tolerance,
         fcc_type=fcc_type,
         verbose=args.verbose,
-        output_filetype=args.output_steps
+        output_filetype=args.output_steps_filetype
         )
     out_mesh.write(args.output)
