@@ -84,10 +84,6 @@ def lloyd_smoothing(
 
     max_move = tol + 1
 
-    # from matplotlib import pyplot as plt
-    # mesh.show()
-    # plt.show()
-
     k = 0
     for k in range(max_steps):
         if max_move < tol:
@@ -760,7 +756,8 @@ class MeshTri(_base_mesh):
         relatively expensive to compute and hardly ever necessary.
         '''
         num_cells = len(self.cells['nodes'])
-        edge_cells = len(self.edges['nodes']) * [[]]
+        num_edges = len(self.edges['nodes'])
+        edge_cells = [[] for k in range(num_edges)]
         for k, edge_id in enumerate(self._inv):
             edge_cells[edge_id].append(k % num_cells)
         return edge_cells
@@ -962,9 +959,15 @@ class MeshTri(_base_mesh):
         ce_ratios = self.get_ce_ratios_per_edge()
         return numpy.sum(ce_ratios[~self.is_boundary_edge] < 0.0)
 
-    def show(
+    def show(self, *args, **kwargs):
+        from matplotlib import pyplot as plt
+        self.plot(*args, **kwargs)
+        plt.show()
+        return
+
+    def plot(
             self,
-            show_ce_ratios=True,
+            show_coedges=True,
             show_centroids=True,
             mesh_color='k',
             boundary_edge_color=None,
@@ -972,9 +975,6 @@ class MeshTri(_base_mesh):
             show_axes=True
             ):
         '''Show the mesh using matplotlib.
-
-        :param show_ce_ratios: If true, show all ce_ratios of the mesh, too.
-        :type show_ce_ratios: bool, optional
         '''
         # Importing matplotlib takes a while, so don't do that at the header.
         from matplotlib import pyplot as plt
@@ -1018,7 +1018,7 @@ class MeshTri(_base_mesh):
         line_segments1 = LineCollection(e[neg], color=new_red)
         ax.add_collection(line_segments1)
 
-        if show_ce_ratios:
+        if show_coedges:
             # Connect all cell circumcenters with the edge midpoints
             cc = self.get_cell_circumcenters()
 
