@@ -56,6 +56,14 @@ def _parse_input_arguments():
         help='write mesh after each Lloyd step'
         )
 
+    parser.add_argument(
+        '--flip-frequency', '-f',
+        dest='flip_frequency',
+        default=100,
+        type=int,
+        help='how often to do edge flipping'
+        )
+
     return parser.parse_args()
 
 
@@ -81,6 +89,7 @@ if __name__ == '__main__':
         mesh,
         args.tolerance,
         fcc_type=fcc_type,
+        flip_frequency=args.flip_frequency,
         verbose=args.verbose,
         output_filetype=args.output_steps_filetype
         )

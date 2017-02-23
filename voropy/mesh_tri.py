@@ -71,6 +71,7 @@ def lloyd_smoothing(
                     show_centroids=False,
                     show_axes=False
                     )
+            fig.suptitle('step %d' % k, fontsize=20)
             plt.savefig('lloyd%04d.png' % k)
             plt.close(fig)
         else:
