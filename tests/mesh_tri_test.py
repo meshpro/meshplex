@@ -52,23 +52,24 @@ def test_regular_tri():
 
 def test_regular_tri_order():
     points = numpy.array([
+        [0.0, 1.0, 0.0],
         [0.0, 0.0, 0.0],
         [1.0, 0.0, 0.0],
-        [0.0, 1.0, 0.0]
         ])
-    cells = numpy.array([[1, 2, 0]])
-    mesh = voropy.mesh_tri.MeshTri(points, cells.copy())
-    assert all((mesh.cells['nodes'] == cells).flat)
+    cells = numpy.array([[0, 1, 2]])
+
+    mesh = voropy.mesh_tri.MeshTri(points, cells)
+    assert all((mesh.cells['nodes'] == [0, 1, 2]).flat)
 
     tol = 1.0e-14
 
     # ce_ratios
-    assert near_equal(mesh.get_ce_ratios_per_edge().T, [0.5, 0.5, 0.0], tol)
+    assert near_equal(mesh.get_ce_ratios_per_edge().T, [0.5, 0.0, 0.5], tol)
 
     # control volumes
     assert near_equal(
         mesh.get_control_volumes(),
-        [0.25, 0.125, 0.125],
+        [0.125, 0.25, 0.125],
         tol
         )
 
@@ -84,9 +85,9 @@ def test_regular_tri_order():
 
     # centroids
     assert near_equal(mesh.get_control_volume_centroids(), [
+            [1.0/6.0, 2.0/3.0, 0.0],
             [0.25, 0.25, 0.0],
             [2.0/3.0, 1.0/6.0, 0.0],
-            [1.0/6.0, 2.0/3.0, 0.0],
             ], tol)
 
     assert mesh.num_delaunay_violations() == 0
