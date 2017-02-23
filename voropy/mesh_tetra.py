@@ -14,6 +14,26 @@ def _my_dot(a, b):
     return numpy.einsum('ijk, ijk->ij', a, b)
 
 
+def _scalar_triple_product_squared(v1, v2, v3):
+    # Compute the scalar triple product without the use of the (slow) cross
+    # product; cf. <http://math.stackexchange.com/a/2148866/36678>.
+    v1_dot_v2 = _my_dot(v1, v2)
+    v2_dot_v3 = _my_dot(v2, v3)
+    v3_dot_v1 = _my_dot(v3, v1)
+
+    v1_dot_v1 = _my_dot(v1, v1)
+    v2_dot_v2 = _my_dot(v2, v2)
+    v3_dot_v3 = _my_dot(v3, v3)
+
+    return (
+        v3_dot_v3 * v1_dot_v1 * v2_dot_v2
+        + 2 * v1_dot_v2 * v2_dot_v3 * v3_dot_v1
+        - v3_dot_v3 * v1_dot_v2**2
+        - v3_dot_v1**2 * v2_dot_v2
+        - v2_dot_v3**2 * v1_dot_v1
+        )
+
+
 class MeshTetra(_base_mesh):
     '''Class for handling tetrahedral meshes.
 
@@ -22,6 +42,15 @@ class MeshTetra(_base_mesh):
     def __init__(self, node_coords, cells, mode='geometric'):
         '''Initialization.
         '''
+        # Sort cells and nodes, first every row, then the rows themselves. This
+        # helps in many downstream applications, e.g., when constructing linear
+        # systems with the cells/edges. (When converting to CSR format, the
+        # I/J entries must be sorted.)
+        cells.sort(axis=1)
+        cells = cells[cells[:, 0].argsort()]
+
+        super(MeshTetra, self).__init__(node_coords, cells)
+
         # Assert that all vertices are used.
         # If there are vertices which do not appear in the cells list, this
         # ```
@@ -34,8 +63,6 @@ class MeshTetra(_base_mesh):
         is_used[cells.flat] = True
         assert all(is_used)
 
-        super(MeshTetra, self).__init__(node_coords, cells)
-
         self.cells = {
             'nodes': cells
             }
@@ -45,6 +72,7 @@ class MeshTetra(_base_mesh):
         self._mode = mode
         self._ce_ratios = None
         self._control_volumes = None
+        self.subdomains = {}
 
         # Arrange the cell_face_nodes such that node k is opposite of face k in
         # each cell.
@@ -56,9 +84,9 @@ class MeshTetra(_base_mesh):
             nds[[0, 1, 2]],
             ], axis=1)
 
-        # Arrange the node_edge_face_cells such that node k is opposite of edge
-        # k in each face.
-        self.node_edge_face_cells = numpy.stack([
+        # Arrange the idx_hierarchy (node->edge->face->cells) such that node k
+        # is opposite of edge k in each face.
+        self.idx_hierarchy = numpy.stack([
             numpy.stack([nds[[2, 3]], nds[[3, 1]], nds[[1, 2]]], axis=1),
             numpy.stack([nds[[3, 0]], nds[[0, 2]], nds[[2, 3]]], axis=1),
             numpy.stack([nds[[0, 1]], nds[[1, 3]], nds[[3, 0]]], axis=1),
@@ -67,8 +95,8 @@ class MeshTetra(_base_mesh):
 
         # create ei_dot_ei, ei_dot_ej
         self.edge_coords = \
-            self.node_coords[self.node_edge_face_cells[1]] - \
-            self.node_coords[self.node_edge_face_cells[0]]
+            self.node_coords[self.idx_hierarchy[1]] - \
+            self.node_coords[self.idx_hierarchy[0]]
         self.ei_dot_ei = numpy.einsum(
                 'ijkl, ijkl->ijk',
                 self.edge_coords,
@@ -84,23 +112,19 @@ class MeshTetra(_base_mesh):
         if self._ce_ratios is None:
             assert self._mode in ['geometric', 'algebraic']
             if self._mode == 'geometric':
-                return self.compute_ce_ratios_geometric()
+                self._ce_ratios = self._compute_ce_ratios_geometric()
             else:  # 'algebraic'
                 num_edges = len(self.edges['nodes'])
                 self._ce_ratios = numpy.zeros(num_edges, dtype=float)
                 raise RuntimeError('Disabled')
-                idx, vals = self.compute_ce_ratios_algebraic()
+                idx, vals = self._compute_ce_ratios_algebraic()
                 numpy.add.at(self._ce_ratios, idx, vals)
                 self.circumcenter_face_distances = None
         return self._ce_ratios
 
-    def mark_default_subdomains(self):
-        self.subdomains = {}
-        self.subdomains['everywhere'] = {
-                'vertices': range(len(self.node_coords)),
-                # 'edges': range(len(self.edges['nodes'])),
-                'faces': range(len(self.faces['nodes']))
-                }
+    def mark_boundary(self):
+        if 'faces' not in self.cells:
+            self.create_cell_face_relationships()
 
         # Get vertices on the boundary faces
         boundary_faces = numpy.where(self.is_boundary_face)[0]
@@ -116,7 +140,6 @@ class MeshTetra(_base_mesh):
                 # 'edges': boundary_edges,
                 'faces': boundary_faces
                 }
-
         return
 
     def create_cell_face_relationships(self):
@@ -220,7 +243,7 @@ class MeshTetra(_base_mesh):
         b_cross_c = X_cross_Y[:, 1, :]
         c_cross_a = X_cross_Y[:, 2, :]
 
-        # Compute scalar triple product <a, b, c> = <b, c, a> = <c, a, b>.
+        # Compute scalar triple product without using cross.
         # The product is highly symmetric, so it's a little funny if there
         # should be no single einsum to compute it; see
         # <http://stackoverflow.com/q/42158228/353337>.
@@ -242,7 +265,7 @@ class MeshTetra(_base_mesh):
 # something to do with it?
 # "triple product": Project one edge onto the plane spanned by the two others.
 #
-#     def compute_ce_ratios_algebraic(self):
+#     def _compute_ce_ratios_algebraic(self):
 #         # Precompute edges.
 #         edges = \
 #             self.node_coords[self.edges['nodes'][:, 1]] - \
@@ -286,7 +309,7 @@ class MeshTetra(_base_mesh):
 #
 #         return self.cells['edges'], sol
 
-    def compute_ce_ratios_geometric(self):
+    def _compute_ce_ratios_geometric(self):
 
         face_areas, face_ce_ratios = \
             compute_tri_areas_and_ce_ratios(self.ei_dot_ej)
@@ -367,11 +390,11 @@ class MeshTetra(_base_mesh):
         if self._control_volumes is None:
             #   1/3. * (0.5 * edge_length) * covolume
             # = 1/6 * edge_length**2 * ce_ratio_edge_ratio
-            ce = self.compute_ce_ratios_geometric()
+            ce = self.get_ce_ratios()
             v = self.ei_dot_ei * ce / 6.0
             # TODO explicitly sum up contributions per cell first
             vals = numpy.array([v, v])
-            idx = self.node_edge_face_cells
+            idx = self.idx_hierarchy
             self._control_volumes = \
                 numpy.zeros(len(self.node_coords), dtype=float)
             numpy.add.at(self._control_volumes, idx, vals)
@@ -382,7 +405,7 @@ class MeshTetra(_base_mesh):
         # the sum of the signed distances between face circumcenter and
         # tetrahedron circumcenter is negative.
         if self.circumcenter_face_distances is None:
-            self.compute_ce_ratios_geometric()
+            self._compute_ce_ratios_geometric()
 
         if 'faces' not in self.cells:
             self.create_cell_face_relationships()

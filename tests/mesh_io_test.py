@@ -17,10 +17,8 @@ def test_io_2d():
 
     assert mesh.num_delaunay_violations() == 0
 
-    mesh.show()
+    mesh.plot()
     mesh.show_vertex(0)
-    # import matplotlib.pyplot as plt
-    # plt.show()
 
     _, fname = tempfile.mkstemp(suffix='.msh')
     mesh.write(fname)

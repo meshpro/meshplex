@@ -12,7 +12,7 @@ __all__ = ['MeshTri']
 
 def _column_stack(a, b):
     # http://stackoverflow.com/a/39638773/353337
-    return numpy.concatenate([a[:, None], b[:, None]], axis=1)
+    return numpy.stack([a, b], axis=1)
 
 
 def lloyd_smoothing(
@@ -66,11 +66,12 @@ def lloyd_smoothing(
 
     def write(mesh, k):
         if output_filetype == 'png':
-            fig = mesh.show(
-                    show_ce_ratios=False,
+            fig = mesh.plot(
+                    show_coedges=False,
                     show_centroids=False,
                     show_axes=False
                     )
+            fig.suptitle('step %d' % k, fontsize=20)
             plt.savefig('lloyd%04d.png' % k)
             plt.close(fig)
         else:
@@ -83,10 +84,6 @@ def lloyd_smoothing(
     boundary_verts = mesh.get_boundary_vertices()
 
     max_move = tol + 1
-
-    # from matplotlib import pyplot as plt
-    # mesh.show()
-    # plt.show()
 
     k = 0
     for k in range(max_steps):
@@ -510,6 +507,13 @@ class MeshTri(_base_mesh):
     def __init__(self, nodes, cells, flat_cell_correction=None):
         '''Initialization.
         '''
+        # Sort cells and nodes, first every row, then the rows themselves. This
+        # helps in many downstream applications, e.g., when constructing linear
+        # systems with the cells/edges. (When converting to CSR format, the
+        # I/J entries must be sorted.)
+        cells.sort(axis=1)
+        cells = cells[cells[:, 0].argsort()]
+
         super(MeshTri, self).__init__(nodes, cells)
 
         # Assert that all vertices are used.
@@ -535,12 +539,13 @@ class MeshTri(_base_mesh):
         self._surface_areas = None
         self.edges = None
         self.cell_circumcenters = None
+        self.subdomains = {}
 
         # compute data
-        # Create the cells->edges->nodes hierarchy. Make sure that the k-th
-        # edge is opposite of the k-th point in the triangle.
+        # Create the idx_hierarchy (nodes->edges->cells). Make sure that the
+        # k-th edge is opposite of the k-th point in the triangle.
         nds = self.cells['nodes'].T
-        self.node_edge_cells = numpy.stack([
+        self.idx_hierarchy = numpy.stack([
             nds[[1, 2]],
             nds[[2, 0]],
             nds[[0, 1]],
@@ -548,12 +553,14 @@ class MeshTri(_base_mesh):
 
         # Create the corresponding edge coordinates.
         self.half_edge_coords = \
-            self.node_coords[self.node_edge_cells[1]] - \
-            self.node_coords[self.node_edge_cells[0]]
+            self.node_coords[self.idx_hierarchy[1]] - \
+            self.node_coords[self.idx_hierarchy[0]]
 
-        e_shift1 = self.half_edge_coords[[1, 2, 0]]
-        e_shift2 = self.half_edge_coords[[2, 0, 1]]
-        self.ei_dot_ej = numpy.einsum('ijk, ijk->ij', e_shift1, e_shift2)
+        self.ei_dot_ej = numpy.einsum(
+                'ijk, ijk->ij',
+                self.half_edge_coords[[1, 2, 0]],
+                self.half_edge_coords[[2, 0, 1]]
+                )
 
         e = self.half_edge_coords
         self.ei_dot_ei = numpy.einsum('ijk, ijk->ij', e, e)
@@ -561,7 +568,10 @@ class MeshTri(_base_mesh):
         self.cell_volumes, self.ce_ratios_per_half_edge = \
             compute_tri_areas_and_ce_ratios(self.ei_dot_ej)
 
-        if flat_cell_correction is not None:
+        if flat_cell_correction is None:
+            self.fcc = None
+            self.regular_cells = numpy.s_[:]
+        else:
             assert flat_cell_correction in ['full', 'boundary']
             if flat_cell_correction == 'full':
                 # All cells with a negative c/e ratio are redone.
@@ -590,14 +600,11 @@ class MeshTri(_base_mesh):
                     )
             self.ce_ratios_per_half_edge[:, self.fcc_cells] = \
                 self.fcc.get_ce_ratios().T
-        else:
-            self.fcc = None
-            self.regular_cells = range(len(self.cells['nodes']))
 
         return
 
     def get_boundary_vertices(self):
-        self.mark_default_subdomains()
+        self.mark_boundary()
         return self.subdomains['boundary']['vertices']
 
     def get_ce_ratios(self, cell_ids=None):
@@ -639,6 +646,7 @@ class MeshTri(_base_mesh):
             self._control_volumes = numpy.zeros(len(self.node_coords))
             for d in control_volume_data:
                 numpy.add.at(self._control_volumes, d[0], d[1])
+
         return self._control_volumes
 
     def get_surface_areas(self):
@@ -684,16 +692,9 @@ class MeshTri(_base_mesh):
             self._cv_centroids /= self.get_control_volumes()[:, None]
         return self._cv_centroids
 
-    def mark_default_subdomains(self):
-        if 'edges' not in self.cells:
+    def mark_boundary(self):
+        if self.edges is None:
             self.create_edges()
-
-        self.subdomains = {}
-        self.subdomains['everywhere'] = {
-                'vertices': range(len(self.node_coords)),
-                'edges': range(len(self.edges['nodes'])),
-                'cells': range(len(self.cells['nodes'])),
-                }
 
         # Get vertices on the boundary edges
         boundary_edges = numpy.where(self.is_boundary_edge)[0]
@@ -756,7 +757,8 @@ class MeshTri(_base_mesh):
         relatively expensive to compute and hardly ever necessary.
         '''
         num_cells = len(self.cells['nodes'])
-        edge_cells = [[] for k in range(len(self.edges['nodes']))]
+        num_edges = len(self.edges['nodes'])
+        edge_cells = [[] for k in range(num_edges)]
         for k, edge_id in enumerate(self._inv):
             edge_cells[edge_id].append(k % num_cells)
         return edge_cells
@@ -793,7 +795,7 @@ class MeshTri(_base_mesh):
         # area of the triangle.
         right_triangle_vols = self._get_control_volume_contribs()[:, cell_ids]
 
-        node_edges = self.node_edge_cells[..., cell_ids]
+        node_edges = self.idx_hierarchy[..., cell_ids]
 
         corner = self.node_coords[node_edges]
         edge_midpoints = 0.5 * (corner[0] + corner[1])
@@ -931,7 +933,7 @@ class MeshTri(_base_mesh):
         # Compute the projection of A on the edge at each edge midpoint.
         # Take the average of `vector_field` at the endpoints to get the
         # approximate value at the edge midpoint.
-        A = 0.5 * numpy.sum(vector_field[self.node_edge_cells], axis=0)
+        A = 0.5 * numpy.sum(vector_field[self.idx_hierarchy], axis=0)
         # sum of <edge, A> for all three edges
         sum_edge_dot_A = numpy.einsum('ijk, ijk->j', self.half_edge_coords, A)
 
@@ -958,9 +960,15 @@ class MeshTri(_base_mesh):
         ce_ratios = self.get_ce_ratios_per_edge()
         return numpy.sum(ce_ratios[~self.is_boundary_edge] < 0.0)
 
-    def show(
+    def show(self, *args, **kwargs):
+        from matplotlib import pyplot as plt
+        self.plot(*args, **kwargs)
+        plt.show()
+        return
+
+    def plot(
             self,
-            show_ce_ratios=True,
+            show_coedges=True,
             show_centroids=True,
             mesh_color='k',
             boundary_edge_color=None,
@@ -968,9 +976,6 @@ class MeshTri(_base_mesh):
             show_axes=True
             ):
         '''Show the mesh using matplotlib.
-
-        :param show_ce_ratios: If true, show all ce_ratios of the mesh, too.
-        :type show_ce_ratios: bool, optional
         '''
         # Importing matplotlib takes a while, so don't do that at the header.
         from matplotlib import pyplot as plt
@@ -1002,6 +1007,9 @@ class MeshTri(_base_mesh):
 
         new_red = '#d62728'  # mpl 2.0 default red
 
+        if self.edges is None:
+            self.create_edges()
+
         # Get edges, cut off z-component.
         e = self.node_coords[self.edges['nodes']][:, :, :2]
         # Plot regular edges, mark those with negative ce-ratio red.
@@ -1014,7 +1022,7 @@ class MeshTri(_base_mesh):
         line_segments1 = LineCollection(e[neg], color=new_red)
         ax.add_collection(line_segments1)
 
-        if show_ce_ratios:
+        if show_coedges:
             # Connect all cell circumcenters with the edge midpoints
             cc = self.get_cell_circumcenters()
 
