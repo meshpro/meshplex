@@ -12,7 +12,7 @@ __all__ = ['MeshTri']
 
 def _column_stack(a, b):
     # http://stackoverflow.com/a/39638773/353337
-    return numpy.concatenate([a[:, None], b[:, None]], axis=1)
+    return numpy.stack([a, b], axis=1)
 
 
 def lloyd_smoothing(
@@ -66,7 +66,7 @@ def lloyd_smoothing(
 
     def write(mesh, k):
         if output_filetype == 'png':
-            fig = mesh.show(
+            fig = mesh.plot(
                     show_ce_ratios=False,
                     show_centroids=False,
                     show_axes=False
@@ -1005,6 +1005,9 @@ class MeshTri(_base_mesh):
         ax.set_ylim(ymin, ymax)
 
         new_red = '#d62728'  # mpl 2.0 default red
+
+        if self.edges is None:
+            self.create_edges()
 
         # Get edges, cut off z-component.
         e = self.node_coords[self.edges['nodes']][:, :, :2]
