@@ -105,12 +105,12 @@ class MeshTetra(_base_mesh):
         if self._ce_ratios is None:
             assert self._mode in ['geometric', 'algebraic']
             if self._mode == 'geometric':
-                return self.compute_ce_ratios_geometric()
+                self._ce_ratios = self._compute_ce_ratios_geometric()
             else:  # 'algebraic'
                 num_edges = len(self.edges['nodes'])
                 self._ce_ratios = numpy.zeros(num_edges, dtype=float)
                 raise RuntimeError('Disabled')
-                idx, vals = self.compute_ce_ratios_algebraic()
+                idx, vals = self._compute_ce_ratios_algebraic()
                 numpy.add.at(self._ce_ratios, idx, vals)
                 self.circumcenter_face_distances = None
         return self._ce_ratios
@@ -258,7 +258,7 @@ class MeshTetra(_base_mesh):
 # something to do with it?
 # "triple product": Project one edge onto the plane spanned by the two others.
 #
-#     def compute_ce_ratios_algebraic(self):
+#     def _compute_ce_ratios_algebraic(self):
 #         # Precompute edges.
 #         edges = \
 #             self.node_coords[self.edges['nodes'][:, 1]] - \
@@ -302,7 +302,7 @@ class MeshTetra(_base_mesh):
 #
 #         return self.cells['edges'], sol
 
-    def compute_ce_ratios_geometric(self):
+    def _compute_ce_ratios_geometric(self):
 
         face_areas, face_ce_ratios = \
             compute_tri_areas_and_ce_ratios(self.ei_dot_ej)
@@ -383,7 +383,7 @@ class MeshTetra(_base_mesh):
         if self._control_volumes is None:
             #   1/3. * (0.5 * edge_length) * covolume
             # = 1/6 * edge_length**2 * ce_ratio_edge_ratio
-            ce = self.compute_ce_ratios_geometric()
+            ce = self.get_ce_ratios()
             v = self.ei_dot_ei * ce / 6.0
             # TODO explicitly sum up contributions per cell first
             vals = numpy.array([v, v])
@@ -398,7 +398,7 @@ class MeshTetra(_base_mesh):
         # the sum of the signed distances between face circumcenter and
         # tetrahedron circumcenter is negative.
         if self.circumcenter_face_distances is None:
-            self.compute_ce_ratios_geometric()
+            self._compute_ce_ratios_geometric()
 
         if 'faces' not in self.cells:
             self.create_cell_face_relationships()

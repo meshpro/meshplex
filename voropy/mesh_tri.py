@@ -573,7 +573,7 @@ class MeshTri(_base_mesh):
 
         if flat_cell_correction is None:
             self.fcc = None
-            self.regular_cells = None
+            self.regular_cells = numpy.s_[:]
         else:
             assert flat_cell_correction in ['full', 'boundary']
             if flat_cell_correction == 'full':
