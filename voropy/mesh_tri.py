@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 #
+from __future__ import print_function
 import numpy
 from voropy.base import \
         _base_mesh, \
@@ -40,7 +41,7 @@ def lloyd_smoothing(
             ce_ratios = mesh.get_ce_ratios_per_edge()
         return mesh
 
-    def print_stats(mesh):
+    def gather_stats(mesh):
         # The cosines of the angles are the negative dot products of
         # the normalized edges adjacent to the angle.
         norms = numpy.sqrt(mesh.ei_dot_ei)
@@ -56,12 +57,26 @@ def lloyd_smoothing(
             angles,
             bins=numpy.linspace(0.0, 180.0, num=19, endpoint=True)
             )
+        return hist, bin_edges
+
+    def print_stats(data_list):
+        # make sure that all data sets have the same length
+        n = len(data_list[0][0])
+        for data in data_list:
+            assert len(data[0]) == n
+
+        # find largest hist value
+        max_val = max([max(data[0]) for data in data_list])
+        digits_max_val = len(str(max_val))
+
         print('  angles (in degrees):\n')
-        for i in range(len(hist)):
-            print(
-                '         %3d < angle < %3d:   %d'
-                % (bin_edges[i], bin_edges[i+1], hist[i])
-                )
+        for i in range(n):
+            for data in data_list:
+                hist, bin_edges = data
+                tple = (bin_edges[i], bin_edges[i+1], hist[i])
+                fmt = '         %%3d < angle < %%3d:   %%%dd' % digits_max_val
+                print(fmt % tple, end='')
+            print('\n', end='')
         return
 
     def write(mesh, k):
@@ -84,6 +99,8 @@ def lloyd_smoothing(
     boundary_verts = mesh.get_boundary_vertices()
 
     max_move = tol + 1
+
+    initial_stats = gather_stats(mesh)
 
     k = 0
     for k in range(max_steps):
@@ -111,14 +128,17 @@ def lloyd_smoothing(
         if verbose:
             print('\nstep: %d' % k)
             print('  maximum move: %.15e' % max_move)
-            print_stats(mesh)
+            print_stats([gather_stats(mesh)])
 
     # Flip one last time.
     mesh = flip_until_delaunay(mesh)
 
     if verbose:
-        print('\nFinal:')
-        print_stats(mesh)
+        print('\nFinal:' + 35*' ' + 'Initial:')
+        print_stats([
+            gather_stats(mesh),
+            initial_stats
+            ])
 
     if output_filetype:
         write(mesh, k+1)
