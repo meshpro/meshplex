@@ -565,11 +565,12 @@ class MeshTri(_base_mesh):
         # Create the idx_hierarchy (nodes->edges->cells). Make sure that the
         # k-th edge is opposite of the k-th point in the triangle.
         nds = self.cells['nodes'].T
-        self.idx_hierarchy = numpy.stack([
-            nds[[1, 2]],
-            nds[[2, 0]],
-            nds[[0, 1]],
-            ], axis=1)
+        idx = numpy.array([
+            [1, 2],
+            [2, 0],
+            [0, 1],
+            ]).T
+        self.idx_hierarchy = nds[idx]
 
         # Create the corresponding edge coordinates.
         self.half_edge_coords = \
