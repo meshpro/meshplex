@@ -77,21 +77,23 @@ class MeshTetra(_base_mesh):
         # Arrange the cell_face_nodes such that node k is opposite of face k in
         # each cell.
         nds = self.cells['nodes'].T
-        self.node_face_cells = numpy.stack([
-            nds[[1, 2, 3]],
-            nds[[2, 3, 0]],
-            nds[[3, 0, 1]],
-            nds[[0, 1, 2]],
-            ], axis=1)
+        idx = numpy.array([
+            [1, 2, 3],
+            [2, 3, 0],
+            [3, 0, 1],
+            [0, 1, 2],
+            ]).T
+        self.node_face_cells = nds[idx]
 
         # Arrange the idx_hierarchy (node->edge->face->cells) such that node k
         # is opposite of edge k in each face.
-        self.idx_hierarchy = numpy.stack([
-            numpy.stack([nds[[2, 3]], nds[[3, 1]], nds[[1, 2]]], axis=1),
-            numpy.stack([nds[[3, 0]], nds[[0, 2]], nds[[2, 3]]], axis=1),
-            numpy.stack([nds[[0, 1]], nds[[1, 3]], nds[[3, 0]]], axis=1),
-            numpy.stack([nds[[1, 2]], nds[[2, 0]], nds[[0, 1]]], axis=1),
-            ], axis=2)
+        idx = numpy.array([
+            [[2, 3], [3, 1], [1, 2]],
+            [[3, 0], [0, 2], [2, 3]],
+            [[0, 1], [1, 3], [3, 0]],
+            [[1, 2], [2, 0], [0, 1]],
+            ]).T
+        self.idx_hierarchy = nds[idx]
 
         # create ei_dot_ei, ei_dot_ej
         self.edge_coords = \
@@ -395,13 +397,12 @@ class MeshTetra(_base_mesh):
             # Explicitly sum up contributions per cell first.
             # This is based on
             #
-            # self.idx_hierarchy = numpy.stack([
-            #     numpy.stack([nds[[2, 3]], nds[[3, 1]], nds[[1, 2]]], axis=1),
-            #     numpy.stack([nds[[3, 0]], nds[[0, 2]], nds[[2, 3]]], axis=1),
-            #     numpy.stack([nds[[0, 1]], nds[[1, 3]], nds[[3, 0]]], axis=1),
-            #     numpy.stack([nds[[1, 2]], nds[[2, 0]], nds[[0, 1]]], axis=1),
-            #     ], axis=2)
-            #
+            #     idx = numpy.array([
+            #         [[2, 3], [3, 1], [1, 2]],
+            #         [[3, 0], [0, 2], [2, 3]],
+            #         [[0, 1], [1, 3], [3, 0]],
+            #         [[1, 2], [2, 0], [0, 1]],
+            #         ]).T
             #
             vals = numpy.array([
                 v[0, 1] + v[1, 1] + v[0, 2] + v[2, 2] + v[1, 3] + v[2, 3],
