@@ -392,19 +392,18 @@ class MeshTetra(_base_mesh):
         if self._control_volumes is None:
             #   1/3. * (0.5 * edge_length) * covolume
             # = 1/6 * edge_length**2 * ce_ratio_edge_ratio
-            ce = self.get_ce_ratios()
-            v = self.ei_dot_ei * ce / 6.0
-            # Explicitly sum up contributions per cell first.
+            v = self.ei_dot_ei * self.get_ce_ratios() / 6.0
+            # Explicitly sum up contributions per cell first. Makes
+            # numpy.add.at faster.
+            # For every node k (range(4)), check for which edges k appears in
+            # local_idx, and sum() up the v's from there.
             idx = self.local_idx
             vals = numpy.array([
-                sum([
-                    v[i[0], i[1]]
-                    for i in numpy.array(numpy.where(idx == k)[1:]).T
-                    ])
+                sum([v[i, j] for i, j in zip(*numpy.where(idx == k)[1:])])
                 for k in range(4)
                 ]).T
-            self._control_volumes = \
-                numpy.zeros(len(self.node_coords), dtype=float)
+            #
+            self._control_volumes = numpy.zeros(len(self.node_coords))
             numpy.add.at(self._control_volumes, self.cells['nodes'], vals)
         return self._control_volumes
 
