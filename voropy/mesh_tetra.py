@@ -87,13 +87,13 @@ class MeshTetra(_base_mesh):
 
         # Arrange the idx_hierarchy (node->edge->face->cells) such that node k
         # is opposite of edge k in each face.
-        idx = numpy.array([
+        self.local_idx = numpy.array([
             [[2, 3], [3, 1], [1, 2]],
             [[3, 0], [0, 2], [2, 3]],
             [[0, 1], [1, 3], [3, 0]],
             [[1, 2], [2, 0], [0, 1]],
             ]).T
-        self.idx_hierarchy = nds[idx]
+        self.idx_hierarchy = nds[self.local_idx]
 
         # create ei_dot_ei, ei_dot_ej
         self.edge_coords = \
@@ -395,20 +395,13 @@ class MeshTetra(_base_mesh):
             ce = self.get_ce_ratios()
             v = self.ei_dot_ei * ce / 6.0
             # Explicitly sum up contributions per cell first.
-            # This is based on
-            #
-            #     idx = numpy.array([
-            #         [[2, 3], [3, 1], [1, 2]],
-            #         [[3, 0], [0, 2], [2, 3]],
-            #         [[0, 1], [1, 3], [3, 0]],
-            #         [[1, 2], [2, 0], [0, 1]],
-            #         ]).T
-            #
+            idx = self.local_idx
             vals = numpy.array([
-                v[0, 1] + v[1, 1] + v[0, 2] + v[2, 2] + v[1, 3] + v[2, 3],
-                v[1, 0] + v[2, 0] + v[0, 2] + v[1, 2] + v[0, 3] + v[2, 3],
-                v[0, 0] + v[2, 0] + v[1, 1] + v[2, 1] + v[0, 3] + v[1, 3],
-                v[0, 0] + v[1, 0] + v[0, 1] + v[2, 1] + v[1, 2] + v[2, 2],
+                sum([
+                    v[i[0], i[1]]
+                    for i in numpy.array(numpy.where(idx == k)[1:]).T
+                    ])
+                for k in range(4)
                 ]).T
             self._control_volumes = \
                 numpy.zeros(len(self.node_coords), dtype=float)
