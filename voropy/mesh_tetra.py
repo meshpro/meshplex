@@ -392,12 +392,26 @@ class MeshTetra(_base_mesh):
             # = 1/6 * edge_length**2 * ce_ratio_edge_ratio
             ce = self.get_ce_ratios()
             v = self.ei_dot_ei * ce / 6.0
-            # TODO explicitly sum up contributions per cell first
-            vals = numpy.array([v, v])
-            idx = self.idx_hierarchy
+            # Explicitly sum up contributions per cell first.
+            # This is based on
+            #
+            # self.idx_hierarchy = numpy.stack([
+            #     numpy.stack([nds[[2, 3]], nds[[3, 1]], nds[[1, 2]]], axis=1),
+            #     numpy.stack([nds[[3, 0]], nds[[0, 2]], nds[[2, 3]]], axis=1),
+            #     numpy.stack([nds[[0, 1]], nds[[1, 3]], nds[[3, 0]]], axis=1),
+            #     numpy.stack([nds[[1, 2]], nds[[2, 0]], nds[[0, 1]]], axis=1),
+            #     ], axis=2)
+            #
+            #
+            vals = numpy.array([
+                v[0, 1] + v[1, 1] + v[0, 2] + v[2, 2] + v[1, 3] + v[2, 3],
+                v[1, 0] + v[2, 0] + v[0, 2] + v[1, 2] + v[0, 3] + v[2, 3],
+                v[0, 0] + v[2, 0] + v[1, 1] + v[2, 1] + v[0, 3] + v[1, 3],
+                v[0, 0] + v[1, 0] + v[0, 1] + v[2, 1] + v[1, 2] + v[2, 2],
+                ]).T
             self._control_volumes = \
                 numpy.zeros(len(self.node_coords), dtype=float)
-            numpy.add.at(self._control_volumes, idx, vals)
+            numpy.add.at(self._control_volumes, self.cells['nodes'], vals)
         return self._control_volumes
 
     def num_delaunay_violations(self):
