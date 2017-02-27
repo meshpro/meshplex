@@ -568,11 +568,11 @@ class MeshTri(_base_mesh):
             [1, 2],
             [2, 0],
             [0, 1],
-            ])
+            ]).T
         # Map idx back to the nodes. This is useful if quantities which are in
         # idx shape need to be added up into nodes (e.g., equation system rhs).
         nds = self.cells['nodes'].T
-        self.idx_hierarchy = nds[self.local_idx.T]
+        self.idx_hierarchy = nds[self.local_idx]
 
         # The inverted local index.
         # This array specifies for each of the three nodes which edge endpoints
@@ -581,7 +581,7 @@ class MeshTri(_base_mesh):
         #    [[(1, 1), (0, 2)], [(0, 0), (1, 2)], [(1, 0), (0, 1)]]
         #
         self.local_idx_inv = [
-            [(j, i) for i, j in zip(*numpy.where(self.local_idx == k))]
+            [tuple(i) for i in zip(*numpy.where(self.local_idx == k))]
             for k in range(3)
             ]
 
@@ -667,7 +667,7 @@ class MeshTri(_base_mesh):
             # lighter.
             ids = self.cells['nodes'][self.regular_cells].T
             vals = numpy.array([
-                sum([v[i] for i in numpy.where(self.local_idx == k)[0]])
+                sum([v[i] for i in numpy.where(self.local_idx.T == k)[0]])
                 for k in range(3)
                 ])
             control_volume_data = [(ids, vals)]

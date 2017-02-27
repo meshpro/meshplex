@@ -95,6 +95,14 @@ class MeshTetra(_base_mesh):
             ]).T
         self.idx_hierarchy = nds[self.local_idx]
 
+        # The inverted local index.
+        # This array specifies for each of the three nodes which edge endpoints
+        # correspond to it.
+        self.local_idx_inv = [
+            [tuple(i) for i in zip(*numpy.where(self.local_idx == node_idx))]
+            for node_idx in range(4)
+            ]
+
         # create ei_dot_ei, ei_dot_ej
         self.edge_coords = \
             self.node_coords[self.idx_hierarchy[1]] - \

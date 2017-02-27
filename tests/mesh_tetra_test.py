@@ -29,6 +29,22 @@ def test_regular_tet0(a):
     # from matplotlib import pyplot as plt
     # plt.show()
 
+    ref_local_idx = [
+        [[2, 3], [3, 1], [1, 2]],
+        [[3, 0], [0, 2], [2, 3]],
+        [[0, 1], [1, 3], [3, 0]],
+        [[1, 2], [2, 0], [0, 1]],
+        ]
+    assert (mesh.local_idx.T == ref_local_idx).all()
+
+    ref_local_idx_inv = [
+        [(0, 0, 2), (0, 1, 1), (0, 2, 3), (1, 0, 1), (1, 1, 3), (1, 2, 2)],
+        [(0, 0, 3), (0, 1, 2), (0, 2, 0), (1, 0, 2), (1, 1, 0), (1, 2, 3)],
+        [(0, 0, 0), (0, 1, 3), (0, 2, 1), (1, 0, 3), (1, 1, 1), (1, 2, 0)],
+        [(0, 0, 1), (0, 1, 0), (0, 2, 2), (1, 0, 0), (1, 1, 2), (1, 2, 1)],
+        ]
+    assert mesh.local_idx_inv == ref_local_idx_inv
+
     tol = 1.0e-14
 
     z = a / numpy.sqrt(24.0)
