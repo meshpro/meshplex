@@ -365,19 +365,25 @@ class MeshTetra(_base_mesh):
 
         delta = (
             # - alpha * x2_dot_x2
-            e0_dot_e0 * e1_dot_e1 * e2_dot_e2 - e2_dot_e2 * e0_dot_e1**2 +
-            e0_dot_e1 * e1_dot_e2 * e2_dot_e2 - e2_dot_e2 * e1_dot_e1 * e2_dot_e0 +
-            e2_dot_e0 * e0_dot_e1 * e2_dot_e2 - e2_dot_e2 * e1_dot_e2 * e0_dot_e0 +
+            (
+                e0_dot_e0 * e1_dot_e1 - e0_dot_e1**2 +
+                e0_dot_e1 * e1_dot_e2 - e1_dot_e1 * e2_dot_e0 +
+                e2_dot_e0 * e0_dot_e1 - e1_dot_e2 * e0_dot_e0
+            ) * e2_dot_e2 +
             #
             # - beta * x0_dot_x0
-            e0_dot_e1 * e1_dot_e2 * e0_dot_e0 - e0_dot_e0 * e2_dot_e0 * e1_dot_e1 +
-            e1_dot_e1 * e2_dot_e2 * e0_dot_e0 - e0_dot_e0 * e1_dot_e2**2 +
-            e1_dot_e2 * e2_dot_e0 * e0_dot_e0 - e0_dot_e0 * e2_dot_e2 * e0_dot_e1 +
+            (
+                e0_dot_e1 * e1_dot_e2 - e2_dot_e0 * e1_dot_e1 +
+                e1_dot_e1 * e2_dot_e2 - e1_dot_e2**2 +
+                e1_dot_e2 * e2_dot_e0 - e2_dot_e2 * e0_dot_e1
+            ) * e0_dot_e0 +
             #
             # - gamma * x1_dot_x1
-            e2_dot_e0 * e0_dot_e1 * e1_dot_e1 - e1_dot_e1 * e0_dot_e0 * e1_dot_e2 +
-            e1_dot_e2 * e2_dot_e0 * e1_dot_e1 - e1_dot_e1 * e0_dot_e1 * e2_dot_e2 +
-            e0_dot_e0 * e2_dot_e2 * e1_dot_e1 - e1_dot_e1 * e2_dot_e0**2
+            (
+                e2_dot_e0 * e0_dot_e1 - e0_dot_e0 * e1_dot_e2 +
+                e1_dot_e2 * e2_dot_e0 - e0_dot_e1 * e2_dot_e2 +
+                e0_dot_e0 * e2_dot_e2 - e2_dot_e0**2
+            ) * e1_dot_e1
             )
 
         a = (72.0 * self.cell_volumes[None]**2 - delta) / (12.0 * face_areas)
