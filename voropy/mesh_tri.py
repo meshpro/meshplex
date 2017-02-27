@@ -564,13 +564,26 @@ class MeshTri(_base_mesh):
         # compute data
         # Create the idx_hierarchy (nodes->edges->cells). Make sure that the
         # k-th edge is opposite of the k-th point in the triangle.
-        nds = self.cells['nodes'].T
-        idx = numpy.array([
+        self.local_idx = numpy.array([
             [1, 2],
             [2, 0],
             [0, 1],
-            ]).T
-        self.idx_hierarchy = nds[idx]
+            ])
+        # Map idx back to the nodes. This is useful if quantities which are in
+        # idx shape need to be added up into nodes (e.g., equation system rhs).
+        nds = self.cells['nodes'].T
+        self.idx_hierarchy = nds[self.local_idx.T]
+
+        # The inverted local index.
+        # This array specifies for each of the three nodes which edge endpoints
+        # correspond to it.  For the aboe local_idx, this should give
+        #
+        #    [[(1, 1), (0, 2)], [(0, 0), (1, 2)], [(1, 0), (0, 1)]]
+        #
+        self.local_idx_inv = [
+            [(j, i) for i, j in zip(*numpy.where(self.local_idx == k))]
+            for k in range(3)
+            ]
 
         # Create the corresponding edge coordinates.
         self.half_edge_coords = \
@@ -650,14 +663,12 @@ class MeshTri(_base_mesh):
     def get_control_volumes(self):
         if self._control_volumes is None:
             v = self._get_control_volume_contribs()[..., self.regular_cells]
-            # Again, make use of the fact that edge k is opposite of node k in
-            # every cell. Adding the arrays first makes the work for
-            # numpy.add.at lighter.
+            # Summing up the arrays first makes the work for numpy.add.at
+            # lighter.
             ids = self.cells['nodes'][self.regular_cells].T
             vals = numpy.array([
-                v[1] + v[2],
-                v[2] + v[0],
-                v[0] + v[1],
+                sum([v[i] for i in numpy.where(self.local_idx == k)[0]])
+                for k in range(3)
                 ])
             control_volume_data = [(ids, vals)]
             if self.fcc is not None:
