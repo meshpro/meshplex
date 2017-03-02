@@ -26,11 +26,11 @@ def _scalar_triple_product_squared(v1, v2, v3):
     v3_dot_v3 = _my_dot(v3, v3)
 
     return (
-        v3_dot_v3 * v1_dot_v1 * v2_dot_v2
+        v1_dot_v1 * v2_dot_v2 * v3_dot_v3
         + 2 * v1_dot_v2 * v2_dot_v3 * v3_dot_v1
+        - v1_dot_v1 * v2_dot_v3**2
+        - v2_dot_v2 * v3_dot_v1**2
         - v3_dot_v3 * v1_dot_v2**2
-        - v3_dot_v1**2 * v2_dot_v2
-        - v2_dot_v3**2 * v1_dot_v1
         )
 
 
@@ -328,9 +328,12 @@ class MeshTetra(_base_mesh):
         v_op = self.cells['nodes'].T
         v = self.node_face_cells
 
-        e0 = self.node_coords[v[0]] - self.node_coords[v_op]
-        e1 = self.node_coords[v[1]] - self.node_coords[v_op]
-        e2 = self.node_coords[v[2]] - self.node_coords[v_op]
+        e = numpy.array([
+            self.node_coords[v[0]] - self.node_coords[v_op],
+            self.node_coords[v[1]] - self.node_coords[v_op],
+            self.node_coords[v[2]] - self.node_coords[v_op],
+            ])
+        ei_dot_ej = numpy.einsum('ijkl, hjkl->ihjk', e, e)
 
         # This is the reference expression.
         # a = (
@@ -356,41 +359,92 @@ class MeshTetra(_base_mesh):
         # TODO simplify
         # TODO can those perhaps be expressed as dot products of x_ - x_, i.e.,
         #      edges of the considered face
-        e0_dot_e0 = _my_dot(e0, e0)
-        e1_dot_e1 = _my_dot(e1, e1)
-        e2_dot_e2 = _my_dot(e2, e2)
-        e0_dot_e1 = _my_dot(e0, e1)
-        e1_dot_e2 = _my_dot(e1, e2)
-        e2_dot_e0 = _my_dot(e2, e0)
 
-        delta = (
-            # - alpha * x2_dot_x2
-            (
-                e0_dot_e0 * e1_dot_e1 - e0_dot_e1**2 +
-                e0_dot_e1 * e1_dot_e2 - e1_dot_e1 * e2_dot_e0 +
-                e2_dot_e0 * e0_dot_e1 - e1_dot_e2 * e0_dot_e0
-            ) * e2_dot_e2 +
-            #
-            # - beta * x0_dot_x0
-            (
-                e0_dot_e1 * e1_dot_e2 - e2_dot_e0 * e1_dot_e1 +
-                e1_dot_e1 * e2_dot_e2 - e1_dot_e2**2 +
-                e1_dot_e2 * e2_dot_e0 - e2_dot_e2 * e0_dot_e1
-            ) * e0_dot_e0 +
-            #
-            # - gamma * x1_dot_x1
-            (
-                e2_dot_e0 * e0_dot_e1 - e0_dot_e0 * e1_dot_e2 +
-                e1_dot_e2 * e2_dot_e0 - e0_dot_e1 * e2_dot_e2 +
-                e0_dot_e0 * e2_dot_e2 - e2_dot_e0**2
-            ) * e1_dot_e1
+        # delta = (
+        #     # - alpha * x2_dot_x2
+        #     (
+        #         e0_dot_e0 * e1_dot_e1 - e0_dot_e1**2 +
+        #         e0_dot_e1 * e1_dot_e2 - e1_dot_e1 * e2_dot_e0 +
+        #         e2_dot_e0 * e0_dot_e1 - e1_dot_e2 * e0_dot_e0
+        #     ) * e2_dot_e2 +
+        #     #
+        #     # - beta * x0_dot_x0
+        #     (
+        #         e0_dot_e1 * e1_dot_e2 - e2_dot_e0 * e1_dot_e1 +
+        #         e1_dot_e1 * e2_dot_e2 - e1_dot_e2**2 +
+        #         e1_dot_e2 * e2_dot_e0 - e2_dot_e2 * e0_dot_e1
+        #     ) * e0_dot_e0 +
+        #     #
+        #     # - gamma * x1_dot_x1
+        #     (
+        #         e2_dot_e0 * e0_dot_e1 - e0_dot_e0 * e1_dot_e2 +
+        #         e1_dot_e2 * e2_dot_e0 - e0_dot_e1 * e2_dot_e2 +
+        #         e0_dot_e0 * e2_dot_e2 - e2_dot_e0**2
+        #     ) * e1_dot_e1
+        #     )
+
+        # # from _scalar_triple_product_squared
+        # vol2 = (
+        #     + e2_dot_e2 * e0_dot_e0 * e1_dot_e1
+        #     + 2 * e0_dot_e1 * e1_dot_e2 * e2_dot_e0
+        #     - e0_dot_e0 * e1_dot_e2**2
+        #     - e1_dot_e1 * e2_dot_e0**2
+        #     - e2_dot_e2 * e0_dot_e1**2
+        #     )
+
+        # 2*vol2 - delta
+        # zeta = (
+        #     - e2_dot_e2 * e0_dot_e0 * e1_dot_e1
+        #     + 4 * e0_dot_e1 * e1_dot_e2 * e2_dot_e0
+        #     ) - (
+        #     (
+        #         e0_dot_e1 * e1_dot_e2 - e1_dot_e1 * e2_dot_e0 +
+        #         e2_dot_e0 * e0_dot_e1 - e1_dot_e2 * e0_dot_e0 +
+        #         e0_dot_e1**2
+        #     ) * e2_dot_e2 +
+        #     (
+        #         e0_dot_e1 * e1_dot_e2 - e2_dot_e0 * e1_dot_e1 +
+        #         e1_dot_e2 * e2_dot_e0 - e2_dot_e2 * e0_dot_e1 +
+        #         e1_dot_e2**2
+        #     ) * e0_dot_e0 +
+        #     (
+        #         e2_dot_e0 * e0_dot_e1 - e0_dot_e0 * e1_dot_e2 +
+        #         e1_dot_e2 * e2_dot_e0 - e0_dot_e1 * e2_dot_e2 +
+        #         e2_dot_e0**2
+        #     ) * e1_dot_e1
+        #     )
+
+        # zeta2 = \
+        #     + e0_dot_e0 * e1_dot_e1 * e2_dot_e2 \
+        #     - e0_dot_e0 * e1_dot_e1 * e1_dot_e2 \
+        #     + e0_dot_e0 * e1_dot_e2**2 \
+        #     - e0_dot_e0 * e1_dot_e2 * e2_dot_e2
+        # zeta3 = \
+        #     + e0_dot_e0 * e1_dot_e1 * e2_dot_e2 \
+        #     + 3 * e0_dot_e0**2 * e1_dot_e1 \
+        #     - e0_dot_e0 * e1_dot_e1**2 \
+        #     - e0_dot_e0 * e1_dot_e2 * e2_dot_e2
+
+        zeta = (
+            - ei_dot_ej[0, 0] * ei_dot_ej[1, 1] * ei_dot_ej[2, 2]
+            + 4 * ei_dot_ej[0, 1] * ei_dot_ej[1, 2] * ei_dot_ej[2, 0]
+            + (
+                + ei_dot_ej[0, 0] * ei_dot_ej[1, 2]
+                + ei_dot_ej[1, 1] * ei_dot_ej[2, 0]
+                + ei_dot_ej[2, 2] * ei_dot_ej[0, 1]
+            ) * (
+                + ei_dot_ej[0, 0] + ei_dot_ej[1, 1] + ei_dot_ej[2, 2]
+                - ei_dot_ej[0, 1] - ei_dot_ej[1, 2] - ei_dot_ej[2, 0]
+                )
+            - ei_dot_ej[0, 0]**2 * ei_dot_ej[1, 2]
+            - ei_dot_ej[1, 1]**2 * ei_dot_ej[2, 0]
+            - ei_dot_ej[2, 2]**2 * ei_dot_ej[0, 1]
             )
-
-        a = (72.0 * self.cell_volumes[None]**2 - delta) / (12.0 * face_areas)
 
         # Distances of the cell circumcenter to the faces.
         # (shape: 4 x num_cells)
-        self.circumcenter_face_distances = 0.5 * a / self.cell_volumes[None]
+        self.circumcenter_face_distances = \
+            zeta / (24.0 * face_areas) / self.cell_volumes[None]
 
         # Multiply
         s = 0.5 * face_ce_ratios * self.circumcenter_face_distances[None]
