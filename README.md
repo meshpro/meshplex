@@ -46,7 +46,7 @@ voropy comes with a smoothing tool for triangular meshes after
 [Lloyd](https://en.wikipedia.org/wiki/Lloyd's_algorithm) that can dramatically
 improve the quality your mesh. To use, simply type
 ```
-lloyd_smoothing --verbose -t 1.0e-3 pacman.msh out.msh
+mesh_smoothing --verbose -t 1.0e-3 pacman.msh out.msh
 ```
 ![Lloyd's algorithm](https://nschloe.github.io/voropy/lloyd.gif)
 
