@@ -326,9 +326,6 @@ class MeshTetra(_base_mesh):
 
     def _compute_ce_ratios_geometric(self):
 
-        face_areas, face_ce_ratios = \
-            compute_tri_areas_and_ce_ratios(self.ei_dot_ej)
-
         # opposing nodes, faces
         v_op = self.cells['nodes'].T
         v = self.node_face_cells
@@ -376,20 +373,37 @@ class MeshTetra(_base_mesh):
             + ei_dot_ej[5, 4] * ei_dot_ej[3, 4] * ei_dot_ej[3, 5]
             )
 
+        # From base.py, but spelled out here since we can avoid one sqrt when
+        # computing the c/e ratios for the faces.
+        alpha = (
+            + self.ei_dot_ej[2] * self.ei_dot_ej[0]
+            + self.ei_dot_ej[0] * self.ei_dot_ej[1]
+            + self.ei_dot_ej[1] * self.ei_dot_ej[2]
+            )
+        # face_ce_ratios = -self.ei_dot_ej * 0.25 / face_areas[None]
+        face_ce_ratios_div_face_areas = -self.ei_dot_ej / alpha
+
         # sum(self.circumcenter_face_distances * face_areas / 3) = cell_volumes
         # =>
         # cell_volumes = numpy.sqrt(sum(zeta / 24.0))
         self.cell_volumes = numpy.sqrt(numpy.sum(zeta/72.0, axis=0))
 
         # Distances of the cell circumcenter to the faces.
-        # (shape: 4 x num_cells)
+        #
+        # self.circumcenter_face_distances =
+        #    zeta / (24.0 * face_areas) / self.cell_volumes[None]
+        # ce_ratios = \
+        #     0.5 * face_ce_ratios * self.circumcenter_face_distances[None],
+        #
+        # so
+        ce_ratios = \
+            zeta/48.0 * face_ce_ratios_div_face_areas / self.cell_volumes[None]
+
+        face_areas = 0.5 * numpy.sqrt(alpha)
         self.circumcenter_face_distances = \
             zeta / (24.0 * face_areas) / self.cell_volumes[None]
 
-        # Multiply
-        s = 0.5 * face_ce_ratios * self.circumcenter_face_distances[None]
-
-        return s
+        return ce_ratios
 
     def get_cell_circumcenters(self):
         if self._circumcenters is None:
