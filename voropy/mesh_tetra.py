@@ -4,34 +4,9 @@ import numpy
 from voropy.base import \
         _base_mesh, \
         _row_dot, \
-        compute_tri_areas_and_ce_ratios, \
         compute_triangle_circumcenters
 
 __all__ = ['MeshTetra']
-
-
-def _my_dot(a, b):
-    return numpy.einsum('ijk, ijk->ij', a, b)
-
-
-def _scalar_triple_product_squared(v1, v2, v3):
-    # Compute the scalar triple product without the use of the (slow) cross
-    # product; cf. <http://math.stackexchange.com/a/2148866/36678>.
-    v1_dot_v2 = _my_dot(v1, v2)
-    v2_dot_v3 = _my_dot(v2, v3)
-    v3_dot_v1 = _my_dot(v3, v1)
-
-    v1_dot_v1 = _my_dot(v1, v1)
-    v2_dot_v2 = _my_dot(v2, v2)
-    v3_dot_v3 = _my_dot(v3, v3)
-
-    return (
-        v1_dot_v1 * v2_dot_v2 * v3_dot_v3
-        + 2 * v1_dot_v2 * v2_dot_v3 * v3_dot_v1
-        - v1_dot_v1 * v2_dot_v3**2
-        - v2_dot_v2 * v3_dot_v1**2
-        - v3_dot_v3 * v1_dot_v2**2
-        )
 
 
 class MeshTetra(_base_mesh):
@@ -362,15 +337,13 @@ class MeshTetra(_base_mesh):
         #
         # All those dot products can probably be cleaned up good.
         # TODO simplify
-        # TODO can those perhaps be expressed as dot products of x_ - x_, i.e.,
-        #      edges of the considered face
 
         # This expression is from brute_simplify
         zeta = (
             + ei_dot_ej[0, 2] * ei_dot_ej[3, 5] * ei_dot_ej[5, 4]
             + ei_dot_ej[0, 1] * ei_dot_ej[3, 5] * ei_dot_ej[3, 4]
             + ei_dot_ej[1, 2] * ei_dot_ej[3, 4] * ei_dot_ej[4, 5]
-            + ei_dot_ej[5, 4] * ei_dot_ej[3, 4] * ei_dot_ej[3, 5]
+            + self.ei_dot_ej[0] * self.ei_dot_ej[1] * self.ei_dot_ej[2]
             )
 
         # From base.py, but spelled out here since we can avoid one sqrt when
