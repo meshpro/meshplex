@@ -67,11 +67,10 @@ class MeshTetra(_base_mesh):
             'nodes': cells
             }
 
-        self.create_cell_circumcenters_and_volumes()
-
         self._mode = mode
         self._ce_ratios = None
         self._control_volumes = None
+        self._circumcenters = None
         self.subdomains = {}
 
         # Arrange the node_face_cells such that node k is opposite of face k in
@@ -122,6 +121,8 @@ class MeshTetra(_base_mesh):
             # numpy.roll(self.edge_coords, 1, axis=0),
             # numpy.roll(self.edge_coords, 2, axis=0),
             )
+
+        self._compute_ce_ratios_geometric()
 
         return
 
@@ -232,7 +233,7 @@ class MeshTetra(_base_mesh):
 
         return
 
-    def create_cell_circumcenters_and_volumes(self):
+    def _compute_cell_circumcenters(self):
         '''Computes the center of the circumsphere of each cell.
         '''
         cell_coords = self.node_coords[self.cells['nodes']]
@@ -266,14 +267,11 @@ class MeshTetra(_base_mesh):
         # <http://stackoverflow.com/q/42158228/353337>.
         omega = _row_dot(a, b_cross_c)
 
-        self.cell_circumcenters = cell_coords[:, 0, :] + (
+        self._circumcenters = cell_coords[:, 0, :] + (
                 b_cross_c * a_dot_a[:, None] +
                 c_cross_a * b_dot_b[:, None] +
                 a_cross_b * c_dot_c[:, None]
                 ) / (2.0 * omega[:, None])
-
-        # https://en.wikipedia.org/wiki/Tetrahedron#Volume
-        self.cell_volumes = abs(omega) / 6.0
         return
 
 # Question:
@@ -378,6 +376,11 @@ class MeshTetra(_base_mesh):
             + ei_dot_ej[5, 4] * ei_dot_ej[3, 4] * ei_dot_ej[3, 5]
             )
 
+        # sum(self.circumcenter_face_distances * face_areas / 3) = cell_volumes
+        # =>
+        # cell_volumes = numpy.sqrt(sum(zeta / 24.0))
+        self.cell_volumes = numpy.sqrt(numpy.sum(zeta/72.0, axis=0))
+
         # Distances of the cell circumcenter to the faces.
         # (shape: 4 x num_cells)
         self.circumcenter_face_distances = \
@@ -389,7 +392,9 @@ class MeshTetra(_base_mesh):
         return s
 
     def get_cell_circumcenters(self):
-        return self.cell_circumcenters
+        if self._circumcenters is None:
+            self._compute_cell_circumcenters()
+        return self._circumcenters
 
     def get_control_volumes(self):
         '''Compute the control volumes of all nodes in the mesh.
@@ -439,9 +444,12 @@ class MeshTetra(_base_mesh):
         ax = fig.gca(projection='3d')
         plt.axis('equal')
 
+        if self._circumcenters is None:
+            self._compute_cell_circumcenters()
+
         X = self.node_coords
         for cell_id in range(len(self.cells['nodes'])):
-            cc = self.cell_circumcenters[cell_id]
+            cc = self._circumcenters[cell_id]
             #
             x = X[self.node_face_cells[..., [cell_id]]]
             face_ccs = compute_triangle_circumcenters(
@@ -509,7 +517,7 @@ class MeshTetra(_base_mesh):
         # circumcenters
         X = self.node_coords
         for cell_id in adj_cell_ids:
-            cc = self.cell_circumcenters[cell_id]
+            cc = self._circumcenters[cell_id]
             #
             x = X[self.node_face_cells[..., [cell_id]]]
             face_ccs = compute_triangle_circumcenters(
@@ -528,6 +536,6 @@ class MeshTetra(_base_mesh):
                     )
 
         # draw the cell circumcenters
-        cc = self.cell_circumcenters[adj_cell_ids]
+        cc = self._circumcenters[adj_cell_ids]
         ax.plot(cc[:, 0], cc[:, 1], cc[:, 2], 'ro')
         return
