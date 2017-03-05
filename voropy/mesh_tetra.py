@@ -74,7 +74,7 @@ class MeshTetra(_base_mesh):
         self._control_volumes = None
         self.subdomains = {}
 
-        # Arrange the cell_face_nodes such that node k is opposite of face k in
+        # Arrange the node_face_cells such that node k is opposite of face k in
         # each cell.
         nds = self.cells['nodes'].T
         idx = numpy.array([
@@ -85,8 +85,10 @@ class MeshTetra(_base_mesh):
             ]).T
         self.node_face_cells = nds[idx]
 
-        # Arrange the idx_hierarchy (node->edge->face->cells) such that node k
-        # is opposite of edge k in each face.
+        # Arrange the idx_hierarchy (node->edge->face->cells) such that
+        #
+        #   * node k is opposite of edge k in each face,
+        #
         self.local_idx = numpy.array([
             [[2, 3], [3, 1], [1, 2]],
             [[3, 0], [0, 2], [2, 3]],
@@ -112,9 +114,14 @@ class MeshTetra(_base_mesh):
                 self.edge_coords,
                 self.edge_coords
                 )
-        e_shift1 = self.edge_coords[[1, 2, 0]]
-        e_shift2 = self.edge_coords[[2, 0, 1]]
-        self.ei_dot_ej = numpy.einsum('ijkl, ijkl->ijk', e_shift1, e_shift2)
+        self.ei_dot_ej = numpy.einsum(
+            'ijkl, ijkl->ijk',
+            self.edge_coords[[1, 2, 0]],
+            self.edge_coords[[2, 0, 1]]
+            # This is equivalent:
+            # numpy.roll(self.edge_coords, 1, axis=0),
+            # numpy.roll(self.edge_coords, 2, axis=0),
+            )
 
         return
 
