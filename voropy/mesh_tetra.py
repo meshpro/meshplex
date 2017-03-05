@@ -332,6 +332,9 @@ class MeshTetra(_base_mesh):
             self.node_coords[v[0]] - self.node_coords[v_op],
             self.node_coords[v[1]] - self.node_coords[v_op],
             self.node_coords[v[2]] - self.node_coords[v_op],
+            self.node_coords[v[1]] - self.node_coords[v[0]],
+            self.node_coords[v[2]] - self.node_coords[v[1]],
+            self.node_coords[v[0]] - self.node_coords[v[2]],
             ])
         ei_dot_ej = numpy.einsum('ijkl, hjkl->ihjk', e, e)
 
@@ -360,85 +363,12 @@ class MeshTetra(_base_mesh):
         # TODO can those perhaps be expressed as dot products of x_ - x_, i.e.,
         #      edges of the considered face
 
-        # delta = (
-        #     # - alpha * x2_dot_x2
-        #     (
-        #         e0_dot_e0 * e1_dot_e1 - e0_dot_e1**2 +
-        #         e0_dot_e1 * e1_dot_e2 - e1_dot_e1 * e2_dot_e0 +
-        #         e2_dot_e0 * e0_dot_e1 - e1_dot_e2 * e0_dot_e0
-        #     ) * e2_dot_e2 +
-        #     #
-        #     # - beta * x0_dot_x0
-        #     (
-        #         e0_dot_e1 * e1_dot_e2 - e2_dot_e0 * e1_dot_e1 +
-        #         e1_dot_e1 * e2_dot_e2 - e1_dot_e2**2 +
-        #         e1_dot_e2 * e2_dot_e0 - e2_dot_e2 * e0_dot_e1
-        #     ) * e0_dot_e0 +
-        #     #
-        #     # - gamma * x1_dot_x1
-        #     (
-        #         e2_dot_e0 * e0_dot_e1 - e0_dot_e0 * e1_dot_e2 +
-        #         e1_dot_e2 * e2_dot_e0 - e0_dot_e1 * e2_dot_e2 +
-        #         e0_dot_e0 * e2_dot_e2 - e2_dot_e0**2
-        #     ) * e1_dot_e1
-        #     )
-
-        # # from _scalar_triple_product_squared
-        # vol2 = (
-        #     + e2_dot_e2 * e0_dot_e0 * e1_dot_e1
-        #     + 2 * e0_dot_e1 * e1_dot_e2 * e2_dot_e0
-        #     - e0_dot_e0 * e1_dot_e2**2
-        #     - e1_dot_e1 * e2_dot_e0**2
-        #     - e2_dot_e2 * e0_dot_e1**2
-        #     )
-
-        # 2*vol2 - delta
-        # zeta = (
-        #     - e2_dot_e2 * e0_dot_e0 * e1_dot_e1
-        #     + 4 * e0_dot_e1 * e1_dot_e2 * e2_dot_e0
-        #     ) - (
-        #     (
-        #         e0_dot_e1 * e1_dot_e2 - e1_dot_e1 * e2_dot_e0 +
-        #         e2_dot_e0 * e0_dot_e1 - e1_dot_e2 * e0_dot_e0 +
-        #         e0_dot_e1**2
-        #     ) * e2_dot_e2 +
-        #     (
-        #         e0_dot_e1 * e1_dot_e2 - e2_dot_e0 * e1_dot_e1 +
-        #         e1_dot_e2 * e2_dot_e0 - e2_dot_e2 * e0_dot_e1 +
-        #         e1_dot_e2**2
-        #     ) * e0_dot_e0 +
-        #     (
-        #         e2_dot_e0 * e0_dot_e1 - e0_dot_e0 * e1_dot_e2 +
-        #         e1_dot_e2 * e2_dot_e0 - e0_dot_e1 * e2_dot_e2 +
-        #         e2_dot_e0**2
-        #     ) * e1_dot_e1
-        #     )
-
-        # zeta2 = \
-        #     + e0_dot_e0 * e1_dot_e1 * e2_dot_e2 \
-        #     - e0_dot_e0 * e1_dot_e1 * e1_dot_e2 \
-        #     + e0_dot_e0 * e1_dot_e2**2 \
-        #     - e0_dot_e0 * e1_dot_e2 * e2_dot_e2
-        # zeta3 = \
-        #     + e0_dot_e0 * e1_dot_e1 * e2_dot_e2 \
-        #     + 3 * e0_dot_e0**2 * e1_dot_e1 \
-        #     - e0_dot_e0 * e1_dot_e1**2 \
-        #     - e0_dot_e0 * e1_dot_e2 * e2_dot_e2
-
+        # This expression is from brute_simplify
         zeta = (
-            - ei_dot_ej[0, 0] * ei_dot_ej[1, 1] * ei_dot_ej[2, 2]
-            + 4 * ei_dot_ej[0, 1] * ei_dot_ej[1, 2] * ei_dot_ej[2, 0]
-            + (
-                + ei_dot_ej[0, 0] * ei_dot_ej[1, 2]
-                + ei_dot_ej[1, 1] * ei_dot_ej[2, 0]
-                + ei_dot_ej[2, 2] * ei_dot_ej[0, 1]
-            ) * (
-                + ei_dot_ej[0, 0] + ei_dot_ej[1, 1] + ei_dot_ej[2, 2]
-                - ei_dot_ej[0, 1] - ei_dot_ej[1, 2] - ei_dot_ej[2, 0]
-                )
-            - ei_dot_ej[0, 0]**2 * ei_dot_ej[1, 2]
-            - ei_dot_ej[1, 1]**2 * ei_dot_ej[2, 0]
-            - ei_dot_ej[2, 2]**2 * ei_dot_ej[0, 1]
+            + ei_dot_ej[0, 2] * ei_dot_ej[3, 5] * ei_dot_ej[5, 4]
+            + ei_dot_ej[0, 1] * ei_dot_ej[3, 5] * ei_dot_ej[3, 4]
+            + ei_dot_ej[1, 2] * ei_dot_ej[3, 4] * ei_dot_ej[4, 5]
+            + ei_dot_ej[5, 4] * ei_dot_ej[3, 4] * ei_dot_ej[3, 5]
             )
 
         # Distances of the cell circumcenter to the faces.
