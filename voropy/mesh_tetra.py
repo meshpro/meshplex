@@ -3,7 +3,6 @@
 import numpy
 from voropy.base import \
         _base_mesh, \
-        _row_dot, \
         compute_triangle_circumcenters
 
 __all__ = ['MeshTetra']
@@ -217,43 +216,33 @@ class MeshTetra(_base_mesh):
     def _compute_cell_circumcenters(self):
         '''Computes the center of the circumsphere of each cell.
         '''
-        cell_coords = self.node_coords[self.cells['nodes']]
+        # Just like for triangular cells, tetrahedron circumcenters are most
+        # easily computed with the quadrilateral coordinates available.
+        # Luckily, we have the circumcenter-face distances (cfd):
+        #
+        #   CC = (
+        #       + cfd[0] * face_area[0] / sum(cfd*face_area) * X[0]
+        #       + cfd[1] * face_area[1] / sum(cfd*face_area) * X[1]
+        #       + cfd[2] * face_area[2] / sum(cfd*face_area) * X[2]
+        #       + cfd[3] * face_area[3] / sum(cfd*face_area) * X[3]
+        #       )
+        #
+        # (Compare with
+        # <https://en.wikipedia.org/wiki/Trilinear_coordinates#Between_Cartesian_and_trilinear_coordinates>.)
+        # Because of
+        #
+        #    cfd = zeta / (24.0 * face_areas) / self.cell_volumes[None]
+        #
+        # we have
+        #
+        #   CC = sum_k (zeta[k] / sum(zeta) * X[k]).
+        #
+        alpha = self.zeta / numpy.sum(self.zeta, axis=0)
 
-        # This used to be
-        # ```
-        # a = cell_coords[:, 1, :] - cell_coords[:, 0, :]
-        # b = cell_coords[:, 2, :] - cell_coords[:, 0, :]
-        # c = cell_coords[:, 3, :] - cell_coords[:, 0, :]
-        # a_cross_b = numpy.cross(a, b)
-        # b_cross_c = numpy.cross(b, c)
-        # c_cross_a = numpy.cross(c, a)
-        # ```
-        # The array X below unified a, b, c.
-        X = cell_coords[:, [1, 2, 3], :] - cell_coords[:, [0], :]
-        X_dot_X = numpy.einsum('ijk, ijk->ij', X, X)
-        X_shift = cell_coords[:, [2, 3, 1], :] - cell_coords[:, [0], :]
-        X_cross_Y = numpy.cross(X, X_shift)
-
-        a = X[:, 0, :]
-        a_dot_a = X_dot_X[:, 0]
-        b_dot_b = X_dot_X[:, 1]
-        c_dot_c = X_dot_X[:, 2]
-        a_cross_b = X_cross_Y[:, 0, :]
-        b_cross_c = X_cross_Y[:, 1, :]
-        c_cross_a = X_cross_Y[:, 2, :]
-
-        # Compute scalar triple product without using cross.
-        # The product is highly symmetric, so it's a little funny if there
-        # should be no single einsum to compute it; see
-        # <http://stackoverflow.com/q/42158228/353337>.
-        omega = _row_dot(a, b_cross_c)
-
-        self._circumcenters = cell_coords[:, 0, :] + (
-                b_cross_c * a_dot_a[:, None] +
-                c_cross_a * b_dot_b[:, None] +
-                a_cross_b * c_dot_c[:, None]
-                ) / (2.0 * omega[:, None])
-
+        self._circumcenters = numpy.sum(
+            alpha[None].T * self.node_coords[self.cells['nodes']],
+            axis=1
+            )
         return
 
 # Question:
@@ -338,7 +327,7 @@ class MeshTetra(_base_mesh):
         #     + self.ei_dot_ej[0] * self.ei_dot_ej[1] * self.ei_dot_ej[2]
         #     )
         ee = self.ei_dot_ej
-        zeta = (
+        self.zeta = (
             - ee[2, [1, 2, 3, 0]] * ee[1] * ee[2]
             - ee[1, [2, 3, 0, 1]] * ee[2] * ee[0]
             - ee[0, [3, 0, 1, 2]] * ee[0] * ee[1]
@@ -358,7 +347,7 @@ class MeshTetra(_base_mesh):
         # sum(self.circumcenter_face_distances * face_areas / 3) = cell_volumes
         # =>
         # cell_volumes = numpy.sqrt(sum(zeta / 72))
-        self.cell_volumes = numpy.sqrt(numpy.sum(zeta, axis=0) / 72.0)
+        self.cell_volumes = numpy.sqrt(numpy.sum(self.zeta, axis=0) / 72.0)
 
         #
         # self.circumcenter_face_distances =
@@ -368,12 +357,13 @@ class MeshTetra(_base_mesh):
         #
         # so
         ce_ratios = \
-            zeta/48.0 * face_ce_ratios_div_face_areas / self.cell_volumes[None]
+            self.zeta/48.0 \
+            * face_ce_ratios_div_face_areas / self.cell_volumes[None]
 
         # Distances of the cell circumcenter to the faces.
         face_areas = 0.5 * numpy.sqrt(alpha)
         self.circumcenter_face_distances = \
-            zeta / (24.0 * face_areas) / self.cell_volumes[None]
+            self.zeta / (24.0 * face_areas) / self.cell_volumes[None]
 
         return ce_ratios
 
