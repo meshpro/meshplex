@@ -63,15 +63,17 @@ class MeshTetra(_base_mesh):
         #
         #   * node k is opposite of edge k in each face,
         #   * duplicate edges are in the same spot of the each of the faces,
-        #   * all nodes are in order ([1, 2], [2, 3], [3, 1]),
-        #   * face edges form a circle and the curl points in the same
-        #     direction (either all outside or all inside of the cell)
+        #   * all nodes are in domino order ([1, 2], [2, 3], [3, 1]),
+        #   * the same edges are easy to find:
+        #      - edge 0: face+1, edge 2
+        #      - edge 1: face+2, edge 1
+        #      - edge 2: face+3, edge 0
         #
         self.local_idx = numpy.array([
             [[2, 3], [3, 1], [1, 2]],
-            [[3, 2], [2, 0], [0, 3]],
+            [[3, 0], [0, 2], [2, 3]],
             [[0, 1], [1, 3], [3, 0]],
-            [[1, 0], [0, 2], [2, 1]],
+            [[1, 2], [2, 0], [0, 1]],
             ]).T
         self.idx_hierarchy = nds[self.local_idx]
 
@@ -305,21 +307,6 @@ class MeshTetra(_base_mesh):
 #         return self.cells['edges'], sol
 
     def _compute_ce_ratios_geometric(self):
-
-        # opposing nodes, faces
-        v_op = self.cells['nodes'].T
-        v = self.node_face_cells
-
-        e = numpy.array([
-            self.node_coords[v[0]] - self.node_coords[v_op],
-            self.node_coords[v[1]] - self.node_coords[v_op],
-            self.node_coords[v[2]] - self.node_coords[v_op],
-            self.node_coords[v[1]] - self.node_coords[v[0]],
-            self.node_coords[v[2]] - self.node_coords[v[1]],
-            self.node_coords[v[0]] - self.node_coords[v[2]],
-            ])
-        ei_dot_ej = numpy.einsum('ijkl, hjkl->ihjk', e, e)
-
         # This is the reference expression.
         # a = (
         #     2 * _my_dot(x0_cross_x1, x2)**2 -
@@ -344,16 +331,18 @@ class MeshTetra(_base_mesh):
         # TODO simplify
 
         # This expression is from brute_simplify
-        # print(self.ei_dot_ej.shape)
-        # ei_dot_ej_shift1 = ei_dot_ej[[1, 2, 0]]
-        # ei_dot_ej_shift2 = ei_dot_ej[[2, 0, 1]]
-        # ei_dot_ej_shift1 * ei_dot_ej_shift2
-        # exit(1)
+        # zeta = (
+        #     + ei_dot_ej[0, 2] * ei_dot_ej[3, 5] * ei_dot_ej[5, 4]
+        #     + ei_dot_ej[0, 1] * ei_dot_ej[3, 5] * ei_dot_ej[3, 4]
+        #     + ei_dot_ej[1, 2] * ei_dot_ej[3, 4] * ei_dot_ej[4, 5]
+        #     + self.ei_dot_ej[0] * self.ei_dot_ej[1] * self.ei_dot_ej[2]
+        #     )
+        ee = self.ei_dot_ej
         zeta = (
-            + ei_dot_ej[0, 2] * ei_dot_ej[3, 5] * ei_dot_ej[5, 4]
-            + ei_dot_ej[0, 1] * ei_dot_ej[3, 5] * ei_dot_ej[3, 4]
-            + ei_dot_ej[1, 2] * ei_dot_ej[3, 4] * ei_dot_ej[4, 5]
-            + self.ei_dot_ej[0] * self.ei_dot_ej[1] * self.ei_dot_ej[2]
+            - ee[2, [1, 2, 3, 0]] * ee[1] * ee[2]
+            - ee[1, [2, 3, 0, 1]] * ee[2] * ee[0]
+            - ee[0, [3, 0, 1, 2]] * ee[0] * ee[1]
+            + ee[0] * ee[1] * ee[2]
             )
 
         # From base.py, but spelled out here since we can avoid one sqrt when
