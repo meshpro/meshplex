@@ -19,8 +19,8 @@ def test_pacman_lloyd():
             max_steps=1000,
             fcc_type='boundary',
             flip_frequency=1,
-            verbose=False,
-            output_filetype='png'
+            verbose=False
+            # output_filetype='png'
             )
 
     # Test if we're dealing with the mesh we expect.

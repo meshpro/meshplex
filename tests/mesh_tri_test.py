@@ -18,6 +18,11 @@ def test_regular_tri():
 
     tol = 1.0e-14
 
+    assert (mesh.local_idx.T == [[1, 2], [2, 0], [0, 1]]).all()
+    assert mesh.local_idx_inv == [
+            [(0, 2), (1, 1)], [(0, 0), (1, 2)], [(0, 1), (1, 0)]
+            ]
+
     # ce_ratios
     assert near_equal(mesh.get_ce_ratios().T, [0.0, 0.5, 0.5], tol)
 

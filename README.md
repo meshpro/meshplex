@@ -6,7 +6,7 @@
 [![PyPi Version](https://img.shields.io/pypi/v/voropy.svg)](https://pypi.python.org/pypi/voropy)
 [![GitHub stars](https://img.shields.io/github/stars/nschloe/voropy.svg?style=social&label=Star&maxAge=2592000)](https://github.com/nschloe/voropy)
 
-![voropy logo](https://nschloe.github.io/voropy/logo-180x180.png)
+![](https://nschloe.github.io/voropy/logo-180x180.png)
 
 Compute Voronoi tesselations and everything else you need for finite-volume
 discretizations. Do it fast, too.
@@ -31,16 +31,14 @@ mesh = voropy.read('pacman.msh')
 print(mesh.node_coords)
 print(mesh.control_volumes)
 
-from matplotlib import pyplot as plt
 mesh.show()
-plt.show()
 ```
 (For mesh creation, check out [pygmsh](https://github.com/nschloe/pygmsh),
 [mshr](https://bitbucket.org/fenics-project/mshr),
 [frentos](https://github.com/nschloe/frentos),
 [meshzoo](https://github.com/nschloe/meshzoo) or any other tool.)
 
-#### Lloyd smoothing
+#### Mesh smoothing
 
 voropy comes with a smoothing tool for triangular meshes after
 [Lloyd](https://en.wikipedia.org/wiki/Lloyd's_algorithm) that can dramatically
@@ -48,7 +46,7 @@ improve the quality your mesh. To use, simply type
 ```
 mesh_smoothing --verbose -t 1.0e-3 pacman.msh out.msh
 ```
-![Lloyd's algorithm](https://nschloe.github.io/voropy/lloyd.gif)
+![](https://nschloe.github.io/voropy/lloyd.gif)
 
 ### Installation
 

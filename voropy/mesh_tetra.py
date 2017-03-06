@@ -3,35 +3,9 @@
 import numpy
 from voropy.base import \
         _base_mesh, \
-        _row_dot, \
-        compute_tri_areas_and_ce_ratios, \
         compute_triangle_circumcenters
 
 __all__ = ['MeshTetra']
-
-
-def _my_dot(a, b):
-    return numpy.einsum('ijk, ijk->ij', a, b)
-
-
-def _scalar_triple_product_squared(v1, v2, v3):
-    # Compute the scalar triple product without the use of the (slow) cross
-    # product; cf. <http://math.stackexchange.com/a/2148866/36678>.
-    v1_dot_v2 = _my_dot(v1, v2)
-    v2_dot_v3 = _my_dot(v2, v3)
-    v3_dot_v1 = _my_dot(v3, v1)
-
-    v1_dot_v1 = _my_dot(v1, v1)
-    v2_dot_v2 = _my_dot(v2, v2)
-    v3_dot_v3 = _my_dot(v3, v3)
-
-    return (
-        v3_dot_v3 * v1_dot_v1 * v2_dot_v2
-        + 2 * v1_dot_v2 * v2_dot_v3 * v3_dot_v1
-        - v3_dot_v3 * v1_dot_v2**2
-        - v3_dot_v1**2 * v2_dot_v2
-        - v2_dot_v3**2 * v1_dot_v1
-        )
 
 
 class MeshTetra(_base_mesh):
@@ -67,31 +41,48 @@ class MeshTetra(_base_mesh):
             'nodes': cells
             }
 
-        self.create_cell_circumcenters_and_volumes()
-
         self._mode = mode
         self._ce_ratios = None
         self._control_volumes = None
+        self._circumcenters = None
         self.subdomains = {}
 
-        # Arrange the cell_face_nodes such that node k is opposite of face k in
+        # Arrange the node_face_cells such that node k is opposite of face k in
         # each cell.
         nds = self.cells['nodes'].T
-        self.node_face_cells = numpy.stack([
-            nds[[1, 2, 3]],
-            nds[[2, 3, 0]],
-            nds[[3, 0, 1]],
-            nds[[0, 1, 2]],
-            ], axis=1)
+        idx = numpy.array([
+            [1, 2, 3],
+            [2, 3, 0],
+            [3, 0, 1],
+            [0, 1, 2],
+            ]).T
+        self.node_face_cells = nds[idx]
 
-        # Arrange the idx_hierarchy (node->edge->face->cells) such that node k
-        # is opposite of edge k in each face.
-        self.idx_hierarchy = numpy.stack([
-            numpy.stack([nds[[2, 3]], nds[[3, 1]], nds[[1, 2]]], axis=1),
-            numpy.stack([nds[[3, 0]], nds[[0, 2]], nds[[2, 3]]], axis=1),
-            numpy.stack([nds[[0, 1]], nds[[1, 3]], nds[[3, 0]]], axis=1),
-            numpy.stack([nds[[1, 2]], nds[[2, 0]], nds[[0, 1]]], axis=1),
-            ], axis=2)
+        # Arrange the idx_hierarchy (node->edge->face->cells) such that
+        #
+        #   * node k is opposite of edge k in each face,
+        #   * duplicate edges are in the same spot of the each of the faces,
+        #   * all nodes are in domino order ([1, 2], [2, 3], [3, 1]),
+        #   * the same edges are easy to find:
+        #      - edge 0: face+1, edge 2
+        #      - edge 1: face+2, edge 1
+        #      - edge 2: face+3, edge 0
+        #
+        self.local_idx = numpy.array([
+            [[2, 3], [3, 1], [1, 2]],
+            [[3, 0], [0, 2], [2, 3]],
+            [[0, 1], [1, 3], [3, 0]],
+            [[1, 2], [2, 0], [0, 1]],
+            ]).T
+        self.idx_hierarchy = nds[self.local_idx]
+
+        # The inverted local index.
+        # This array specifies for each of the three nodes which edge endpoints
+        # correspond to it.
+        self.local_idx_inv = [
+            [tuple(i) for i in zip(*numpy.where(self.local_idx == node_idx))]
+            for node_idx in range(4)
+            ]
 
         # create ei_dot_ei, ei_dot_ej
         self.edge_coords = \
@@ -102,9 +93,16 @@ class MeshTetra(_base_mesh):
                 self.edge_coords,
                 self.edge_coords
                 )
-        e_shift1 = self.edge_coords[[1, 2, 0]]
-        e_shift2 = self.edge_coords[[2, 0, 1]]
-        self.ei_dot_ej = numpy.einsum('ijkl, ijkl->ijk', e_shift1, e_shift2)
+        self.ei_dot_ej = numpy.einsum(
+            'ijkl, ijkl->ijk',
+            self.edge_coords[[1, 2, 0]],
+            self.edge_coords[[2, 0, 1]]
+            # This is equivalent:
+            # numpy.roll(self.edge_coords, 1, axis=0),
+            # numpy.roll(self.edge_coords, 2, axis=0),
+            )
+
+        self._ce_ratios = self._compute_ce_ratios_geometric()
 
         return
 
@@ -215,48 +213,36 @@ class MeshTetra(_base_mesh):
 
         return
 
-    def create_cell_circumcenters_and_volumes(self):
+    def _compute_cell_circumcenters(self):
         '''Computes the center of the circumsphere of each cell.
         '''
-        cell_coords = self.node_coords[self.cells['nodes']]
+        # Just like for triangular cells, tetrahedron circumcenters are most
+        # easily computed with the quadrilateral coordinates available.
+        # Luckily, we have the circumcenter-face distances (cfd):
+        #
+        #   CC = (
+        #       + cfd[0] * face_area[0] / sum(cfd*face_area) * X[0]
+        #       + cfd[1] * face_area[1] / sum(cfd*face_area) * X[1]
+        #       + cfd[2] * face_area[2] / sum(cfd*face_area) * X[2]
+        #       + cfd[3] * face_area[3] / sum(cfd*face_area) * X[3]
+        #       )
+        #
+        # (Compare with
+        # <https://en.wikipedia.org/wiki/Trilinear_coordinates#Between_Cartesian_and_trilinear_coordinates>.)
+        # Because of
+        #
+        #    cfd = zeta / (24.0 * face_areas) / self.cell_volumes[None]
+        #
+        # we have
+        #
+        #   CC = sum_k (zeta[k] / sum(zeta) * X[k]).
+        #
+        alpha = self.zeta / numpy.sum(self.zeta, axis=0)
 
-        # This used to be
-        # ```
-        # a = cell_coords[:, 1, :] - cell_coords[:, 0, :]
-        # b = cell_coords[:, 2, :] - cell_coords[:, 0, :]
-        # c = cell_coords[:, 3, :] - cell_coords[:, 0, :]
-        # a_cross_b = numpy.cross(a, b)
-        # b_cross_c = numpy.cross(b, c)
-        # c_cross_a = numpy.cross(c, a)
-        # ```
-        # The array X below unified a, b, c.
-        X = cell_coords[:, [1, 2, 3], :] - cell_coords[:, [0], :]
-        X_dot_X = numpy.einsum('ijk, ijk->ij', X, X)
-        X_shift = cell_coords[:, [2, 3, 1], :] - cell_coords[:, [0], :]
-        X_cross_Y = numpy.cross(X, X_shift)
-
-        a = X[:, 0, :]
-        a_dot_a = X_dot_X[:, 0]
-        b_dot_b = X_dot_X[:, 1]
-        c_dot_c = X_dot_X[:, 2]
-        a_cross_b = X_cross_Y[:, 0, :]
-        b_cross_c = X_cross_Y[:, 1, :]
-        c_cross_a = X_cross_Y[:, 2, :]
-
-        # Compute scalar triple product without using cross.
-        # The product is highly symmetric, so it's a little funny if there
-        # should be no single einsum to compute it; see
-        # <http://stackoverflow.com/q/42158228/353337>.
-        omega = _row_dot(a, b_cross_c)
-
-        self.cell_circumcenters = cell_coords[:, 0, :] + (
-                b_cross_c * a_dot_a[:, None] +
-                c_cross_a * b_dot_b[:, None] +
-                a_cross_b * c_dot_c[:, None]
-                ) / (2.0 * omega[:, None])
-
-        # https://en.wikipedia.org/wiki/Tetrahedron#Volume
-        self.cell_volumes = abs(omega) / 6.0
+        self._circumcenters = numpy.sum(
+            alpha[None].T * self.node_coords[self.cells['nodes']],
+            axis=1
+            )
         return
 
 # Question:
@@ -310,20 +296,14 @@ class MeshTetra(_base_mesh):
 #         return self.cells['edges'], sol
 
     def _compute_ce_ratios_geometric(self):
-
-        face_areas, face_ce_ratios = \
-            compute_tri_areas_and_ce_ratios(self.ei_dot_ej)
-
-        # opposing nodes, faces
-        v_op = self.cells['nodes'].T
-        v = self.node_face_cells
-
-        e0 = self.node_coords[v[0]] - self.node_coords[v_op]
-        e1 = self.node_coords[v[1]] - self.node_coords[v_op]
-        e2 = self.node_coords[v[2]] - self.node_coords[v_op]
-
-        # This is the reference expression.
-        # a = (
+        # For triangles, the covolume/edgelength ratios are
+        #
+        #   [1]   ce_ratios = -<ei, ej> / cell_volume / 4;
+        #
+        # for tetrahedra, is somewhat more tricky. This is the reference
+        # expression:
+        #
+        # ce_ratios = (
         #     2 * _my_dot(x0_cross_x1, x2)**2 -
         #     _my_dot(
         #         x0_cross_x1 + x1_cross_x2 + x2_cross_x0,
@@ -331,58 +311,106 @@ class MeshTetra(_base_mesh):
         #         x1_cross_x2 * x0_dot_x0[..., None] +
         #         x2_cross_x0 * x1_dot_x1[..., None]
         #     )) / (12.0 * face_areas)
-
-        # Note that
         #
-        #    6*tet_volume = abs(<x0 x x1, x2>)
-        #                 = abs(<x1 x x2, x0>)
-        #                 = abs(<x2 x x0, x1>).
+        # Tedious simplification steps (with the help of
+        # <https://github.com/nschloe/brute_simplify>) lead to
         #
-        # Also,
+        #   zeta = (
+        #       + ei_dot_ej[0, 2] * ei_dot_ej[3, 5] * ei_dot_ej[5, 4]
+        #       + ei_dot_ej[0, 1] * ei_dot_ej[3, 5] * ei_dot_ej[3, 4]
+        #       + ei_dot_ej[1, 2] * ei_dot_ej[3, 4] * ei_dot_ej[4, 5]
+        #       + self.ei_dot_ej[0] * self.ei_dot_ej[1] * self.ei_dot_ej[2]
+        #       ).
         #
-        #    <a x b, c x d> = <a, c> <b, d> - <a, d> <b, c>.
+        # for the face [1, 2, 3] (with edges [3, 4, 5]), where nodes and edges
+        # are ordered like
         #
-        # All those dot products can probably be cleaned up good.
-        # TODO simplify
-        # TODO can those perhaps be expressed as dot products of x_ - x_, i.e.,
-        #      edges of the considered face
-        e0_dot_e0 = _my_dot(e0, e0)
-        e1_dot_e1 = _my_dot(e1, e1)
-        e2_dot_e2 = _my_dot(e2, e2)
-        e0_dot_e1 = _my_dot(e0, e1)
-        e1_dot_e2 = _my_dot(e1, e2)
-        e2_dot_e0 = _my_dot(e2, e0)
-
-        delta = (
-            # - alpha * x2_dot_x2
-            e0_dot_e0 * e1_dot_e1 * e2_dot_e2 - e2_dot_e2 * e0_dot_e1**2 +
-            e0_dot_e1 * e1_dot_e2 * e2_dot_e2 - e2_dot_e2 * e1_dot_e1 * e2_dot_e0 +
-            e2_dot_e0 * e0_dot_e1 * e2_dot_e2 - e2_dot_e2 * e1_dot_e2 * e0_dot_e0 +
-            #
-            # - beta * x0_dot_x0
-            e0_dot_e1 * e1_dot_e2 * e0_dot_e0 - e0_dot_e0 * e2_dot_e0 * e1_dot_e1 +
-            e1_dot_e1 * e2_dot_e2 * e0_dot_e0 - e0_dot_e0 * e1_dot_e2**2 +
-            e1_dot_e2 * e2_dot_e0 * e0_dot_e0 - e0_dot_e0 * e2_dot_e2 * e0_dot_e1 +
-            #
-            # - gamma * x1_dot_x1
-            e2_dot_e0 * e0_dot_e1 * e1_dot_e1 - e1_dot_e1 * e0_dot_e0 * e1_dot_e2 +
-            e1_dot_e2 * e2_dot_e0 * e1_dot_e1 - e1_dot_e1 * e0_dot_e1 * e2_dot_e2 +
-            e0_dot_e0 * e2_dot_e2 * e1_dot_e1 - e1_dot_e1 * e2_dot_e0**2
+        #                        3
+        #                        ^
+        #                       /|\
+        #                      / | \
+        #                     /  \  \
+        #                    /    \  \
+        #                   /      |  \
+        #                  /       |   \
+        #                 /        \    \
+        #                /         4\    \
+        #               /            |    \
+        #              /2            |     \5
+        #             /              \      \
+        #            /                \      \
+        #           /            _____|       \
+        #          /        ____/     2\_      \
+        #         /    ____/1            \_     \
+        #        /____/                    \_    \
+        #       /________                   3\_   \
+        #      0         \__________           \___\
+        #                        0  \______________\\
+        #                                            1
+        #
+        # This is not a too obvious extension of -<ei, ej> in [1]. However,
+        # consider the fact that this contains all pairwise dot-products of
+        # edges not part of the respective face (<e0, e1>, <e1, e2>, <e2, e0>),
+        # each of them weighted with dot-products of edges in the respective
+        # face.
+        #
+        # Note that, to retrieve the covolume-edge ratio, one divides by
+        #
+        #       alpha = (
+        #           + ei_dot_ej[3, 5] * ei_dot_ej[5, 4]
+        #           + ei_dot_ej[3, 5] * ei_dot_ej[3, 4]
+        #           + ei_dot_ej[3, 4] * ei_dot_ej[4, 5]
+        #           )
+        #
+        # (which is the square of the face area). It's funny that there should
+        # be no further simplification in zeta/alpha, but nothing has been
+        # found here yet.
+        #
+        ee = self.ei_dot_ej
+        self.zeta = (
+            - ee[2, [1, 2, 3, 0]] * ee[1] * ee[2]
+            - ee[1, [2, 3, 0, 1]] * ee[2] * ee[0]
+            - ee[0, [3, 0, 1, 2]] * ee[0] * ee[1]
+            + ee[0] * ee[1] * ee[2]
             )
 
-        a = (72.0 * self.cell_volumes[None]**2 - delta) / (12.0 * face_areas)
+        # From base.py, but spelled out here since we can avoid one sqrt when
+        # computing the c/e ratios for the faces.
+        alpha = (
+            + self.ei_dot_ej[2] * self.ei_dot_ej[0]
+            + self.ei_dot_ej[0] * self.ei_dot_ej[1]
+            + self.ei_dot_ej[1] * self.ei_dot_ej[2]
+            )
+        # face_ce_ratios = -self.ei_dot_ej * 0.25 / face_areas[None]
+        face_ce_ratios_div_face_areas = -self.ei_dot_ej / alpha
+
+        # sum(self.circumcenter_face_distances * face_areas / 3) = cell_volumes
+        # =>
+        # cell_volumes = numpy.sqrt(sum(zeta / 72))
+        self.cell_volumes = numpy.sqrt(numpy.sum(self.zeta, axis=0) / 72.0)
+
+        #
+        # self.circumcenter_face_distances =
+        #    zeta / (24.0 * face_areas) / self.cell_volumes[None]
+        # ce_ratios = \
+        #     0.5 * face_ce_ratios * self.circumcenter_face_distances[None],
+        #
+        # so
+        ce_ratios = \
+            self.zeta/48.0 \
+            * face_ce_ratios_div_face_areas / self.cell_volumes[None]
 
         # Distances of the cell circumcenter to the faces.
-        # (shape: 4 x num_cells)
-        self.circumcenter_face_distances = 0.5 * a / self.cell_volumes[None]
+        face_areas = 0.5 * numpy.sqrt(alpha)
+        self.circumcenter_face_distances = \
+            self.zeta / (24.0 * face_areas) / self.cell_volumes[None]
 
-        # Multiply
-        s = 0.5 * face_ce_ratios * self.circumcenter_face_distances[None]
-
-        return s
+        return ce_ratios
 
     def get_cell_circumcenters(self):
-        return self.cell_circumcenters
+        if self._circumcenters is None:
+            self._compute_cell_circumcenters()
+        return self._circumcenters
 
     def get_control_volumes(self):
         '''Compute the control volumes of all nodes in the mesh.
@@ -390,14 +418,19 @@ class MeshTetra(_base_mesh):
         if self._control_volumes is None:
             #   1/3. * (0.5 * edge_length) * covolume
             # = 1/6 * edge_length**2 * ce_ratio_edge_ratio
-            ce = self.get_ce_ratios()
-            v = self.ei_dot_ei * ce / 6.0
-            # TODO explicitly sum up contributions per cell first
-            vals = numpy.array([v, v])
-            idx = self.idx_hierarchy
-            self._control_volumes = \
-                numpy.zeros(len(self.node_coords), dtype=float)
-            numpy.add.at(self._control_volumes, idx, vals)
+            v = self.ei_dot_ei * self.get_ce_ratios() / 6.0
+            # Explicitly sum up contributions per cell first. Makes
+            # numpy.add.at faster.
+            # For every node k (range(4)), check for which edges k appears in
+            # local_idx, and sum() up the v's from there.
+            idx = self.local_idx
+            vals = numpy.array([
+                sum([v[i, j] for i, j in zip(*numpy.where(idx == k)[1:])])
+                for k in range(4)
+                ]).T
+            #
+            self._control_volumes = numpy.zeros(len(self.node_coords))
+            numpy.add.at(self._control_volumes, self.cells['nodes'], vals)
         return self._control_volumes
 
     def num_delaunay_violations(self):
@@ -427,9 +460,12 @@ class MeshTetra(_base_mesh):
         ax = fig.gca(projection='3d')
         plt.axis('equal')
 
+        if self._circumcenters is None:
+            self._compute_cell_circumcenters()
+
         X = self.node_coords
         for cell_id in range(len(self.cells['nodes'])):
-            cc = self.cell_circumcenters[cell_id]
+            cc = self._circumcenters[cell_id]
             #
             x = X[self.node_face_cells[..., [cell_id]]]
             face_ccs = compute_triangle_circumcenters(
@@ -497,7 +533,7 @@ class MeshTetra(_base_mesh):
         # circumcenters
         X = self.node_coords
         for cell_id in adj_cell_ids:
-            cc = self.cell_circumcenters[cell_id]
+            cc = self._circumcenters[cell_id]
             #
             x = X[self.node_face_cells[..., [cell_id]]]
             face_ccs = compute_triangle_circumcenters(
@@ -516,6 +552,6 @@ class MeshTetra(_base_mesh):
                     )
 
         # draw the cell circumcenters
-        cc = self.cell_circumcenters[adj_cell_ids]
+        cc = self._circumcenters[adj_cell_ids]
         ax.plot(cc[:, 0], cc[:, 1], cc[:, 2], 'ro')
         return
