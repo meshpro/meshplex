@@ -296,8 +296,14 @@ class MeshTetra(_base_mesh):
 #         return self.cells['edges'], sol
 
     def _compute_ce_ratios_geometric(self):
-        # This is the reference expression.
-        # a = (
+        # For triangles, the covolume/edgelength ratios are
+        #
+        #   [1]   ce_ratios = -<ei, ej> / cell_volume / 4;
+        #
+        # for tetrahedra, is somewhat more tricky. This is the reference
+        # expression:
+        #
+        # ce_ratios = (
         #     2 * _my_dot(x0_cross_x1, x2)**2 -
         #     _my_dot(
         #         x0_cross_x1 + x1_cross_x2 + x2_cross_x0,
@@ -305,27 +311,61 @@ class MeshTetra(_base_mesh):
         #         x1_cross_x2 * x0_dot_x0[..., None] +
         #         x2_cross_x0 * x1_dot_x1[..., None]
         #     )) / (12.0 * face_areas)
-
-        # Note that
         #
-        #    6*tet_volume = abs(<x0 x x1, x2>)
-        #                 = abs(<x1 x x2, x0>)
-        #                 = abs(<x2 x x0, x1>).
+        # Tedious simplification steps (with the help of
+        # <https://github.com/nschloe/brute_simplify>) lead to
         #
-        # Also,
+        #   zeta = (
+        #       + ei_dot_ej[0, 2] * ei_dot_ej[3, 5] * ei_dot_ej[5, 4]
+        #       + ei_dot_ej[0, 1] * ei_dot_ej[3, 5] * ei_dot_ej[3, 4]
+        #       + ei_dot_ej[1, 2] * ei_dot_ej[3, 4] * ei_dot_ej[4, 5]
+        #       + self.ei_dot_ej[0] * self.ei_dot_ej[1] * self.ei_dot_ej[2]
+        #       ).
         #
-        #    <a x b, c x d> = <a, c> <b, d> - <a, d> <b, c>.
+        # for the face [1, 2, 3] (with edges [3, 4, 5]), where nodes and edges
+        # are ordered like
         #
-        # All those dot products can probably be cleaned up good.
-        # TODO simplify
-
-        # This expression is from brute_simplify
-        # zeta = (
-        #     + ei_dot_ej[0, 2] * ei_dot_ej[3, 5] * ei_dot_ej[5, 4]
-        #     + ei_dot_ej[0, 1] * ei_dot_ej[3, 5] * ei_dot_ej[3, 4]
-        #     + ei_dot_ej[1, 2] * ei_dot_ej[3, 4] * ei_dot_ej[4, 5]
-        #     + self.ei_dot_ej[0] * self.ei_dot_ej[1] * self.ei_dot_ej[2]
-        #     )
+        #                        3
+        #                        ^
+        #                       /|\
+        #                      / | \
+        #                     /  \  \
+        #                    /    \  \
+        #                   /      |  \
+        #                  /       |   \
+        #                 /        \    \
+        #                /         4\    \
+        #               /            |    \
+        #              /2            |     \5
+        #             /              \      \
+        #            /                \      \
+        #           /            _____|       \
+        #          /        ____/     2\_      \
+        #         /    ____/1            \_     \
+        #        /____/                    \_    \
+        #       /________                   3\_   \
+        #      0         \__________           \___\
+        #                        0  \______________\\
+        #                                            1
+        #
+        # This is not a too obvious extension of -<ei, ej> in [1]. However,
+        # consider the fact that this contains all pairwise dot-products of
+        # edges not part of the respective face (<e0, e1>, <e1, e2>, <e2, e0>),
+        # each of them weighted with dot-products of edges in the respective
+        # face.
+        #
+        # Note that, to retrieve the covolume-edge ratio, one divides by
+        #
+        #       alpha = (
+        #           + ei_dot_ej[3, 5] * ei_dot_ej[5, 4]
+        #           + ei_dot_ej[3, 5] * ei_dot_ej[3, 4]
+        #           + ei_dot_ej[3, 4] * ei_dot_ej[4, 5]
+        #           )
+        #
+        # (which is the square of the face area). It's funny that there should
+        # be no further simplification in zeta/alpha, but nothing has been
+        # found here yet.
+        #
         ee = self.ei_dot_ej
         self.zeta = (
             - ee[2, [1, 2, 3, 0]] * ee[1] * ee[2]
