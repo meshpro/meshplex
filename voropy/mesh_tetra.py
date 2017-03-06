@@ -62,12 +62,16 @@ class MeshTetra(_base_mesh):
         # Arrange the idx_hierarchy (node->edge->face->cells) such that
         #
         #   * node k is opposite of edge k in each face,
+        #   * duplicate edges are in the same spot of the each of the faces,
+        #   * all nodes are in order ([1, 2], [2, 3], [3, 1]),
+        #   * face edges form a circle and the curl points in the same
+        #     direction (either all outside or all inside of the cell)
         #
         self.local_idx = numpy.array([
             [[2, 3], [3, 1], [1, 2]],
-            [[3, 0], [0, 2], [2, 3]],
+            [[3, 2], [2, 0], [0, 3]],
             [[0, 1], [1, 3], [3, 0]],
-            [[1, 2], [2, 0], [0, 1]],
+            [[1, 0], [0, 2], [2, 1]],
             ]).T
         self.idx_hierarchy = nds[self.local_idx]
 
@@ -97,7 +101,7 @@ class MeshTetra(_base_mesh):
             # numpy.roll(self.edge_coords, 2, axis=0),
             )
 
-        self._compute_ce_ratios_geometric()
+        self._ce_ratios = self._compute_ce_ratios_geometric()
 
         return
 
@@ -247,6 +251,7 @@ class MeshTetra(_base_mesh):
                 c_cross_a * b_dot_b[:, None] +
                 a_cross_b * c_dot_c[:, None]
                 ) / (2.0 * omega[:, None])
+
         return
 
 # Question:
@@ -339,6 +344,11 @@ class MeshTetra(_base_mesh):
         # TODO simplify
 
         # This expression is from brute_simplify
+        # print(self.ei_dot_ej.shape)
+        # ei_dot_ej_shift1 = ei_dot_ej[[1, 2, 0]]
+        # ei_dot_ej_shift2 = ei_dot_ej[[2, 0, 1]]
+        # ei_dot_ej_shift1 * ei_dot_ej_shift2
+        # exit(1)
         zeta = (
             + ei_dot_ej[0, 2] * ei_dot_ej[3, 5] * ei_dot_ej[5, 4]
             + ei_dot_ej[0, 1] * ei_dot_ej[3, 5] * ei_dot_ej[3, 4]
@@ -358,10 +368,9 @@ class MeshTetra(_base_mesh):
 
         # sum(self.circumcenter_face_distances * face_areas / 3) = cell_volumes
         # =>
-        # cell_volumes = numpy.sqrt(sum(zeta / 24.0))
-        self.cell_volumes = numpy.sqrt(numpy.sum(zeta/72.0, axis=0))
+        # cell_volumes = numpy.sqrt(sum(zeta / 72))
+        self.cell_volumes = numpy.sqrt(numpy.sum(zeta, axis=0) / 72.0)
 
-        # Distances of the cell circumcenter to the faces.
         #
         # self.circumcenter_face_distances =
         #    zeta / (24.0 * face_areas) / self.cell_volumes[None]
@@ -372,6 +381,7 @@ class MeshTetra(_base_mesh):
         ce_ratios = \
             zeta/48.0 * face_ce_ratios_div_face_areas / self.cell_volumes[None]
 
+        # Distances of the cell circumcenter to the faces.
         face_areas = 0.5 * numpy.sqrt(alpha)
         self.circumcenter_face_distances = \
             zeta / (24.0 * face_areas) / self.cell_volumes[None]
