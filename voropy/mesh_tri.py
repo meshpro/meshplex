@@ -16,6 +16,21 @@ def _column_stack(a, b):
     return numpy.stack([a, b], axis=1)
 
 
+def flip_until_delaunay(mesh):
+    # We need boundary flat cell correction for flipping. If `full`,
+    # all c/e ratios are nonnegative.
+    mesh = MeshTri(
+            mesh.node_coords,
+            mesh.cells['nodes'],
+            flat_cell_correction='boundary'
+            )
+    ce_ratios = mesh.get_ce_ratios_per_edge()
+    while any(ce_ratios < 0.0):
+        mesh = flip_edges(mesh, ce_ratios < 0.0)
+        ce_ratios = mesh.get_ce_ratios_per_edge()
+    return mesh
+
+
 def lloyd_smoothing(
         mesh,
         tol,
@@ -26,20 +41,6 @@ def lloyd_smoothing(
         output_filetype=None
         ):
     from matplotlib import pyplot as plt
-
-    def flip_until_delaunay(mesh):
-        # We need boundary flat cell correction for flipping. If `full`,
-        # all c/e ratios are nonnegative.
-        mesh = MeshTri(
-                mesh.node_coords,
-                mesh.cells['nodes'],
-                flat_cell_correction='boundary'
-                )
-        ce_ratios = mesh.get_ce_ratios_per_edge()
-        while any(ce_ratios < 0.0):
-            mesh = flip_edges(mesh, ce_ratios < 0.0)
-            ce_ratios = mesh.get_ce_ratios_per_edge()
-        return mesh
 
     def gather_stats(mesh):
         # The cosines of the angles are the negative dot products of

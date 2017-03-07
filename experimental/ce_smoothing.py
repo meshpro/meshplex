@@ -6,8 +6,10 @@
 # the iteration trapped in a point away from the minimum.  Lloyd's smoothing is
 # clearly superior.
 #
-from . import mesh_tri
+from voropy import mesh_tri
+import meshio
 import numpy
+import voropy
 
 
 def _objective(mesh):
@@ -59,90 +61,6 @@ def _grad(mesh):
     return grad
 
 
-def flip_until_delaunay(mesh):
-    # We need boundary flat cell correction for flipping. If `full`,
-    # all c/e ratios are nonnegative.
-    mesh = mesh_tri.MeshTri(
-            mesh.node_coords,
-            mesh.cells['nodes'],
-            flat_cell_correction='boundary'
-            )
-    ce_ratios = mesh.get_ce_ratios_per_edge()
-    while any(ce_ratios < 0.0):
-        mesh = flip_edges(mesh, ce_ratios < 0.0)
-        ce_ratios = mesh.get_ce_ratios_per_edge()
-    return mesh
-
-
-def flip_edges(mesh, is_flip_edge):
-    '''Creates a new mesh by flipping those interior edges which have a
-    negative covolume (i.e., a negative covolume-edge length ratio). The
-    resulting mesh is Delaunay.
-    '''
-    is_flip_edge_per_cell = is_flip_edge[mesh.cells['edges']]
-
-    # can only handle the case where each cell has at most one edge to flip
-    count = numpy.sum(is_flip_edge_per_cell, axis=1)
-    assert all(count <= 1)
-
-    # new cells
-    edge_cells = mesh.compute_edge_cells()
-    flip_edges = numpy.where(is_flip_edge)[0]
-    new_cells = numpy.empty((len(flip_edges), 2, 3), dtype=int)
-    for k, flip_edge in enumerate(flip_edges):
-        adj_cells = edge_cells[flip_edge]
-        assert len(adj_cells) == 2
-        # The local edge ids are opposite of the local vertex with the same
-        # id.
-        cell0_local_edge_id = numpy.where(
-            is_flip_edge_per_cell[adj_cells[0]]
-            )[0]
-        cell1_local_edge_id = numpy.where(
-            is_flip_edge_per_cell[adj_cells[1]]
-            )[0]
-
-        #     0
-        #     /\
-        #    /  \
-        #   / 0  \
-        # 2/______\3
-        #  \      /
-        #   \  1 /
-        #    \  /
-        #     \/
-        #      1
-        verts = [
-            mesh.cells['nodes'][adj_cells[0], cell0_local_edge_id],
-            mesh.cells['nodes'][adj_cells[1], cell1_local_edge_id],
-            mesh.cells['nodes'][adj_cells[0], (cell0_local_edge_id + 1) % 3],
-            mesh.cells['nodes'][adj_cells[0], (cell0_local_edge_id + 2) % 3],
-            ]
-        new_cells[k, 0] = [verts[0], verts[1], verts[2]]
-        new_cells[k, 1] = [verts[0], verts[1], verts[3]]
-
-    # find cells that can stay
-    is_good_cell = numpy.all(
-            numpy.logical_not(is_flip_edge_per_cell),
-            axis=1
-            )
-
-    mesh.cells['nodes'] = numpy.concatenate([
-        mesh.cells['nodes'][is_good_cell],
-        new_cells[:, 0, :],
-        new_cells[:, 1, :]
-        ])
-
-    # Create and return new mesh.
-    new_mesh = mesh_tri.MeshTri(
-        mesh.node_coords,
-        mesh.cells['nodes'],
-        # Don't actually need that last bit here.
-        flat_cell_correction='boundary'
-        )
-
-    return new_mesh
-
-
 def smooth(mesh):
     # x = numpy.array([
     #     [0.0, 0.0, 0.0],
@@ -159,15 +77,10 @@ def smooth(mesh):
     #     ])
     # mesh = mesh_tri.MeshTri(x, cells)
     boundary_verts = mesh.get_boundary_vertices()
-    x = mesh.node_coords.copy()
-    x[:, :2] += 1.0e-1 * (
-        numpy.random.rand(len(mesh.node_coords), 2) - 0.5
-        )
-    x[boundary_verts] = mesh.node_coords[boundary_verts]
-    mesh = mesh_tri.MeshTri(x, mesh.cells['nodes'])
+
     t = 1.0e-3
-    for k in range(1000):
-        mesh = flip_until_delaunay(mesh)
+    for k in range(100):
+        mesh = mesh_tri.flip_until_delaunay(mesh)
         x = mesh.node_coords.copy()
         x -= t * _grad(mesh)
         x[boundary_verts] = mesh.node_coords[boundary_verts]
@@ -175,3 +88,21 @@ def smooth(mesh):
         mesh.write('smoo%04d.vtu' % k)
         print(_objective(mesh))
     return mesh
+
+
+if __name__ == '__main__':
+    pts, cells, _, _, _ = meshio.read('pacman.vtu')
+
+    # x = mesh.node_coords.copy()
+    # x[:, :2] += 1.0e-1 * (
+    #     numpy.random.rand(len(mesh.node_coords), 2) - 0.5
+    #     )
+    # x[boundary_verts] = mesh.node_coords[boundary_verts]
+
+    # only include nodes which are part of a cell
+    uvertices, uidx = numpy.unique(cells['triangle'], return_inverse=True)
+    cells = uidx.reshape(cells['triangle'].shape)
+    pts = pts[uvertices]
+
+    mesh = voropy.mesh_tri.MeshTri(pts, cells)
+    smooth(mesh)
