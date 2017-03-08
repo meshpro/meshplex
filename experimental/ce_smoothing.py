@@ -61,26 +61,11 @@ def _grad(mesh):
     return grad
 
 
-def smooth(mesh):
-    # x = numpy.array([
-    #     [0.0, 0.0, 0.0],
-    #     [1.0, 0.0, 0.0],
-    #     [1.0, 1.0, 0.0],
-    #     [0.0, 1.0, 0.0],
-    #     [0.1, 0.5, 0.0],
-    #     ])
-    # cells = numpy.array([
-    #     [0, 1, 4],
-    #     [1, 2, 4],
-    #     [2, 3, 4],
-    #     [3, 0, 4],
-    #     ])
-    # mesh = mesh_tri.MeshTri(x, cells)
+def smooth(mesh, t=1.0e-3, num_iters=10):
     boundary_verts = mesh.get_boundary_vertices()
 
-    t = 1.0e-3
-    for k in range(100):
-        mesh = mesh_tri.flip_until_delaunay(mesh)
+    for k in range(num_iters):
+        # mesh = mesh_tri.flip_until_delaunay(mesh)
         x = mesh.node_coords.copy()
         x -= t * _grad(mesh)
         x[boundary_verts] = mesh.node_coords[boundary_verts]
@@ -90,8 +75,8 @@ def smooth(mesh):
     return mesh
 
 
-if __name__ == '__main__':
-    pts, cells, _, _, _ = meshio.read('pacman.vtu')
+def read(filename):
+    pts, cells, _, _, _ = meshio.read(filename)
 
     # x = mesh.node_coords.copy()
     # x[:, :2] += 1.0e-1 * (
@@ -104,5 +89,28 @@ if __name__ == '__main__':
     cells = uidx.reshape(cells['triangle'].shape)
     pts = pts[uvertices]
 
+    return pts, cells
+
+
+def circle(num_segments=7):
+    angles = numpy.linspace(0.0, 2*numpy.pi, num_segments, endpoint=False)
+    pts = numpy.array([
+        numpy.cos(angles), numpy.sin(angles), numpy.zeros(len(angles))
+        ]).transpose()
+    pts = numpy.vstack([pts, [[-0.8, 0.0, 0.0]]])
+
+    n = len(pts) - 1
+    cells = numpy.array([
+        [k, (k+1) % n, n] for k in range(n)
+        ])
+
+    pts = numpy.ascontiguousarray(pts)
+    cells = numpy.ascontiguousarray(cells)
+    return pts, cells
+
+
+if __name__ == '__main__':
+    pts, cells = read('pacman.vtu')
+    # pts, cells = circle()
     mesh = voropy.mesh_tri.MeshTri(pts, cells)
-    smooth(mesh)
+    smooth(mesh, t=1.0e-3, num_iters=100)
