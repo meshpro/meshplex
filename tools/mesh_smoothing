@@ -59,9 +59,9 @@ def _parse_input_arguments():
     parser.add_argument(
         '--flip-frequency', '-f',
         dest='flip_frequency',
-        default=100,
+        default=1,
         type=int,
-        help='how often to do edge flipping'
+        help='how often to do edge flipping (default: 1, everytime)'
         )
 
     return parser.parse_args()
@@ -86,7 +86,7 @@ if __name__ == '__main__':
 
     mesh = voropy.mesh_tri.MeshTri(pts, cells, flat_cell_correction=fcc_type)
 
-    out_mesh = voropy.mesh_tri.lloyd_smoothing(
+    out_mesh = voropy.smoothing.lloyd(
         mesh,
         args.tolerance,
         fcc_type=fcc_type,
