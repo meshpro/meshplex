@@ -7,17 +7,38 @@ import numpy
 
 
 def flip_until_delaunay(mesh):
-    # We need boundary flat cell correction for flipping. If `full`,
-    # all c/e ratios are nonnegative.
-    mesh = MeshTri(
-            mesh.node_coords,
-            mesh.cells['nodes'],
-            flat_cell_correction='boundary'
+    fcc_type = mesh.fcc_type
+    if fcc_type is not None:
+        # No flat_cell_correction when flipping.
+        mesh = MeshTri(
+                mesh.node_coords,
+                mesh.cells['nodes'],
+                flat_cell_correction=None
+                )
+    mesh.create_edges()
+    needs_flipping = numpy.logical_and(
+        numpy.logical_not(mesh.is_boundary_edge),
+        mesh.get_ce_ratios_per_edge() < 0.0
+        )
+    k = 0
+    while any(needs_flipping):
+        k += 1
+        mesh = flip_edges(mesh, needs_flipping)
+        mesh.write('flip%04d.vtu' % k)
+        #
+        mesh.create_edges()
+        needs_flipping = numpy.logical_and(
+            numpy.logical_not(mesh.is_boundary_edge),
+            mesh.get_ce_ratios_per_edge() < 0.0
             )
-    ce_ratios = mesh.get_ce_ratios_per_edge()
-    while any(ce_ratios < 0.0):
-        mesh = flip_edges(mesh, ce_ratios < 0.0)
-        ce_ratios = mesh.get_ce_ratios_per_edge()
+
+    # Translate back to input fcc_type.
+    if fcc_type is not None:
+        mesh = MeshTri(
+                mesh.node_coords,
+                mesh.cells['nodes'],
+                flat_cell_correction=fcc_type
+                )
     return mesh
 
 
@@ -79,12 +100,11 @@ def flip_edges(mesh, is_flip_edge):
         new_cells[:, 1, :]
         ])
 
-    # Create and return new mesh.
+    # Create new mesh to make sure that all entities are computed again.
     new_mesh = MeshTri(
         mesh.node_coords,
         mesh.cells['nodes'],
-        # Don't actually need that last bit here.
-        flat_cell_correction='boundary'
+        flat_cell_correction=mesh.fcc_type
         )
 
     return new_mesh
@@ -156,7 +176,7 @@ def lloyd(
 
     # 2D mesh
     assert all(mesh.node_coords[:, 2] == 0.0)
-    assert mesh.fcc is not fcc_type
+    assert mesh.fcc_type == fcc_type
 
     boundary_verts = mesh.get_boundary_vertices()
 
@@ -184,7 +204,7 @@ def lloyd(
         mesh = MeshTri(
                 new_points,
                 mesh.cells['nodes'],
-                flat_cell_correction='full'
+                flat_cell_correction=fcc_type
                 )
 
         if verbose:

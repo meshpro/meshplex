@@ -402,6 +402,7 @@ class MeshTri(_base_mesh):
         self.cell_volumes, self.ce_ratios_per_half_edge = \
             compute_tri_areas_and_ce_ratios(self.ei_dot_ej)
 
+        self.fcc_type = flat_cell_correction
         if flat_cell_correction is None:
             self.fcc = None
             self.regular_cells = numpy.s_[:]
