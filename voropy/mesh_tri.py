@@ -66,7 +66,8 @@ def _isosceles_ce_ratios(p0, p1, p2):
     ei_dot_ej = numpy.einsum('ijk, ijk->ij', e_shift1, e_shift2)
 
     _, ce_ratios = compute_tri_areas_and_ce_ratios(ei_dot_ej)
-    assert all(abs(ce_ratios[1] - ce_ratios[2]) < 1.0e-12)
+    tol = 1.0e-10
+    assert all(abs(ce_ratios[1] - ce_ratios[2]) < tol * ce_ratios[1])
     return ce_ratios[[0, 1]]
 
 
