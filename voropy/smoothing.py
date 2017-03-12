@@ -24,7 +24,6 @@ def flip_until_delaunay(mesh):
     while any(needs_flipping):
         k += 1
         mesh = flip_edges(mesh, needs_flipping)
-        mesh.write('flip%04d.vtu' % k)
         #
         mesh.create_edges()
         needs_flipping = numpy.logical_and(
