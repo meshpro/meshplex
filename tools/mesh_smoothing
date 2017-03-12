@@ -72,7 +72,6 @@ if __name__ == '__main__':
 
     # toss away all nodes which don't belong to cells
     pts, cells, _, cell_data, _ = meshio.read(args.input)
-    print(cell_data)
     cells = cells['triangle']
     uvertices, uidx = numpy.unique(cells, return_inverse=True)
     cells = uidx.reshape(cells.shape)
