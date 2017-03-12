@@ -19,6 +19,20 @@ def _parse_input_arguments():
         help='Input file'
         )
 
+    parser.add_argument(
+        '--show-centroids', '-c',
+        action='store_true',
+        help='show control volume centroids (default: false)',
+        default=False
+        )
+
+    parser.add_argument(
+        '--show-coedges', '-s',
+        action='store_true',
+        help='show co-edges (default: false)',
+        default=False
+        )
+
     return parser.parse_args()
 
 
@@ -35,5 +49,7 @@ if __name__ == '__main__':
 
     mesh = voropy.mesh_tri.MeshTri(pts, cells)
 
-    mesh.show()
-    plt.show()
+    mesh.show(
+        show_centroids=args.show_centroids,
+        show_coedges=args.show_coedges
+        )

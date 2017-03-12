@@ -59,9 +59,9 @@ def _parse_input_arguments():
     parser.add_argument(
         '--flip-frequency', '-f',
         dest='flip_frequency',
-        default=100,
+        default=1,
         type=int,
-        help='how often to do edge flipping'
+        help='how often to do edge flipping (default: 1, everytime)'
         )
 
     return parser.parse_args()
@@ -71,7 +71,7 @@ if __name__ == '__main__':
     args = _parse_input_arguments()
 
     # toss away all nodes which don't belong to cells
-    pts, cells, _, _, _ = meshio.read(args.input)
+    pts, cells, _, cell_data, _ = meshio.read(args.input)
     cells = cells['triangle']
     uvertices, uidx = numpy.unique(cells, return_inverse=True)
     cells = uidx.reshape(cells.shape)
@@ -85,7 +85,7 @@ if __name__ == '__main__':
 
     mesh = voropy.mesh_tri.MeshTri(pts, cells, flat_cell_correction=fcc_type)
 
-    out_mesh = voropy.mesh_tri.lloyd_smoothing(
+    out_mesh = voropy.smoothing.lloyd(
         mesh,
         args.tolerance,
         fcc_type=fcc_type,
