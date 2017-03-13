@@ -178,10 +178,7 @@ def lloyd(
     assert all(X[:, 2] == 0.0)
 
     # create mesh data structure
-    mesh = MeshTri(
-            X, cells,
-            flat_cell_correction=fcc_type
-            )
+    mesh = MeshTri(X, cells, flat_cell_correction=fcc_type)
 
     boundary_verts = mesh.get_boundary_vertices()
 
@@ -232,10 +229,10 @@ def lloyd(
     mesh, _ = flip_until_delaunay(mesh)
 
     if verbose:
-        print('\nFinal:' + 35*' ' + 'Initial:')
+        print('\nBefore:' + 35*' ' + 'After:')
         _print_stats([
+            initial_stats,
             _gather_stats(mesh),
-            initial_stats
             ])
 
     if output_filetype:
