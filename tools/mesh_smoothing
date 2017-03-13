@@ -39,7 +39,7 @@ def _parse_input_arguments():
         metavar='TOL',
         type=float,
         required=True,
-        help='convergence criterium (maximum move)'
+        help='convergence criterion (maximum move)'
         )
 
     parser.add_argument(
@@ -59,9 +59,9 @@ def _parse_input_arguments():
     parser.add_argument(
         '--flip-frequency', '-f',
         dest='flip_frequency',
-        default=1,
+        default=0,
         type=int,
-        help='how often to do edge flipping (default: 1, everytime)'
+        help='how often to do edge flipping (default: 0, adaptive)'
         )
 
     return parser.parse_args()

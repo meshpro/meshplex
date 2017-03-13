@@ -20,6 +20,7 @@ def flip_until_delaunay(mesh):
         numpy.logical_not(mesh.is_boundary_edge),
         mesh.get_ce_ratios_per_edge() < 0.0
         )
+    is_flipped = any(needs_flipping)
     k = 0
     while any(needs_flipping):
         k += 1
@@ -38,7 +39,7 @@ def flip_until_delaunay(mesh):
                 mesh.cells['nodes'],
                 flat_cell_correction=fcc_type
                 )
-    return mesh
+    return mesh, is_flipped
 
 
 def flip_edges(mesh, is_flip_edge):
@@ -168,7 +169,7 @@ def lloyd(
         tol,
         max_steps=10000,
         fcc_type='full',
-        flip_frequency=100,
+        flip_frequency=0,
         verbose=True,
         output_filetype=None
         ):
@@ -183,16 +184,27 @@ def lloyd(
 
     initial_stats = _gather_stats(mesh)
 
-    k = 0
+    next_flip_at = 0
+    flip_skip = 1
     for k in range(max_steps):
         if max_move < tol:
             break
         if output_filetype:
             _write(mesh, output_filetype, k)
 
-        # Flip the edges every so often.
-        if k % flip_frequency == 0:
-            mesh = flip_until_delaunay(mesh)
+        if k == next_flip_at:
+            mesh, is_flipped = flip_until_delaunay(mesh)
+            if flip_frequency > 0:
+                # fixed flip frequency
+                flip_skip = flip_frequency
+            else:
+                # If the mesh needed flipping, flip again next time. Otherwise
+                # double the interval.
+                if is_flipped:
+                    flip_skip = 1
+                else:
+                    flip_skip *= 2
+            next_flip_at = k + flip_skip
 
         # move interior points into centroids
         new_points = mesh.get_control_volume_centroids()
@@ -212,7 +224,7 @@ def lloyd(
             _print_stats([_gather_stats(mesh)])
 
     # Flip one last time.
-    mesh = flip_until_delaunay(mesh)
+    mesh, _ = flip_until_delaunay(mesh)
 
     if verbose:
         print('\nFinal:' + 35*' ' + 'Initial:')
