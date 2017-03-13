@@ -165,7 +165,8 @@ def _write(mesh, filetype, k):
 
 
 def lloyd(
-        mesh,
+        X,
+        cells,
         tol,
         max_steps=10000,
         fcc_type='full',
@@ -173,10 +174,14 @@ def lloyd(
         verbose=True,
         output_filetype=None
         ):
-
     # 2D mesh
-    assert all(mesh.node_coords[:, 2] == 0.0)
-    assert mesh.fcc_type == fcc_type
+    assert all(X[:, 2] == 0.0)
+
+    # create mesh data structure
+    mesh = MeshTri(
+            X, cells,
+            flat_cell_correction=fcc_type
+            )
 
     boundary_verts = mesh.get_boundary_vertices()
 
@@ -237,3 +242,49 @@ def lloyd(
         _write(mesh, output_filetype, k+1)
 
     return mesh
+
+
+def lloyd_submesh(X, cells, submeshes, tol, **kwargs):
+
+    # perform lloyd on each submesh separately
+    for submesh_id, cell_in_submesh in submeshes.items():
+        # Extract submesh entities
+        # Get cells
+        submesh_cells = cells['triangle'][cell_in_submesh]
+        # Get the vertices
+        submesh_verts, uidx = \
+            numpy.unique(submesh_cells, return_inverse=True)
+        submesh_X = X[submesh_verts]
+        #
+        submesh_cells = uidx.reshape(submesh_cells.shape)
+
+        # Since we don't have access to the density field here, voropy's Lloyd
+        # smoothing will always make all cells roughly equally large. This is
+        # inappropriate if the mesh is meant to be inhomegenous, e.g., if there
+        # are boundary layers. As a heuristic for inhomogenous meshes, check
+        # the lengths of the longest and the shortest boundary edge. If they
+        # are roughtly equal, perform Lloyd smoothing.
+        submesh = MeshTri(
+            submesh_X, submesh_cells, flat_cell_correction='full'
+            )
+        submesh.create_edges()
+        x = submesh_X[submesh.edges['nodes'][submesh.is_boundary_edge]]
+        e = x[:, 0] - x[:, 1]
+        edge_lengths2 = numpy.einsum('ij, ij->i', e, e)
+        ratio = numpy.sqrt(max(edge_lengths2) / min(edge_lengths2))
+        if ratio > 1.5:
+            print((
+                4*' ' + 'Subdomain boundary inhomogeneous ' +
+                '(edge length ratio %1.3f). Skipping.'
+                ) % ratio
+                )
+            continue
+
+        # perform lloyd smoothing
+        mesh = lloyd(submesh_X, submesh_cells, tol, **kwargs)
+
+        # write the points and cells back
+        X[submesh_verts] = mesh.node_coords
+        cells['triangle'][cell_in_submesh] = submesh_verts[mesh.cells['nodes']]
+
+    return X, cells

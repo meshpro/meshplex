@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 from helpers import download_mesh
+import meshio
 import voropy
 
 import numpy
@@ -11,10 +12,10 @@ def test_pacman_lloyd():
             'pacman.msh',
             '2da8ff96537f844a95a83abb48471b6a'
             )
-    mesh, _, _, _ = voropy.read(filename, flat_cell_correction='boundary')
+    X, cells, _, _, _ = meshio.read(filename)
 
     mesh = voropy.smoothing.lloyd(
-            mesh,
+            X, cells,
             1.0e-2,
             max_steps=1000,
             fcc_type='boundary',
