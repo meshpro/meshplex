@@ -887,8 +887,9 @@ class MeshTri(_base_mesh):
             ax.add_collection(line_segments)
 
         if boundary_edge_color:
-            boundary_edges = self.subdomains['boundary']['edges']
-            e = self.node_coords[self.edges['nodes'][boundary_edges]][:, :, :2]
+            e = self.node_coords[
+                self.edges['nodes'][self.is_boundary_edge]
+                ][:, :, :2]
             line_segments1 = LineCollection(e, color=boundary_edge_color)
             ax.add_collection(line_segments1)
 

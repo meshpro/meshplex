@@ -1,7 +1,6 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
-from matplotlib import pyplot as plt
-import numpy as np
+import numpy
 import pygmsh as pg
 import voropy
 
@@ -15,12 +14,11 @@ def generate():
             1.0,
             lcar,
             num_sections=4,
-            compound=True
+            compound=True,
+            make_surface=False
             )
 
-    ll = geom.add_line_loop(circle)
-
-    coords_v = np.array([
+    coords_v = numpy.array([
         [+0.2, -0.6, 0.0],
         [+0.65, +0.5, 0.0],
         [+0.25, +0.5, 0.0],
@@ -29,21 +27,24 @@ def generate():
         [-0.65, +0.5, 0.0],
         [-0.2, -0.6, 0.0],
         ])
-    hole = geom.add_polygon_loop(coords_v, lcar)
+    hole = geom.add_polygon(coords_v, lcar, make_surface=False)
 
-    geom.add_plane_surface([ll, hole])
+    geom.add_plane_surface(circle.line_loop, holes=[hole])
 
     return geom
 
 
 if __name__ == '__main__':
-    points, cells = pg.generate_mesh(generate())
-    mesh = voropy.mesh_tri.MeshTri(points, cells['triangle'])
-    mesh = voropy.mesh_tri.lloyd_smoothing(mesh, 1.0e-10)
+    X, cells, _, _, _ = pg.generate_mesh(generate())
+    # single out nodes that are actually used
+    uvertices, uidx = numpy.unique(cells['triangle'], return_inverse=True)
+    cells = uidx.reshape(cells['triangle'].shape)
+    X = X[uvertices]
+
+    mesh = voropy.smoothing.lloyd(X, cells, 1.0e-10)
     mesh.show(
             show_centroids=False,
-            mesh_color=[0.8,0.8,0.8],
+            mesh_color=[0.8, 0.8, 0.8],
             comesh_color='k',
             boundary_edge_color='k'
             )
-    plt.show()

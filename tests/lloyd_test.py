@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 from helpers import download_mesh
+import meshio
 import voropy
 
 import numpy
@@ -11,11 +12,14 @@ def test_pacman_lloyd():
             'pacman.msh',
             '2da8ff96537f844a95a83abb48471b6a'
             )
-    mesh, _, _, _ = voropy.read(filename, flat_cell_correction='boundary')
+    X, cells, _, _, _ = meshio.read(filename)
 
-    mesh = voropy.smoothing.lloyd(
-            mesh,
+    submesh_bools = {0: numpy.ones(len(cells['triangle']), dtype=bool)}
+
+    X, cells = voropy.smoothing.lloyd_submesh(
+            X, cells['triangle'], submesh_bools,
             1.0e-2,
+            skip_inhomogenous=False,
             max_steps=1000,
             fcc_type='boundary',
             flip_frequency=1,
@@ -24,7 +28,7 @@ def test_pacman_lloyd():
             )
 
     # Test if we're dealing with the mesh we expect.
-    nc = mesh.node_coords.flatten()
+    nc = X.flatten()
     norm1 = numpy.linalg.norm(nc, ord=1)
     norm2 = numpy.linalg.norm(nc, ord=2)
     normi = numpy.linalg.norm(nc, ord=numpy.inf)
@@ -35,7 +39,5 @@ def test_pacman_lloyd():
     assert abs(norm1 - 1939.1198108068188) < tol
     assert abs(norm2 - 75.949652079323229) < tol
     assert abs(normi - 5.0) < tol
-
-    assert mesh.num_delaunay_violations() == 0
 
     return
