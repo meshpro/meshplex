@@ -14,8 +14,10 @@ def test_pacman_lloyd():
             )
     X, cells, _, _, _ = meshio.read(filename)
 
-    X, cells = voropy.smoothing.lloyd(
-            X, cells['triangle'],
+    submesh_bools = {0: numpy.ones(len(cells['triangle']), dtype=bool)}
+
+    X, cells = voropy.smoothing.lloyd_submesh(
+            X, cells['triangle'], submesh_bools,
             1.0e-2,
             max_steps=1000,
             fcc_type='boundary',

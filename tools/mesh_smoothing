@@ -3,7 +3,6 @@
 import argparse
 import meshio
 import numpy
-from matplotlib import pyplot as plt
 import voropy
 
 
@@ -70,22 +69,15 @@ def _parse_input_arguments():
 if __name__ == '__main__':
     args = _parse_input_arguments()
 
-    # toss away all nodes which don't belong to cells
     X, cells, pt_data, cell_data, field_data = meshio.read(args.input)
-    uvertices, uidx = numpy.unique(cells['triangle'], return_inverse=True)
-    cells['triangle'] = uidx.reshape(cells['triangle'].shape)
-    X = X[uvertices]
 
     assert args.method in ['lloyd', 'lloyd_modified']
-    if args.method == 'lloyd':
-        fcc_type = 'boundary'
-    else:  # 'lloyd_modified'
-        fcc_type = 'full'
+    fcc_type = 'boundary' if args.method == 'lloyd' else 'full'
 
     if 'geometrical' in cell_data['triangle']:
         a = cell_data['triangle']['geometrical']
         # http://stackoverflow.com/q/42740483/353337
-        submesh_bools = {v: v == a for v in set(a)}
+        submesh_bools = {v: v == a for v in numpy.unique(a)}
     else:
         submesh_bools = {0: numpy.ones(len(cells['triangle']), dtype=bool)}
 
