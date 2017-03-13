@@ -81,6 +81,7 @@ if __name__ == '__main__':
     else:
         submesh_bools = {0: numpy.ones(len(cells['triangle']), dtype=bool)}
 
+    for cell_in_submesh in submeshes.values():
     X, cells['triangle'] = voropy.smoothing.lloyd_submesh(
         X, cells['triangle'], submesh_bools,
         args.tolerance,

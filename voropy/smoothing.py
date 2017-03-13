@@ -241,41 +241,51 @@ def lloyd(
     return mesh.node_coords, mesh.cells['nodes']
 
 
-def lloyd_submesh(X, cells, submeshes, tol, **kwargs):
+def _get_boundary_edge_ratio(X, cells):
+    '''Gets the ratio of the longest vs. the shortest boundary edge.
+    '''
+    submesh = MeshTri(X, cells, flat_cell_correction='full')
+    submesh.create_edges()
+    x = X[submesh.edges['nodes'][submesh.is_boundary_edge]]
+    e = x[:, 0] - x[:, 1]
+    edge_lengths2 = numpy.einsum('ij, ij->i', e, e)
+    return numpy.sqrt(max(edge_lengths2) / min(edge_lengths2))
+
+
+def _extract_submesh_entities(X, cells, cell_in_submesh):
+    # Get cells
+    submesh_cells = cells[cell_in_submesh]
+    # Get the vertices
+    submesh_verts, uidx = numpy.unique(submesh_cells, return_inverse=True)
+    submesh_X = X[submesh_verts]
+    #
+    submesh_cells = uidx.reshape(submesh_cells.shape)
+    return submesh_X, submesh_cells, submesh_verts
+
+
+def lloyd_submesh(X, cells, submeshes, tol, skip_inhomogenous=True, **kwargs):
 
     # perform lloyd on each submesh separately
-    for submesh_id, cell_in_submesh in submeshes.items():
-        # Extract submesh entities
-        # Get cells
-        submesh_cells = cells[cell_in_submesh]
-        # Get the vertices
-        submesh_verts, uidx = \
-            numpy.unique(submesh_cells, return_inverse=True)
-        submesh_X = X[submesh_verts]
-        #
-        submesh_cells = uidx.reshape(submesh_cells.shape)
+    for cell_in_submesh in submeshes.values():
+        submesh_X, submesh_cells, submesh_verts = \
+            _extract_submesh_entities(X, cells, cell_in_submesh)
 
-        # Since we don't have access to the density field here, voropy's Lloyd
-        # smoothing will always make all cells roughly equally large. This is
-        # inappropriate if the mesh is meant to be inhomegenous, e.g., if there
-        # are boundary layers. As a heuristic for inhomogenous meshes, check
-        # the lengths of the longest and the shortest boundary edge. If they
-        # are roughtly equal, perform Lloyd smoothing.
-        submesh = MeshTri(
-            submesh_X, submesh_cells, flat_cell_correction='full'
-            )
-        submesh.create_edges()
-        x = submesh_X[submesh.edges['nodes'][submesh.is_boundary_edge]]
-        e = x[:, 0] - x[:, 1]
-        edge_lengths2 = numpy.einsum('ij, ij->i', e, e)
-        ratio = numpy.sqrt(max(edge_lengths2) / min(edge_lengths2))
-        if ratio > 1.5:
-            print((
-                4*' ' + 'Subdomain boundary inhomogeneous ' +
-                '(edge length ratio %1.3f). Skipping.'
-                ) % ratio
-                )
-            continue
+        if skip_inhomogenous:
+            # Since we don't have access to the density field here, voropy's
+            # Lloyd smoothing will always make all cells roughly equally large.
+            # This is inappropriate if the mesh is meant to be inhomegenous,
+            # e.g., if there are boundary layers. As a heuristic for
+            # inhomogenous meshes, check the lengths of the longest and the
+            # shortest boundary edge. If they are roughtly equal, perform Lloyd
+            # smoothing.
+            ratio = _get_boundary_edge_ratio(submesh_X, submesh_cells)
+            if ratio > 1.5:
+                print((
+                    4*' ' + 'Subdomain boundary inhomogeneous ' +
+                    '(edge length ratio %1.3f). Skipping.'
+                    ) % ratio
+                    )
+                continue
 
         # perform lloyd smoothing
         X_out, cells_out = lloyd(submesh_X, submesh_cells, tol, **kwargs)
