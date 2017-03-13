@@ -250,7 +250,7 @@ def lloyd_submesh(X, cells, submeshes, tol, **kwargs):
     for submesh_id, cell_in_submesh in submeshes.items():
         # Extract submesh entities
         # Get cells
-        submesh_cells = cells['triangle'][cell_in_submesh]
+        submesh_cells = cells[cell_in_submesh]
         # Get the vertices
         submesh_verts, uidx = \
             numpy.unique(submesh_cells, return_inverse=True)
@@ -285,6 +285,6 @@ def lloyd_submesh(X, cells, submeshes, tol, **kwargs):
 
         # write the points and cells back
         X[submesh_verts] = mesh.node_coords
-        cells['triangle'][cell_in_submesh] = submesh_verts[mesh.cells['nodes']]
+        cells[cell_in_submesh] = submesh_verts[mesh.cells['nodes']]
 
     return X, cells

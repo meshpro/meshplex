@@ -71,11 +71,10 @@ if __name__ == '__main__':
     args = _parse_input_arguments()
 
     # toss away all nodes which don't belong to cells
-    pts, cells, _, cell_data, _ = meshio.read(args.input)
-    cells = cells['triangle']
-    uvertices, uidx = numpy.unique(cells, return_inverse=True)
-    cells = uidx.reshape(cells.shape)
-    pts = pts[uvertices]
+    X, cells, pt_data, cell_data, field_data = meshio.read(args.input)
+    uvertices, uidx = numpy.unique(cells['triangle'], return_inverse=True)
+    cells['triangle'] = uidx.reshape(cells['triangle'].shape)
+    X = X[uvertices]
 
     assert args.method in ['lloyd', 'lloyd_modified']
     if args.method == 'lloyd':
@@ -83,14 +82,26 @@ if __name__ == '__main__':
     else:  # 'lloyd_modified'
         fcc_type = 'full'
 
-    mesh = voropy.mesh_tri.MeshTri(pts, cells, flat_cell_correction=fcc_type)
+    if 'geometrical' in cell_data['triangle']:
+        a = cell_data['triangle']['geometrical']
+        # http://stackoverflow.com/q/42740483/353337
+        submesh_bools = {v: v == a for v in set(a)}
+    else:
+        submesh_bools = {0: numpy.ones(len(cells['triangle']), dtype=bool)}
 
-    out_mesh = voropy.smoothing.lloyd(
-        mesh,
+    X, cells['triangle'] = voropy.smoothing.lloyd_submesh(
+        X, cells['triangle'], submesh_bools,
         args.tolerance,
         fcc_type=fcc_type,
         flip_frequency=args.flip_frequency,
         verbose=args.verbose,
         output_filetype=args.output_steps_filetype
         )
-    out_mesh.write(args.output)
+
+    meshio.write(
+        args.output,
+        X, cells,
+        point_data=pt_data,
+        cell_data=cell_data,
+        field_data=field_data
+        )
