@@ -241,7 +241,7 @@ def lloyd(
     if output_filetype:
         _write(mesh, output_filetype, k+1)
 
-    return mesh
+    return mesh.node_coords, mesh.cells['nodes']
 
 
 def lloyd_submesh(X, cells, submeshes, tol, **kwargs):
@@ -281,10 +281,10 @@ def lloyd_submesh(X, cells, submeshes, tol, **kwargs):
             continue
 
         # perform lloyd smoothing
-        mesh = lloyd(submesh_X, submesh_cells, tol, **kwargs)
+        X_out, cells_out = lloyd(submesh_X, submesh_cells, tol, **kwargs)
 
         # write the points and cells back
-        X[submesh_verts] = mesh.node_coords
-        cells[cell_in_submesh] = submesh_verts[mesh.cells['nodes']]
+        X[submesh_verts] = X_out
+        cells[cell_in_submesh] = submesh_verts[cells_out]
 
     return X, cells
