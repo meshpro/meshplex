@@ -40,7 +40,7 @@ setup(
         'matplotlib',
         'meshio',
         'meshzoo',  # only required by tests
-        'numpy',
+        'numpy >= 1.9',  # unique return_counts
         'scipy',
         ],
     classifiers=[
