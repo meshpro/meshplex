@@ -32,7 +32,7 @@ setup(
     long_description=read('README.rst'),
     url='https://github.com/nschloe/voropy',
     download_url='https://github.com/nschloe/voropy/releases',
-    license='License :: OSI Approved :: MIT License',
+    license=about['__license__'],
     platforms='any',
     install_requires=[
         'matplotlib',
@@ -42,9 +42,9 @@ setup(
         'scipy',
         ],
     classifiers=[
-        'Development Status :: 4 - Beta',
+        about['__status__'],
+        about['__license__'],
         'Intended Audience :: Science/Research',
-        'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',
         'Programming Language :: Python',
         'Programming Language :: Python :: 2',
