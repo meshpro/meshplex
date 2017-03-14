@@ -28,7 +28,9 @@ setup(
     author=about['__author__'],
     author_email=about['__author_email__'],
     packages=find_packages(),
-    description='Finite Volume Discretizations for Python',
+    description=(
+       'Voronoi regions and more for triangular and tetrehedral meshes'
+       ),
     long_description=read('README.rst'),
     url='https://github.com/nschloe/voropy',
     download_url='https://github.com/nschloe/voropy/releases',
