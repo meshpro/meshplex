@@ -346,7 +346,7 @@ class MeshTri(_base_mesh):
         # ```
         # helps.
         is_used = numpy.zeros(len(nodes), dtype=bool)
-        is_used[cells.flat] = True
+        is_used[cells] = True
         assert all(is_used)
 
         self.cells = {
