@@ -56,8 +56,7 @@ def test_regular_tet0(a):
     # covolume/edge length ratios
     # alpha = a / 12.0 / numpy.sqrt(2)
     alpha = a / 2 / numpy.sqrt(24) / numpy.sqrt(12)
-    vals = mesh.get_ce_ratios()
-    print(vals.shape)
+    vals = mesh.ce_ratios
     assert near_equal(
         vals,
         [[
@@ -156,7 +155,7 @@ def test_regular_tet1_geometric(a):
         [[-a/24.0], [a/8.0], [0.0], [a/8.0]],
         [[-a/24.0], [0.0], [a/8.0], [a/8.0]],
         ])
-    assert near_equal(mesh.get_ce_ratios(), ref, tol)
+    assert near_equal(mesh.ce_ratios, ref, tol)
 
     # cell volumes
     assert near_equal(mesh.cell_volumes, [a**3/6.0], tol)
@@ -204,7 +203,7 @@ def test_regular_tet1_geometric_order():
         [[a/8.0], [-a/24.0], [a/8.0], [0.0]],
         [[a/8.0], [-a/24.0], [0.0], [a/8.0]],
         ])
-    assert near_equal(mesh.get_ce_ratios(), ref, tol)
+    assert near_equal(mesh.ce_ratios, ref, tol)
 
     # cell volumes
     assert near_equal(mesh.cell_volumes, [a**3/6.0], tol)
@@ -250,9 +249,9 @@ def test_regular_tet1_geometric_order():
 #
 #     # covolume/edge length ratios
 #     print(h)
-#     print(mesh.get_ce_ratios())
+#     print(mesh.ce_ratios)
 #     assert near_equal(
-#         mesh.get_ce_ratios(),
+#         mesh.ce_ratios,
 #         [[
 #             [0.0, 0.0, 0.0],
 #             [3.0/80.0, 3.0/40.0, 3.0/80.0],
