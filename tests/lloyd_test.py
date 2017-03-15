@@ -28,7 +28,7 @@ def test_pacman_simple():
             X, cells, submesh_bools,
             1.0e-2,
             skip_inhomogenous_submeshes=True,
-            max_steps=1,
+            max_steps=5,
             fcc_type='boundary',
             verbose=True
             )
