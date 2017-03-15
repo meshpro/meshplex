@@ -7,6 +7,9 @@ import numpy
 
 
 def flip_until_delaunay(mesh):
+    if (mesh.get_ce_ratios() > 0).all():
+        return mesh, False
+
     fcc_type = mesh.fcc_type
     if fcc_type is not None:
         # No flat_cell_correction when flipping.
@@ -267,6 +270,7 @@ def _get_boundary_edge_ratio(X, cells):
     '''Gets the ratio of the longest vs. the shortest boundary edge.
     '''
     submesh = MeshTri(X, cells, flat_cell_correction='full')
+    submesh.write('submesh.vtu')
     submesh.create_edges()
     x = X[submesh.edges['nodes'][submesh.is_boundary_edge]]
     e = x[:, 0] - x[:, 1]
@@ -285,14 +289,17 @@ def _extract_submesh_entities(X, cells, cell_in_submesh):
     return submesh_X, submesh_cells, submesh_verts
 
 
-def lloyd_submesh(X, cells, submeshes, tol, skip_inhomogenous=True, **kwargs):
-
+def lloyd_submesh(
+        X, cells, submeshes, tol,
+        skip_inhomogenous_submeshes=True,
+        **kwargs
+        ):
     # perform lloyd on each submesh separately
     for cell_in_submesh in submeshes.values():
         submesh_X, submesh_cells, submesh_verts = \
             _extract_submesh_entities(X, cells, cell_in_submesh)
 
-        if skip_inhomogenous:
+        if skip_inhomogenous_submeshes:
             # Since we don't have access to the density field here, voropy's
             # Lloyd smoothing will always make all cells roughly equally large.
             # This is inappropriate if the mesh is meant to be inhomegenous,

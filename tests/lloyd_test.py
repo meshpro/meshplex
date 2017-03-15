@@ -19,7 +19,7 @@ def test_pacman_lloyd():
     X, cells = voropy.smoothing.lloyd_submesh(
             X, cells['triangle'], submesh_bools,
             1.0e-2,
-            skip_inhomogenous=False,
+            skip_inhomogenous_submeshes=False,
             max_steps=1000,
             fcc_type='boundary',
             flip_frequency=1,

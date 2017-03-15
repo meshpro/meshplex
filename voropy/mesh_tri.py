@@ -558,6 +558,7 @@ class MeshTri(_base_mesh):
         # First sort...
         # TODO sort nds for less work
         a.sort(axis=1)
+
         # ... then find unique rows.
         b = numpy.ascontiguousarray(a).view(
                 numpy.dtype((numpy.void, a.dtype.itemsize * a.shape[1]))
@@ -568,6 +569,9 @@ class MeshTri(_base_mesh):
                 return_inverse=True,
                 return_counts=True
                 )
+        # No edge has more than 2 cells. This assertion fails, for example, if
+        # cells are listed twice.
+        assert all(cts < 3)
         edge_nodes = a[idx]
 
         self.is_boundary_edge = (cts == 1)
