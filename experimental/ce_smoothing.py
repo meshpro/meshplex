@@ -110,7 +110,8 @@ def circle(num_segments=7):
 
 
 if __name__ == '__main__':
-    pts, cells = read('pacman.vtu')
+    # pts, cells = read('pacman.vtu')
+    pts, cells = read('boundary_layers.vtu')
     # pts, cells = circle()
     mesh = voropy.mesh_tri.MeshTri(pts, cells)
     smooth(mesh, t=1.0e-3, num_iters=100)

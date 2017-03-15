@@ -7,6 +7,9 @@ import numpy
 
 
 def flip_until_delaunay(mesh):
+    if (mesh.get_ce_ratios() > 0).all():
+        return mesh, False
+
     fcc_type = mesh.fcc_type
     if fcc_type is not None:
         # No flat_cell_correction when flipping.
