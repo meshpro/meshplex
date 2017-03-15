@@ -182,7 +182,7 @@ def _write(mesh, filetype, k):
         plt.savefig('lloyd%04d.png' % k)
         plt.close(fig)
     else:
-        mesh.write('lloyd%04d.vtu' % k)
+        mesh.write('lloyd%04d.%s' % (k, filetype))
 
 
 def lloyd(
