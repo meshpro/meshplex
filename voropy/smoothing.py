@@ -270,7 +270,6 @@ def _get_boundary_edge_ratio(X, cells):
     '''Gets the ratio of the longest vs. the shortest boundary edge.
     '''
     submesh = MeshTri(X, cells, flat_cell_correction='full')
-    submesh.write('submesh.vtu')
     submesh.create_edges()
     x = X[submesh.edges['nodes'][submesh.is_boundary_edge]]
     e = x[:, 0] - x[:, 1]
