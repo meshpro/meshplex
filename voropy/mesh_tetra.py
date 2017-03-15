@@ -42,7 +42,6 @@ class MeshTetra(_base_mesh):
             }
 
         self._mode = mode
-        self._ce_ratios = None
         self._control_volumes = None
         self._circumcenters = None
         self.subdomains = {}
@@ -102,23 +101,12 @@ class MeshTetra(_base_mesh):
             # numpy.roll(self.edge_coords, 2, axis=0),
             )
 
-        self._ce_ratios = self._compute_ce_ratios_geometric()
+        self.ce_ratios = self._compute_ce_ratios_geometric()
 
         return
 
     def get_ce_ratios(self):
-        if self._ce_ratios is None:
-            assert self._mode in ['geometric', 'algebraic']
-            if self._mode == 'geometric':
-                self._ce_ratios = self._compute_ce_ratios_geometric()
-            else:  # 'algebraic'
-                num_edges = len(self.edges['nodes'])
-                self._ce_ratios = numpy.zeros(num_edges, dtype=float)
-                raise RuntimeError('Disabled')
-                idx, vals = self._compute_ce_ratios_algebraic()
-                numpy.add.at(self._ce_ratios, idx, vals)
-                self.circumcenter_face_distances = None
-        return self._ce_ratios
+        return self.ce_ratios
 
     def mark_boundary(self):
         if 'faces' not in self.cells:
@@ -237,7 +225,7 @@ class MeshTetra(_base_mesh):
         #
         #   CC = sum_k (zeta[k] / sum(zeta) * X[k]).
         #
-        alpha = self.zeta / numpy.sum(self.zeta, axis=0)
+        alpha = self._zeta / numpy.sum(self._zeta, axis=0)
 
         self._circumcenters = numpy.sum(
             alpha[None].T * self.node_coords[self.cells['nodes']],
@@ -367,7 +355,7 @@ class MeshTetra(_base_mesh):
         # found here yet.
         #
         ee = self.ei_dot_ej
-        self.zeta = (
+        self._zeta = (
             - ee[2, [1, 2, 3, 0]] * ee[1] * ee[2]
             - ee[1, [2, 3, 0, 1]] * ee[2] * ee[0]
             - ee[0, [3, 0, 1, 2]] * ee[0] * ee[1]
@@ -387,7 +375,7 @@ class MeshTetra(_base_mesh):
         # sum(self.circumcenter_face_distances * face_areas / 3) = cell_volumes
         # =>
         # cell_volumes = numpy.sqrt(sum(zeta / 72))
-        self.cell_volumes = numpy.sqrt(numpy.sum(self.zeta, axis=0) / 72.0)
+        self.cell_volumes = numpy.sqrt(numpy.sum(self._zeta, axis=0) / 72.0)
 
         #
         # self.circumcenter_face_distances =
@@ -397,13 +385,13 @@ class MeshTetra(_base_mesh):
         #
         # so
         ce_ratios = \
-            self.zeta/48.0 \
+            self._zeta/48.0 \
             * face_ce_ratios_div_face_areas / self.cell_volumes[None]
 
         # Distances of the cell circumcenter to the faces.
         face_areas = 0.5 * numpy.sqrt(alpha)
         self.circumcenter_face_distances = \
-            self.zeta / (24.0 * face_areas) / self.cell_volumes[None]
+            self._zeta / (24.0 * face_areas) / self.cell_volumes[None]
 
         return ce_ratios
 
@@ -418,7 +406,7 @@ class MeshTetra(_base_mesh):
         if self._control_volumes is None:
             #   1/3. * (0.5 * edge_length) * covolume
             # = 1/6 * edge_length**2 * ce_ratio_edge_ratio
-            v = self.ei_dot_ei * self.get_ce_ratios() / 6.0
+            v = self.ei_dot_ei * self.ce_ratios / 6.0
             # Explicitly sum up contributions per cell first. Makes
             # numpy.add.at faster.
             # For every node k (range(4)), check for which edges k appears in

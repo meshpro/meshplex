@@ -45,22 +45,22 @@ def flip_until_delaunay(mesh):
     return mesh, is_flipped
 
 
-def flip_for_six(mesh):
-    '''Ideally, all nodes are connected to six neighbors, forming a nicely
-    homogenous mesh. Sometimes, we can flip edges to increase the "six-ness" of
-    a mesh, e.g., if there is a triangle with one node that has less than six,
-    and two nodes that have more than six neighbors.
-    '''
-    # count the number of neighbors
-    mesh.create_edges()
-    num_neighbors = numpy.zeros(len(mesh.node_coords), dtype=int)
-    e = mesh.edges['nodes']
-    numpy.add.at(num_neighbors, e, numpy.ones(e.shape, dtype=int))
-    # Find edges which connect nodes with an adjacency larger than 6. An edge
-    # flip here won't make it worse, and probably will make it better.
-    nn = num_neighbors[e]
-    is_flip_edge = numpy.sum(nn > 6, axis=1) > 1
-    return flip_edges(mesh, is_flip_edge), numpy.any(is_flip_edge)
+# def flip_for_six(mesh):
+#     '''Ideally, all nodes are connected to six neighbors, forming a nicely
+#     homogenous mesh. Sometimes, we can flip edges to increase the "six-ness"
+#     of a mesh, e.g., if there is a triangle with one node that has less than
+#     six, and two nodes that have more than six neighbors.
+#     '''
+#     # count the number of neighbors
+#     mesh.create_edges()
+#     num_neighbors = numpy.zeros(len(mesh.node_coords), dtype=int)
+#     e = mesh.edges['nodes']
+#     numpy.add.at(num_neighbors, e, numpy.ones(e.shape, dtype=int))
+#     # Find edges which connect nodes with an adjacency larger than 6. An edge
+#     # flip here won't make it worse, and probably will make it better.
+#     nn = num_neighbors[e]
+#     is_flip_edge = numpy.sum(nn > 6, axis=1) > 1
+#     return flip_edges(mesh, is_flip_edge), numpy.any(is_flip_edge)
 
 
 def flip_edges(mesh, is_flip_edge):
@@ -182,7 +182,7 @@ def _write(mesh, filetype, k):
         plt.savefig('lloyd%04d.png' % k)
         plt.close(fig)
     else:
-        mesh.write('lloyd%04d.vtu' % k)
+        mesh.write('lloyd%04d.%s' % (k, filetype))
 
 
 def lloyd(
@@ -270,7 +270,6 @@ def _get_boundary_edge_ratio(X, cells):
     '''Gets the ratio of the longest vs. the shortest boundary edge.
     '''
     submesh = MeshTri(X, cells, flat_cell_correction='full')
-    submesh.write('submesh.vtu')
     submesh.create_edges()
     x = X[submesh.edges['nodes'][submesh.is_boundary_edge]]
     e = x[:, 0] - x[:, 1]
