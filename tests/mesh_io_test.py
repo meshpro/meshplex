@@ -17,7 +17,7 @@ def test_io_2d():
 
     assert mesh.num_delaunay_violations() == 0
 
-    mesh.plot()
+    mesh.show(show_axes=False, boundary_edge_color='g')
     mesh.show_vertex(0)
 
     _, fname = tempfile.mkstemp(suffix='.msh')
