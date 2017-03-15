@@ -80,6 +80,8 @@ def test_regular_tet0(a):
         tol
         )
 
+    mesh.mark_boundary()
+
     return
 
 
