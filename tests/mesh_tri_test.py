@@ -61,8 +61,8 @@ def test_regular_tri():
         def __init__(self):
             return
 
-        def is_inside(self):
-            return True
+        def is_inside(self, X):
+            return numpy.ones(X.shape[1:], dtype=bool)
     mesh.mark_cells(Subdomain())
 
     return

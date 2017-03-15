@@ -40,8 +40,8 @@ def test_pacman_simple():
     normi = numpy.linalg.norm(nc, ord=numpy.inf)
 
     tol = 1.0e-12
-    assert abs(norm1 - 4.9416430501237505) < tol
-    assert abs(norm2 - 2.1083283861207698) < tol
+    assert abs(norm1 - 4.9853556578540266) < tol
+    assert abs(norm2 - 2.1179164560036154) < tol
     assert abs(normi - 1.0) < tol
 
     return
