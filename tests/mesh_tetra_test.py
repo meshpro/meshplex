@@ -10,15 +10,15 @@ import numpy
 
 @pytest.mark.parametrize(
         'a',  # edge length
-        [1.0]
+        [0.5, 1.0, 1.33]
         )
 def test_regular_tet0(a):
-    points = numpy.array([
+    points = a * numpy.array([
         [1.0, 0, 0],
         [-0.5,  numpy.sqrt(3.0) / 2.0, 0],
         [-0.5, -numpy.sqrt(3.0) / 2.0, 0],
         [0.0, 0.0, numpy.sqrt(2.0)],
-        ]) / numpy.sqrt(3.0) * a
+        ]) / numpy.sqrt(3.0)
     cells = numpy.array([[0, 1, 2, 3]])
     mesh = voropy.mesh_tetra.MeshTetra(points, cells.copy())
 
