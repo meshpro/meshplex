@@ -13,6 +13,13 @@ import voropy
 __all__ = ['read']
 
 
+def _sanitize(points, cells):
+    uvertices, uidx = numpy.unique(cells, return_inverse=True)
+    cells = uidx.reshape(cells.shape)
+    points = points[uvertices]
+    return points, cells
+
+
 def read(filename, flat_cell_correction=None):
     '''Reads an unstructured mesh with added data.
 
@@ -29,17 +36,11 @@ def read(filename, flat_cell_correction=None):
 
     # make sure to include the used nodes only
     if 'tetra' in cells:
-        cells = cells['tetra']
-        uvertices, uidx = numpy.unique(cells, return_inverse=True)
-        cells = uidx.reshape(cells.shape)
-        points = points[uvertices]
+        points, cells = _sanitize(points, cells['tetra'])
         return voropy.mesh_tetra.MeshTetra(points, cells), \
             point_data, cell_data, field_data
     elif 'triangle' in cells:
-        cells = cells['triangle']
-        uvertices, uidx = numpy.unique(cells, return_inverse=True)
-        cells = uidx.reshape(cells.shape)
-        points = points[uvertices]
+        points, cells = _sanitize(points, cells['triangle'])
         return voropy.mesh_tri.MeshTri(
                points, cells,
                flat_cell_correction=flat_cell_correction
