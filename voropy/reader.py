@@ -7,6 +7,7 @@ formats.
 .. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
 '''
 import meshio
+import numpy
 import voropy
 
 __all__ = ['read']
@@ -23,17 +24,26 @@ def read(filename, flat_cell_correction=None):
     :returns field_data: Field data read from file.
     :type field_data: dict
     '''
-    points, cells_nodes, point_data, cell_data, field_data = \
+    points, cells, point_data, cell_data, field_data = \
         meshio.read(filename)
 
-    if 'tetra' in cells_nodes:
-        return voropy.mesh_tetra.MeshTetra(points, cells_nodes['tetra']), \
-               point_data, cell_data, field_data
-    elif 'triangle' in cells_nodes:
+    # make sure to include the used nodes only
+    if 'tetra' in cells:
+        cells = cells['tetra']
+        uvertices, uidx = numpy.unique(cells, return_inverse=True)
+        cells = uidx.reshape(cells.shape)
+        points = points[uvertices]
+        return voropy.mesh_tetra.MeshTetra(points, cells), \
+            point_data, cell_data, field_data
+    elif 'triangle' in cells:
+        cells = cells['triangle']
+        uvertices, uidx = numpy.unique(cells, return_inverse=True)
+        cells = uidx.reshape(cells.shape)
+        points = points[uvertices]
         return voropy.mesh_tri.MeshTri(
-               points, cells_nodes['triangle'],
+               points, cells,
                flat_cell_correction=flat_cell_correction
                ), \
-               point_data, cell_data, field_data
+            point_data, cell_data, field_data
     else:
         raise RuntimeError('Unknown mesh type.')
