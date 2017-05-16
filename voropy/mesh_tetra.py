@@ -20,7 +20,11 @@ class MeshTetra(_base_mesh):
         # helps in many downstream applications, e.g., when constructing linear
         # systems with the cells/edges. (When converting to CSR format, the
         # I/J entries must be sorted.)
-        cells.sort(axis=1)
+        # Don't use cells.sort(axis=1) to avoid
+        # ```
+        # ValueError: sort array is read-only
+        # ```
+        cells = numpy.sort(cells, axis=1)
         cells = cells[cells[:, 0].argsort()]
 
         super(MeshTetra, self).__init__(node_coords, cells)
