@@ -359,7 +359,7 @@ class MeshTri(_base_mesh):
 
         self._ce_ratios = None
         self._control_volumes = None
-        self._control_volume_contribs = None
+        self._cell_partitions = None
         self._cv_centroids = None
         self._surface_areas = None
         self.edges = None
@@ -381,7 +381,7 @@ class MeshTri(_base_mesh):
 
         # The inverted local index.
         # This array specifies for each of the three nodes which edge endpoints
-        # correspond to it.  For the aboe local_idx, this should give
+        # correspond to it. For the aboe local_idx, this should give
         #
         #    [[(1, 1), (0, 2)], [(0, 0), (1, 2)], [(1, 0), (0, 1)]]
         #
@@ -468,7 +468,8 @@ class MeshTri(_base_mesh):
 
     def get_control_volumes(self):
         if self._control_volumes is None:
-            v = self._get_control_volume_contribs()[..., self.regular_cells]
+            v = self.get_cell_partitions()[..., self.regular_cells]
+
             # Summing up the arrays first makes the work for numpy.add.at
             # lighter.
             ids = self.cells['nodes'][self.regular_cells].T
@@ -534,15 +535,14 @@ class MeshTri(_base_mesh):
         if self.edges is None:
             self.create_edges()
 
-        # Get vertices on the boundary edges
-        boundary_edges = numpy.where(self.is_boundary_edge)[0]
-        boundary_vertices = numpy.unique(
-                self.edges['nodes'][boundary_edges].flatten()
-                )
+        self.is_boundary_node = numpy.zeros(len(self.node_coords), dtype=bool)
+        self.is_boundary_node[
+            self.edges['nodes'][self.is_boundary_edge]
+            ] = True
 
         self.subdomains['boundary'] = {
-                'vertices': boundary_vertices,
-                'edges': boundary_edges
+                'vertices': numpy.where(self.is_boundary_node)[0],
+                'edges': numpy.where(self.is_boundary_edge)[0],
                 }
         return
 
@@ -560,7 +560,7 @@ class MeshTri(_base_mesh):
 
         # Find the unique edges.
         # First sort...
-        # TODO sort nds for less work
+        # TODO sort nds first for less work
         a.sort(axis=1)
 
         # ... then find unique rows.
@@ -605,14 +605,44 @@ class MeshTri(_base_mesh):
             edge_cells[edge_id].append(k % num_cells)
         return edge_cells
 
-    def _get_control_volume_contribs(self):
-        if self._control_volume_contribs is None:
+    def get_face_partitions(self):
+        # face = edge for triangles.
+        # The partition is simply along the center of the edge.
+        edge_lengths = self.get_edge_lengths()
+        return numpy.array([0.5 * edge_lengths, 0.5 * edge_lengths])
+
+    def get_faces(self, subdomain):
+        '''Get the cells and local face (edge) indices that belong to a
+        subdomain.
+        '''
+
+        return
+
+    def mark_faces(self, subdomain):
+        '''Mark faces/edges which are fully in subdomain.
+        '''
+        if subdomain.is_boundary_only:
+            self.mark_boundary()
+            idx = self.subdomains['boundary']['vertices']
+            is_inside = subdomain.is_inside(self.node_coords[idx].T).T
+            vertex_ids = idx[is_inside]
+        else:
+            is_inside = subdomain.is_inside(self.node_coords.T).T
+            vertex_ids = numpy.where(is_inside)[0]
+
+        self.subdomains[subdomain] = {
+                'vertices': vertex_ids,
+                }
+        return
+
+    def get_cell_partitions(self):
+        if self._cell_partitions is None:
             # Compute the control volumes. Note that
             #   0.5 * (0.5 * edge_length) * covolume
             # = 0.25 * edge_length**2 * ce_ratio_edge_ratio
-            self._control_volume_contribs = \
+            self._cell_partitions = \
                 0.25 * self.ei_dot_ei * self.ce_ratios_per_half_edge
-        return self._control_volume_contribs
+        return self._cell_partitions
 
     def get_cell_circumcenters(self):
         if self.cell_circumcenters is None:
@@ -635,7 +665,7 @@ class MeshTri(_base_mesh):
         # The integral of any linear function over a triangle is the average of
         # the values of the function in each of the three corners, times the
         # area of the triangle.
-        right_triangle_vols = self._get_control_volume_contribs()[:, cell_ids]
+        right_triangle_vols = self.get_cell_partitions()[:, cell_ids]
 
         node_edges = self.idx_hierarchy[..., cell_ids]
 
