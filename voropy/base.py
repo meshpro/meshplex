@@ -39,7 +39,6 @@ def compute_tri_areas_and_ce_ratios(ei_dot_ej):
     # There are multiple ways of deriving a closed form for the
     # covolume-edgelength ratios.
     #
-    #
     #   * The covolume-edge ratios for the edges of each cell is the solution
     #     of the equation system
     #
@@ -237,10 +236,11 @@ class _base_mesh(object):
             self.mark_boundary()
             idx = self.subdomains['boundary']['vertices']
             is_inside = subdomain.is_inside(self.node_coords[idx].T).T
-            vertex_ids = idx[is_inside]
         else:
             is_inside = subdomain.is_inside(self.node_coords.T).T
-            vertex_ids = numpy.where(is_inside)[0]
+            idx = numpy.arange(len(self.node_coords))
+
+        vertex_ids = idx[is_inside]
 
         self.subdomains[subdomain] = {
                 'vertices': vertex_ids,
