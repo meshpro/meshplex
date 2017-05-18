@@ -212,6 +212,19 @@ class _base_mesh(object):
             self.mark_vertices(subdomain)
         return self.subdomains[subdomain]['vertices']
 
+    def get_faces(self, subdomain):
+        '''Get faces which are fully in subdomain.
+        '''
+        if subdomain not in self.subdomains:
+            self.mark_vertices(subdomain)
+
+        # A face is inside if all its edges are in.
+        # An edge is inside if all its nodes are in.
+        is_in = self.subdomains[subdomain]['vertices'][self.idx_hierarchy]
+        # Take `all()` over all axes except the last two (face_ids, cell_ids).
+        n = len(is_in.shape)
+        return numpy.all(is_in, axis=tuple(range(n-2)))
+
     def mark_cells(self, subdomain):
         '''Mark cells which are fully in subdomain.
         '''
@@ -232,12 +245,15 @@ class _base_mesh(object):
     def mark_vertices(self, subdomain):
         '''Mark faces/edges which are fully in subdomain.
         '''
-        is_inside = subdomain.is_inside(self.node_coords.T).T
+        if subdomain is None:
+            is_inside = numpy.ones(len(self.node_coords), dtype=bool)
+        else:
+            is_inside = subdomain.is_inside(self.node_coords.T).T
 
-        if subdomain.is_boundary_only:
-            # Filter boundary
-            self.mark_boundary()
-            is_inside = numpy.logical_and(is_inside, self.is_boundary_node)
+            if subdomain.is_boundary_only:
+                # Filter boundary
+                self.mark_boundary()
+                is_inside = numpy.logical_and(is_inside, self.is_boundary_node)
 
         self.subdomains[subdomain] = {
                 'vertices': is_inside,

@@ -611,13 +611,6 @@ class MeshTri(_base_mesh):
         edge_lengths = self.get_edge_lengths()
         return numpy.array([0.5 * edge_lengths, 0.5 * edge_lengths])
 
-    def get_faces(self, subdomain):
-        '''Get the cells and local face (edge) indices that belong to a
-        subdomain.
-        '''
-
-        return
-
     def mark_faces(self, subdomain):
         '''Mark faces/edges which are fully in subdomain.
         '''
