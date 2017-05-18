@@ -58,8 +58,7 @@ def test_regular_tri():
 
     # dummy subdomain marker test
     class Subdomain(object):
-        def __init__(self):
-            return
+        is_boundary_only = False
 
         def is_inside(self, X):
             return numpy.ones(X.shape[1:], dtype=bool)

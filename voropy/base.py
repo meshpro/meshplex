@@ -215,32 +215,31 @@ class _base_mesh(object):
     def mark_cells(self, subdomain):
         '''Mark cells which are fully in subdomain.
         '''
-        is_inside = numpy.all(subdomain.is_inside(
-            self.node_coords[self.cells['nodes']].T
-            ).T, axis=1
-            )
-        cell_ids = numpy.where(is_inside)[0]
+        if subdomain not in self.subdomains:
+            self.mark_vertices(subdomain)
 
-        vertex_ids = numpy.unique(self.cells['nodes'][cell_ids])
+        # A cell is inside if all its faces are in.
+        # A face is inside if all its edges are in.
+        # An edge is inside if all its nodes are in.
+        is_in = self.subdomains[subdomain]['vertices'][self.idx_hierarchy]
+        # Take `all()` over all axes except the last (cell_ids).
+        n = len(is_in.shape)
+        is_inside = numpy.all(is_in, axis=tuple(range(n-1)))
 
-        self.subdomains[subdomain] = {
-                'cells': cell_ids,
-                'vertices': vertex_ids,
-                }
+        self.subdomains[subdomain]['cells'] = is_inside
         return
 
     def mark_vertices(self, subdomain):
         '''Mark faces/edges which are fully in subdomain.
         '''
-        if subdomain.is_boundary_only:
-            self.mark_boundary()
-            idx = self.subdomains['boundary']['vertices']
-        else:
-            idx = numpy.arange(len(self.node_coords))
+        is_inside = subdomain.is_inside(self.node_coords.T).T
 
-        is_inside = subdomain.is_inside(self.node_coords[idx].T).T
+        if subdomain.is_boundary_only:
+            # Filter boundary
+            self.mark_boundary()
+            is_inside = numpy.logical_and(is_inside, self.is_boundary_node)
 
         self.subdomains[subdomain] = {
-                'vertices': idx[is_inside],
+                'vertices': is_inside,
                 }
         return
