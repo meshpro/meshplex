@@ -204,7 +204,7 @@ class _base_mesh(object):
             self.mark_subdomain(subdomain)
         return self.subdomains[subdomain]['cells']
 
-    def get_vertices(self, subdomain=None):
+    def is_node_inside(self, subdomain=None):
         if subdomain is None:
             # http://stackoverflow.com/a/42392791/353337
             return numpy.s_[:]
@@ -212,7 +212,7 @@ class _base_mesh(object):
             self.mark_vertices(subdomain)
         return self.subdomains[subdomain]['vertices']
 
-    def get_faces(self, subdomain):
+    def is_face_inside(self, subdomain):
         '''Get faces which are fully in subdomain.
         '''
         if subdomain not in self.subdomains:
