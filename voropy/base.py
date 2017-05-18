@@ -235,14 +235,12 @@ class _base_mesh(object):
         if subdomain.is_boundary_only:
             self.mark_boundary()
             idx = self.subdomains['boundary']['vertices']
-            is_inside = subdomain.is_inside(self.node_coords[idx].T).T
         else:
-            is_inside = subdomain.is_inside(self.node_coords.T).T
             idx = numpy.arange(len(self.node_coords))
 
-        vertex_ids = idx[is_inside]
+        is_inside = subdomain.is_inside(self.node_coords[idx].T).T
 
         self.subdomains[subdomain] = {
-                'vertices': vertex_ids,
+                'vertices': idx[is_inside],
                 }
         return
