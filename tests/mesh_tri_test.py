@@ -54,7 +54,7 @@ def test_regular_tri():
 
     mesh.get_cells()
     mesh.get_edges()
-    mesh.get_vertices()
+    mesh.is_node_inside()
 
     # dummy subdomain marker test
     class Subdomain(object):
