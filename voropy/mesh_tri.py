@@ -445,7 +445,7 @@ class MeshTri(_base_mesh):
 
     def get_boundary_vertices(self):
         self.mark_boundary()
-        return self.subdomains['boundary']['vertices']
+        return numpy.where(self.is_boundary_node)[0]
 
     def get_ce_ratios(self, cell_ids=None):
         if cell_ids is not None:
@@ -540,10 +540,7 @@ class MeshTri(_base_mesh):
             self.edges['nodes'][self.is_boundary_edge]
             ] = True
 
-        self.subdomains['boundary'] = {
-                'vertices': numpy.where(self.is_boundary_node)[0],
-                'edges': numpy.where(self.is_boundary_edge)[0],
-                }
+        self.is_boundary_face = self.is_boundary_edge
         return
 
     def create_edges(self):

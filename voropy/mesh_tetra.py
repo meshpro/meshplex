@@ -116,20 +116,10 @@ class MeshTetra(_base_mesh):
         if 'faces' not in self.cells:
             self.create_cell_face_relationships()
 
-        # Get vertices on the boundary faces
-        boundary_faces = numpy.where(self.is_boundary_face)[0]
-        boundary_vertices = numpy.unique(
-                self.faces['nodes'][boundary_faces].flatten()
-                )
-        # boundary_edges = numpy.unique(
-        #         self.faces['edges'][boundary_faces].flatten()
-        #         )
-
-        self.subdomains['boundary'] = {
-                'vertices': boundary_vertices,
-                # 'edges': boundary_edges,
-                'faces': boundary_faces
-                }
+        self.is_boundary_node = numpy.zeros(len(self.node_coords), dtype=bool)
+        self.is_boundary_node[
+            self.faces['nodes'][self.is_boundary_face]
+            ] = True
         return
 
     def create_cell_face_relationships(self):

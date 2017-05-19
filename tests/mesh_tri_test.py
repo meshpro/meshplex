@@ -52,9 +52,9 @@ def test_regular_tri():
 
     assert mesh.num_delaunay_violations() == 0
 
-    mesh.get_cells()
-    mesh.get_edges()
-    mesh.is_node_inside()
+    mesh.get_cell_mask()
+    mesh.get_edge_mask()
+    mesh.get_vertex_mask()
 
     # dummy subdomain marker test
     class Subdomain(object):
@@ -62,7 +62,8 @@ def test_regular_tri():
 
         def is_inside(self, X):
             return numpy.ones(X.shape[1:], dtype=bool)
-    mesh.mark_cells(Subdomain())
+    cell_mask = mesh.get_cell_mask(Subdomain())
+    assert sum(cell_mask) == 1
 
     return
 
