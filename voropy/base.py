@@ -188,6 +188,14 @@ class _base_mesh(object):
             self._edge_lengths = numpy.sqrt(self.ei_dot_ei)
         return self._edge_lengths
 
+    def get_vertex_mask(self, subdomain=None):
+        if subdomain is None:
+            # http://stackoverflow.com/a/42392791/353337
+            return numpy.s_[:]
+        if subdomain not in self.subdomains:
+            self._mark_vertices(subdomain)
+        return self.subdomains[subdomain]['vertices']
+
     def get_edge_mask(self, subdomain=None):
         '''Get faces which are fully in subdomain.
         '''
@@ -209,31 +217,6 @@ class _base_mesh(object):
             is_inside = numpy.logical_and(is_inside, self.is_boundary_edge)
 
         return is_inside
-
-    def get_cell_mask(self, subdomain=None):
-        if subdomain is None:
-            # http://stackoverflow.com/a/42392791/353337
-            return numpy.s_[:]
-
-        if subdomain.is_boundary_only:
-            # There are no boundary cells
-            return []
-
-        if subdomain not in self.subdomains:
-            self._mark_vertices(subdomain)
-
-        is_in = self.subdomains[subdomain]['vertices'][self.idx_hierarchy]
-        # Take `all()` over all axes except the last one (cell_ids).
-        n = len(is_in.shape)
-        return numpy.all(is_in, axis=tuple(range(n-1)))
-
-    def get_vertex_mask(self, subdomain=None):
-        if subdomain is None:
-            # http://stackoverflow.com/a/42392791/353337
-            return numpy.s_[:]
-        if subdomain not in self.subdomains:
-            self._mark_vertices(subdomain)
-        return self.subdomains[subdomain]['vertices']
 
     def get_face_mask(self, subdomain):
         '''Get faces which are fully in subdomain.
@@ -257,6 +240,23 @@ class _base_mesh(object):
             is_inside = numpy.logical_and(is_inside, self.is_boundary_face)
 
         return is_inside
+
+    def get_cell_mask(self, subdomain=None):
+        if subdomain is None:
+            # http://stackoverflow.com/a/42392791/353337
+            return numpy.s_[:]
+
+        if subdomain.is_boundary_only:
+            # There are no boundary cells
+            return []
+
+        if subdomain not in self.subdomains:
+            self._mark_vertices(subdomain)
+
+        is_in = self.subdomains[subdomain]['vertices'][self.idx_hierarchy]
+        # Take `all()` over all axes except the last one (cell_ids).
+        n = len(is_in.shape)
+        return numpy.all(is_in, axis=tuple(range(n-1)))
 
     def _mark_vertices(self, subdomain):
         '''Mark faces/edges which are fully in subdomain.

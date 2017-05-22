@@ -7,7 +7,7 @@ import voropy
 import numpy
 
 
-def test_pacman_simple():
+def test_simple_lloyd(max_steps=5, output_filetype=None):
     X = numpy.array([
         [0.0, 0.0, 0.0],
         [1.0, 0.0, 0.0],
@@ -28,9 +28,10 @@ def test_pacman_simple():
             X, cells, submesh_bools,
             1.0e-2,
             skip_inhomogenous_submeshes=True,
-            max_steps=5,
+            max_steps=max_steps,
             fcc_type='boundary',
-            verbose=True
+            verbose=True,
+            output_filetype=output_filetype
             )
 
     # Test if we're dealing with the mesh we expect.
@@ -47,7 +48,7 @@ def test_pacman_simple():
     return
 
 
-def test_pacman_lloyd():
+def test_pacman_lloyd(max_steps=1000, output_filetype=None):
     filename = download_mesh(
             'pacman.msh',
             '2da8ff96537f844a95a83abb48471b6a'
@@ -60,11 +61,11 @@ def test_pacman_lloyd():
             X, cells['triangle'], submesh_bools,
             1.0e-2,
             skip_inhomogenous_submeshes=False,
-            max_steps=1000,
+            max_steps=max_steps,
             fcc_type='boundary',
             flip_frequency=1,
-            verbose=False
-            # output_filetype='png'
+            verbose=False,
+            output_filetype=output_filetype
             )
 
     # Test if we're dealing with the mesh we expect.
@@ -81,3 +82,11 @@ def test_pacman_lloyd():
     assert abs(normi - 5.0) < tol
 
     return
+
+
+if __name__ == '__main__':
+    # test_pacman_lloyd(
+    test_simple_lloyd(
+            max_steps=100,
+            output_filetype='png'
+            )

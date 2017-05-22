@@ -381,7 +381,7 @@ class MeshTri(_base_mesh):
 
         # The inverted local index.
         # This array specifies for each of the three nodes which edge endpoints
-        # correspond to it. For the aboe local_idx, this should give
+        # correspond to it. For the above local_idx, this should give
         #
         #    [[(1, 1), (0, 2)], [(0, 0), (1, 2)], [(1, 0), (0, 1)]]
         #
@@ -412,11 +412,11 @@ class MeshTri(_base_mesh):
             self.fcc = None
             self.regular_cells = numpy.s_[:]
         else:
-            assert flat_cell_correction in ['full', 'boundary']
             if flat_cell_correction == 'full':
                 # All cells with a negative c/e ratio are redone.
                 edge_needs_fcc = self.ce_ratios_per_half_edge < 0.0
-            else:  # 'boundary'
+            else:
+                assert flat_cell_correction == 'boundary'
                 # This best imitates the classical notion of control volumes.
                 # Only cells with a negative c/e ratio on the boundary are
                 # redone. Of course, this requires identifying boundary edges
@@ -425,7 +425,7 @@ class MeshTri(_base_mesh):
                     self.create_edges()
                 edge_needs_fcc = numpy.logical_and(
                     self.ce_ratios_per_half_edge < 0.0,
-                    self.is_boundary_edge[self.cells['edges']].T
+                    self.is_boundary_edge
                     )
 
             fcc_local_edge, self.fcc_cells = numpy.where(edge_needs_fcc)
@@ -529,6 +529,7 @@ class MeshTri(_base_mesh):
                 numpy.add.at(self._cv_centroids, d[0], d[1])
             # Divide by the control volume
             self._cv_centroids /= self.get_control_volumes()[:, None]
+
         return self._cv_centroids
 
     def mark_boundary(self):
@@ -536,8 +537,9 @@ class MeshTri(_base_mesh):
             self.create_edges()
 
         self.is_boundary_node = numpy.zeros(len(self.node_coords), dtype=bool)
+
         self.is_boundary_node[
-            self.edges['nodes'][self.is_boundary_edge]
+            self.idx_hierarchy[..., self.is_boundary_edge]
             ] = True
 
         self.is_boundary_face = self.is_boundary_edge
@@ -546,21 +548,12 @@ class MeshTri(_base_mesh):
     def create_edges(self):
         '''Setup edge-node and edge-cell relations.
         '''
-        # Order the edges such that node 0 doesn't occur in edge 0 etc., i.e.,
-        # node k is opposite of edge k.
-        nds = self.cells['nodes'].T
-        a = numpy.hstack([
-            nds[[1, 2]],
-            nds[[2, 0]],
-            nds[[0, 1]]
-            ]).T
+        # Reshape into individual axes.
+        # Sort the columns to make it possible for `unique()` to identify
+        # individual edges.
+        s = self.idx_hierarchy.shape
+        a = numpy.sort(self.idx_hierarchy.reshape(s[0], s[1]*s[2]).T, axis=1)
 
-        # Find the unique edges.
-        # First sort...
-        # TODO sort nds first for less work
-        a.sort(axis=1)
-
-        # ... then find unique rows.
         b = numpy.ascontiguousarray(a).view(
                 numpy.dtype((numpy.void, a.dtype.itemsize * a.shape[1]))
                 )
@@ -570,17 +563,20 @@ class MeshTri(_base_mesh):
                 return_inverse=True,
                 return_counts=True
                 )
+
         # No edge has more than 2 cells. This assertion fails, for example, if
         # cells are listed twice.
         assert all(cts < 3)
-        edge_nodes = a[idx]
 
-        self.is_boundary_edge = (cts == 1)
+        self.is_boundary_edge = (cts[inv] == 1).reshape(s[1:])
+
+        self.is_boundary_edge_individual = (cts == 1)
 
         self.edges = {
-            'nodes': edge_nodes,
+            'nodes': a[idx],
             }
 
+        # TODO is any of this needed?
         # cell->edges relationship
         num_cells = len(self.cells['nodes'])
         cells_edges = inv.reshape([3, num_cells]).T
@@ -820,7 +816,7 @@ class MeshTri(_base_mesh):
         # Delaunay violations are present exactly on the interior edges where
         # the ce_ratio is negative. Count those.
         ce_ratios = self.get_ce_ratios_per_edge()
-        return numpy.sum(ce_ratios[~self.is_boundary_edge] < 0.0)
+        return numpy.sum(ce_ratios[~self.is_boundary_edge_individual] < 0.0)
 
     def show(self, *args, **kwargs):
         from matplotlib import pyplot as plt
@@ -916,7 +912,7 @@ class MeshTri(_base_mesh):
 
         if boundary_edge_color:
             e = self.node_coords[
-                self.edges['nodes'][self.is_boundary_edge]
+                self.edges['nodes'][self.is_boundary_edge_individual]
                 ][:, :, :2]
             line_segments1 = LineCollection(e, color=boundary_edge_color)
             ax.add_collection(line_segments1)
