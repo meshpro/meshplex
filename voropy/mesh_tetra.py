@@ -20,7 +20,11 @@ class MeshTetra(_base_mesh):
         # helps in many downstream applications, e.g., when constructing linear
         # systems with the cells/edges. (When converting to CSR format, the
         # I/J entries must be sorted.)
-        cells.sort(axis=1)
+        # Don't use cells.sort(axis=1) to avoid
+        # ```
+        # ValueError: sort array is read-only
+        # ```
+        cells = numpy.sort(cells, axis=1)
         cells = cells[cells[:, 0].argsort()]
 
         super(MeshTetra, self).__init__(node_coords, cells)
@@ -112,34 +116,19 @@ class MeshTetra(_base_mesh):
         if 'faces' not in self.cells:
             self.create_cell_face_relationships()
 
-        # Get vertices on the boundary faces
-        boundary_faces = numpy.where(self.is_boundary_face)[0]
-        boundary_vertices = numpy.unique(
-                self.faces['nodes'][boundary_faces].flatten()
-                )
-        # boundary_edges = numpy.unique(
-        #         self.faces['edges'][boundary_faces].flatten()
-        #         )
-
-        self.subdomains['boundary'] = {
-                'vertices': boundary_vertices,
-                # 'edges': boundary_edges,
-                'faces': boundary_faces
-                }
+        self.is_boundary_node = numpy.zeros(len(self.node_coords), dtype=bool)
+        self.is_boundary_node[
+            self.faces['nodes'][self.is_boundary_face_individual]
+            ] = True
         return
 
     def create_cell_face_relationships(self):
-        # All possible faces.
-        # Face k is opposite of node k in each cell.
-        # Make sure that the indices in each row are in ascending order. This
-        # makes it easier to find unique rows.
-        sorted_nds = numpy.sort(self.cells['nodes'], axis=1).T
-        a = numpy.hstack([
-            sorted_nds[[1, 2, 3]],
-            sorted_nds[[0, 2, 3]],
-            sorted_nds[[0, 1, 3]],
-            sorted_nds[[0, 1, 2]]
-            ]).T
+        # Reshape into individual faces, and take the first node per edge. (The
+        # face is fully characterized by it.) Sort the columns to make it
+        # possible for `unique()` to identify individual faces.
+        s = self.idx_hierarchy.shape
+        a = self.idx_hierarchy.reshape([s[0], s[1], s[2]*s[3]]).T
+        a = numpy.sort(a[:, :, 0])
 
         # Find the unique faces
         b = numpy.ascontiguousarray(a).view(
@@ -151,12 +140,16 @@ class MeshTetra(_base_mesh):
                 return_inverse=True,
                 return_counts=True
                 )
-        face_nodes = a[idx]
 
-        self.is_boundary_face = (cts == 1)
+        # No face has more than 2 cells. This assertion fails, for example, if
+        # cells are listed twice.
+        assert all(cts < 3)
+
+        self.is_boundary_face = (cts[inv] == 1).reshape(s[2:])
+        self.is_boundary_face_individual = (cts == 1)
 
         self.faces = {
-            'nodes': face_nodes
+            'nodes': a[idx]
             }
 
         # cell->faces relationship

@@ -20,7 +20,7 @@ def flip_until_delaunay(mesh):
                 )
     mesh.create_edges()
     needs_flipping = numpy.logical_and(
-        numpy.logical_not(mesh.is_boundary_edge),
+        numpy.logical_not(mesh.is_boundary_edge_individual),
         mesh.get_ce_ratios_per_edge() < 0.0
         )
     is_flipped = any(needs_flipping)
@@ -31,7 +31,7 @@ def flip_until_delaunay(mesh):
         #
         mesh.create_edges()
         needs_flipping = numpy.logical_and(
-            numpy.logical_not(mesh.is_boundary_edge),
+            numpy.logical_not(mesh.is_boundary_edge_individual),
             mesh.get_ce_ratios_per_edge() < 0.0
             )
 
@@ -279,8 +279,10 @@ def _get_boundary_edge_ratio(X, cells):
     '''
     submesh = MeshTri(X, cells, flat_cell_correction='full')
     submesh.create_edges()
-    x = X[submesh.edges['nodes'][submesh.is_boundary_edge]]
-    e = x[:, 0] - x[:, 1]
+    x = submesh.node_coords[
+            submesh.idx_hierarchy[..., submesh.is_boundary_edge]
+            ]
+    e = x[0] - x[1]
     edge_lengths2 = numpy.einsum('ij, ij->i', e, e)
     return numpy.sqrt(max(edge_lengths2) / min(edge_lengths2))
 

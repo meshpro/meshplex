@@ -332,7 +332,11 @@ class MeshTri(_base_mesh):
         # helps in many downstream applications, e.g., when constructing linear
         # systems with the cells/edges. (When converting to CSR format, the
         # I/J entries must be sorted.)
-        cells.sort(axis=1)
+        # Don't use cells.sort(axis=1) to avoid
+        # ```
+        # ValueError: sort array is read-only
+        # ```
+        cells = numpy.sort(cells, axis=1)
         cells = cells[cells[:, 0].argsort()]
 
         super(MeshTri, self).__init__(nodes, cells)
@@ -355,7 +359,7 @@ class MeshTri(_base_mesh):
 
         self._ce_ratios = None
         self._control_volumes = None
-        self._control_volume_contribs = None
+        self._cell_partitions = None
         self._cv_centroids = None
         self._surface_areas = None
         self.edges = None
@@ -377,7 +381,7 @@ class MeshTri(_base_mesh):
 
         # The inverted local index.
         # This array specifies for each of the three nodes which edge endpoints
-        # correspond to it.  For the aboe local_idx, this should give
+        # correspond to it. For the above local_idx, this should give
         #
         #    [[(1, 1), (0, 2)], [(0, 0), (1, 2)], [(1, 0), (0, 1)]]
         #
@@ -408,11 +412,11 @@ class MeshTri(_base_mesh):
             self.fcc = None
             self.regular_cells = numpy.s_[:]
         else:
-            assert flat_cell_correction in ['full', 'boundary']
             if flat_cell_correction == 'full':
                 # All cells with a negative c/e ratio are redone.
                 edge_needs_fcc = self.ce_ratios_per_half_edge < 0.0
-            else:  # 'boundary'
+            else:
+                assert flat_cell_correction == 'boundary'
                 # This best imitates the classical notion of control volumes.
                 # Only cells with a negative c/e ratio on the boundary are
                 # redone. Of course, this requires identifying boundary edges
@@ -421,7 +425,7 @@ class MeshTri(_base_mesh):
                     self.create_edges()
                 edge_needs_fcc = numpy.logical_and(
                     self.ce_ratios_per_half_edge < 0.0,
-                    self.is_boundary_edge[self.cells['edges']].T
+                    self.is_boundary_edge
                     )
 
             fcc_local_edge, self.fcc_cells = numpy.where(edge_needs_fcc)
@@ -441,7 +445,7 @@ class MeshTri(_base_mesh):
 
     def get_boundary_vertices(self):
         self.mark_boundary()
-        return self.subdomains['boundary']['vertices']
+        return numpy.where(self.is_boundary_node)[0]
 
     def get_ce_ratios(self, cell_ids=None):
         if cell_ids is not None:
@@ -464,7 +468,8 @@ class MeshTri(_base_mesh):
 
     def get_control_volumes(self):
         if self._control_volumes is None:
-            v = self._get_control_volume_contribs()[..., self.regular_cells]
+            v = self.get_cell_partitions()[..., self.regular_cells]
+
             # Summing up the arrays first makes the work for numpy.add.at
             # lighter.
             ids = self.cells['nodes'][self.regular_cells].T
@@ -524,42 +529,31 @@ class MeshTri(_base_mesh):
                 numpy.add.at(self._cv_centroids, d[0], d[1])
             # Divide by the control volume
             self._cv_centroids /= self.get_control_volumes()[:, None]
+
         return self._cv_centroids
 
     def mark_boundary(self):
         if self.edges is None:
             self.create_edges()
 
-        # Get vertices on the boundary edges
-        boundary_edges = numpy.where(self.is_boundary_edge)[0]
-        boundary_vertices = numpy.unique(
-                self.edges['nodes'][boundary_edges].flatten()
-                )
+        self.is_boundary_node = numpy.zeros(len(self.node_coords), dtype=bool)
 
-        self.subdomains['boundary'] = {
-                'vertices': boundary_vertices,
-                'edges': boundary_edges
-                }
+        self.is_boundary_node[
+            self.idx_hierarchy[..., self.is_boundary_edge]
+            ] = True
+
+        self.is_boundary_face = self.is_boundary_edge
         return
 
     def create_edges(self):
         '''Setup edge-node and edge-cell relations.
         '''
-        # Order the edges such that node 0 doesn't occur in edge 0 etc., i.e.,
-        # node k is opposite of edge k.
-        nds = self.cells['nodes'].T
-        a = numpy.hstack([
-            nds[[1, 2]],
-            nds[[2, 0]],
-            nds[[0, 1]]
-            ]).T
+        # Reshape into individual edges.
+        # Sort the columns to make it possible for `unique()` to identify
+        # individual edges.
+        s = self.idx_hierarchy.shape
+        a = numpy.sort(self.idx_hierarchy.reshape(s[0], s[1]*s[2]).T)
 
-        # Find the unique edges.
-        # First sort...
-        # TODO sort nds for less work
-        a.sort(axis=1)
-
-        # ... then find unique rows.
         b = numpy.ascontiguousarray(a).view(
                 numpy.dtype((numpy.void, a.dtype.itemsize * a.shape[1]))
                 )
@@ -569,17 +563,20 @@ class MeshTri(_base_mesh):
                 return_inverse=True,
                 return_counts=True
                 )
+
         # No edge has more than 2 cells. This assertion fails, for example, if
         # cells are listed twice.
         assert all(cts < 3)
-        edge_nodes = a[idx]
 
-        self.is_boundary_edge = (cts == 1)
+        self.is_boundary_edge = (cts[inv] == 1).reshape(s[1:])
+
+        self.is_boundary_edge_individual = (cts == 1)
 
         self.edges = {
-            'nodes': edge_nodes,
+            'nodes': a[idx],
             }
 
+        # TODO is any of this needed?
         # cell->edges relationship
         num_cells = len(self.cells['nodes'])
         cells_edges = inv.reshape([3, num_cells]).T
@@ -601,14 +598,20 @@ class MeshTri(_base_mesh):
             edge_cells[edge_id].append(k % num_cells)
         return edge_cells
 
-    def _get_control_volume_contribs(self):
-        if self._control_volume_contribs is None:
+    def get_face_partitions(self):
+        # face = edge for triangles.
+        # The partition is simply along the center of the edge.
+        edge_lengths = self.get_edge_lengths()
+        return numpy.array([0.5 * edge_lengths, 0.5 * edge_lengths])
+
+    def get_cell_partitions(self):
+        if self._cell_partitions is None:
             # Compute the control volumes. Note that
             #   0.5 * (0.5 * edge_length) * covolume
             # = 0.25 * edge_length**2 * ce_ratio_edge_ratio
-            self._control_volume_contribs = \
+            self._cell_partitions = \
                 0.25 * self.ei_dot_ei * self.ce_ratios_per_half_edge
-        return self._control_volume_contribs
+        return self._cell_partitions
 
     def get_cell_circumcenters(self):
         if self.cell_circumcenters is None:
@@ -631,7 +634,7 @@ class MeshTri(_base_mesh):
         # The integral of any linear function over a triangle is the average of
         # the values of the function in each of the three corners, times the
         # area of the triangle.
-        right_triangle_vols = self._get_control_volume_contribs()[:, cell_ids]
+        right_triangle_vols = self.get_cell_partitions()[:, cell_ids]
 
         node_edges = self.idx_hierarchy[..., cell_ids]
 
@@ -796,7 +799,7 @@ class MeshTri(_base_mesh):
         # Delaunay violations are present exactly on the interior edges where
         # the ce_ratio is negative. Count those.
         ce_ratios = self.get_ce_ratios_per_edge()
-        return numpy.sum(ce_ratios[~self.is_boundary_edge] < 0.0)
+        return numpy.sum(ce_ratios[~self.is_boundary_edge_individual] < 0.0)
 
     def show(self, *args, **kwargs):
         from matplotlib import pyplot as plt
@@ -892,7 +895,7 @@ class MeshTri(_base_mesh):
 
         if boundary_edge_color:
             e = self.node_coords[
-                self.edges['nodes'][self.is_boundary_edge]
+                self.edges['nodes'][self.is_boundary_edge_individual]
                 ][:, :, :2]
             line_segments1 = LineCollection(e, color=boundary_edge_color)
             ax.add_collection(line_segments1)
