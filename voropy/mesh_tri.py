@@ -604,23 +604,6 @@ class MeshTri(_base_mesh):
         edge_lengths = self.get_edge_lengths()
         return numpy.array([0.5 * edge_lengths, 0.5 * edge_lengths])
 
-    def mark_faces(self, subdomain):
-        '''Mark faces/edges which are fully in subdomain.
-        '''
-        if subdomain.is_boundary_only:
-            self.mark_boundary()
-            idx = self.subdomains['boundary']['vertices']
-            is_inside = subdomain.is_inside(self.node_coords[idx].T).T
-            vertex_ids = idx[is_inside]
-        else:
-            is_inside = subdomain.is_inside(self.node_coords.T).T
-            vertex_ids = numpy.where(is_inside)[0]
-
-        self.subdomains[subdomain] = {
-                'vertices': vertex_ids,
-                }
-        return
-
     def get_cell_partitions(self):
         if self._cell_partitions is None:
             # Compute the control volumes. Note that
