@@ -548,7 +548,7 @@ class MeshTri(_base_mesh):
     def create_edges(self):
         '''Setup edge-node and edge-cell relations.
         '''
-        # Reshape into individual axes.
+        # Reshape into individual edges.
         # Sort the columns to make it possible for `unique()` to identify
         # individual edges.
         s = self.idx_hierarchy.shape

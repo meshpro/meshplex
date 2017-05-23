@@ -248,7 +248,7 @@ class _base_mesh(object):
 
         if subdomain.is_boundary_only:
             # There are no boundary cells
-            return []
+            return numpy.array([])
 
         if subdomain not in self.subdomains:
             self._mark_vertices(subdomain)

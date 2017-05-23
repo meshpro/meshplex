@@ -38,15 +38,19 @@ def test_mark_subdomain2d():
 
     sd1 = Subdomain1()
     vertex_mask = mesh.get_vertex_mask(sd1)
-    assert sum(vertex_mask) == 27
+    assert vertex_mask.sum() == 27
+    face_mask = mesh.get_face_mask(sd1)
+    assert face_mask.sum() == 26
     cell_mask = mesh.get_cell_mask(sd1)
-    assert sum(cell_mask) == 0
+    assert cell_mask.sum() == 0
 
     sd2 = Subdomain2()
     vertex_mask = mesh.get_vertex_mask(sd2)
-    assert sum(vertex_mask) == 214
+    assert vertex_mask.sum() == 214
+    face_mask = mesh.get_face_mask(sd2)
+    assert face_mask.sum() == 1137
     cell_mask = mesh.get_cell_mask(sd2)
-    assert sum(cell_mask) == 371
+    assert cell_mask.sum() == 371
     return
 
 
@@ -71,13 +75,17 @@ def test_mark_subdomain3d():
 
     sd1 = Subdomain1()
     vertex_mask = mesh.get_vertex_mask(sd1)
-    assert sum(vertex_mask) == 16
+    assert vertex_mask.sum() == 16
+    face_mask = mesh.get_face_mask(sd1)
+    assert face_mask.sum() == 20
     cell_mask = mesh.get_cell_mask(sd1)
-    assert sum(cell_mask) == 0
+    assert cell_mask.sum() == 0
 
     sd2 = Subdomain2()
     vertex_mask = mesh.get_vertex_mask(sd2)
-    assert sum(vertex_mask) == 10
+    assert vertex_mask.sum() == 10
+    face_mask = mesh.get_face_mask(sd2)
+    assert face_mask.sum() == 25
     cell_mask = mesh.get_cell_mask(sd2)
-    assert sum(cell_mask) == 5
+    assert cell_mask.sum() == 5
     return
