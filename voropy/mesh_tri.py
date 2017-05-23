@@ -552,7 +552,7 @@ class MeshTri(_base_mesh):
         # Sort the columns to make it possible for `unique()` to identify
         # individual edges.
         s = self.idx_hierarchy.shape
-        a = numpy.sort(self.idx_hierarchy.reshape(s[0], s[1]*s[2]).T, axis=1)
+        a = numpy.sort(self.idx_hierarchy.reshape(s[0], s[1]*s[2]).T)
 
         b = numpy.ascontiguousarray(a).view(
                 numpy.dtype((numpy.void, a.dtype.itemsize * a.shape[1]))
