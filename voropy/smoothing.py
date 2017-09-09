@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 #
 from __future__ import print_function
-from .mesh_tri import MeshTri
+
 from matplotlib import pyplot as plt
 import numpy
+
+from .mesh_tri import MeshTri
 
 
 def flip_until_delaunay(mesh):
@@ -76,9 +78,9 @@ def flip_edges(mesh, is_flip_edge):
 
     # new cells
     edge_cells = mesh.compute_edge_cells()
-    flip_edges = numpy.where(is_flip_edge)[0]
-    new_cells = numpy.empty((len(flip_edges), 2, 3), dtype=int)
-    for k, flip_edge in enumerate(flip_edges):
+    flip_e = numpy.where(is_flip_edge)[0]
+    new_cells = numpy.empty((len(flip_e), 2, 3), dtype=int)
+    for k, flip_edge in enumerate(flip_e):
         adj_cells = edge_cells[flip_edge]
         assert len(adj_cells) == 2
         # The local edge ids are opposite of the local vertex with the same
@@ -140,8 +142,8 @@ def _gather_stats(mesh):
         mesh.ei_dot_ej[1] / norms[2] / norms[0],
         mesh.ei_dot_ej[2] / norms[0] / norms[1],
         ])
-    angles = numpy.arccos(-normalized_ei_dot_ej) \
-        / (2 * numpy.pi) * 360.0
+    # pylint: disable=invalid-unary-operand-type
+    angles = numpy.arccos(-normalized_ei_dot_ej) / (2*numpy.pi) * 360.0
 
     hist, bin_edges = numpy.histogram(
         angles,
@@ -269,7 +271,7 @@ def lloyd(
             ])
 
     if output_filetype:
-        _write(mesh, output_filetype, k+1)
+        _write(mesh, output_filetype, max_steps)
 
     return mesh.node_coords, mesh.cells['nodes']
 
