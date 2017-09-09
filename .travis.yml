@@ -22,7 +22,9 @@ addons:
       - python3-scipy
 
 before_install:
-  - pip install pytest pytest-cov
+  - pip install pytest pytest-cov pylint
+  - pylint voropy
+  - pylint tests/*.py
 
 install:
   - pip install .
