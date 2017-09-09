@@ -42,6 +42,9 @@ setup(
         'numpy >= 1.9',  # unique return_counts
         'scipy',
         ],
+    tests_require=[
+        'meshzoo',    
+        ],
     classifiers=[
         about['__status__'],
         about['__license__'],
