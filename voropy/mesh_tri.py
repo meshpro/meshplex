@@ -36,7 +36,8 @@ def _mirror_point(p0, p1, p2):
     # q = p1 + dot(p0-p1, (p2-p1)/||p2-p1||) * (p2-p1)/||p2-p1||
     #   = p1 + dot(p0-p1, p2-p1)/dot(p2-p1, p2-p1) * (p2-p1)
     #
-    if p0:
+    # pylint: disable=len-as-condition
+    if len(p0) == 0:
         return numpy.empty(p0.shape), numpy.empty(p0.shape)
     alpha = _row_dot(p0-p1, p2-p1)/_row_dot(p2-p1, p2-p1)
     q = p1 + alpha[:, None] * (p2-p1)
