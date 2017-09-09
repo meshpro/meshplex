@@ -8,6 +8,7 @@ from voropy.base import \
 __all__ = ['MeshTetra']
 
 
+# pylint: disable=too-many-instance-attributes
 class MeshTetra(_base_mesh):
     '''Class for handling tetrahedral meshes.
 
@@ -107,6 +108,12 @@ class MeshTetra(_base_mesh):
 
         self.ce_ratios = self._compute_ce_ratios_geometric()
 
+        self.is_boundary_node = None
+        self._inv_faces = None
+        self.edges = None
+        self.is_boundary_face_individual = None
+        self.is_boundary_face = None
+        self.faces = None
         return
 
     def get_ce_ratios(self):
@@ -362,9 +369,13 @@ class MeshTetra(_base_mesh):
             + self.ei_dot_ej[0] * self.ei_dot_ej[1]
             + self.ei_dot_ej[1] * self.ei_dot_ej[2]
             )
+        # pylint: disable=invalid-unary-operand-type
         # face_ce_ratios = -self.ei_dot_ej * 0.25 / face_areas[None]
         face_ce_ratios_div_face_areas = -self.ei_dot_ej / alpha
 
+        # TODO Check out the Cayley-Menger determinant
+        # <http://mathworld.wolfram.com/Cayley-MengerDeterminant.html
+        #
         # sum(self.circumcenter_face_distances * face_areas / 3) = cell_volumes
         # =>
         # cell_volumes = numpy.sqrt(sum(zeta / 72))
@@ -434,6 +445,7 @@ class MeshTetra(_base_mesh):
         return numpy.sum(sums < 0.0)
 
     def show(self):
+        # pylint: disable=unused-variable,relative-import
         from mpl_toolkits.mplot3d import Axes3D
         from matplotlib import pyplot as plt
 
@@ -471,6 +483,7 @@ class MeshTetra(_base_mesh):
         :param edge_id: Edge ID for which to show the ce_ratio.
         :type edge_id: int
         '''
+        # pylint: disable=unused-variable,relative-import
         from mpl_toolkits.mplot3d import Axes3D
         from matplotlib import pyplot as plt
 

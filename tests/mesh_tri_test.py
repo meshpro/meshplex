@@ -57,9 +57,11 @@ def test_regular_tri():
     mesh.get_vertex_mask()
 
     # dummy subdomain marker test
+    # pylint: disable=too-few-public-methods
     class Subdomain(object):
         is_boundary_only = False
 
+        # pylint: disable=no-self-use
         def is_inside(self, X):
             return numpy.ones(X.shape[1:], dtype=bool)
     cell_mask = mesh.get_cell_mask(Subdomain())
@@ -498,11 +500,11 @@ def test_pacman():
 
 def test_shell():
     points = numpy.array([
-        [0.0,  0.0,  1.0],
-        [1.0,  0.0,  0.0],
-        [0.0,  1.0,  0.0],
-        [-1.0,  0.0,  0.0],
-        [0.0, -1.0,  0.0]
+        [+0.0, +0.0, +1.0],
+        [+1.0, +0.0, +0.0],
+        [+0.0, +1.0, +0.0],
+        [-1.0, +0.0, +0.0],
+        [+0.0, -1.0, +0.0]
         ])
     cells = numpy.array([
         [0, 1, 2],

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 #
-import meshzoo
 import tempfile
 
+import meshzoo
 import voropy
 
 

@@ -36,6 +36,7 @@ def _mirror_point(p0, p1, p2):
     # q = p1 + dot(p0-p1, (p2-p1)/||p2-p1||) * (p2-p1)/||p2-p1||
     #   = p1 + dot(p0-p1, p2-p1)/dot(p2-p1, p2-p1) * (p2-p1)
     #
+    # pylint: disable=len-as-condition
     if len(p0) == 0:
         return numpy.empty(p0.shape), numpy.empty(p0.shape)
     alpha = _row_dot(p0-p1, p2-p1)/_row_dot(p2-p1, p2-p1)
@@ -71,6 +72,7 @@ def _isosceles_ce_ratios(p0, p1, p2):
     return ce_ratios[[0, 1]]
 
 
+# pylint: disable=too-many-instance-attributes
 class FlatCellCorrector(object):
     '''Cells can be flat such that the circumcenter is outside the cell, e.g.,
 
@@ -320,6 +322,7 @@ class FlatCellCorrector(object):
         return ids, vals
 
 
+# pylint: disable=too-many-instance-attributes
 class MeshTri(_base_mesh):
     '''Class for handling triangular meshes.
 
@@ -441,6 +444,8 @@ class MeshTri(_base_mesh):
             self.ce_ratios_per_half_edge[:, self.fcc_cells] = \
                 self.fcc.get_ce_ratios().T
 
+        self.is_boundary_node = None
+        self.is_boundary_face = None
         return
 
     def get_boundary_vertices(self):
@@ -813,7 +818,7 @@ class MeshTri(_base_mesh):
             show_centroids=True,
             mesh_color='k',
             boundary_edge_color=None,
-            comesh_color=[0.8, 0.8, 0.8],
+            comesh_color=(0.8, 0.8, 0.8),
             show_axes=True
             ):
         '''Show the mesh using matplotlib.

@@ -22,10 +22,13 @@ addons:
       - python3-scipy
 
 before_install:
-  - pip install pytest pytest-cov
+  - pip install pytest pytest-cov pylint
+  - pip install -r test_requirements.txt
 
 install:
   - pip install .
+  - pylint voropy
+  - pylint tests/*.py
 
 script:
   - cd tests && MPLBACKEND=Agg pytest --cov voropy

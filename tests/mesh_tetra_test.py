@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 #
-from helpers import download_mesh, near_equal, run
+from math import fsum
+import numpy
 import pytest
 import voropy
 
-from math import fsum
-import numpy
+from helpers import download_mesh, near_equal, run
 
 
 @pytest.mark.parametrize(
@@ -15,8 +15,8 @@ import numpy
 def test_regular_tet0(a):
     points = a * numpy.array([
         [1.0, 0, 0],
-        [-0.5,  numpy.sqrt(3.0) / 2.0, 0],
-        [-0.5, -numpy.sqrt(3.0) / 2.0, 0],
+        [-0.5, +numpy.sqrt(3.0)/2.0, 0],
+        [-0.5, -numpy.sqrt(3.0)/2.0, 0],
         [0.0, 0.0, numpy.sqrt(2.0)],
         ]) / numpy.sqrt(3.0)
     cells = numpy.array([[0, 1, 2, 3]])
@@ -50,6 +50,7 @@ def test_regular_tet0(a):
     z = a / numpy.sqrt(24.0)
     assert near_equal(mesh.get_cell_circumcenters(), [0.0, 0.0, z], tol)
 
+    # pylint: disable=protected-access
     mesh._compute_ce_ratios_geometric()
     assert near_equal(mesh.circumcenter_face_distances, [z, z, z, z], tol)
 
@@ -312,13 +313,13 @@ def test_regular_tet1_geometric_order():
 def test_cubesmall():
     points = numpy.array([
         [-0.5, -0.5, -5.0],
-        [-0.5,  0.5, -5.0],
-        [0.5, -0.5, -5.0],
-        [-0.5, -0.5,  5.0],
-        [0.5,  0.5, -5.0],
-        [0.5,  0.5,  5.0],
-        [-0.5,  0.5,  5.0],
-        [0.5, -0.5,  5.0]
+        [-0.5, +0.5, -5.0],
+        [+0.5, -0.5, -5.0],
+        [-0.5, -0.5, +5.0],
+        [+0.5, +0.5, -5.0],
+        [+0.5, +0.5, +5.0],
+        [-0.5, +0.5, +5.0],
+        [+0.5, -0.5, +5.0]
         ])
     cells = numpy.array([
         [0, 1, 2, 3],
@@ -357,12 +358,12 @@ def test_cubesmall():
 
 def test_arrow3d():
     nodes = numpy.array([
-        [0.0,  0.0, 0.0],
-        [2.0, -1.0, 0.0],
-        [2.0,  0.0, 0.0],
-        [2.0,  1.0, 0.0],
-        [0.5,  0.0, -0.9],
-        [0.5,  0.0, 0.9]
+        [+0.0, +0.0, +0.0],
+        [+2.0, -1.0, +0.0],
+        [+2.0, +0.0, +0.0],
+        [+2.0, +1.0, +0.0],
+        [+0.5, +0.0, -0.9],
+        [+0.5, +0.0, +0.9]
         ])
     cellsNodes = numpy.array([
         [1, 2, 4, 5],

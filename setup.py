@@ -39,7 +39,6 @@ setup(
     install_requires=[
         'matplotlib',
         'meshio',
-        'meshzoo',  # only required by tests
         'numpy >= 1.9',  # unique return_counts
         'scipy',
         ],
