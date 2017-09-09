@@ -23,11 +23,11 @@ addons:
 
 before_install:
   - pip install pytest pytest-cov pylint
-  - pylint voropy
-  - pylint tests/*.py
 
 install:
   - pip install .
+  - pylint voropy
+  - pylint tests/*.py
 
 script:
   - cd tests && MPLBACKEND=Agg pytest --cov voropy
