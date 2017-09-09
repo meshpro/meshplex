@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 #
+# pylint: disable=too-few-public-methods
 from helpers import download_mesh
 import voropy
 
@@ -27,12 +28,14 @@ def test_mark_subdomain2d():
     class Subdomain1(object):
         is_boundary_only = True
 
+        # pylint: disable=no-self-use
         def is_inside(self, x):
             return x[0] < 0.0
 
     class Subdomain2(object):
         is_boundary_only = False
 
+        # pylint: disable=no-self-use
         def is_inside(self, x):
             return x[0] > 0.0
 
@@ -64,12 +67,14 @@ def test_mark_subdomain3d():
     class Subdomain1(object):
         is_boundary_only = True
 
+        # pylint: disable=no-self-use
         def is_inside(self, x):
             return x[0] < 0.5
 
     class Subdomain2(object):
         is_boundary_only = False
 
+        # pylint: disable=no-self-use
         def is_inside(self, x):
             return x[0] > 0.5
 

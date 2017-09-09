@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 #
-from helpers import download_mesh
-import voropy
+import unittest
 
 import numpy
-import unittest
+import voropy
+
+from helpers import download_mesh
 
 
 class CurlTest(unittest.TestCase):
@@ -29,10 +30,10 @@ class CurlTest(unittest.TestCase):
         #     )
 
         tol = 1.0e-14
-        for k in range(len(B)):
-            self.assertAlmostEqual(B[k][0], 0.0, delta=tol)
-            self.assertAlmostEqual(B[k][1], 0.0, delta=tol)
-            self.assertAlmostEqual(B[k][2], 1.0, delta=tol)
+        for b in B:
+            self.assertAlmostEqual(b[0], 0.0, delta=tol)
+            self.assertAlmostEqual(b[1], 0.0, delta=tol)
+            self.assertAlmostEqual(b[2], 1.0, delta=tol)
         return
 
     def test_pacman(self):

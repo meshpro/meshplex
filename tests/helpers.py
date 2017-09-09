@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
 #
+from __future__ import print_function
+
+import shutil
+
 import hashlib
 import os
 from math import fsum
 import numpy
 import requests
-import shutil
 
 
 # The tests files are located on sourceforge.
