@@ -365,6 +365,9 @@ class MeshTetra(_base_mesh):
         # face_ce_ratios = -self.ei_dot_ej * 0.25 / face_areas[None]
         face_ce_ratios_div_face_areas = -self.ei_dot_ej / alpha
 
+        # TODO Check out the Cayley-Menger determinant
+        # <http://mathworld.wolfram.com/Cayley-MengerDeterminant.html
+        #
         # sum(self.circumcenter_face_distances * face_areas / 3) = cell_volumes
         # =>
         # cell_volumes = numpy.sqrt(sum(zeta / 72))
