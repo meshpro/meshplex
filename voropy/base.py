@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 #
-import meshio
 import numpy
 from numpy.core.umath_tests import inner1d
+
+import meshio
 
 __all__ = []
 
@@ -147,8 +148,7 @@ class _base_mesh(object):
 
     def __init__(self,
                  nodes,
-                 cells_nodes
-                 ):
+                 cells_nodes):
         self.node_coords = nodes
         self._edge_lengths = None
         return
@@ -157,8 +157,7 @@ class _base_mesh(object):
               filename,
               point_data=None,
               cell_data=None,
-              field_data=None
-              ):
+              field_data=None):
         if self.node_coords.shape[1] == 2:
             n = len(self.node_coords)
             a = numpy.ascontiguousarray(
@@ -272,6 +271,6 @@ class _base_mesh(object):
                 is_inside = numpy.logical_and(is_inside, self.is_boundary_node)
 
         self.subdomains[subdomain] = {
-                'vertices': is_inside,
-                }
+            'vertices': is_inside,
+            }
         return

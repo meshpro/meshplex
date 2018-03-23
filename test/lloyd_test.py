@@ -26,14 +26,14 @@ def test_simple_lloyd(max_steps=5, output_filetype=None):
     submesh_bools = {0: numpy.ones(len(cells), dtype=bool)}
 
     X, cells = voropy.smoothing.lloyd_submesh(
-            X, cells, submesh_bools,
-            1.0e-2,
-            skip_inhomogenous_submeshes=True,
-            max_steps=max_steps,
-            fcc_type='boundary',
-            verbose=True,
-            output_filetype=output_filetype
-            )
+        X, cells, submesh_bools,
+        1.0e-2,
+        skip_inhomogenous_submeshes=True,
+        max_steps=max_steps,
+        fcc_type='boundary',
+        verbose=True,
+        output_filetype=output_filetype
+        )
 
     # Test if we're dealing with the mesh we expect.
     nc = X.flatten()
@@ -51,23 +51,23 @@ def test_simple_lloyd(max_steps=5, output_filetype=None):
 
 def test_pacman_lloyd(max_steps=1000, output_filetype=None):
     filename = download_mesh(
-            'pacman.msh',
-            '2da8ff96537f844a95a83abb48471b6a'
-            )
+        'pacman.msh',
+        '2da8ff96537f844a95a83abb48471b6a'
+        )
     X, cells, _, _, _ = meshio.read(filename)
 
     submesh_bools = {0: numpy.ones(len(cells['triangle']), dtype=bool)}
 
     X, cells = voropy.smoothing.lloyd_submesh(
-            X, cells['triangle'], submesh_bools,
-            1.0e-2,
-            skip_inhomogenous_submeshes=False,
-            max_steps=max_steps,
-            fcc_type='boundary',
-            flip_frequency=1,
-            verbose=False,
-            output_filetype=output_filetype
-            )
+        X, cells['triangle'], submesh_bools,
+        1.0e-2,
+        skip_inhomogenous_submeshes=False,
+        max_steps=max_steps,
+        fcc_type='boundary',
+        flip_frequency=1,
+        verbose=False,
+        output_filetype=output_filetype
+        )
 
     # Test if we're dealing with the mesh we expect.
     nc = X.flatten()
@@ -88,6 +88,6 @@ def test_pacman_lloyd(max_steps=1000, output_filetype=None):
 if __name__ == '__main__':
     # test_pacman_lloyd(
     test_simple_lloyd(
-            max_steps=100,
-            output_filetype='png'
-            )
+        max_steps=100,
+        output_filetype='png'
+        )

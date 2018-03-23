@@ -6,9 +6,11 @@ formats.
 
 .. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
 '''
-import meshio
 import numpy
+
+import meshio
 import voropy
+
 
 __all__ = ['read']
 
@@ -42,9 +44,8 @@ def read(filename, flat_cell_correction=None):
     elif 'triangle' in cells:
         points, cells = _sanitize(points, cells['triangle'])
         return voropy.mesh_tri.MeshTri(
-               points, cells,
-               flat_cell_correction=flat_cell_correction
-               ), \
-            point_data, cell_data, field_data
+            points, cells,
+            flat_cell_correction=flat_cell_correction
+            ), point_data, cell_data, field_data
     else:
         raise RuntimeError('Unknown mesh type.')

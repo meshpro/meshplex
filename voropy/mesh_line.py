@@ -11,9 +11,9 @@ class MeshLine(object):
 
         num_cells = len(cells)
         self.cells = numpy.empty(
-                num_cells,
-                dtype=numpy.dtype([('nodes', (int, 2))])
-                )
+            num_cells,
+            dtype=numpy.dtype([('nodes', (int, 2))])
+            )
         self.cells['nodes'] = cells
 
         self.create_cell_volumes()
@@ -34,9 +34,9 @@ class MeshLine(object):
         '''Compute the control volumes of all nodes in the mesh.
         '''
         self.control_volumes = numpy.zeros(
-                len(self.node_coords),
-                dtype=float
-                )
+            len(self.node_coords),
+            dtype=float
+            )
         for k, cell in enumerate(self.cells):
             node_ids = cell['nodes']
             self.control_volumes[node_ids] += 0.5 * self.cell_volumes[k]

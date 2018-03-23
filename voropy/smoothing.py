@@ -16,10 +16,10 @@ def flip_until_delaunay(mesh):
     if fcc_type is not None:
         # No flat_cell_correction when flipping.
         mesh = MeshTri(
-                mesh.node_coords,
-                mesh.cells['nodes'],
-                flat_cell_correction=None
-                )
+            mesh.node_coords,
+            mesh.cells['nodes'],
+            flat_cell_correction=None
+            )
     mesh.create_edges()
     needs_flipping = numpy.logical_and(
         numpy.logical_not(mesh.is_boundary_edge_individual),
@@ -40,10 +40,10 @@ def flip_until_delaunay(mesh):
     # Translate back to input fcc_type.
     if fcc_type is not None:
         mesh = MeshTri(
-                mesh.node_coords,
-                mesh.cells['nodes'],
-                flat_cell_correction=fcc_type
-                )
+            mesh.node_coords,
+            mesh.cells['nodes'],
+            flat_cell_correction=fcc_type
+            )
     return mesh, is_flipped
 
 
@@ -113,9 +113,9 @@ def flip_edges(mesh, is_flip_edge):
 
     # find cells that can stay
     is_good_cell = numpy.all(
-            numpy.logical_not(is_flip_edge_per_cell),
-            axis=1
-            )
+        numpy.logical_not(is_flip_edge_per_cell),
+        axis=1
+        )
 
     mesh.cells['nodes'] = numpy.concatenate([
         mesh.cells['nodes'][is_good_cell],
@@ -176,10 +176,10 @@ def _print_stats(data_list):
 def _write(mesh, filetype, k):
     if filetype == 'png':
         fig = mesh.plot(
-                show_coedges=False,
-                show_centroids=False,
-                show_axes=False
-                )
+            show_coedges=False,
+            show_centroids=False,
+            show_axes=False
+            )
         fig.suptitle('step %d' % k, fontsize=20)
         plt.savefig('lloyd%04d.png' % k)
         plt.close(fig)
@@ -195,16 +195,14 @@ def _sit_in_plane(X, tol=1.0e-15):
     return (abs(numpy.dot(X - X[0], orth)) < tol).all()
 
 
-def lloyd(
-        X,
-        cells,
-        tol,
-        max_steps=10000,
-        fcc_type='full',
-        flip_frequency=0,
-        verbose=True,
-        output_filetype=None
-        ):
+def lloyd(X,
+          cells,
+          tol,
+          max_steps=10000,
+          fcc_type='full',
+          flip_frequency=0,
+          verbose=True,
+          output_filetype=None):
     # flat mesh
     assert _sit_in_plane(X)
 
@@ -249,10 +247,10 @@ def lloyd(
         max_move = numpy.sqrt(numpy.max(numpy.sum(diff*diff, axis=1)))
 
         mesh = MeshTri(
-                new_points,
-                mesh.cells['nodes'],
-                flat_cell_correction=fcc_type
-                )
+            new_points,
+            mesh.cells['nodes'],
+            flat_cell_correction=fcc_type
+            )
 
         if verbose:
             print('\nstep: %d' % k)
@@ -282,8 +280,8 @@ def _get_boundary_edge_ratio(X, cells):
     submesh = MeshTri(X, cells, flat_cell_correction='full')
     submesh.create_edges()
     x = submesh.node_coords[
-            submesh.idx_hierarchy[..., submesh.is_boundary_edge]
-            ]
+        submesh.idx_hierarchy[..., submesh.is_boundary_edge]
+        ]
     e = x[0] - x[1]
     edge_lengths2 = numpy.einsum('ij, ij->i', e, e)
     return numpy.sqrt(max(edge_lengths2) / min(edge_lengths2))
@@ -300,11 +298,9 @@ def _extract_submesh_entities(X, cells, cell_in_submesh):
     return submesh_X, submesh_cells, submesh_verts
 
 
-def lloyd_submesh(
-        X, cells, submeshes, tol,
-        skip_inhomogenous_submeshes=True,
-        **kwargs
-        ):
+def lloyd_submesh(X, cells, submeshes, tol,
+                  skip_inhomogenous_submeshes=True,
+                  **kwargs):
     # perform lloyd on each submesh separately
     for cell_in_submesh in submeshes.values():
         submesh_X, submesh_cells, submesh_verts = \
@@ -323,8 +319,7 @@ def lloyd_submesh(
                 print((
                     4*' ' + 'Subdomain boundary inhomogeneous ' +
                     '(edge length ratio %1.3f). Skipping.'
-                    ) % ratio
-                    )
+                    ) % ratio)
                 continue
 
         # perform lloyd smoothing

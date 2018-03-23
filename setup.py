@@ -31,8 +31,8 @@ setup(
     author_email=about['__author_email__'],
     packages=find_packages(),
     description=(
-       'Voronoi regions and more for triangular and tetrehedral meshes'
-       ),
+        'Voronoi regions and more for triangular and tetrehedral meshes'
+        ),
     long_description=read('README.rst'),
     url='https://github.com/nschloe/voropy',
     download_url='https://github.com/nschloe/voropy/releases',

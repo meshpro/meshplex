@@ -93,10 +93,10 @@ class MeshTetra(_base_mesh):
             self.node_coords[self.idx_hierarchy[1]] - \
             self.node_coords[self.idx_hierarchy[0]]
         self.ei_dot_ei = numpy.einsum(
-                'ijkl, ijkl->ijk',
-                self.edge_coords,
-                self.edge_coords
-                )
+            'ijkl, ijkl->ijk',
+            self.edge_coords,
+            self.edge_coords
+            )
         self.ei_dot_ej = numpy.einsum(
             'ijkl, ijkl->ijk',
             self.edge_coords[[1, 2, 0]],
@@ -139,14 +139,14 @@ class MeshTetra(_base_mesh):
 
         # Find the unique faces
         b = numpy.ascontiguousarray(a).view(
-                numpy.dtype((numpy.void, a.dtype.itemsize * a.shape[1]))
-                )
+            numpy.dtype((numpy.void, a.dtype.itemsize * a.shape[1]))
+            )
         _, idx, inv, cts = numpy.unique(
-                b,
-                return_index=True,
-                return_inverse=True,
-                return_counts=True
-                )
+            b,
+            return_index=True,
+            return_inverse=True,
+            return_counts=True
+            )
 
         # No face has more than 2 cells. This assertion fails, for example, if
         # cells are listed twice.
@@ -181,13 +181,13 @@ class MeshTetra(_base_mesh):
 
         # Find the unique edges
         b = numpy.ascontiguousarray(a).view(
-                numpy.dtype((numpy.void, a.dtype.itemsize * a.shape[1]))
-                )
+            numpy.dtype((numpy.void, a.dtype.itemsize * a.shape[1]))
+            )
         _, idx, inv = numpy.unique(
-                b,
-                return_index=True,
-                return_inverse=True
-                )
+            b,
+            return_index=True,
+            return_inverse=True
+            )
         edge_nodes = a[idx]
 
         self.edges = {
@@ -437,10 +437,10 @@ class MeshTetra(_base_mesh):
 
         sums = numpy.zeros(len(self.faces['nodes']))
         numpy.add.at(
-                sums,
-                self.cells['faces'].T,
-                self.circumcenter_face_distances
-                )
+            sums,
+            self.cells['faces'].T,
+            self.circumcenter_face_distances
+            )
 
         return numpy.sum(sums < 0.0)
 
@@ -507,9 +507,10 @@ class MeshTetra(_base_mesh):
             )[0]
         # find all cells with the faces
         # <http://stackoverflow.com/a/38481969/353337>
-        adj_cell_ids = numpy.where(numpy.in1d(
-            self.cells['faces'], adj_face_ids
-            ).reshape(self.cells['faces'].shape).any(axis=1)
+        adj_cell_ids = numpy.where(
+            numpy.in1d(
+                self.cells['faces'], adj_face_ids
+                ).reshape(self.cells['faces'].shape).any(axis=1)
             )[0]
 
         # plot all those adjacent cells; first collect all edges
@@ -536,8 +537,8 @@ class MeshTetra(_base_mesh):
             #
             x = X[self.node_face_cells[..., [cell_id]]]
             face_ccs = compute_triangle_circumcenters(
-                    x, self.ei_dot_ei, self.ei_dot_ej
-                    )
+                x, self.ei_dot_ei, self.ei_dot_ej
+                )
             # draw the face circumcenters
             ax.plot(
                 face_ccs[..., 0].flatten(),

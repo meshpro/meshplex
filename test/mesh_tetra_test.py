@@ -9,9 +9,9 @@ from helpers import download_mesh, near_equal, run
 
 
 @pytest.mark.parametrize(
-        'a',  # edge length
-        [0.5, 1.0, 1.33]
-        )
+    'a',  # edge length
+    [0.5, 1.0, 1.33]
+    )
 def test_regular_tet0(a):
     points = a * numpy.array([
         [1.0, 0, 0],
@@ -129,9 +129,9 @@ def test_regular_tet0(a):
 
 
 @pytest.mark.parametrize(
-        'a',  # basis edge length
-        [0.5, 1.0, 2.0]
-        )
+    'a',  # basis edge length
+    [0.5, 1.0, 2.0]
+    )
 def test_regular_tet1_geometric(a):
     points = numpy.array([
         [0, 0, 0],
@@ -388,9 +388,9 @@ def test_arrow3d():
 
 def test_tetrahedron():
     filename = download_mesh(
-            'tetrahedron.msh',
-            '27a5d7e102e6613a1e58629c252cb293'
-            )
+        'tetrahedron.msh',
+        '27a5d7e102e6613a1e58629c252cb293'
+        )
     mesh, _, _, _ = voropy.read(filename)
 
     run(

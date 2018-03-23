@@ -1,17 +1,16 @@
 # -*- coding: utf-8 -*-
 #
 import numpy
-from voropy.base import \
-        _base_mesh, \
-        _row_dot, \
-        compute_tri_areas_and_ce_ratios, \
-        compute_triangle_circumcenters
+from voropy.base import (
+    _base_mesh, _row_dot, compute_tri_areas_and_ce_ratios,
+    compute_triangle_circumcenters
+    )
 
 __all__ = ['MeshTri']
 
 
 def _column_stack(a, b):
-    # http://stackoverflow.com/a/39638773/353337
+    # https://stackoverflow.com/a/39638773/353337
     return numpy.stack([a, b], axis=1)
 
 
@@ -141,10 +140,10 @@ class FlatCellCorrector(object):
         ghost, self.q = _mirror_point(self.p0, self.p1, self.p2)
 
         ce = _isosceles_ce_ratios(
-                numpy.concatenate([self.p1, self.p2]),
-                numpy.concatenate([self.p0, self.p0]),
-                numpy.concatenate([ghost, ghost])
-                )
+            numpy.concatenate([self.p1, self.p2]),
+            numpy.concatenate([self.p0, self.p0]),
+            numpy.concatenate([ghost, ghost])
+            )
 
         n = len(self.p0)
         self.ce_ratios1 = ce[:, :n]
@@ -231,9 +230,9 @@ class FlatCellCorrector(object):
 
         ids1 = _column_stack(self.p1_id, self.p2_id)
         vals1 = _column_stack(
-                numpy.linalg.norm(self.q - self.p1) - cv1,
-                numpy.linalg.norm(self.q - self.p2) - cv2
-                )
+            numpy.linalg.norm(self.q - self.p1) - cv1,
+            numpy.linalg.norm(self.q - self.p2) - cv2
+            )
 
         ids = numpy.concatenate([ids0, ids1])
         vals = numpy.concatenate([vals0, vals1])
@@ -299,10 +298,10 @@ class FlatCellCorrector(object):
         # the values of the function in each of the three corners, times the
         # area of the triangle.
         ids = numpy.stack([
-                _column_stack(self.p0_id, self.p0_id),
-                _column_stack(self.p0_id, self.p1_id),
-                _column_stack(self.p0_id, self.p2_id)
-                ], axis=1)
+            _column_stack(self.p0_id, self.p0_id),
+            _column_stack(self.p0_id, self.p1_id),
+            _column_stack(self.p0_id, self.p2_id)
+            ], axis=1)
 
         vals = numpy.stack([
             _column_stack(
@@ -402,10 +401,10 @@ class MeshTri(_base_mesh):
             self.node_coords[self.idx_hierarchy[0]]
 
         self.ei_dot_ej = numpy.einsum(
-                'ijk, ijk->ij',
-                self.half_edge_coords[[1, 2, 0]],
-                self.half_edge_coords[[2, 0, 1]]
-                )
+            'ijk, ijk->ij',
+            self.half_edge_coords[[1, 2, 0]],
+            self.half_edge_coords[[2, 0, 1]]
+            )
 
         e = self.half_edge_coords
         self.ei_dot_ei = numpy.einsum('ijk, ijk->ij', e, e)
@@ -440,10 +439,10 @@ class MeshTri(_base_mesh):
                 ))[0]
 
             self.fcc = FlatCellCorrector(
-                    self.cells['nodes'][self.fcc_cells],
-                    fcc_local_edge,
-                    self.node_coords
-                    )
+                self.cells['nodes'][self.fcc_cells],
+                fcc_local_edge,
+                self.node_coords
+                )
             self.ce_ratios_per_half_edge[:, self.fcc_cells] = \
                 self.fcc.get_ce_ratios().T
 
@@ -468,10 +467,10 @@ class MeshTri(_base_mesh):
             cells_edges = self.cells['edges'].T
             self._ce_ratios = numpy.zeros(len(self.edges['nodes']))
             numpy.add.at(
-                    self._ce_ratios,
-                    cells_edges,
-                    self.ce_ratios_per_half_edge
-                    )
+                self._ce_ratios,
+                cells_edges,
+                self.ce_ratios_per_half_edge
+                )
         return self._ce_ratios
 
     def get_control_volumes(self):
@@ -563,14 +562,14 @@ class MeshTri(_base_mesh):
         a = numpy.sort(self.idx_hierarchy.reshape(s[0], s[1]*s[2]).T)
 
         b = numpy.ascontiguousarray(a).view(
-                numpy.dtype((numpy.void, a.dtype.itemsize * a.shape[1]))
-                )
+            numpy.dtype((numpy.void, a.dtype.itemsize * a.shape[1]))
+            )
         _, idx, inv, cts = numpy.unique(
-                b,
-                return_index=True,
-                return_inverse=True,
-                return_counts=True
-                )
+            b,
+            return_index=True,
+            return_inverse=True,
+            return_counts=True
+            )
 
         # No edge has more than 2 cells. This assertion fails, for example, if
         # cells are listed twice.
@@ -623,10 +622,10 @@ class MeshTri(_base_mesh):
         if self.cell_circumcenters is None:
             node_cells = self.cells['nodes'].T
             self.cell_circumcenters = compute_triangle_circumcenters(
-                    self.node_coords[node_cells],
-                    self.ei_dot_ei,
-                    self.ei_dot_ej
-                    )
+                self.node_coords[node_cells],
+                self.ei_dot_ei,
+                self.ei_dot_ej
+                )
         return self.cell_circumcenters
 
     def _compute_integral_x(self, cell_ids):
@@ -813,15 +812,13 @@ class MeshTri(_base_mesh):
         plt.show()
         return
 
-    def plot(
-            self,
-            show_coedges=True,
-            show_centroids=True,
-            mesh_color='k',
-            boundary_edge_color=None,
-            comesh_color=(0.8, 0.8, 0.8),
-            show_axes=True
-            ):
+    def plot(self,
+             show_coedges=True,
+             show_centroids=True,
+             mesh_color='k',
+             boundary_edge_color=None,
+             comesh_color=(0.8, 0.8, 0.8),
+             show_axes=True):
         '''Show the mesh using matplotlib.
         '''
         # Importing matplotlib takes a while, so don't do that at the header.
@@ -881,17 +878,17 @@ class MeshTri(_base_mesh):
             # Plot connection of the circumcenter to the midpoint of all three
             # axes.
             a = numpy.stack([
-                    cc[:, :2],
-                    edge_midpoints[self.cells['edges'][:, 0], :2]
-                    ], axis=1)
+                cc[:, :2],
+                edge_midpoints[self.cells['edges'][:, 0], :2]
+                ], axis=1)
             b = numpy.stack([
-                    cc[:, :2],
-                    edge_midpoints[self.cells['edges'][:, 1], :2]
-                    ], axis=1)
+                cc[:, :2],
+                edge_midpoints[self.cells['edges'][:, 1], :2]
+                ], axis=1)
             c = numpy.stack([
-                    cc[:, :2],
-                    edge_midpoints[self.cells['edges'][:, 2], :2]
-                    ], axis=1)
+                cc[:, :2],
+                edge_midpoints[self.cells['edges'][:, 2], :2]
+                ], axis=1)
 
             line_segments = LineCollection(
                 numpy.concatenate([a, b, c]),
@@ -945,12 +942,11 @@ class MeshTri(_base_mesh):
         if show_ce_ratio:
             if self.cell_circumcenters is None:
                 X = self.node_coords[self.cells['nodes']]
-                self.cell_circumcenters = \
-                    self.compute_triangle_circumcenters(
-                            X,
-                            self.ei_dot_ei,
-                            self.ei_dot_ej
-                            )
+                self.cell_circumcenters = self.compute_triangle_circumcenters(
+                    X,
+                    self.ei_dot_ei,
+                    self.ei_dot_ej
+                    )
 
             # Find the cells that contain the vertex
             cell_ids = numpy.where(
@@ -963,9 +959,9 @@ class MeshTri(_base_mesh):
                         continue
                     node_ids = self.edges['nodes'][edge_id]
                     edge_midpoint = 0.5 * (
-                            self.node_coords[node_ids[0]] +
-                            self.node_coords[node_ids[1]]
-                            )
+                        self.node_coords[node_ids[0]] +
+                        self.node_coords[node_ids[1]]
+                        )
                     p = _column_stack(
                         self.cell_circumcenters[cell_id],
                         edge_midpoint
