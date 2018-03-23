@@ -462,10 +462,15 @@ class MeshTetra(_base_mesh):
             #
             x = X[self.node_face_cells[..., [cell_id]]]
             face_ccs = compute_triangle_circumcenters(
-                    x, self.ei_dot_ei, self.ei_dot_ej
-                    )
+                x, self.ei_dot_ei, self.ei_dot_ej
+                )
             # draw the face circumcenters
-            ax.plot(face_ccs[..., 0], face_ccs[..., 1], face_ccs[..., 2], 'go')
+            ax.plot(
+                face_ccs[..., 0].flatten(),
+                face_ccs[..., 1].flatten(),
+                face_ccs[..., 2].flatten(),
+                'go'
+                )
             # draw the connections
             #   tet circumcenter---face circumcenter
             for face_cc in face_ccs:
@@ -534,7 +539,12 @@ class MeshTetra(_base_mesh):
                     x, self.ei_dot_ei, self.ei_dot_ej
                     )
             # draw the face circumcenters
-            ax.plot(face_ccs[..., 0], face_ccs[..., 1], face_ccs[..., 2], 'go')
+            ax.plot(
+                face_ccs[..., 0].flatten(),
+                face_ccs[..., 1].flatten(),
+                face_ccs[..., 2].flatten(),
+                'go'
+                )
             # draw the connections
             #   tet circumcenter---face circumcenter
             for face_cc in face_ccs:
