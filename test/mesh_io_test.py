@@ -8,10 +8,10 @@ import voropy
 
 def test_io_2d():
     vertices, cells = meshzoo.rectangle(
-            0.0, 1.0, 0.0, 1.0,
-            2, 2,
-            zigzag=True
-            )
+        0.0, 1.0, 0.0, 1.0,
+        2, 2,
+        zigzag=True
+        )
     mesh = voropy.mesh_tri.MeshTri(vertices, cells)
     # mesh, _, _, _ = voropy.read('pacman.vtu')
 

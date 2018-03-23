@@ -76,7 +76,7 @@ if __name__ == '__main__':
 
     if 'geometrical' in cell_data['triangle']:
         a = cell_data['triangle']['geometrical']
-        # http://stackoverflow.com/q/42740483/353337
+        # https://stackoverflow.com/q/42740483/353337
         submesh_bools = {v: v == a for v in numpy.unique(a)}
     else:
         submesh_bools = {0: numpy.ones(len(cells['triangle']), dtype=bool)}

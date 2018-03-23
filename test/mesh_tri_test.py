@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 #
-from helpers import download_mesh, near_equal, run
+import numpy
+
 import pytest
 import voropy
 
-import numpy
+from helpers import download_mesh, near_equal, run
 
 
 def test_regular_tri():
@@ -20,8 +21,8 @@ def test_regular_tri():
 
     assert (mesh.local_idx.T == [[1, 2], [2, 0], [0, 1]]).all()
     assert mesh.local_idx_inv == [
-            [(0, 2), (1, 1)], [(0, 0), (1, 2)], [(0, 1), (1, 0)]
-            ]
+        [(0, 2), (1, 1)], [(0, 0), (1, 2)], [(0, 1), (1, 0)]
+        ]
 
     # ce_ratios
     assert near_equal(mesh.get_ce_ratios().T, [0.0, 0.5, 0.5], tol)
@@ -45,10 +46,10 @@ def test_regular_tri():
 
     # centroids
     assert near_equal(mesh.get_control_volume_centroids(), [
-            [0.25, 0.25, 0.0],
-            [2.0/3.0, 1.0/6.0, 0.0],
-            [1.0/6.0, 2.0/3.0, 0.0],
-            ], tol)
+        [0.25, 0.25, 0.0],
+        [2.0/3.0, 1.0/6.0, 0.0],
+        [1.0/6.0, 2.0/3.0, 0.0],
+        ], tol)
 
     assert mesh.num_delaunay_violations() == 0
 
@@ -105,10 +106,10 @@ def test_regular_tri_order():
 
     # centroids
     assert near_equal(mesh.get_control_volume_centroids(), [
-            [1.0/6.0, 2.0/3.0, 0.0],
-            [0.25, 0.25, 0.0],
-            [2.0/3.0, 1.0/6.0, 0.0],
-            ], tol)
+        [1.0/6.0, 2.0/3.0, 0.0],
+        [0.25, 0.25, 0.0],
+        [2.0/3.0, 1.0/6.0, 0.0],
+        ], tol)
 
     assert mesh.num_delaunay_violations() == 0
 
@@ -116,9 +117,9 @@ def test_regular_tri_order():
 
 
 @pytest.mark.parametrize(
-        'a',
-        [1.0, 2.0]
-        )
+    'a',
+    [1.0, 2.0]
+    )
 def test_regular_tri2(a):
     points = numpy.array([
         [-0.5, -0.5 * numpy.sqrt(3.0), 0],
@@ -222,10 +223,10 @@ def test_regular_tri2(a):
 
 
 @pytest.mark.parametrize(
-        'h',
-        # TODO [1.0e0, 1.0e-1]
-        [1.0e0]
-        )
+    'h',
+    # TODO [1.0e0, 1.0e-1]
+    [1.0e0]
+    )
 def test_degenerate_small0b(h):
     points = numpy.array([
         [0, 0, 0],
@@ -234,10 +235,10 @@ def test_degenerate_small0b(h):
         ])
     cells = numpy.array([[0, 1, 2]])
     mesh = voropy.mesh_tri.MeshTri(
-            points,
-            cells,
-            flat_cell_correction=None
-            )
+        points,
+        cells,
+        flat_cell_correction=None
+        )
 
     tol = 1.0e-14
 
@@ -292,10 +293,10 @@ def test_degenerate_small0b_fcc():
         ])
     cells = numpy.array([[0, 1, 2]])
     mesh = voropy.mesh_tri.MeshTri(
-            points,
-            cells,
-            flat_cell_correction='full'
-            )
+        points,
+        cells,
+        flat_cell_correction='full'
+        )
 
     tol = 1.0e-14
 
@@ -347,10 +348,10 @@ def test_degenerate_small1(h, a):
         ])
     cells = numpy.array([[0, 1, 2]])
     mesh = voropy.mesh_tri.MeshTri(
-            points,
-            cells,
-            flat_cell_correction='full'
-            )
+        points,
+        cells,
+        flat_cell_correction='full'
+        )
 
     tol = 1.0e-14
 
@@ -404,9 +405,9 @@ def test_degenerate_small2(h):
         ])
     cells = numpy.array([[0, 1, 2], [0, 1, 3]])
     mesh = voropy.mesh_tri.MeshTri(
-            points,
-            cells
-            )
+        points,
+        cells
+        )
 
     tol = 1.0e-11
 
@@ -480,9 +481,9 @@ def test_rectanglesmall():
 
 def test_pacman():
     filename = download_mesh(
-            'pacman.msh',
-            '2da8ff96537f844a95a83abb48471b6a'
-            )
+        'pacman.msh',
+        '2da8ff96537f844a95a83abb48471b6a'
+        )
     mesh, _, _, _ = voropy.read(filename, flat_cell_correction='boundary')
 
     run(
@@ -531,9 +532,9 @@ def test_shell():
 
 def test_sphere():
     filename = download_mesh(
-            'sphere.msh',
-            '70a5dbf79c3b259ed993458ff4aa2e93'
-            )
+        'sphere.msh',
+        '70a5dbf79c3b259ed993458ff4aa2e93'
+        )
     mesh, _, _, _ = voropy.read(filename)
     run(
         mesh,

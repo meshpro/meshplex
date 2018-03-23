@@ -1,10 +1,10 @@
 # voropy
 
 [![Build Status](https://travis-ci.org/nschloe/voropy.svg?branch=master)](https://travis-ci.org/nschloe/voropy)
-[![Code Health](https://landscape.io/github/nschloe/voropy/master/landscape.png)](https://landscape.io/github/nschloe/voropy/master)
-[![codecov](https://codecov.io/gh/nschloe/voropy/branch/master/graph/badge.svg)](https://codecov.io/gh/nschloe/voropy)
+[![codecov](https://img.shields.io/codecov/c/github/nschloe/voropy.svg)](https://codecov.io/gh/nschloe/voropy)
+[![Codacy grade](https://img.shields.io/codacy/grade/b524f1e339244cf9a429784681a7f248.svg)](https://app.codacy.com/app/nschloe/voropy/dashboard)
 [![PyPi Version](https://img.shields.io/pypi/v/voropy.svg)](https://pypi.python.org/pypi/voropy)
-[![GitHub stars](https://img.shields.io/github/stars/nschloe/voropy.svg?style=social&label=Star&maxAge=2592000)](https://github.com/nschloe/voropy)
+[![GitHub stars](https://img.shields.io/github/stars/nschloe/voropy.svg?style=social&label=Stars)](https://github.com/nschloe/voropy)
 
 ![](https://nschloe.github.io/voropy/logo-180x180.png)
 

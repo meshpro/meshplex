@@ -44,12 +44,10 @@ def near_equal(a, b, tol):
     return numpy.allclose(a, b, rtol=0.0, atol=tol)
 
 
-def run(
-        mesh,
+def run(mesh,
         volume,
         convol_norms, ce_ratio_norms, cellvol_norms,
-        tol=1.0e-12
-        ):
+        tol=1.0e-12):
     # Check cell volumes.
     total_cellvolume = fsum(mesh.cell_volumes)
     assert abs(volume - total_cellvolume) < tol * volume

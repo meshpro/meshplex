@@ -1,17 +1,18 @@
 # -*- coding: utf-8 -*-
 #
-import meshio
 import numpy
 from numpy.core.umath_tests import inner1d
+
+import meshio
 
 __all__ = []
 
 
 def _row_dot(a, b):
-    # http://stackoverflow.com/a/26168677/353337
+    # https://stackoverflow.com/a/26168677/353337
     # return numpy.einsum('ij, ij->i', a, b)
     #
-    # http://stackoverflow.com/a/39657905/353337
+    # https://stackoverflow.com/a/39657905/353337
     return inner1d(a, b)
 
 
@@ -52,7 +53,7 @@ def compute_tri_areas_and_ce_ratios(ei_dot_ej):
     #
     #       x_1 = <e_2, e_3> / <e1 x e2, e1 x e3> * |simplex|;
     #
-    #     see <http://math.stackexchange.com/a/1855380/36678>.
+    #     see <https://math.stackexchange.com/a/1855380/36678>.
     #
     #   * In trilinear coordinates
     #     <https://en.wikipedia.org/wiki/Trilinear_coordinates>, the
@@ -147,8 +148,7 @@ class _base_mesh(object):
 
     def __init__(self,
                  nodes,
-                 cells_nodes
-                 ):
+                 cells_nodes):
         self.node_coords = nodes
         self._edge_lengths = None
         return
@@ -157,8 +157,7 @@ class _base_mesh(object):
               filename,
               point_data=None,
               cell_data=None,
-              field_data=None
-              ):
+              field_data=None):
         if self.node_coords.shape[1] == 2:
             n = len(self.node_coords)
             a = numpy.ascontiguousarray(
@@ -169,10 +168,10 @@ class _base_mesh(object):
 
         if self.cells['nodes'].shape[1] == 3:
             cell_type = 'triangle'
-        elif self.cells['nodes'].shape[1] == 4:
-            cell_type = 'tetra'
         else:
-            raise RuntimeError('Only triangles/tetrahedra supported')
+            assert self.cells['nodes'].shape[1] == 4, \
+                'Only triangles/tetrahedra supported'
+            cell_type = 'tetra'
 
         meshio.write(
             filename,
@@ -190,7 +189,7 @@ class _base_mesh(object):
 
     def get_vertex_mask(self, subdomain=None):
         if subdomain is None:
-            # http://stackoverflow.com/a/42392791/353337
+            # https://stackoverflow.com/a/42392791/353337
             return numpy.s_[:]
         if subdomain not in self.subdomains:
             self._mark_vertices(subdomain)
@@ -200,7 +199,7 @@ class _base_mesh(object):
         '''Get faces which are fully in subdomain.
         '''
         if subdomain is None:
-            # http://stackoverflow.com/a/42392791/353337
+            # https://stackoverflow.com/a/42392791/353337
             return numpy.s_[:]
 
         if subdomain not in self.subdomains:
@@ -222,7 +221,7 @@ class _base_mesh(object):
         '''Get faces which are fully in subdomain.
         '''
         if subdomain is None:
-            # http://stackoverflow.com/a/42392791/353337
+            # https://stackoverflow.com/a/42392791/353337
             return numpy.s_[:]
 
         if subdomain not in self.subdomains:
@@ -243,7 +242,7 @@ class _base_mesh(object):
 
     def get_cell_mask(self, subdomain=None):
         if subdomain is None:
-            # http://stackoverflow.com/a/42392791/353337
+            # https://stackoverflow.com/a/42392791/353337
             return numpy.s_[:]
 
         if subdomain.is_boundary_only:
@@ -272,6 +271,6 @@ class _base_mesh(object):
                 is_inside = numpy.logical_and(is_inside, self.is_boundary_node)
 
         self.subdomains[subdomain] = {
-                'vertices': is_inside,
-                }
+            'vertices': is_inside,
+            }
         return
