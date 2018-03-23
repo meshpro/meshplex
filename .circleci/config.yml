@@ -13,7 +13,7 @@ jobs:
       - run: pip3 install -U pytest pytest-cov pylint
       - checkout
       - run: pip3 install -r test_requirements.txt
-      - run: pip3 install .
+      - run: pip3 install .[all]
       # lint
       - run: pylint setup.py voropy/ test/*.py
       # make sure that rst converts correctly

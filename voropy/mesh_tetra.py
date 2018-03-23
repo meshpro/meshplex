@@ -262,7 +262,7 @@ class MeshTetra(_base_mesh):
 #         # has to hold for all vectors u in the plane spanned by the edges,
 #         # particularly by the edges themselves.
 #         cells_edges = edges[self.cells['edges']]
-#         # <http://stackoverflow.com/a/38110345/353337>
+#         # <https://stackoverflow.com/a/38110345/353337>
 #         A = numpy.einsum('ijk,ilk->ijl', cells_edges, cells_edges)
 #         A = A**2
 #
@@ -506,7 +506,7 @@ class MeshTetra(_base_mesh):
             (self.faces['edges'] == edge_id).any(axis=1)
             )[0]
         # find all cells with the faces
-        # <http://stackoverflow.com/a/38481969/353337>
+        # https://stackoverflow.com/a/38481969/353337
         adj_cell_ids = numpy.where(
             numpy.in1d(
                 self.cells['faces'], adj_face_ids

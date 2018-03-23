@@ -39,11 +39,14 @@ setup(
     license=about['__license__'],
     platforms='any',
     install_requires=[
-        'matplotlib',
         'meshio',
         'numpy >= 1.9',  # unique return_counts
         'scipy',
         ],
+    extras_require={
+        'all': ['matplotlib'],
+        'plot': ['matplotlib'],
+        },
     classifiers=[
         about['__status__'],
         about['__license__'],

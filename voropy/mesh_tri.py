@@ -683,7 +683,7 @@ class MeshTri(_base_mesh):
 #            Discrete gradient method in solid mechanics,
 #            Lu, Jia and Qian, Jing and Han, Weimin,
 #            International Journal for Numerical Methods in Engineering,
-#            http://dx.doi.org/10.1002/nme.2187.
+#            https://doi.org/10.1002/nme.2187.
 #         '''
 #         if self.cell_circumcenters is None:
 #             X = self.node_coords[self.cells['nodes']]

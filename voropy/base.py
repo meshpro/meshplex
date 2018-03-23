@@ -9,10 +9,10 @@ __all__ = []
 
 
 def _row_dot(a, b):
-    # http://stackoverflow.com/a/26168677/353337
+    # https://stackoverflow.com/a/26168677/353337
     # return numpy.einsum('ij, ij->i', a, b)
     #
-    # http://stackoverflow.com/a/39657905/353337
+    # https://stackoverflow.com/a/39657905/353337
     return inner1d(a, b)
 
 
@@ -168,10 +168,10 @@ class _base_mesh(object):
 
         if self.cells['nodes'].shape[1] == 3:
             cell_type = 'triangle'
-        elif self.cells['nodes'].shape[1] == 4:
-            cell_type = 'tetra'
         else:
-            raise RuntimeError('Only triangles/tetrahedra supported')
+            assert self.cells['nodes'].shape[1] == 4, \
+                'Only triangles/tetrahedra supported'
+            cell_type = 'tetra'
 
         meshio.write(
             filename,
@@ -189,7 +189,7 @@ class _base_mesh(object):
 
     def get_vertex_mask(self, subdomain=None):
         if subdomain is None:
-            # http://stackoverflow.com/a/42392791/353337
+            # https://stackoverflow.com/a/42392791/353337
             return numpy.s_[:]
         if subdomain not in self.subdomains:
             self._mark_vertices(subdomain)
@@ -199,7 +199,7 @@ class _base_mesh(object):
         '''Get faces which are fully in subdomain.
         '''
         if subdomain is None:
-            # http://stackoverflow.com/a/42392791/353337
+            # https://stackoverflow.com/a/42392791/353337
             return numpy.s_[:]
 
         if subdomain not in self.subdomains:
@@ -221,7 +221,7 @@ class _base_mesh(object):
         '''Get faces which are fully in subdomain.
         '''
         if subdomain is None:
-            # http://stackoverflow.com/a/42392791/353337
+            # https://stackoverflow.com/a/42392791/353337
             return numpy.s_[:]
 
         if subdomain not in self.subdomains:
@@ -242,7 +242,7 @@ class _base_mesh(object):
 
     def get_cell_mask(self, subdomain=None):
         if subdomain is None:
-            # http://stackoverflow.com/a/42392791/353337
+            # https://stackoverflow.com/a/42392791/353337
             return numpy.s_[:]
 
         if subdomain.is_boundary_only:
