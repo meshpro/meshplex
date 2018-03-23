@@ -370,8 +370,11 @@ class MeshTri(_base_mesh):
         self.subdomains = {}
 
         # compute data
-        # Create the idx_hierarchy (nodes->edges->cells). Make sure that the
-        # k-th edge is opposite of the k-th point in the triangle.
+        # Create the idx_hierarchy (nodes->edges->cells), i.e., the value of
+        # `self.idx_hierarchy[0, 2, 27]` is the index of the node of cell 27,
+        # edge 2, node 0. The shape of `self.idx_hierarchy` is `(2, 3, n)`,
+        # where `n` is the number of cells. Make sure that the k-th edge is
+        # opposite of the k-th point in the triangle.
         self.local_idx = numpy.array([
             [1, 2],
             [2, 0],
@@ -583,13 +586,11 @@ class MeshTri(_base_mesh):
 
         # TODO is any of this needed?
         # cell->edges relationship
-        num_cells = len(self.cells['nodes'])
-        cells_edges = inv.reshape([3, num_cells]).T
+        cells_edges = inv.reshape(3, -1).T
         self.cells['edges'] = cells_edges
 
         # store inv for possible later use in create_edge_cells
         self._inv = inv
-
         return
 
     def compute_edge_cells(self):

@@ -108,8 +108,8 @@ def flip_edges(mesh, is_flip_edge):
             mesh.cells['nodes'][adj_cells[0], (cell0_local_edge_id + 1) % 3],
             mesh.cells['nodes'][adj_cells[0], (cell0_local_edge_id + 2) % 3],
             ]
-        new_cells[k, 0] = [verts[0], verts[1], verts[2]]
-        new_cells[k, 1] = [verts[0], verts[1], verts[3]]
+        new_cells[k, 0] = numpy.array([verts[0][0], verts[1][0], verts[2][0]])
+        new_cells[k, 1] = numpy.array([verts[0][0], verts[1][0], verts[3][0]])
 
     # find cells that can stay
     is_good_cell = numpy.all(

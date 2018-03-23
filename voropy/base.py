@@ -52,7 +52,7 @@ def compute_tri_areas_and_ce_ratios(ei_dot_ej):
     #
     #       x_1 = <e_2, e_3> / <e1 x e2, e1 x e3> * |simplex|;
     #
-    #     see <http://math.stackexchange.com/a/1855380/36678>.
+    #     see <https://math.stackexchange.com/a/1855380/36678>.
     #
     #   * In trilinear coordinates
     #     <https://en.wikipedia.org/wiki/Trilinear_coordinates>, the
