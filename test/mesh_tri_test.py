@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 #
-from helpers import download_mesh, near_equal, run
+import numpy
+
 import pytest
 import voropy
 
-import numpy
+from helpers import download_mesh, near_equal, run
 
 
 def test_regular_tri():

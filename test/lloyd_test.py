@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 #
-from helpers import download_mesh
+import numpy
+
 import meshio
 import voropy
 
-import numpy
+from helpers import download_mesh
 
 
 def test_simple_lloyd(max_steps=5, output_filetype=None):
