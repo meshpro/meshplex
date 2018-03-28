@@ -1,10 +1,10 @@
 # voropy
 
-[![Build Status](https://travis-ci.org/nschloe/voropy.svg?branch=master)](https://travis-ci.org/nschloe/voropy)
+[![CircleCI](https://img.shields.io/circleci/project/github/nschloe/voropy/master.svg)](https://circleci.com/gh/nschloe/voropy/tree/master)
 [![codecov](https://img.shields.io/codecov/c/github/nschloe/voropy.svg)](https://codecov.io/gh/nschloe/voropy)
 [![Codacy grade](https://img.shields.io/codacy/grade/b524f1e339244cf9a429784681a7f248.svg)](https://app.codacy.com/app/nschloe/voropy/dashboard)
-[![PyPi Version](https://img.shields.io/pypi/v/voropy.svg)](https://pypi.python.org/pypi/voropy)
-[![GitHub stars](https://img.shields.io/github/stars/nschloe/voropy.svg?style=social&label=Stars)](https://github.com/nschloe/voropy)
+[![PyPi Version](https://img.shields.io/pypi/v/voropy.svg)](https://pypi.org/project/voropy)
+[![GitHub stars](https://img.shields.io/github/stars/nschloe/voropy.svg?logo=github&style=social&label=Stars)](https://github.com/nschloe/voropy)
 
 ![](https://nschloe.github.io/voropy/logo-180x180.png)
 
@@ -50,24 +50,12 @@ mesh_smoothing --verbose -t 1.0e-3 pacman.msh out.msh
 
 ### Installation
 
-#### Python Package Index
-
 voropy is [available from the Python Package
-Index](https://pypi.python.org/pypi/voropy/), so simply type
+Index](https://pypi.org/project/voropy/), so simply type
 ```
 pip install -U voropy
 ```
 to install or upgrade.
-
-#### Manual installation
-
-Download voropy from
-[the Python Package Index](https://pypi.python.org/pypi/voropy/).
-Place voropy in a directory where Python can find it (e.g.,
-`$PYTHONPATH`).  You can install it system-wide with
-```
-python setup.py install
-```
 
 ### Testing
 
