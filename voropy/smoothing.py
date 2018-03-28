@@ -2,7 +2,6 @@
 #
 from __future__ import print_function
 
-from matplotlib import pyplot as plt
 import numpy
 
 from .mesh_tri import MeshTri
@@ -174,6 +173,7 @@ def _print_stats(data_list):
 
 
 def _write(mesh, filetype, k):
+    from matplotlib import pyplot as plt
     if filetype == 'png':
         fig = mesh.plot(
             show_coedges=False,
