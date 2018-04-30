@@ -6,3 +6,4 @@ README.rst
 voropy.egg-info/
 dist/
 *.png
+.pytest_cache/

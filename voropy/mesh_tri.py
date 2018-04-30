@@ -544,7 +544,6 @@ class MeshTri(_base_mesh):
             self.create_edges()
 
         self.is_boundary_node = numpy.zeros(len(self.node_coords), dtype=bool)
-
         self.is_boundary_node[
             self.idx_hierarchy[..., self.is_boundary_edge]
             ] = True
@@ -573,7 +572,7 @@ class MeshTri(_base_mesh):
 
         # No edge has more than 2 cells. This assertion fails, for example, if
         # cells are listed twice.
-        assert all(cts < 3)
+        assert numpy.all(cts < 3)
 
         self.is_boundary_edge = (cts[inv] == 1).reshape(s[1:])
 
