@@ -35,18 +35,10 @@ mesh.show()
 ```
 (For mesh creation, check out [pygmsh](https://github.com/nschloe/pygmsh),
 [mshr](https://bitbucket.org/fenics-project/mshr),
-[frentos](https://github.com/nschloe/frentos),
-[meshzoo](https://github.com/nschloe/meshzoo) or any other tool.)
+[pygalmesh](https://github.com/nschloe/pygalmesh),
+[meshzoo](https://github.com/nschloe/meshzoo),
+[optimesh](//github.com/nschloe/optimesh) or any other tool.)
 
-#### Mesh smoothing
-
-voropy comes with a smoothing tool for triangular meshes after
-[Lloyd](https://en.wikipedia.org/wiki/Lloyd's_algorithm) that can dramatically
-improve the quality your mesh. To use, simply type
-```
-mesh_smoothing --verbose -t 1.0e-3 pacman.msh out.msh
-```
-![](https://nschloe.github.io/voropy/lloyd.gif)
 
 ### Installation
 
