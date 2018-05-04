@@ -474,3 +474,23 @@ def test_toy_geometric():
     assert abs(cc_norm_2 - 1103.7038287583791) < 1.0e-12
     assert abs(cc_norm_inf - 3.4234008596539662) < 1.0e-12
     return
+
+
+def test_signed_volume():
+    filename = download_mesh(
+        'toy.msh',
+        '1d125d3fa9f373823edd91ebae5f7a81'
+        )
+    mesh, _, _, _ = voropy.read(filename, flat_cell_correction=None)
+
+    vols = \
+        voropy.get_signed_simplex_volumes(mesh.cells['nodes'], mesh.node_coords)
+
+    assert numpy.all(
+        abs(abs(vols) - mesh.cell_volumes) < 1.0e-12 * mesh.cell_volumes
+        )
+    return
+
+
+if __name__ == '__main__':
+    test_signed_volume()

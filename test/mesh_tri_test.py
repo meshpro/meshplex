@@ -545,5 +545,23 @@ def test_sphere():
         )
 
     # assertEqual(mesh.num_delaunay_violations(), 60)
-
     return
+
+
+def test_signed_area():
+    filename = download_mesh(
+        'pacman.msh',
+        '2da8ff96537f844a95a83abb48471b6a'
+        )
+    mesh, _, _, _ = voropy.read(filename, flat_cell_correction=None)
+
+    vols = voropy.get_signed_tri_areas(mesh.cells['nodes'], mesh.node_coords)
+
+    assert numpy.all(
+        abs(abs(vols) - mesh.cell_volumes) < 1.0e-12 * mesh.cell_volumes
+        )
+    return
+
+
+if __name__ == '__main__':
+    test_signed_area()

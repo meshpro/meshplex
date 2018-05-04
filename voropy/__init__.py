@@ -9,6 +9,7 @@ from voropy.__about__ import (
 from . import mesh_line
 from . import mesh_tri
 from . import mesh_tetra
+from .helpers import *
 from .reader import read
 
 __all__ = [
