@@ -8,6 +8,8 @@ import numpy
 def get_signed_tri_areas(cells, pts):
     '''Signed area of a triangle in 2D.
     '''
+    assert cells.shape[1] == 3
+    assert pts.shape[1] == 2
     # http://mathworld.wolfram.com/TriangleArea.html
     p = pts[cells].T
     p = numpy.moveaxis(p, 0, 1)

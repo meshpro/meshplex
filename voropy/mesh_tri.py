@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 #
 import numpy
-from voropy.base import (
+from .base import (
     _base_mesh, _row_dot, compute_tri_areas_and_ce_ratios,
     compute_triangle_circumcenters
     )
+from .helpers import get_signed_tri_areas
+
 
 __all__ = ['MeshTri']
 
@@ -413,6 +415,7 @@ class MeshTri(_base_mesh):
             compute_tri_areas_and_ce_ratios(self.ei_dot_ej)
 
         self.fcc_type = flat_cell_correction
+        self.flat_cell_correction = flat_cell_correction
         if flat_cell_correction is None:
             self.fcc = None
             self.regular_cells = numpy.s_[:]
@@ -448,6 +451,42 @@ class MeshTri(_base_mesh):
 
         self.is_boundary_node = None
         self.is_boundary_face = None
+        return
+
+    def update_node_coordinates(self, X):
+        assert self.flat_cell_correction is None
+        assert X.shape == self.node_coords.shape
+
+        self.node_coords = X
+
+        if self.half_edge_coords is not None:
+            self.half_edge_coords = (
+                self.node_coords[self.idx_hierarchy[1]] -
+                self.node_coords[self.idx_hierarchy[0]]
+                )
+
+        if self.ei_dot_ej is not None:
+            self.ei_dot_ej = numpy.einsum(
+                'ijk, ijk->ij',
+                self.half_edge_coords[[1, 2, 0]],
+                self.half_edge_coords[[2, 0, 1]]
+                )
+
+        if self.ei_dot_ei is not None:
+            e = self.half_edge_coords
+            self.ei_dot_ei = numpy.einsum('ijk, ijk->ij', e, e)
+
+        if self.cell_volumes is not None or self.ce_ratios_per_half_edge is not None:
+            self.cell_volumes, self.ce_ratios_per_half_edge = \
+                compute_tri_areas_and_ce_ratios(self.ei_dot_ej)
+
+        self._edge_lengths = None
+        self.cell_circumcenters = None
+        self._ce_ratios = None
+        self._control_volumes = None
+        self._cell_partitions = None
+        self._cv_centroids = None
+        self._surface_areas = None
         return
 
     def get_boundary_vertices(self):
@@ -809,6 +848,12 @@ class MeshTri(_base_mesh):
         from matplotlib import pyplot as plt
         self.plot(*args, **kwargs)
         plt.show()
+        return
+
+    def save_png(self, filename, *args, **kwargs):
+        from matplotlib import pyplot as plt
+        self.plot(*args, **kwargs)
+        plt.savefig(filename, transparent=False)
         return
 
     def plot(self,
