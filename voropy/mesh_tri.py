@@ -84,8 +84,8 @@ class FlatCellCorrector(object):
                    ___/                   \___
                ___/  \                     /  \___
            ___/       \                   /       \___
-          /____________\________________ /____________\
-         p1             \       |       /               p2
+          /____________\_________________/____________\
+         p1             \       |       /              p2
                          \      |      /
                           \     |     /
                            \    |    /
@@ -116,8 +116,8 @@ class FlatCellCorrector(object):
                    ___/                   \___
                ___/  \                     /  \___
            ___/       \                   /       \___
-          /____________\________________ /____________\
-         p1                                             p2
+          /____________\_________________/____________\
+         p1                                            p2
     '''
     def __init__(self, cells, flat_edge_local_id, node_coords):
         self.cells = cells
@@ -415,7 +415,6 @@ class MeshTri(_base_mesh):
             compute_tri_areas_and_ce_ratios(self.ei_dot_ej)
 
         self.fcc_type = flat_cell_correction
-        self.flat_cell_correction = flat_cell_correction
         if flat_cell_correction is None:
             self.fcc = None
             self.regular_cells = numpy.s_[:]
@@ -437,9 +436,9 @@ class MeshTri(_base_mesh):
                     )
 
             fcc_local_edge, self.fcc_cells = numpy.where(edge_needs_fcc)
-            self.regular_cells = numpy.where(numpy.logical_not(
-                numpy.any(edge_needs_fcc, axis=0)
-                ))[0]
+            self.regular_cells = numpy.where(
+                ~numpy.any(edge_needs_fcc, axis=0)
+                )[0]
 
             self.fcc = FlatCellCorrector(
                 self.cells['nodes'][self.fcc_cells],
@@ -454,7 +453,7 @@ class MeshTri(_base_mesh):
         return
 
     def update_node_coordinates(self, X):
-        assert self.flat_cell_correction is None
+        assert self.fcc is None
         assert X.shape == self.node_coords.shape
 
         self.node_coords = X
@@ -503,11 +502,10 @@ class MeshTri(_base_mesh):
             self.create_edges()
         if self._ce_ratios is None:
             # sum up from self.ce_ratios_per_half_edge
-            cells_edges = self.cells['edges'].T
             self._ce_ratios = numpy.zeros(len(self.edges['nodes']))
             numpy.add.at(
                 self._ce_ratios,
-                cells_edges,
+                self.cells['edges'].T,
                 self.ce_ratios_per_half_edge
                 )
         return self._ce_ratios
@@ -591,14 +589,13 @@ class MeshTri(_base_mesh):
         return
 
     def create_edges(self):
-        '''Setup edge-node and edge-cell relations.
+        '''Set up edge-node and edge-cell relations.
         '''
         # Reshape into individual edges.
         # Sort the columns to make it possible for `unique()` to identify
         # individual edges.
         s = self.idx_hierarchy.shape
         a = numpy.sort(self.idx_hierarchy.reshape(s[0], s[1]*s[2]).T)
-
         b = numpy.ascontiguousarray(a).view(
             numpy.dtype((numpy.void, a.dtype.itemsize * a.shape[1]))
             )
@@ -621,25 +618,26 @@ class MeshTri(_base_mesh):
             'nodes': a[idx],
             }
 
-        # TODO is any of this needed?
         # cell->edges relationship
         cells_edges = inv.reshape(3, -1).T
         self.cells['edges'] = cells_edges
 
-        # store inv for possible later use in create_edge_cells
+        # store inv for possible later use in get_adjacent_cells
         self._inv = inv
+        self._edges_cells = {}
         return
 
-    def compute_edge_cells(self):
-        '''This creates edge->cell relations. As an upstream relation, this is
-        relatively expensive to compute and hardly ever necessary.
+    def get_adjacent_cells(self, edge_id):
+        '''Gets the cells adjacent to edge_id. Involves a search over all cells
+        and as such is not cheap.
         '''
-        num_cells = len(self.cells['nodes'])
-        num_edges = len(self.edges['nodes'])
-        edge_cells = [[] for k in range(num_edges)]
-        for k, edge_id in enumerate(self._inv):
-            edge_cells[edge_id].append(k % num_cells)
-        return edge_cells
+        # Cache the result. This makes it possible to manually set adjacency
+        # data; a feature used in flip_edges(), for example.
+        if edge_id not in self._edges_cells:
+            idx = numpy.where(self._inv == edge_id)[0]
+            out = numpy.mod(idx, len(self.cells['nodes']))
+            self._edges_cells[edge_id] = out
+        return self._edges_cells[edge_id]
 
     def get_face_partitions(self):
         # face = edge for triangles.
@@ -906,7 +904,7 @@ class MeshTri(_base_mesh):
         line_segments0 = LineCollection(e[pos], color=mesh_color)
         ax.add_collection(line_segments0)
         #
-        neg = numpy.logical_not(pos)
+        neg = ~pos
         line_segments1 = LineCollection(e[neg], color=new_red)
         ax.add_collection(line_segments1)
 
@@ -1017,4 +1015,198 @@ class MeshTri(_base_mesh):
                         ])
                     ax.fill(q[0], q[1], color='0.5')
                     ax.plot(p[0], p[1], color='0.7')
+        return
+
+    def flip_until_delaunay(self):
+        # There are no interior edges with negative covolume-edge ratio
+        # when using full flat cell correction.
+        assert self.fcc_type != 'full'
+
+        # If all coedge/edge ratios are positive, all cells are Delaunay.
+        if numpy.all(self.get_ce_ratios() > 0):
+            return False
+
+        self.create_edges()
+
+        needs_flipping = numpy.logical_and(
+            ~self.is_boundary_edge_individual,
+            self.get_ce_ratios_per_edge() < 0.0
+            )
+
+        num_flip_steps = 0
+        while numpy.any(needs_flipping):
+            num_flip_steps += 1
+            self._flip_edges(needs_flipping)
+            needs_flipping = numpy.logical_and(
+                ~self.is_boundary_edge_individual,
+                self.get_ce_ratios_per_edge() < 0.0
+                )
+
+        return num_flip_steps > 1
+
+    def _flip_edges(self, is_flip_edge):
+        '''Flips the given edges.
+        '''
+        assert self.fcc_type != 'full'
+
+        # can only handle the case where each cell has at most one edge to flip
+        is_flip_edge_per_cell = is_flip_edge[self.cells['edges']]
+        count = numpy.sum(is_flip_edge_per_cell, axis=1)
+        assert numpy.all(count < 2)
+
+        update_cell_ids = []
+        for flip_edge in numpy.where(is_flip_edge)[0]:
+            adj_cells = self.get_adjacent_cells(flip_edge)
+            assert len(adj_cells) == 2
+
+            # The local edge ids are opposite of the local vertex with the same
+            # id.
+            cell0_local_edge_id = numpy.where(
+                is_flip_edge_per_cell[adj_cells[0]]
+                )[0][0]
+            cell1_local_edge_id = numpy.where(
+                is_flip_edge_per_cell[adj_cells[1]]
+                )[0][0]
+
+            #        3                   3
+            #        A                   A
+            #       /|\                 / \
+            #      / | \               /   \
+            #     /  |  \             /  1  \
+            #   0/ 0 |   \1   ==>   0/_______\1
+            #    \   | 1 /           \       /
+            #     \  |  /             \  0  /
+            #      \ | /               \   /
+            #       \|/                 \ /
+            #        V                   V
+            #        2                   2
+            verts = numpy.array([
+                self.cells['nodes'][adj_cells[0], cell0_local_edge_id],
+                self.cells['nodes'][adj_cells[1], cell1_local_edge_id],
+                self.cells['nodes'][adj_cells[0], (cell0_local_edge_id + 1) % 3],
+                self.cells['nodes'][adj_cells[0], (cell0_local_edge_id + 2) % 3],
+                ])
+
+            # update edges
+            self.edges['nodes'][flip_edge] = numpy.sort(verts[[0, 1]])
+            # No need to touch self.is_boundary_edge,
+            # self.is_boundary_edge_individual; we're only flipping interior
+            # edges.
+
+            # Set new cells
+            self.cells['nodes'][adj_cells[0]] = verts[[0, 1, 2]]
+            self.cells['nodes'][adj_cells[1]] = verts[[0, 1, 3]]
+
+            # Set up new cells->edges relationships.
+            # First store the old edges in a dictionary with the global edge
+            # indices, then look for the new edge indices in them. Perhaps
+            # overkill, there may be a more elegant solution.
+            old_edges_idx = numpy.concatenate([
+                self.cells['edges'][adj_cells[0]],
+                self.cells['edges'][adj_cells[1]],
+                ])
+            d = {
+                tuple(self.edges['nodes'][idx]): idx
+                for idx in old_edges_idx
+                }
+            # Now update cells['edges']
+            self.cells['edges'][adj_cells[0]] = numpy.array([
+                    d[tuple(numpy.sort(verts[[1, 2]]))],
+                    d[tuple(numpy.sort(verts[[2, 0]]))],
+                    flip_edge
+                    ])
+            self.cells['edges'][adj_cells[1]] = numpy.array([
+                    d[tuple(numpy.sort(verts[[1, 3]]))],
+                    d[tuple(numpy.sort(verts[[3, 0]]))],
+                    flip_edge
+                    ])
+
+            # Update the edge->cells relationship. It doesn't change for the
+            # edge that was flipped, but for some of the other edges.
+            for edge_id in self.cells['edges'][adj_cells[0]]:
+                # Initialze self._edges_cells by calling get_adjacent_cells.
+                self.get_adjacent_cells(edge_id)
+                # If adj_cells[0] is not in _edges_cells, then the other cell
+                # must be. Swap.
+                if adj_cells[0] not in self._edges_cells[edge_id]:
+                    i = numpy.where(
+                        self._edges_cells[edge_id] == adj_cells[1]
+                        )[0][0]
+                    self._edges_cells[edge_id][i] = adj_cells[0]
+            for edge_id in self.cells['edges'][adj_cells[1]]:
+                self.get_adjacent_cells(edge_id)
+                if adj_cells[1] not in self._edges_cells[edge_id]:
+                    i = numpy.where(
+                        self._edges_cells[edge_id] == adj_cells[0]
+                        )[0][0]
+                    self._edges_cells[edge_id][i] = adj_cells[1]
+
+            # Schedule the cell ids for updates.
+            update_cell_ids.append(adj_cells[0])
+            update_cell_ids.append(adj_cells[1])
+
+        self._update_cell_values(update_cell_ids)
+        return
+
+    def _update_cell_values(self, cell_ids):
+        '''Updates all sorts of cell information for the given cell IDs.
+        '''
+        # update idx_hierarchy
+        nds = self.cells['nodes'][cell_ids].T
+        self.idx_hierarchy[..., cell_ids] = nds[self.local_idx]
+
+        # update self.half_edge_coords
+        # TODO report numpy bug for vectorization
+        for cell_id in cell_ids:
+            self.half_edge_coords[:, cell_id, :] = (
+                self.node_coords[self.idx_hierarchy[1, ..., cell_id]] -
+                self.node_coords[self.idx_hierarchy[0, ..., cell_id]]
+                )
+
+        # update self.ei_dot_ej
+        self.ei_dot_ej[:, cell_ids] = numpy.einsum(
+            'ijk, ijk->ij',
+            self.half_edge_coords[[1, 2, 0]][:, cell_ids],
+            self.half_edge_coords[[2, 0, 1]][:, cell_ids]
+            )
+
+        # update self.ei_dot_ei
+        e = self.half_edge_coords[:, cell_ids]
+        self.ei_dot_ei[:, cell_ids] = numpy.einsum('ijk, ijk->ij', e, e)
+
+        # update cell_volumes, ce_ratios_per_half_edge
+        cv, ce = compute_tri_areas_and_ce_ratios(self.ei_dot_ej[:, cell_ids])
+        self.cell_volumes[cell_ids] = cv
+        self.ce_ratios_per_half_edge[:, cell_ids] = ce
+
+        if self._ce_ratios is not None:
+            # TODO don't recompute them from scratch
+            self._ce_ratios[:] = 0.0
+            numpy.add.at(
+                self._ce_ratios,
+                self.cells['edges'].T,
+                self.ce_ratios_per_half_edge
+                )
+
+        # TODO update self._edge_lengths
+        assert self._edge_lengths is None
+
+        # TODO update self.cell_circumcenters
+        assert self.cell_circumcenters is None
+
+        # TODO update self._control_volumes
+        assert self._control_volumes is None
+
+        # TODO update self._cell_partitions
+        assert self._cell_partitions is None
+
+        # TODO update self._cv_centroids
+        assert self._cv_centroids is None
+
+        # TODO update self._surface_areas
+        assert self._surface_areas is None
+
+        # TODO update self.subdomains
+        assert self.subdomains == {}
+
         return

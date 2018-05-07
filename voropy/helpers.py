@@ -12,10 +12,10 @@ def get_signed_tri_areas(cells, pts):
     assert pts.shape[1] == 2
     # http://mathworld.wolfram.com/TriangleArea.html
     p = pts[cells].T
-    p = numpy.moveaxis(p, 0, 1)
+
     return (
-        - p[1][0]*p[0][1] + p[2][0]*p[0][1] + p[0][0]*p[1][1]
-        - p[2][0]*p[1][1] - p[0][0]*p[2][1] + p[1][0]*p[2][1]
+        - p[0][1]*p[1][0] + p[0][2]*p[1][0] + p[0][0]*p[1][1]
+        - p[0][2]*p[1][1] - p[0][0]*p[1][2] + p[0][1]*p[1][2]
         ) / 2
 
 

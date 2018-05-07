@@ -555,7 +555,10 @@ def test_signed_area():
         )
     mesh, _, _, _ = voropy.read(filename, flat_cell_correction=None)
 
-    vols = voropy.get_signed_tri_areas(mesh.cells['nodes'], mesh.node_coords)
+    vols = voropy.get_signed_tri_areas(
+        mesh.cells['nodes'],
+        mesh.node_coords[:, :2]
+        )
 
     assert numpy.all(
         abs(abs(vols) - mesh.cell_volumes) < 1.0e-12 * mesh.cell_volumes
