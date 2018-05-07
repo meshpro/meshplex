@@ -1026,7 +1026,8 @@ class MeshTri(_base_mesh):
         if numpy.all(self.get_ce_ratios() > 0):
             return False
 
-        self.create_edges()
+        if 'edges' not in self.cells:
+            self.create_edges()
 
         needs_flipping = numpy.logical_and(
             ~self.is_boundary_edge_individual,
