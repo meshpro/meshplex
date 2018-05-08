@@ -497,6 +497,29 @@ class MeshTri(_base_mesh):
             return self.ce_ratios_per_half_edge[cell_ids]
         return self.ce_ratios_per_half_edge
 
+    def get_nondelaunay_edges(self):
+        if 'edges' not in self.cells:
+            self.create_edges()
+
+        neg = self.get_ce_ratios() < 0.0
+
+        print(neg.shape)
+        candidate_edges = self.cells['edges'].T[neg]
+        print(candidate_edges)
+        print(len(candidate_edges))
+        print(len(numpy.unique(candidate_edges)))
+        exit(1)
+
+        sum_ce_ratios = numpy.zeros(len(candidate_edges))
+        numpy.add.at(
+            sum_ce_ratios,
+            self.cells['edges'].T,
+            self.ce_ratios_per_half_edge
+            )
+        exit(1)
+        return
+
+    # TODO remove
     def get_ce_ratios_per_edge(self):
         if 'edges' not in self.cells:
             self.create_edges()
@@ -624,19 +647,27 @@ class MeshTri(_base_mesh):
 
         # store inv for possible later use in get_adjacent_cells
         self._inv = inv
-        self._edges_cells = {}
+        self._edges_cells = None
+
+        return
+
+    def _compute_edges_cells(self):
+        '''This creates edge->cell relations. As an upstream relation, this is
+        relatively expensive to compute and hardly ever necessary.
+        '''
+        num_cells = len(self.cells['nodes'])
+        num_edges = len(self.edges['nodes'])
+        self._edges_cells = [[] for k in range(num_edges)]
+        for k, edge_id in enumerate(self._inv):
+            self._edges_cells[edge_id].append(k % num_cells)
         return
 
     def get_adjacent_cells(self, edge_id):
         '''Gets the cells adjacent to edge_id. Involves a search over all cells
         and as such is not cheap.
         '''
-        # Cache the result. This makes it possible to manually set adjacency
-        # data; a feature used in flip_edges(), for example.
-        if edge_id not in self._edges_cells:
-            idx = numpy.where(self._inv == edge_id)[0]
-            out = numpy.mod(idx, len(self.cells['nodes']))
-            self._edges_cells[edge_id] = out
+        if self._edges_cells is None:
+            self._compute_edges_cells()
         return self._edges_cells[edge_id]
 
     def get_face_partitions(self):
@@ -1029,10 +1060,21 @@ class MeshTri(_base_mesh):
         if 'edges' not in self.cells:
             self.create_edges()
 
+        # print(numpy.sum(self.get_ce_ratios_per_edge() < 0.0))
+        # nd = self.get_nondelaunay_edges()
+        # print(len(nd))
+        # exit(1)
+
         needs_flipping = numpy.logical_and(
             ~self.is_boundary_edge_individual,
             self.get_ce_ratios_per_edge() < 0.0
             )
+
+        # print(
+        #     len(self.get_ce_ratios().flatten()),
+        #     numpy.sum(self.get_ce_ratios() < 0.0),
+        #     numpy.sum(needs_flipping)
+        #     )
 
         num_flip_steps = 0
         while numpy.any(needs_flipping):
@@ -1130,16 +1172,12 @@ class MeshTri(_base_mesh):
                 # If adj_cells[0] is not in _edges_cells, then the other cell
                 # must be. Swap.
                 if adj_cells[0] not in self._edges_cells[edge_id]:
-                    i = numpy.where(
-                        self._edges_cells[edge_id] == adj_cells[1]
-                        )[0][0]
+                    i = self._edges_cells[edge_id].index(adj_cells[1])
                     self._edges_cells[edge_id][i] = adj_cells[0]
             for edge_id in self.cells['edges'][adj_cells[1]]:
                 self.get_adjacent_cells(edge_id)
                 if adj_cells[1] not in self._edges_cells[edge_id]:
-                    i = numpy.where(
-                        self._edges_cells[edge_id] == adj_cells[0]
-                        )[0][0]
+                    i = self._edges_cells[edge_id].index(adj_cells[0])
                     self._edges_cells[edge_id][i] = adj_cells[1]
 
             # Schedule the cell ids for updates.
