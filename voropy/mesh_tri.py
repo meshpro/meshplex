@@ -1158,6 +1158,7 @@ class MeshTri(_base_mesh):
         assert numpy.all(counts < 2), 'Can flip at most one edge per cell.'
 
         update_cell_ids = []
+        update_interior_edge_ids = []
         for interior_edge_id in numpy.where(is_flip_interior_edge)[0]:
             adj_cells = interior_edges_cells[interior_edge_id]
             lid = interior_edges_local[interior_edge_id]
@@ -1204,6 +1205,7 @@ class MeshTri(_base_mesh):
                 tuple(self.edges['nodes'][idx]): idx
                 for idx in old_edges_idx
                 }
+
             # Now update cells['edges']
             self.cells['edges'][adj_cells[0]] = numpy.array([
                     d[tuple(numpy.sort(verts[[1, 2]]))],
@@ -1237,10 +1239,20 @@ class MeshTri(_base_mesh):
             update_cell_ids.append(adj_cells[0])
             update_cell_ids.append(adj_cells[1])
 
-        self._update_cell_values(update_cell_ids)
+            for c0, c1 in [adj_cells, adj_cells[::-1]]:
+                for gid in self.cells['edges'][c0]:
+                    k, idx = self._edge_gid_to_edge_list[gid]
+                    if k == 2:
+                        update_interior_edge_ids.append(idx)
+
+
+        update_cell_ids = numpy.unique(update_cell_ids)
+        update_interior_edge_gids = numpy.unique(update_interior_edge_ids)
+
+        self._update_cell_values(update_cell_ids, update_interior_edge_ids)
         return
 
-    def _update_cell_values(self, cell_ids):
+    def _update_cell_values(self, cell_ids, interior_edge_ids):
         '''Updates all sorts of cell information for the given cell IDs.
         '''
         # update idx_hierarchy
@@ -1272,12 +1284,12 @@ class MeshTri(_base_mesh):
         self.ce_ratios_per_half_edge[:, cell_ids] = ce
 
         if self._interior_ce_ratios is not None:
-            # TODO don't recompute all ce_ratios from scratch
-            self._interior_ce_ratios[:] = 0.0
+            self._interior_ce_ratios[interior_edge_ids] = 0.0
             for i in [0, 1]:
-                self._interior_ce_ratios[:] += self.ce_ratios_per_half_edge[
-                        self._edges_local[2][:, i],
-                        self._edges_cells[2][:, i]
+                self._interior_ce_ratios[interior_edge_ids] += \
+                    self.ce_ratios_per_half_edge[
+                        self._edges_local[2][interior_edge_ids, i],
+                        self._edges_cells[2][interior_edge_ids, i]
                         ]
 
         # TODO update self._edge_lengths
