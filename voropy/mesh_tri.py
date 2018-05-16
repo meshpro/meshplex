@@ -449,6 +449,7 @@ class MeshTri(_base_mesh):
                 self.fcc.get_ce_ratios().T
 
         self.is_boundary_node = None
+        self.is_boundary_edge = None
         self.is_boundary_face = None
         return
 
@@ -1120,7 +1121,8 @@ class MeshTri(_base_mesh):
 
         # If all _interior_ coedge/edge ratios are positive, all cells are
         # Delaunay.
-        self.mark_boundary()
+        if self.is_boundary_edge is None:
+            self.create_edges()
         if numpy.all(ce_ratios[~self.is_boundary_edge] > 0):
             return False
 
