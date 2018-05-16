@@ -681,6 +681,7 @@ class MeshTri(_base_mesh):
         num_cells = len(self.cells['nodes'])
         num_edges = len(self.edges['nodes'])
 
+        # TODO speed up this part
         # num_interior_edges = numpy.sum(~self.is_boundary_edge_individual)
         _edges_cells = numpy.empty((num_edges, 2), dtype=int)
         _edges_local = numpy.empty((num_edges, 2), dtype=int)
@@ -694,6 +695,7 @@ class MeshTri(_base_mesh):
             count[edge_gid] += 1
         # Make sure the entire array has been filled in
         is_interior_edge = ~self.is_boundary_edge_individual
+        assert numpy.all(count[self.is_boundary_edge_individual] == 1)
         assert numpy.all(count[is_interior_edge] == 2)
 
         # Extract the interior edges.
@@ -730,6 +732,7 @@ class MeshTri(_base_mesh):
         l2 = numpy.sum(c2)
         self._edge_gid_to_edge_list[c2, 1] = numpy.arange(l2)
         assert l1 + l2 == len(count)
+
         return
 
     def get_face_partitions(self):
