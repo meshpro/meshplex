@@ -699,13 +699,14 @@ class MeshTri(_base_mesh):
         # interior edge:
         self._edges_cells = [
             [],  # no edges with zero adjacent cells
-            _edges_cells[self.is_boundary_edge_individual][:, 0],
+            _edges_cells[self.is_boundary_edge_individual][:, 0, numpy.newaxis],
             _edges_cells[is_interior_edge]
             ]
+
         # self._edges_local contains the local edge index in the adjacent cell
         self._edges_local = [
             [],
-            _edges_local[self.is_boundary_edge_individual][:, 0],
+            _edges_local[self.is_boundary_edge_individual][:, 0, numpy.newaxis],
             _edges_local[is_interior_edge]
             ]
 
