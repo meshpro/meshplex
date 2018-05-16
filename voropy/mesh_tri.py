@@ -361,7 +361,7 @@ class MeshTri(_base_mesh):
             'nodes': cells
             }
 
-        self._ce_ratios = None
+        self._interior_ce_ratios = None
         self._control_volumes = None
         self._cell_partitions = None
         self._cv_centroids = None
@@ -481,7 +481,7 @@ class MeshTri(_base_mesh):
 
         self._interior_edge_lengths = None
         self.cell_circumcenters = None
-        self._ce_ratios = None
+        self._interior_ce_ratios = None
         self._control_volumes = None
         self._cell_partitions = None
         self._cv_centroids = None
@@ -520,7 +520,7 @@ class MeshTri(_base_mesh):
         return
 
     def get_ce_ratios_per_interior_edge(self):
-        if self._ce_ratios is None:
+        if self._interior_ce_ratios is None:
             if 'edges' not in self.cells:
                 self.create_edges()
 
@@ -533,22 +533,23 @@ class MeshTri(_base_mesh):
             # ref = self._ce_ratios[~self.is_boundary_edge_individual]
 
             # sum up from self.ce_ratios_per_half_edge
-            if self._interior_edges_cells is None:
-                self._compute_interior_edges_cells()
+            if self._edges_cells is None:
+                self._compute_edges_cells()
 
-            idx = [
-                self._interior_edges_local[:, 0],
-                self._interior_edges_cells[:, 0],
-                ]
-            a0 = self.ce_ratios_per_half_edge[idx]
-            idx = [
-                self._interior_edges_local[:, 1],
-                self._interior_edges_cells[:, 1],
-                ]
-            a1 = self.ce_ratios_per_half_edge[idx]
-            self._ce_ratios = a0 + a1
+            # Interior edges = edges with _2_ adjacent cells
+            interior_edges_local = self._edges_local[2]
+            interior_edges_cells = self._edges_cells[2]
 
-        return self._ce_ratios
+            a = []
+            for i in [0, 1]:
+                idx = [
+                    interior_edges_local[:, i],
+                    interior_edges_cells[:, i],
+                    ]
+                a.append(self.ce_ratios_per_half_edge[idx])
+            self._interior_ce_ratios = a[0] + a[1]
+
+        return self._interior_ce_ratios
 
     def get_control_volumes(self):
         if self._control_volumes is None:
@@ -664,12 +665,13 @@ class MeshTri(_base_mesh):
 
         # store inv for possible later use in get_adjacent_cells
         self._inv = inv
-        self._interior_edges_cells = None
-        self._interior_edges_local = None
+        self._edges_cells = None
+        self._edges_local = None
+        self._edge_gid_to_edge_list = None
 
         return
 
-    def _compute_interior_edges_cells(self):
+    def _compute_edges_cells(self):
         '''This creates interior edge->cells relations. As an upstream
         relation, this is relatively expensive to compute. Luckily, it's not
         necessary for many applications.
@@ -681,13 +683,13 @@ class MeshTri(_base_mesh):
         _edges_cells = numpy.empty((num_edges, 2), dtype=int)
         _edges_local = numpy.empty((num_edges, 2), dtype=int)
         count = numpy.zeros(num_edges, dtype=int)
-        for k, edge_id in enumerate(self._inv):
-            i = count[edge_id]
+        for k, edge_gid in enumerate(self._inv):
+            i = count[edge_gid]
             cell_id = k % num_cells
-            _edges_cells[edge_id][i] = cell_id
-            lid = numpy.where(self.cells['edges'][cell_id] == edge_id)[0][0]
-            _edges_local[edge_id][i] = lid
-            count[edge_id] += 1
+            _edges_cells[edge_gid][i] = cell_id
+            lid = numpy.where(self.cells['edges'][cell_id] == edge_gid)[0][0]
+            _edges_local[edge_gid][i] = lid
+            count[edge_gid] += 1
         # Make sure the entire array has been filled in
         is_interior_edge = ~self.is_boundary_edge_individual
         assert numpy.all(count[is_interior_edge] == 2)
@@ -695,13 +697,36 @@ class MeshTri(_base_mesh):
         # Extract the interior edges.
         # self._interior_edges_cells contains the two cells adjacent to each
         # interior edge:
-        self._interior_edges_cells = _edges_cells[is_interior_edge]
-        # self._interior_edges_local contains the local edge index in the
-        # adjacent cell
-        self._interior_edges_local = _edges_local[is_interior_edge]
+        self._edges_cells = [
+            [],  # no edges with zero adjacent cells
+            _edges_cells[self.is_boundary_edge_individual][:, 0],
+            _edges_cells[is_interior_edge]
+            ]
+        # self._edges_local contains the local edge index in the adjacent cell
+        self._edges_local = [
+            [],
+            _edges_local[self.is_boundary_edge_individual][:, 0],
+            _edges_local[is_interior_edge]
+            ]
 
-        # Store an index interior_edge -> edge_id
-        self._interior_edge_to_edge_id = numpy.where(is_interior_edge)[0]
+        # Store an index {boundary,interior}_edge -> edge_gid
+        self._edge_to_edge_gid = [
+            [],
+            numpy.where(self.is_boundary_edge_individual)[0],
+            numpy.where(~self.is_boundary_edge_individual)[0]
+            ]
+
+        # For each edge, store the number of adjacent cells plus the index into
+        # the respective edge array.
+        self._edge_gid_to_edge_list = numpy.empty((num_edges, 2), dtype=int)
+        self._edge_gid_to_edge_list[:, 0] = count
+        c1 = (count==1)
+        l1 = numpy.sum(c1)
+        self._edge_gid_to_edge_list[c1, 1] = numpy.arange(l1)
+        c2 = (count==2)
+        l2 = numpy.sum(c2)
+        self._edge_gid_to_edge_list[c2, 1] = numpy.arange(l2)
+        assert l1 + l2 == len(count)
         return
 
     def get_face_partitions(self):
@@ -809,26 +834,26 @@ class MeshTri(_base_mesh):
 #         for node in self.get_vertices('boundary'):
 #             boundary_matrices[node] = numpy.zeros((2, 2))
 #
-#         for edge_id, edge in enumerate(self.edges['cells']):
+#         for edge_gid, edge in enumerate(self.edges['cells']):
 #             # Compute edge length.
-#             node0 = self.edges['nodes'][edge_id][0]
-#             node1 = self.edges['nodes'][edge_id][1]
+#             node0 = self.edges['nodes'][edge_gid][0]
+#             node1 = self.edges['nodes'][edge_gid][1]
 #
 #             # Compute coedge length.
-#             if len(self.edges['cells'][edge_id]) == 1:
+#             if len(self.edges['cells'][edge_gid]) == 1:
 #                 # Boundary edge.
 #                 edge_midpoint = 0.5 * (
 #                         node_coords2d[node0] +
 #                         node_coords2d[node1]
 #                         )
-#                 cell0 = self.edges['cells'][edge_id][0]
+#                 cell0 = self.edges['cells'][edge_gid][0]
 #                 coedge_midpoint = 0.5 * (
 #                         cell_circumcenters2d[cell0] +
 #                         edge_midpoint
 #                         )
-#             elif len(self.edges['cells'][edge_id]) == 2:
-#                 cell0 = self.edges['cells'][edge_id][0]
-#                 cell1 = self.edges['cells'][edge_id][1]
+#             elif len(self.edges['cells'][edge_gid]) == 2:
+#                 cell0 = self.edges['cells'][edge_gid][0]
+#                 cell1 = self.edges['cells'][edge_gid][1]
 #                 # Interior edge.
 #                 coedge_midpoint = 0.5 * (
 #                         cell_circumcenters2d[cell0] +
@@ -840,8 +865,8 @@ class MeshTri(_base_mesh):
 #                         )
 #
 #             # Compute the coefficient r for both contributions
-#             coeffs = self.ce_ratios[edge_id] / \
-#                 self.control_volumes[self.edges['nodes'][edge_id]]
+#             coeffs = self.ce_ratios[edge_gid] / \
+#                 self.control_volumes[self.edges['nodes'][edge_gid]]
 #
 #             # Compute R*_{IJ} ((11) in [1]).
 #             r0 = (coedge_midpoint - node_coords2d[node0]) * coeffs[0]
@@ -1039,9 +1064,9 @@ class MeshTri(_base_mesh):
         plt.axis('equal')
 
         # Find the edges that contain the vertex
-        edge_ids = numpy.where((self.edges['nodes'] == node_id).any(axis=1))[0]
+        edge_gids = numpy.where((self.edges['nodes'] == node_id).any(axis=1))[0]
         # ... and plot them
-        for node_ids in self.edges['nodes'][edge_ids]:
+        for node_ids in self.edges['nodes'][edge_gids]:
             x = self.node_coords[node_ids]
             ax.plot(x[:, 0], x[:, 1], 'k')
 
@@ -1061,10 +1086,10 @@ class MeshTri(_base_mesh):
                 )[0]
 
             for cell_id in cell_ids:
-                for edge_id in self.cells['edges'][cell_id]:
-                    if node_id not in self.edges['nodes'][edge_id]:
+                for edge_gid in self.cells['edges'][cell_id]:
+                    if node_id not in self.edges['nodes'][edge_gid]:
                         continue
-                    node_ids = self.edges['nodes'][edge_id]
+                    node_ids = self.edges['nodes'][edge_gid]
                     edge_midpoint = 0.5 * (
                         self.node_coords[node_ids[0]] +
                         self.node_coords[node_ids[1]]
@@ -1113,18 +1138,21 @@ class MeshTri(_base_mesh):
         '''
         assert self.fcc_type != 'full'
 
+        interior_edges_cells = self._edges_cells[2]
+        interior_edges_local = self._edges_local[2]
+
         # Can only handle the case where each cell has at most one edge to flip.
         # Use `unique` here as there are usually only very edges in the list.
         _, counts = numpy.unique(
-            self._interior_edges_cells[is_flip_interior_edge],
+            interior_edges_cells[is_flip_interior_edge],
             return_counts=True
             )
         assert numpy.all(counts < 2), 'Can flip at most one edge per cell.'
 
         update_cell_ids = []
         for interior_edge_id in numpy.where(is_flip_interior_edge)[0]:
-            adj_cells = self._interior_edges_cells[interior_edge_id]
-            lid = self._interior_edges_local[interior_edge_id]
+            adj_cells = interior_edges_cells[interior_edge_id]
+            lid = interior_edges_local[interior_edge_id]
 
             #        3                   3
             #        A                   A
@@ -1146,8 +1174,8 @@ class MeshTri(_base_mesh):
                 ])
 
             # update edges
-            edge_id = self._interior_edge_to_edge_id[interior_edge_id]
-            self.edges['nodes'][edge_id] = numpy.sort(verts[[0, 1]])
+            edge_gid = self._edge_to_edge_gid[2][interior_edge_id]
+            self.edges['nodes'][edge_gid] = numpy.sort(verts[[0, 1]])
             # No need to touch self.is_boundary_edge,
             # self.is_boundary_edge_individual; we're only flipping interior
             # edges.
@@ -1172,35 +1200,34 @@ class MeshTri(_base_mesh):
             self.cells['edges'][adj_cells[0]] = numpy.array([
                     d[tuple(numpy.sort(verts[[1, 2]]))],
                     d[tuple(numpy.sort(verts[[2, 0]]))],
-                    edge_id
+                    edge_gid
                     ])
             self.cells['edges'][adj_cells[1]] = numpy.array([
                     d[tuple(numpy.sort(verts[[1, 3]]))],
                     d[tuple(numpy.sort(verts[[3, 0]]))],
-                    edge_id
+                    edge_gid
                     ])
 
             # Update the edge->cells relationship. It doesn't change for the
             # edge that was flipped, but for some of the other edges.
-            for e_id in self.cells['edges'][adj_cells[0]]:
-                # If adj_cells[0] is not in _edges_cells, then the other cell
-                # must be. Swap.
-                raise ValueError()
-                if adj_cells[0] not in self._edges_cells[e_id]:
-                    i = self._edges_cells[e_id].index(adj_cells[1])
-                    self._edges_cells[e_id][i] = adj_cells[0]
-            for e_id in self.cells['edges'][adj_cells[1]]:
-                if adj_cells[1] not in self._edges_cells[e_id]:
-                    i = self._edges_cells[e_id].index(adj_cells[0])
-                    self._edges_cells[e_id][i] = adj_cells[1]
+            for c0, c1 in [adj_cells, adj_cells[::-1]]:
+                for lid, gid in enumerate(self.cells['edges'][c0]):
+                    k, idx = self._edge_gid_to_edge_list[gid]
+
+                    c0_idx = numpy.where(self._edges_cells[k][idx] == c0)[0]
+                    if len(c0_idx) > 0:
+                        i = c0_idx[0]
+                        self._edges_local[k][idx][i] = lid
+                    else:
+                        # If c0 is not in _edges_cells, then the other cell
+                        # must be. Swap.
+                        i = numpy.where(self._edges_cells[k][idx] == c1)[0][0]
+                        self._edges_cells[k][idx][i] = c0
+                        self._edges_local[k][idx][i] = lid
 
             # Schedule the cell ids for updates.
             update_cell_ids.append(adj_cells[0])
             update_cell_ids.append(adj_cells[1])
-
-            # TODO update self._interior_edges_cells
-            # TODO update self._interior_edges_local
-            exit(1)
 
         self._update_cell_values(update_cell_ids)
         return
@@ -1236,15 +1263,14 @@ class MeshTri(_base_mesh):
         self.cell_volumes[cell_ids] = cv
         self.ce_ratios_per_half_edge[:, cell_ids] = ce
 
-        if self._ce_ratios is not None:
-            # TODO don't recompute them from scratch
-            exit(1)
-            self._ce_ratios[:] = 0.0
-            numpy.add.at(
-                self._ce_ratios,
-                self.cells['edges'].T,
-                self.ce_ratios_per_half_edge
-                )
+        if self._interior_ce_ratios is not None:
+            # TODO don't recompute all ce_ratios from scratch
+            self._interior_ce_ratios[:] = 0.0
+            for i in [0, 1]:
+                self._interior_ce_ratios[:] += self.ce_ratios_per_half_edge[
+                        self._edges_local[2][:, i],
+                        self._edges_cells[2][:, i]
+                        ]
 
         # TODO update self._edge_lengths
         assert self._edge_lengths is None
