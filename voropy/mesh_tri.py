@@ -369,6 +369,9 @@ class MeshTri(_base_mesh):
         self.edges = None
         self.cell_circumcenters = None
         self.subdomains = {}
+        self.is_boundary_node = None
+        self.is_boundary_edge = None
+        self.is_boundary_face = None
 
         # compute data
         # Create the idx_hierarchy (nodes->edges->cells), i.e., the value of
@@ -448,9 +451,6 @@ class MeshTri(_base_mesh):
             self.ce_ratios_per_half_edge[:, self.fcc_cells] = \
                 self.fcc.get_ce_ratios().T
 
-        self.is_boundary_node = None
-        self.is_boundary_edge = None
-        self.is_boundary_face = None
         return
 
     def update_node_coordinates(self, X):
@@ -627,6 +627,7 @@ class MeshTri(_base_mesh):
             self.idx_hierarchy[..., self.is_boundary_edge]
             ] = True
 
+        assert self.is_boundary_edge is not None
         self.is_boundary_face = self.is_boundary_edge
         return
 
@@ -1123,6 +1124,7 @@ class MeshTri(_base_mesh):
         # Delaunay.
         if self.is_boundary_edge is None:
             self.create_edges()
+        self.mark_boundary()
         if numpy.all(ce_ratios[~self.is_boundary_edge] > 0):
             return False
 
