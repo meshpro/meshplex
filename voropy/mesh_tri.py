@@ -667,7 +667,6 @@ class MeshTri(_base_mesh):
         self._edges_cells = None
         self._edges_local = None
         self._edge_gid_to_edge_list = None
-
         return
 
     def _compute_edges_cells(self):
@@ -683,16 +682,12 @@ class MeshTri(_base_mesh):
         _edges_cells = numpy.empty((num_edges, 2), dtype=int)
         _edges_local = numpy.empty((num_edges, 2), dtype=int)
         count = numpy.zeros(num_edges, dtype=int)
-
-        inv = self.cells['edges'].T.flatten()
-
-        for k, edge_gid in enumerate(inv):
-            i = count[edge_gid]
-            cell_id = k % num_cells
-            _edges_cells[edge_gid][i] = cell_id
-            lid = numpy.where(self.cells['edges'][cell_id] == edge_gid)[0][0]
-            _edges_local[edge_gid][i] = lid
-            count[edge_gid] += 1
+        for cell_id, edge_gids in enumerate(self.cells['edges']):
+            for lid, edge_gid in enumerate(edge_gids):
+                i = count[edge_gid]
+                _edges_cells[edge_gid][i] = cell_id
+                _edges_local[edge_gid][i] = lid
+                count[edge_gid] += 1
         # Make sure the entire array has been filled in
         is_interior_edge = ~self.is_boundary_edge_individual
         assert numpy.all(count[self.is_boundary_edge_individual] == 1)
