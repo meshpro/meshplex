@@ -662,11 +662,8 @@ class MeshTri(_base_mesh):
             }
 
         # cell->edges relationship
-        cells_edges = inv.reshape(3, -1).T
-        self.cells['edges'] = cells_edges
+        self.cells['edges'] = inv.reshape(3, -1).T
 
-        # store inv for possible later use in get_adjacent_cells
-        self._inv = inv
         self._edges_cells = None
         self._edges_local = None
         self._edge_gid_to_edge_list = None
@@ -686,7 +683,10 @@ class MeshTri(_base_mesh):
         _edges_cells = numpy.empty((num_edges, 2), dtype=int)
         _edges_local = numpy.empty((num_edges, 2), dtype=int)
         count = numpy.zeros(num_edges, dtype=int)
-        for k, edge_gid in enumerate(self._inv):
+
+        inv = self.cells['edges'].T.flatten()
+
+        for k, edge_gid in enumerate(inv):
             i = count[edge_gid]
             cell_id = k % num_cells
             _edges_cells[edge_gid][i] = cell_id
