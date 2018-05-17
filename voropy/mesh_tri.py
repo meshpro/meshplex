@@ -677,35 +677,55 @@ class MeshTri(_base_mesh):
         num_cells = len(self.cells['nodes'])
         num_edges = len(self.edges['nodes'])
 
-        # TODO speed up this part
-        # num_interior_edges = numpy.sum(~self.is_boundary_edge_individual)
-        _edges_cells = numpy.empty((num_edges, 2), dtype=int)
-        _edges_local = numpy.empty((num_edges, 2), dtype=int)
-        count = numpy.zeros(num_edges, dtype=int)
-        for cell_id, edge_gids in enumerate(self.cells['edges']):
-            i = count[edge_gids]
-            _edges_cells[edge_gids, i] = cell_id
-            _edges_local[edge_gids, i] = [0, 1, 2]
-            count[edge_gids] += 1
-        # Make sure the entire array has been filled in
-        is_interior_edge = ~self.is_boundary_edge_individual
-        assert numpy.all(count[self.is_boundary_edge_individual] == 1)
-        assert numpy.all(count[is_interior_edge] == 2)
+        # # TODO speed up this part
+        # _edges_cells = numpy.empty((num_edges, 2), dtype=int)
+        # _edges_local = numpy.empty((num_edges, 2), dtype=int)
+        # count = numpy.zeros(num_edges, dtype=int)
+        # for cell_id, edge_gids in enumerate(self.cells['edges']):
+        #     i = count[edge_gids]
+        #     _edges_cells[edge_gids, i] = cell_id
+        #     _edges_local[edge_gids, i] = [0, 1, 2]
+        #     count[edge_gids] += 1
+        # # Make sure the entire array has been filled in
+        # is_interior_edge = ~self.is_boundary_edge_individual
+        # assert numpy.all(count[self.is_boundary_edge_individual] == 1)
+        # assert numpy.all(count[is_interior_edge] == 2)
 
-        # Extract the interior edges.
-        # self._interior_edges_cells contains the two cells adjacent to each
-        # interior edge:
+        # # Extract the interior edges.
+        # # self._interior_edges_cells contains the two cells adjacent to each
+        # # interior edge:
+        # self._edges_cells = [
+        #     [],  # no edges with zero adjacent cells
+        #     _edges_cells[self.is_boundary_edge_individual][:, 0, numpy.newaxis],
+        #     _edges_cells[is_interior_edge]
+        #     ]
+
+        # # self._edges_local contains the local edge index in the adjacent cell
+        # self._edges_local = [
+        #     [],
+        #     _edges_local[self.is_boundary_edge_individual][:, 0, numpy.newaxis],
+        #     _edges_local[is_interior_edge]
+        #     ]
+
+        # <https://stackoverflow.com/q/50389518/353337>
+        edges_flat = self.cells['edges'].flatten()
+        idx_sort = numpy.argsort(edges_flat)
+        edges_sort = edges_flat[idx_sort]
+        vals, idx_start, count = numpy.unique(
+            edges_sort, return_counts=True, return_index=True
+            )
+        res1 = idx_sort[idx_start[count==1]][:, numpy.newaxis]
+        idx = idx_start[count==2]
+        res2 = numpy.column_stack([idx_sort[idx], idx_sort[idx + 1],])
         self._edges_cells = [
             [],  # no edges with zero adjacent cells
-            _edges_cells[self.is_boundary_edge_individual][:, 0, numpy.newaxis],
-            _edges_cells[is_interior_edge]
+            res1 // 3,
+            res2 // 3,
             ]
-
-        # self._edges_local contains the local edge index in the adjacent cell
         self._edges_local = [
-            [],
-            _edges_local[self.is_boundary_edge_individual][:, 0, numpy.newaxis],
-            _edges_local[is_interior_edge]
+            [],  # no edges with zero adjacent cells
+            res1 % 3,
+            res2 % 3,
             ]
 
         # Store an index {boundary,interior}_edge -> edge_gid
