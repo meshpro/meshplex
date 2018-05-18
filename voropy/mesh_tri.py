@@ -677,7 +677,7 @@ class MeshTri(_base_mesh):
         num_cells = len(self.cells['nodes'])
         num_edges = len(self.edges['nodes'])
 
-        # <https://stackoverflow.com/q/50389518/353337>
+        # <https://stackoverflow.com/a/50395231/353337>
         edges_flat = self.cells['edges'].flatten()
         idx_sort = numpy.argsort(edges_flat)
         idx_start, count = grp_start_len(edges_flat[idx_sort])

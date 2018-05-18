@@ -46,7 +46,7 @@ def compute_tri_areas_and_ce_ratios(ei_dot_ej):
     #       |simplex| ||u||^2 = \sum_i \alpha_i <u,e_i> <e_i,u>,
     #
     #     where alpha_i are the covolume contributions for the edges. This
-    #     equation system to hold for all vectors u in the plane spanned by the
+    #     equation system holds for all vectors u in the plane spanned by the
     #     edges, particularly by the edges themselves.
     #
     #     For triangles, the exact solution of the system is
