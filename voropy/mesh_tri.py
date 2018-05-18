@@ -368,6 +368,7 @@ class MeshTri(_base_mesh):
         self._surface_areas = None
         self.edges = None
         self.cell_circumcenters = None
+        self._signed_tri_areas = None
         self.subdomains = {}
         self.is_boundary_node = None
         self.is_boundary_edge = None
@@ -487,6 +488,7 @@ class MeshTri(_base_mesh):
         self._cell_partitions = None
         self._cv_centroids = None
         self._surface_areas = None
+        self._signed_tri_areas = None
         return
 
     def get_boundary_vertices(self):
@@ -625,16 +627,17 @@ class MeshTri(_base_mesh):
         assert self.node_coords.shape[1] == 2, \
             'Signed areas only make sense for triangles in 2D.'
 
-        # One could make p contiguous by adding a copy(), but that's not really
-        # worth it here.
-        p = self.node_coords[self.cells['nodes']].T
-
-        # <https://stackoverflow.com/q/50411583/353337>
-        return (
-            + p[0][2] * (p[1][0] - p[1][1])
-            + p[0][0] * (p[1][1] - p[1][2])
-            + p[0][1] * (p[1][2] - p[1][0])
-            ) / 2
+        if self._signed_tri_areas is None:
+            # One could make p contiguous by adding a copy(), but that's not
+            # really worth it here.
+            p = self.node_coords[self.cells['nodes']].T
+            # <https://stackoverflow.com/q/50411583/353337>
+            self._signed_tri_areas = (
+                + p[0][2] * (p[1][0] - p[1][1])
+                + p[0][0] * (p[1][1] - p[1][2])
+                + p[0][1] * (p[1][2] - p[1][0])
+                ) / 2
+        return self._signed_tri_areas
 
     def mark_boundary(self):
         if self.edges is None:
@@ -1290,6 +1293,17 @@ class MeshTri(_base_mesh):
                         self._edges_local[2][interior_edge_ids, i],
                         self._edges_cells[2][interior_edge_ids, i]
                         ]
+
+        if self._signed_tri_areas is not None:
+            # One could make p contiguous by adding a copy(), but that's not
+            # really worth it here.
+            p = self.node_coords[self.cells['nodes'][cell_ids]].T
+            # <https://stackoverflow.com/q/50411583/353337>
+            self._signed_tri_areas[cell_ids] = (
+                + p[0][2] * (p[1][0] - p[1][1])
+                + p[0][0] * (p[1][1] - p[1][2])
+                + p[0][1] * (p[1][2] - p[1][0])
+                ) / 2
 
         # TODO update self._edge_lengths
         assert self._edge_lengths is None
