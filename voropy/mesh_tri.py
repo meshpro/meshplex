@@ -5,7 +5,7 @@ from .base import (
     _base_mesh, _row_dot, compute_tri_areas_and_ce_ratios,
     compute_triangle_circumcenters
     )
-from .helpers import get_signed_tri_areas, grp_start_len
+from .helpers import grp_start_len
 
 
 __all__ = ['MeshTri']
@@ -617,6 +617,24 @@ class MeshTri(_base_mesh):
             self._cv_centroids /= self.get_control_volumes()[:, None]
 
         return self._cv_centroids
+
+    def get_signed_tri_areas(self):
+        '''Signed area of a triangle in 2D.
+        '''
+        # http://mathworld.wolfram.com/TriangleArea.html
+        assert self.node_coords.shape[1] == 2, \
+            'Signed areas only make sense for triangles in 2D.'
+
+        # One could make p contiguous by adding a copy(), but that's not really
+        # worth it here.
+        p = self.node_coords[self.cells['nodes']].T
+
+        # <https://stackoverflow.com/q/50411583/353337>
+        return (
+            + p[0][2] * (p[1][0] - p[1][1])
+            + p[0][0] * (p[1][1] - p[1][2])
+            + p[0][1] * (p[1][2] - p[1][0])
+            ) / 2
 
     def mark_boundary(self):
         if self.edges is None:

@@ -5,24 +5,6 @@ import math
 import numpy
 
 
-def get_signed_tri_areas(cells, pts):
-    '''Signed area of a triangle in 2D.
-    '''
-    # http://mathworld.wolfram.com/TriangleArea.html
-    assert cells.shape[1] == 3
-    assert pts.shape[1] == 2
-    # One could make p contiguous by adding a copy(), but that's not really
-    # worth it here.
-    p = pts[cells].T
-
-    # <https://stackoverflow.com/q/50411583/353337>
-    return (
-        + p[0][2] * (p[1][0] - p[1][1])
-        + p[0][0] * (p[1][1] - p[1][2])
-        + p[0][1] * (p[1][2] - p[1][0])
-        ) / 2
-
-
 def get_signed_simplex_volumes(cells, pts):
     '''Signed volume of a simplex in nD. Note that signing only makes sense for
     n-simplices in R^n.
