@@ -533,24 +533,22 @@ class MeshTri(_base_mesh):
             #     self.cells['edges'].T,
             #     self.ce_ratios_per_half_edge
             #     )
-            # ref = self._ce_ratios[~self.is_boundary_edge_individual]
+            # self._interior_ce_ratios = \
+            #     self._ce_ratios[~self.is_boundary_edge_individual]
 
             # sum up from self.ce_ratios_per_half_edge
             if self._edges_cells is None:
                 self._compute_edges_cells()
 
-            # Interior edges = edges with _2_ adjacent cells
-            interior_edges_local = self._edges_local[2]
-            interior_edges_cells = self._edges_cells[2]
-
-            a = []
+            self._interior_ce_ratios = \
+                numpy.zeros(self._edges_local[2].shape[0])
             for i in [0, 1]:
+                # Interior edges = edges with _2_ adjacent cells
                 idx = [
-                    interior_edges_local[:, i],
-                    interior_edges_cells[:, i],
+                    self._edges_local[2][:, i],
+                    self._edges_cells[2][:, i],
                     ]
-                a.append(self.ce_ratios_per_half_edge[idx])
-            self._interior_ce_ratios = a[0] + a[1]
+                self._interior_ce_ratios += self.ce_ratios_per_half_edge[idx]
 
         return self._interior_ce_ratios
 
