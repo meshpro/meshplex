@@ -1175,16 +1175,26 @@ class MeshTri(_base_mesh):
             #       \|/                 \ /
             #        V                   V
             #        2                   2
+            #
+            # Make sure i0 is the cell with the lower node index.
+            node_id0 = self.cells['nodes'][adj_cells[0], lid[0]]
+            node_id1 = self.cells['nodes'][adj_cells[1], lid[1]]
+            if node_id0 < node_id1:
+                i0, i1 = 0, 1
+            else:
+                i0, i1 = 1, 0
+
             verts = numpy.array([
-                self.cells['nodes'][adj_cells[0], lid[0]],
-                self.cells['nodes'][adj_cells[1], lid[1]],
-                self.cells['nodes'][adj_cells[0], (lid[0] + 1) % 3],
-                self.cells['nodes'][adj_cells[0], (lid[0] + 2) % 3],
+                self.cells['nodes'][adj_cells[i0], lid[i0]],
+                self.cells['nodes'][adj_cells[i1], lid[i1]],
+                self.cells['nodes'][adj_cells[i0], (lid[i0] + 1) % 3],
+                self.cells['nodes'][adj_cells[i0], (lid[i0] + 2) % 3],
                 ])
 
             # update edges
             edge_gid = self._edge_to_edge_gid[2][interior_edge_id]
-            self.edges['nodes'][edge_gid] = numpy.sort(verts[[0, 1]])
+            # Vertices are ordered.
+            self.edges['nodes'][edge_gid] = verts[[0, 1]]
             # No need to touch self.is_boundary_edge,
             # self.is_boundary_edge_individual; we're only flipping interior
             # edges.
@@ -1205,18 +1215,17 @@ class MeshTri(_base_mesh):
                 tuple(self.edges['nodes'][idx]): idx
                 for idx in old_edges_idx
                 }
-
             # Now update cells['edges']
             self.cells['edges'][adj_cells[0]] = numpy.array([
-                    d[tuple(numpy.sort(verts[[1, 2]]))],
-                    d[tuple(numpy.sort(verts[[2, 0]]))],
-                    edge_gid
-                    ])
+                d[tuple(numpy.sort(verts[[1, 2]]))],
+                d[tuple(numpy.sort(verts[[2, 0]]))],
+                edge_gid
+                ])
             self.cells['edges'][adj_cells[1]] = numpy.array([
-                    d[tuple(numpy.sort(verts[[1, 3]]))],
-                    d[tuple(numpy.sort(verts[[3, 0]]))],
-                    edge_gid
-                    ])
+                d[tuple(numpy.sort(verts[[1, 3]]))],
+                d[tuple(numpy.sort(verts[[3, 0]]))],
+                edge_gid
+                ])
 
             # Update the edge->cells relationship. It doesn't change for the
             # edge that was flipped, but for some of the other edges.
@@ -1236,18 +1245,17 @@ class MeshTri(_base_mesh):
                         self._edges_local[k][idx][i] = lid
 
             # Schedule the cell ids for updates.
-            update_cell_ids.append(adj_cells[0])
-            update_cell_ids.append(adj_cells[1])
+            update_cell_ids.append(adj_cells)
+            # Same for edge ids
+            k, edge_gids = self._edge_gid_to_edge_list[
+                self.cells['edges'][adj_cells].flatten()
+                ].T
+            update_interior_edge_ids.append(edge_gids[k==2])
 
-            for c0, c1 in [adj_cells, adj_cells[::-1]]:
-                for gid in self.cells['edges'][c0]:
-                    k, idx = self._edge_gid_to_edge_list[gid]
-                    if k == 2:
-                        update_interior_edge_ids.append(idx)
-
-
-        update_cell_ids = numpy.unique(update_cell_ids)
-        update_interior_edge_gids = numpy.unique(update_interior_edge_ids)
+        update_cell_ids = numpy.unique(numpy.concatenate(update_cell_ids))
+        update_interior_edge_ids = numpy.unique(numpy.concatenate(
+            update_interior_edge_ids
+            ))
 
         self._update_cell_values(update_cell_ids, update_interior_edge_ids)
         return
