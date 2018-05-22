@@ -658,15 +658,18 @@ class MeshTri(_base_mesh):
         # individual edges.
         s = self.idx_hierarchy.shape
         a = numpy.sort(self.idx_hierarchy.reshape(s[0], s[1]*s[2]).T)
+
+        # The cleaner alternative `numpy.unique(a, axis=0)` is slow; cf.
+        # <https://github.com/numpy/numpy/issues/11136>.
         b = numpy.ascontiguousarray(a).view(
             numpy.dtype((numpy.void, a.dtype.itemsize * a.shape[1]))
             )
-        _, idx, inv, cts = numpy.unique(
+        a_unique, inv, cts = numpy.unique(
             b,
-            return_index=True,
             return_inverse=True,
             return_counts=True
             )
+        a_unique = a_unique.view(a.dtype).reshape(-1, a.shape[1])
 
         # No edge has more than 2 cells. This assertion fails, for example, if
         # cells are listed twice.
@@ -677,7 +680,7 @@ class MeshTri(_base_mesh):
         self.is_boundary_edge_individual = (cts == 1)
 
         self.edges = {
-            'nodes': a[idx],
+            'nodes': a_unique,
             }
 
         # cell->edges relationship
