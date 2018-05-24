@@ -26,3 +26,18 @@ def grp_start_len(a):
     m = numpy.concatenate([[True], a[:-1] != a[1:], [True]])
     idx = numpy.flatnonzero(m)
     return idx[:-1], numpy.diff(idx)
+
+
+def unique_rows(a):
+    # The cleaner alternative `numpy.unique(a, axis=0)` is slow; cf.
+    # <https://github.com/numpy/numpy/issues/11136>.
+    b = numpy.ascontiguousarray(a).view(
+        numpy.dtype((numpy.void, a.dtype.itemsize * a.shape[1]))
+        )
+    a_unique, inv, cts = numpy.unique(
+        b,
+        return_inverse=True,
+        return_counts=True
+        )
+    a_unique = a_unique.view(a.dtype).reshape(-1, a.shape[1])
+    return a_unique, inv, cts

@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
 #
 import numpy
+import fastfunc
+
 from .base import (
     _base_mesh, _row_dot, compute_tri_areas_and_ce_ratios,
     compute_triangle_circumcenters
     )
-from .helpers import grp_start_len
+from .helpers import grp_start_len, unique_rows
+
 
 
 __all__ = ['MeshTri']
@@ -657,19 +660,8 @@ class MeshTri(_base_mesh):
         # Sort the columns to make it possible for `unique()` to identify
         # individual edges.
         s = self.idx_hierarchy.shape
-        a = numpy.sort(self.idx_hierarchy.reshape(s[0], s[1]*s[2]).T)
-
-        # The cleaner alternative `numpy.unique(a, axis=0)` is slow; cf.
-        # <https://github.com/numpy/numpy/issues/11136>.
-        b = numpy.ascontiguousarray(a).view(
-            numpy.dtype((numpy.void, a.dtype.itemsize * a.shape[1]))
-            )
-        a_unique, inv, cts = numpy.unique(
-            b,
-            return_inverse=True,
-            return_counts=True
-            )
-        a_unique = a_unique.view(a.dtype).reshape(-1, a.shape[1])
+        a = numpy.sort(self.idx_hierarchy.reshape(s[0], -1).T)
+        a_unique, inv, cts = unique_rows(a)
 
         # No edge has more than 2 cells. This assertion fails, for example, if
         # cells are listed twice.
@@ -692,15 +684,21 @@ class MeshTri(_base_mesh):
         return
 
     def _compute_edges_cells(self):
-        '''This creates interior edge->cells relations. As an upstream
-        relation, this is relatively expensive to compute. Luckily, it's not
-        necessary for many applications.
+        '''This creates interior edge->cells relations. While it's not
+        necessary for many applications, it sometimes does come in handy.
         '''
         num_cells = len(self.cells['nodes'])
         num_edges = len(self.edges['nodes'])
 
+        counts = numpy.zeros(num_edges, dtype=int)
+        fastfunc.add.at(
+            counts,
+            self.cells['edges'],
+            numpy.ones(self.cells['edges'].shape, dtype=int)
+            )
+
         # <https://stackoverflow.com/a/50395231/353337>
-        edges_flat = self.cells['edges'].flatten()
+        edges_flat = self.cells['edges'].flat
         idx_sort = numpy.argsort(edges_flat)
         idx_start, count = grp_start_len(edges_flat[idx_sort])
         res1 = idx_sort[idx_start[count==1]][:, numpy.newaxis]
@@ -1251,7 +1249,7 @@ class MeshTri(_base_mesh):
             update_cell_ids.append(adj_cells)
             # Same for edge ids
             k, edge_gids = self._edge_gid_to_edge_list[
-                self.cells['edges'][adj_cells].flatten()
+                self.cells['edges'][adj_cells].flat
                 ].T
             update_interior_edge_ids.append(edge_gids[k==2])
 
