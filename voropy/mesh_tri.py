@@ -346,6 +346,9 @@ class MeshTri(_base_mesh):
         cells = numpy.sort(cells, axis=1)
         cells = cells[cells[:, 0].argsort()]
 
+        # For fastfunc
+        assert cells.dtype == numpy.int
+
         super(MeshTri, self).__init__(nodes, cells)
 
         # Assert that all vertices are used.
@@ -517,6 +520,7 @@ class MeshTri(_base_mesh):
         exit(1)
 
         sum_ce_ratios = numpy.zeros(len(candidate_edges))
+        # TODO fastfunc
         numpy.add.at(
             sum_ce_ratios,
             self.cells['edges'].T,
@@ -530,28 +534,28 @@ class MeshTri(_base_mesh):
             if 'edges' not in self.cells:
                 self.create_edges()
 
-            # self._ce_ratios = numpy.zeros(len(self.edges['nodes']))
-            # numpy.add.at(
-            #     self._ce_ratios,
-            #     self.cells['edges'].T,
-            #     self.ce_ratios_per_half_edge
-            #     )
-            # self._interior_ce_ratios = \
-            #     self._ce_ratios[~self.is_boundary_edge_individual]
-
-            # sum up from self.ce_ratios_per_half_edge
-            if self._edges_cells is None:
-                self._compute_edges_cells()
-
+            self._ce_ratios = numpy.zeros(len(self.edges['nodes']))
+            fastfunc.add.at(
+                self._ce_ratios,
+                self.cells['edges'].T,
+                self.ce_ratios_per_half_edge
+                )
             self._interior_ce_ratios = \
-                numpy.zeros(self._edges_local[2].shape[0])
-            for i in [0, 1]:
-                # Interior edges = edges with _2_ adjacent cells
-                idx = [
-                    self._edges_local[2][:, i],
-                    self._edges_cells[2][:, i],
-                    ]
-                self._interior_ce_ratios += self.ce_ratios_per_half_edge[idx]
+                self._ce_ratios[~self.is_boundary_edge_individual]
+
+            # # sum up from self.ce_ratios_per_half_edge
+            # if self._edges_cells is None:
+            #     self._compute_edges_cells()
+
+            # self._interior_ce_ratios = \
+            #     numpy.zeros(self._edges_local[2].shape[0])
+            # for i in [0, 1]:
+            #     # Interior edges = edges with _2_ adjacent cells
+            #     idx = [
+            #         self._edges_local[2][:, i],
+            #         self._edges_cells[2][:, i],
+            #         ]
+            #     self._interior_ce_ratios += self.ce_ratios_per_half_edge[idx]
 
         return self._interior_ce_ratios
 
@@ -573,6 +577,7 @@ class MeshTri(_base_mesh):
             # sum up from self.control_volume_data
             self._control_volumes = numpy.zeros(len(self.node_coords))
             for d in control_volume_data:
+                # TODO fastfunc
                 numpy.add.at(self._control_volumes, d[0], d[1])
 
         return self._control_volumes
@@ -615,6 +620,7 @@ class MeshTri(_base_mesh):
             # add it all up
             self._cv_centroids = numpy.zeros((len(self.node_coords), 3))
             for d in centroid_data:
+                # TODO fastfunc
                 numpy.add.at(self._cv_centroids, d[0], d[1])
             # Divide by the control volume
             self._cv_centroids /= self.get_control_volumes()[:, None]
@@ -1146,6 +1152,9 @@ class MeshTri(_base_mesh):
         '''Flips the given edges.
         '''
         assert self.fcc_type != 'full'
+
+        if self._edges_cells is None:
+            self._compute_edges_cells()
 
         interior_edges_cells = self._edges_cells[2]
         interior_edges_local = self._edges_local[2]
