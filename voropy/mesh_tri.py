@@ -1209,26 +1209,20 @@ class MeshTri(_base_mesh):
             # TODO sort cells?
 
             # Set up new cells->edges relationships.
-            if numpy.all(orient[adj_cells] == [True, False]):
-                i0, j0, i1, j1 = 2, 2, 1, 1
-            elif numpy.all(orient[adj_cells] == [False, True]):
-                i0, j0, i1, j1 = 2, 2, 1, 1
-            elif numpy.all(orient[adj_cells] == [True, True]):
-                i0, j0, i1, j1 = 1, 2, 2, 1
-            elif numpy.all(orient[adj_cells] == [False, False]):
-                i0, j0, i1, j1 = 1, 2, 2, 1
+            if numpy.all(orient[adj_cells[0]] != orient[adj_cells[1]]):
+                i0, i1 = 2, 1
             else:
-                assert False
+                i0, i1 = 1, 2
             old_edges0 = self.cells['edges'][adj_cells[0]].copy()
             old_edges1 = self.cells['edges'][adj_cells[1]].copy()
             self.cells['edges'][adj_cells[0]] = numpy.array([
                 old_edges1[(lid[1] + i0) % 3],
-                old_edges0[(lid[0] + j0) % 3],
+                old_edges0[(lid[0] + 2) % 3],
                 edge_gid,
                 ])
             self.cells['edges'][adj_cells[1]] = numpy.array([
                 old_edges1[(lid[1] + i1) % 3],
-                old_edges0[(lid[0] + j1) % 3],
+                old_edges0[(lid[0] + 1) % 3],
                 edge_gid,
                 ])
 
