@@ -1167,6 +1167,8 @@ class MeshTri(_base_mesh):
             )
         assert numpy.all(counts < 2), 'Can flip at most one edge per cell.'
 
+        orient = self.get_signed_tri_areas() > 0.0
+
         update_cell_ids = []
         update_interior_edge_ids = []
         for interior_edge_id in numpy.where(is_flip_interior_edge)[0]:
@@ -1186,25 +1188,16 @@ class MeshTri(_base_mesh):
             #        V                   V
             #        2                   2
             #
-            # Make sure i0 is the cell with the lower node index.
-            node_id0 = self.cells['nodes'][adj_cells[0], lid[0]]
-            node_id1 = self.cells['nodes'][adj_cells[1], lid[1]]
-            if node_id0 < node_id1:
-                i0, i1 = 0, 1
-            else:
-                i0, i1 = 1, 0
-
             verts = numpy.array([
-                self.cells['nodes'][adj_cells[i0], lid[i0]],
-                self.cells['nodes'][adj_cells[i1], lid[i1]],
-                self.cells['nodes'][adj_cells[i0], (lid[i0] + 1) % 3],
-                self.cells['nodes'][adj_cells[i0], (lid[i0] + 2) % 3],
+                self.cells['nodes'][adj_cells[0], lid[0]],
+                self.cells['nodes'][adj_cells[1], lid[1]],
+                self.cells['nodes'][adj_cells[0], (lid[0] + 1) % 3],
+                self.cells['nodes'][adj_cells[0], (lid[0] + 2) % 3],
                 ])
 
             # update edges
             edge_gid = self._edge_to_edge_gid[2][interior_edge_id]
-            # Vertices are ordered.
-            self.edges['nodes'][edge_gid] = verts[[0, 1]]
+            self.edges['nodes'][edge_gid] = numpy.sort(verts[[0, 1]])
             # No need to touch self.is_boundary_edge,
             # self.is_boundary_edge_individual; we're only flipping interior
             # edges.
@@ -1212,29 +1205,31 @@ class MeshTri(_base_mesh):
             # Set new cells
             self.cells['nodes'][adj_cells[0]] = verts[[0, 1, 2]]
             self.cells['nodes'][adj_cells[1]] = verts[[0, 1, 3]]
+            # TODO update self.orient
+            # TODO sort cells?
 
             # Set up new cells->edges relationships.
-            # First store the old edges in a dictionary with the global edge
-            # indices, then look for the new edge indices in them. Perhaps
-            # overkill, there may be a more elegant solution.
-            old_edges_idx = numpy.concatenate([
-                self.cells['edges'][adj_cells[0]],
-                self.cells['edges'][adj_cells[1]],
-                ])
-            d = {
-                tuple(self.edges['nodes'][idx]): idx
-                for idx in old_edges_idx
-                }
-            # Now update cells['edges']
+            if numpy.all(orient[adj_cells] == [True, False]):
+                i0, j0, i1, j1 = 2, 2, 1, 1
+            elif numpy.all(orient[adj_cells] == [False, True]):
+                i0, j0, i1, j1 = 2, 2, 1, 1
+            elif numpy.all(orient[adj_cells] == [True, True]):
+                i0, j0, i1, j1 = 1, 2, 2, 1
+            elif numpy.all(orient[adj_cells] == [False, False]):
+                i0, j0, i1, j1 = 1, 2, 2, 1
+            else:
+                assert False
+            old_edges0 = self.cells['edges'][adj_cells[0]].copy()
+            old_edges1 = self.cells['edges'][adj_cells[1]].copy()
             self.cells['edges'][adj_cells[0]] = numpy.array([
-                d[tuple(numpy.sort(verts[[1, 2]]))],
-                d[tuple(numpy.sort(verts[[2, 0]]))],
-                edge_gid
+                old_edges1[(lid[1] + i0) % 3],
+                old_edges0[(lid[0] + j0) % 3],
+                edge_gid,
                 ])
             self.cells['edges'][adj_cells[1]] = numpy.array([
-                d[tuple(numpy.sort(verts[[1, 3]]))],
-                d[tuple(numpy.sort(verts[[3, 0]]))],
-                edge_gid
+                old_edges1[(lid[1] + i1) % 3],
+                old_edges0[(lid[0] + j1) % 3],
+                edge_gid,
                 ])
 
             # Update the edge->cells relationship. It doesn't change for the
