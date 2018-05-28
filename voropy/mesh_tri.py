@@ -1271,32 +1271,22 @@ class MeshTri(_base_mesh):
         self._edges_cells[1][idx1][:, 0] = adj_cells_all[k1, 1]
 
         # Interior edges
-        # k2 = (ks == 2)
-        # idx2 = idxs[k2]
-        # is_column0 = self._edges_cells[2][idx2][:, 0] == adj_cells_all[k2, 0]
-        # is_column1 = self._edges_cells[2][idx2][:, 1] == adj_cells_all[k2, 0]
-        # assert numpy.all(numpy.logical_xor(is_column0, is_column1))
-        # # print(adj_cells_all[k2])
-        # self._edges_cells[2][idx2][is_column0, 0] = adj_cells_all[k2, 1][is_column0]
-        # self._edges_cells[2][idx2][is_column1, 1] = adj_cells_all[k2, 1][is_column1]
-
-        for adj_cells, k, idx in zip(adj_cells_all, ks, idxs):
-            if k == 2:
-                if self._edges_cells[2][idx][0] == adj_cells[0]:
-                    i = 0
-                else:
-                    assert self._edges_cells[2][idx][1] == adj_cells[0]
-                    i = 1
-                self._edges_cells[2][idx][i] = adj_cells[1]
+        k2 = (ks == 2)
+        idx2 = idxs[k2]
+        is_column0 = self._edges_cells[2][idx2][:, 0] == adj_cells_all[k2, 0]
+        is_column1 = self._edges_cells[2][idx2][:, 1] == adj_cells_all[k2, 0]
+        assert numpy.all(numpy.logical_xor(is_column0, is_column1))
+        #
+        self._edges_cells[2][idx2[is_column0], 0] = \
+            adj_cells_all[k2, 1][is_column0]
+        self._edges_cells[2][idx2[is_column1], 1] = \
+            adj_cells_all[k2, 1][is_column1]
 
         i1_all = numpy.empty(equal_orientation.shape[0], dtype=int)
         i1_all[equal_orientation] = 1
         i1_all[~equal_orientation] = 2
-
         gids = numpy.choose((lids[:, 1] + i1_all) % 3, old_edges1_all.T)
-
         ks, idxs = self._edge_gid_to_edge_list[gids].T
-
         # Outer boundary edge
         k1 = (ks == 1)
         idx1 = idxs[k1]
@@ -1305,14 +1295,16 @@ class MeshTri(_base_mesh):
             )
         self._edges_cells[1][idx1][:, 0] = adj_cells_all[k1, 0]
 
-        for adj_cells, lid, old_edges1, k, idx in zip(adj_cells_all, lids, old_edges1_all, ks, idxs):
-            if k == 2:
-                if self._edges_cells[2][idx][0] == adj_cells[1]:
-                    i = 0
-                else:
-                    assert self._edges_cells[2][idx][1] == adj_cells[1]
-                    i = 1
-                self._edges_cells[2][idx][i] = adj_cells[0]
+        k2 = (ks == 2)
+        idx2 = idxs[k2]
+        is_column0 = self._edges_cells[2][idx2][:, 0] == adj_cells_all[k2, 1]
+        is_column1 = self._edges_cells[2][idx2][:, 1] == adj_cells_all[k2, 1]
+        assert numpy.all(numpy.logical_xor(is_column0, is_column1))
+        #
+        self._edges_cells[2][idx2[is_column0], 0] = \
+            adj_cells_all[k2, 0][is_column0]
+        self._edges_cells[2][idx2[is_column1], 1] = \
+            adj_cells_all[k2, 0][is_column1]
 
         # Schedule the cell ids for updates.
         update_cell_ids = numpy.unique(adj_cells_all.flat)
