@@ -1350,20 +1350,36 @@ class MeshTri(_base_mesh):
 
         if self._interior_ce_ratios is not None:
             self._interior_ce_ratios[interior_edge_ids] = 0.0
-            # TODO vectorize
-            for interior_edge_id in interior_edge_ids:
-                edge_gid = self._edge_to_edge_gid[2][interior_edge_id]
-                adj_cells = self._edges_cells[2][interior_edge_id]
-                lid = numpy.array([
-                    numpy.where(self.cells['edges'][adj_cells[0]] == edge_gid)[0][0],
-                    numpy.where(self.cells['edges'][adj_cells[1]] == edge_gid)[0][0],
-                    ])
-                for i in [0, 1]:
-                    self._interior_ce_ratios[interior_edge_id] += \
-                        self.ce_ratios_per_half_edge[
-                            lid[i],
-                            adj_cells[i]
-                            ]
+            edge_gids = self._edge_to_edge_gid[2][interior_edge_ids]
+            adj_cells_all = self._edges_cells[2][interior_edge_ids]
+
+            is0 = self.cells['edges'][adj_cells_all[:, 0]][:, 0] == edge_gids
+            is1 = self.cells['edges'][adj_cells_all[:, 0]][:, 1] == edge_gids
+            is2 = self.cells['edges'][adj_cells_all[:, 0]][:, 2] == edge_gids
+            assert numpy.all(
+                numpy.sum(numpy.column_stack([is0, is1, is2]), axis=1) == 1
+                )
+            #
+            self._interior_ce_ratios[interior_edge_ids[is0]] += \
+                self.ce_ratios_per_half_edge[0, adj_cells_all[is0, 0]]
+            self._interior_ce_ratios[interior_edge_ids[is1]] += \
+                self.ce_ratios_per_half_edge[1, adj_cells_all[is1, 0]]
+            self._interior_ce_ratios[interior_edge_ids[is2]] += \
+                self.ce_ratios_per_half_edge[2, adj_cells_all[is2, 0]]
+
+            is0 = self.cells['edges'][adj_cells_all[:, 1]][:, 0] == edge_gids
+            is1 = self.cells['edges'][adj_cells_all[:, 1]][:, 1] == edge_gids
+            is2 = self.cells['edges'][adj_cells_all[:, 1]][:, 2] == edge_gids
+            assert numpy.all(
+                numpy.sum(numpy.column_stack([is0, is1, is2]), axis=1) == 1
+                )
+            #
+            self._interior_ce_ratios[interior_edge_ids[is0]] += \
+                self.ce_ratios_per_half_edge[0, adj_cells_all[is0, 1]]
+            self._interior_ce_ratios[interior_edge_ids[is1]] += \
+                self.ce_ratios_per_half_edge[1, adj_cells_all[is1, 1]]
+            self._interior_ce_ratios[interior_edge_ids[is2]] += \
+                self.ce_ratios_per_half_edge[2, adj_cells_all[is2, 1]]
 
         if self._signed_tri_areas is not None:
             # One could make p contiguous by adding a copy(), but that's not
