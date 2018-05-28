@@ -1171,15 +1171,34 @@ class MeshTri(_base_mesh):
 
         update_cell_ids = []
         update_interior_edge_ids = []
-        for interior_edge_id in numpy.where(is_flip_interior_edge)[0]:
-            adj_cells = interior_edges_cells[interior_edge_id]
 
-            edge_gid = self._edge_to_edge_gid[2][interior_edge_id]
-            lid = numpy.array([
-                numpy.where(self.cells['edges'][adj_cells[0]] == edge_gid)[0][0],
-                numpy.where(self.cells['edges'][adj_cells[1]] == edge_gid)[0][0],
-                ])
+        interior_edge_ids = numpy.where(is_flip_interior_edge)[0]
+        adj_cells_all = interior_edges_cells[interior_edge_ids]
+        edge_gids = self._edge_to_edge_gid[2][interior_edge_ids]
 
+        ec0 = self.cells['edges'][adj_cells_all[:, 0]]
+        lid0 = numpy.empty(edge_gids.shape[0], dtype=int)
+        hit = numpy.zeros(edge_gids.shape[0], dtype=bool)
+        for i in range(3):
+            mask = ec0[:, i] == edge_gids
+            lid0[mask] = i
+            assert numpy.all(~hit[mask])
+            hit[mask] = True
+        assert numpy.all(hit)
+
+        ec1 = self.cells['edges'][adj_cells_all[:, 1]]
+        lid1 = numpy.empty(edge_gids.shape[0], dtype=int)
+        hit = numpy.zeros(edge_gids.shape[0], dtype=bool)
+        for i in range(3):
+            mask = ec1[:, i] == edge_gids
+            lid1[mask] = i
+            assert numpy.all(~hit[mask])
+            hit[mask] = True
+        assert numpy.all(hit)
+
+        lids = numpy.column_stack([lid0, lid1])
+
+        for interior_edge_id, adj_cells, edge_gid, lid in zip(interior_edge_ids, adj_cells_all, edge_gids, lids):
             #        3                   3
             #        A                   A
             #       /|\                 / \
