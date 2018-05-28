@@ -1195,62 +1195,72 @@ class MeshTri(_base_mesh):
 
         lids = numpy.column_stack([lid0, lid1])
 
-        for interior_edge_id, adj_cells, edge_gid, lid in zip(interior_edge_ids, adj_cells_all, edge_gids, lids):
-            #        3                   3
-            #        A                   A
-            #       /|\                 / \
-            #      / | \               /   \
-            #     /  |  \             /  1  \
-            #   0/ 0 |   \1   ==>   0/_______\1
-            #    \   | 1 /           \       /
-            #     \  |  /             \  0  /
-            #      \ | /               \   /
-            #       \|/                 \ /
-            #        V                   V
-            #        2                   2
-            #
-            verts = numpy.array([
-                self.cells['nodes'][adj_cells[0], lid[0]],
-                self.cells['nodes'][adj_cells[1], lid[1]],
-                self.cells['nodes'][adj_cells[0], (lid[0] + 1) % 3],
-                self.cells['nodes'][adj_cells[0], (lid[0] + 2) % 3],
-                ])
+        #        3                   3
+        #        A                   A
+        #       /|\                 / \
+        #      / | \               /   \
+        #     /  |  \             /  1  \
+        #   0/ 0 |   \1   ==>   0/_______\1
+        #    \   | 1 /           \       /
+        #     \  |  /             \  0  /
+        #      \ | /               \   /
+        #       \|/                 \ /
+        #        V                   V
+        #        2                   2
+        #
+        verts_all = numpy.array([
+            self.cells['nodes'][adj_cells_all[:, 0], lids[:, 0]],
+            self.cells['nodes'][adj_cells_all[:, 1], lids[:, 1]],
+            self.cells['nodes'][adj_cells_all[:, 0], (lids[:, 0] + 1) % 3],
+            self.cells['nodes'][adj_cells_all[:, 0], (lids[:, 0] + 2) % 3],
+            ])
 
-            self.edges['nodes'][edge_gid] = numpy.sort(verts[[0, 1]])
-            # No need to touch self.is_boundary_edge,
-            # self.is_boundary_edge_individual; we're only flipping interior
-            # edges.
+        self.edges['nodes'][edge_gids] = \
+            numpy.sort(verts_all[[0, 1]].T, axis=1)
+        # No need to touch self.is_boundary_edge,
+        # self.is_boundary_edge_individual; we're only flipping interior edges.
 
-            # Set new cells
-            self.cells['nodes'][adj_cells[0]] = verts[[0, 1, 2]]
-            self.cells['nodes'][adj_cells[1]] = verts[[0, 1, 3]]
-            # TODO update self.orient
-            # TODO sort cells?
+        # Set new cells
+        self.cells['nodes'][adj_cells_all[:, 0]] = verts_all[[0, 1, 2]].T
+        self.cells['nodes'][adj_cells_all[:, 1]] = verts_all[[0, 1, 3]].T
+        # TODO update self.orient
+        # TODO sort cells?
 
-            # Set up new cells->edges relationships.
-            if numpy.all(orient[adj_cells[0]] != orient[adj_cells[1]]):
-                i0, i1 = 2, 1
-            else:
-                i0, i1 = 1, 2
-            old_edges0 = self.cells['edges'][adj_cells[0]].copy()
-            old_edges1 = self.cells['edges'][adj_cells[1]].copy()
-            self.cells['edges'][adj_cells[0]] = [
-                old_edges1[(lid[1] + i0) % 3],
-                old_edges0[(lid[0] + 2) % 3],
-                edge_gid,
-                ]
-            self.cells['edges'][adj_cells[1]] = [
-                old_edges1[(lid[1] + i1) % 3],
-                old_edges0[(lid[0] + 1) % 3],
-                edge_gid,
-                ]
+        # Set up new cells->edges relationships.
+        equal_orientation = (
+            orient[adj_cells_all[:, 0]] == orient[adj_cells_all[:, 1]]
+            )
+        i0_all = numpy.empty(equal_orientation.shape[0], dtype=int)
+        i1_all = numpy.empty(equal_orientation.shape[0], dtype=int)
+        i0_all[equal_orientation] = 1
+        i1_all[equal_orientation] = 2
+        i0_all[~equal_orientation] = 2
+        i1_all[~equal_orientation] = 1
 
-            # Update the edge->cells relationship. It doesn't change for the
-            # edge that was flipped, but for some of the other edges.
+        old_edges0_all = self.cells['edges'][adj_cells_all[:, 0]].copy()
+        old_edges1_all = self.cells['edges'][adj_cells_all[:, 1]].copy()
 
-            # [adj_cells[0]][(lid[0] + 2) % 3] can remain as it is.
-            gid = old_edges0[(lid[0] + 1) % 3]
-            k, idx = self._edge_gid_to_edge_list[gid]
+        self.cells['edges'][adj_cells_all[:, 0]] = numpy.column_stack([
+            numpy.choose((lids[:, 1] + i0_all) % 3, old_edges1_all.T),
+            numpy.choose((lids[:, 0] + 2) % 3, old_edges0_all.T),
+            edge_gids,
+            ])
+
+        self.cells['edges'][adj_cells_all[:, 1]] = numpy.column_stack([
+            numpy.choose((lids[:, 1] + i1_all) % 3, old_edges1_all.T),
+            numpy.choose((lids[:, 0] + 1) % 3, old_edges0_all.T),
+            edge_gids,
+            ])
+
+        # Update the edge->cells relationship. It doesn't change for the
+        # edge that was flipped, but for some of the other edges.
+
+        # [adj_cells[0]][(lid[0] + 2) % 3] can remain as it is.
+
+        gids = numpy.choose((lids[:, 0] + 1) % 3, old_edges0_all.T)
+        ks, idxs = self._edge_gid_to_edge_list[gids].T
+
+        for interior_edge_id, adj_cells, edge_gid, lid, verts, i0, i1, old_edges0, old_edges1, gid, k, idx in zip(interior_edge_ids, adj_cells_all, edge_gids, lids, verts_all.T, i0_all, i1_all, old_edges0_all, old_edges1_all, gids, ks, idxs):
             # print(self._edges_cells[k][idx])
             if self._edges_cells[k][idx][0] == adj_cells[0]:
                 i = 0
