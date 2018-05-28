@@ -1169,9 +1169,6 @@ class MeshTri(_base_mesh):
 
         orient = self.get_signed_tri_areas() > 0.0
 
-        update_cell_ids = []
-        update_interior_edge_ids = []
-
         interior_edge_ids = numpy.where(is_flip_interior_edge)[0]
         adj_cells_all = interior_edges_cells[interior_edge_ids]
         edge_gids = self._edge_to_edge_gid[2][interior_edge_ids]
@@ -1276,18 +1273,13 @@ class MeshTri(_base_mesh):
                 i = 1
             self._edges_cells[k][idx][i] = adj_cells[0]
 
-            # Schedule the cell ids for updates.
-            update_cell_ids.append(adj_cells)
-            # Same for edge ids
-            k, edge_gids = self._edge_gid_to_edge_list[
-                self.cells['edges'][adj_cells].flat
-                ].T
-            update_interior_edge_ids.append(edge_gids[k == 2])
-
-        update_cell_ids = numpy.unique(numpy.concatenate(update_cell_ids))
-        update_interior_edge_ids = numpy.unique(numpy.concatenate(
-            update_interior_edge_ids
-            ))
+        # Schedule the cell ids for updates.
+        update_cell_ids = numpy.unique(adj_cells_all.flat)
+        # Same for edge ids
+        k, edge_gids = self._edge_gid_to_edge_list[
+            self.cells['edges'][update_cell_ids].flat
+            ].T
+        update_interior_edge_ids = numpy.unique(edge_gids[k == 2])
 
         self._update_cell_values(update_cell_ids, update_interior_edge_ids)
         return
