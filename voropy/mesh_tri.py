@@ -1158,8 +1158,9 @@ class MeshTri(_base_mesh):
 
         interior_edges_cells = self._edges_cells[2]
 
-        # Can only handle the case where each cell has at most one edge to flip.
-        # Use `unique` here as there are usually only very edges in the list.
+        # Can only handle the case where each cell has at most one edge to
+        # flip.  Use `unique` here as there are usually only very edges in the
+        # list.
         _, counts = numpy.unique(
             interior_edges_cells[is_flip_interior_edge],
             return_counts=True
@@ -1242,19 +1243,12 @@ class MeshTri(_base_mesh):
                 i = 1
             self._edges_cells[k][idx][i] = adj_cells[1]
 
-            if orient[adj_cells[0]] == True and orient[adj_cells[1]] == False:
-                i1 = 2
-            elif orient[adj_cells[0]] == False and orient[adj_cells[1]] == True:
-                i1 = 2
-            elif orient[adj_cells[0]] == True and orient[adj_cells[1]] == True:
-                i1 = 1
-            elif orient[adj_cells[0]] == False and orient[adj_cells[1]] == False:
+            if orient[adj_cells[0]] == orient[adj_cells[1]]:
                 i1 = 1
             else:
-                print(orient[adj_cells])
-                assert False
-
+                i1 = 2
             gid = old_edges1[(lid[1] + i1) % 3]
+
             k, idx = self._edge_gid_to_edge_list[gid]
             if self._edges_cells[k][idx][0] == adj_cells[1]:
                 i = 0
@@ -1269,7 +1263,7 @@ class MeshTri(_base_mesh):
             k, edge_gids = self._edge_gid_to_edge_list[
                 self.cells['edges'][adj_cells].flat
                 ].T
-            update_interior_edge_ids.append(edge_gids[k==2])
+            update_interior_edge_ids.append(edge_gids[k == 2])
 
         update_cell_ids = numpy.unique(numpy.concatenate(update_cell_ids))
         update_interior_edge_ids = numpy.unique(numpy.concatenate(
