@@ -10,7 +10,6 @@ from .base import (
 from .helpers import grp_start_len, unique_rows
 
 
-
 __all__ = ['MeshTri']
 
 
@@ -379,6 +378,11 @@ class MeshTri(_base_mesh):
         self.is_boundary_node = None
         self.is_boundary_edge = None
         self.is_boundary_face = None
+        self._interior_edge_lengths = None
+        self._ce_ratios = None
+        self._edges_cells = None
+        self._edge_gid_to_edge_list = None
+        self._edge_to_edge_gid = None
 
         # compute data
         # Create the idx_hierarchy (nodes->edges->cells), i.e., the value of
@@ -483,7 +487,8 @@ class MeshTri(_base_mesh):
             e = self.half_edge_coords
             self.ei_dot_ei = numpy.einsum('ijk, ijk->ij', e, e)
 
-        if self.cell_volumes is not None or self.ce_ratios_per_half_edge is not None:
+        if (self.cell_volumes is not None or
+                self.ce_ratios_per_half_edge is not None):
             self.cell_volumes, self.ce_ratios_per_half_edge = \
                 compute_tri_areas_and_ce_ratios(self.ei_dot_ej)
 
@@ -619,7 +624,8 @@ class MeshTri(_base_mesh):
                 centroid_data.append(self.fcc.integral_x())
             # add it all up
             num_components = centroid_data[0][1].shape[-1]
-            self._cv_centroids = numpy.zeros((len(self.node_coords), num_components))
+            self._cv_centroids = \
+                numpy.zeros((len(self.node_coords), num_components))
             for d in centroid_data:
                 # TODO fastfunc
                 numpy.add.at(self._cv_centroids, d[0], d[1])
@@ -693,7 +699,6 @@ class MeshTri(_base_mesh):
         '''This creates interior edge->cells relations. While it's not
         necessary for many applications, it sometimes does come in handy.
         '''
-        num_cells = len(self.cells['nodes'])
         num_edges = len(self.edges['nodes'])
 
         counts = numpy.zeros(num_edges, dtype=int)
@@ -707,8 +712,8 @@ class MeshTri(_base_mesh):
         edges_flat = self.cells['edges'].flat
         idx_sort = numpy.argsort(edges_flat)
         idx_start, count = grp_start_len(edges_flat[idx_sort])
-        res1 = idx_sort[idx_start[count==1]][:, numpy.newaxis]
-        idx = idx_start[count==2]
+        res1 = idx_sort[idx_start[count == 1]][:, numpy.newaxis]
+        idx = idx_start[count == 2]
         res2 = numpy.column_stack([idx_sort[idx], idx_sort[idx + 1]])
         self._edges_cells = [
             [],  # no edges with zero adjacent cells
@@ -732,10 +737,10 @@ class MeshTri(_base_mesh):
         # the respective edge array.
         self._edge_gid_to_edge_list = numpy.empty((num_edges, 2), dtype=int)
         self._edge_gid_to_edge_list[:, 0] = count
-        c1 = (count==1)
+        c1 = (count == 1)
         l1 = numpy.sum(c1)
         self._edge_gid_to_edge_list[c1, 1] = numpy.arange(l1)
-        c2 = (count==2)
+        c2 = (count == 2)
         l2 = numpy.sum(c2)
         self._edge_gid_to_edge_list[c2, 1] = numpy.arange(l2)
         assert l1 + l2 == len(count)
@@ -1077,7 +1082,8 @@ class MeshTri(_base_mesh):
         plt.axis('equal')
 
         # Find the edges that contain the vertex
-        edge_gids = numpy.where((self.edges['nodes'] == node_id).any(axis=1))[0]
+        edge_gids = \
+            numpy.where((self.edges['nodes'] == node_id).any(axis=1))[0]
         # ... and plot them
         for node_ids in self.edges['nodes'][edge_gids]:
             x = self.node_coords[node_ids]
