@@ -1,10 +1,15 @@
 # -*- coding: utf-8 -*-
 #
+# pylint: disable=too-many-lines
 import numpy
-from voropy.base import (
+import fastfunc
+
+from .base import (
     _base_mesh, _row_dot, compute_tri_areas_and_ce_ratios,
     compute_triangle_circumcenters
     )
+from .helpers import grp_start_len, unique_rows
+
 
 __all__ = ['MeshTri']
 
@@ -82,8 +87,8 @@ class FlatCellCorrector(object):
                    ___/                   \___
                ___/  \                     /  \___
            ___/       \                   /       \___
-          /____________\________________ /____________\
-         p1             \       |       /               p2
+          /____________\_________________/____________\
+         p1             \       |       /              p2
                          \      |      /
                           \     |     /
                            \    |    /
@@ -114,8 +119,8 @@ class FlatCellCorrector(object):
                    ___/                   \___
                ___/  \                     /  \___
            ___/       \                   /       \___
-          /____________\________________ /____________\
-         p1                                             p2
+          /____________\_________________/____________\
+         p1                                            p2
     '''
     def __init__(self, cells, flat_edge_local_id, node_coords):
         self.cells = cells
@@ -321,7 +326,7 @@ class FlatCellCorrector(object):
         return ids, vals
 
 
-# pylint: disable=too-many-instance-attributes
+# pylint: disable=too-many-instance-attributes, too-many-public-methods
 class MeshTri(_base_mesh):
     '''Class for handling triangular meshes.
 
@@ -341,6 +346,9 @@ class MeshTri(_base_mesh):
         cells = numpy.sort(cells, axis=1)
         cells = cells[cells[:, 0].argsort()]
 
+        # For fastfunc
+        assert cells.dtype == numpy.int
+
         super(MeshTri, self).__init__(nodes, cells)
 
         # Assert that all vertices are used.
@@ -359,14 +367,23 @@ class MeshTri(_base_mesh):
             'nodes': cells
             }
 
-        self._ce_ratios = None
+        self._interior_ce_ratios = None
         self._control_volumes = None
         self._cell_partitions = None
         self._cv_centroids = None
         self._surface_areas = None
         self.edges = None
         self.cell_circumcenters = None
+        self._signed_tri_areas = None
         self.subdomains = {}
+        self.is_boundary_node = None
+        self.is_boundary_edge = None
+        self.is_boundary_face = None
+        self._interior_edge_lengths = None
+        self._ce_ratios = None
+        self._edges_cells = None
+        self._edge_gid_to_edge_list = None
+        self._edge_to_edge_gid = None
 
         # compute data
         # Create the idx_hierarchy (nodes->edges->cells), i.e., the value of
@@ -434,9 +451,9 @@ class MeshTri(_base_mesh):
                     )
 
             fcc_local_edge, self.fcc_cells = numpy.where(edge_needs_fcc)
-            self.regular_cells = numpy.where(numpy.logical_not(
-                numpy.any(edge_needs_fcc, axis=0)
-                ))[0]
+            self.regular_cells = numpy.where(
+                ~numpy.any(edge_needs_fcc, axis=0)
+                )[0]
 
             self.fcc = FlatCellCorrector(
                 self.cells['nodes'][self.fcc_cells],
@@ -446,8 +463,44 @@ class MeshTri(_base_mesh):
             self.ce_ratios_per_half_edge[:, self.fcc_cells] = \
                 self.fcc.get_ce_ratios().T
 
-        self.is_boundary_node = None
-        self.is_boundary_face = None
+        return
+
+    def update_node_coordinates(self, X):
+        assert self.fcc is None
+        assert X.shape == self.node_coords.shape
+
+        self.node_coords = X
+
+        if self.half_edge_coords is not None:
+            self.half_edge_coords = (
+                self.node_coords[self.idx_hierarchy[1]] -
+                self.node_coords[self.idx_hierarchy[0]]
+                )
+
+        if self.ei_dot_ej is not None:
+            self.ei_dot_ej = numpy.einsum(
+                'ijk, ijk->ij',
+                self.half_edge_coords[[1, 2, 0]],
+                self.half_edge_coords[[2, 0, 1]]
+                )
+
+        if self.ei_dot_ei is not None:
+            e = self.half_edge_coords
+            self.ei_dot_ei = numpy.einsum('ijk, ijk->ij', e, e)
+
+        if (self.cell_volumes is not None or
+                self.ce_ratios_per_half_edge is not None):
+            self.cell_volumes, self.ce_ratios_per_half_edge = \
+                compute_tri_areas_and_ce_ratios(self.ei_dot_ej)
+
+        self._interior_edge_lengths = None
+        self.cell_circumcenters = None
+        self._interior_ce_ratios = None
+        self._control_volumes = None
+        self._cell_partitions = None
+        self._cv_centroids = None
+        self._surface_areas = None
+        self._signed_tri_areas = None
         return
 
     def get_boundary_vertices(self):
@@ -459,19 +512,58 @@ class MeshTri(_base_mesh):
             return self.ce_ratios_per_half_edge[cell_ids]
         return self.ce_ratios_per_half_edge
 
-    def get_ce_ratios_per_edge(self):
+    def get_nondelaunay_edges(self):
         if 'edges' not in self.cells:
             self.create_edges()
-        if self._ce_ratios is None:
-            # sum up from self.ce_ratios_per_half_edge
-            cells_edges = self.cells['edges'].T
+
+        neg = self.get_ce_ratios() < 0.0
+
+        print(neg.shape)
+        candidate_edges = self.cells['edges'].T[neg]
+        print(candidate_edges)
+        print(len(candidate_edges))
+        print(len(numpy.unique(candidate_edges)))
+        exit(1)
+
+        sum_ce_ratios = numpy.zeros(len(candidate_edges))
+        # TODO fastfunc
+        numpy.add.at(
+            sum_ce_ratios,
+            self.cells['edges'].T,
+            self.ce_ratios_per_half_edge
+            )
+        exit(1)
+        return
+
+    def get_ce_ratios_per_interior_edge(self):
+        if self._interior_ce_ratios is None:
+            if 'edges' not in self.cells:
+                self.create_edges()
+
             self._ce_ratios = numpy.zeros(len(self.edges['nodes']))
-            numpy.add.at(
+            fastfunc.add.at(
                 self._ce_ratios,
-                cells_edges,
+                self.cells['edges'].T,
                 self.ce_ratios_per_half_edge
                 )
-        return self._ce_ratios
+            self._interior_ce_ratios = \
+                self._ce_ratios[~self.is_boundary_edge_individual]
+
+            # # sum up from self.ce_ratios_per_half_edge
+            # if self._edges_cells is None:
+            #     self._compute_edges_cells()
+
+            # self._interior_ce_ratios = \
+            #     numpy.zeros(self._edges_local[2].shape[0])
+            # for i in [0, 1]:
+            #     # Interior edges = edges with _2_ adjacent cells
+            #     idx = [
+            #         self._edges_local[2][:, i],
+            #         self._edges_cells[2][:, i],
+            #         ]
+            #     self._interior_ce_ratios += self.ce_ratios_per_half_edge[idx]
+
+        return self._interior_ce_ratios
 
     def get_control_volumes(self):
         if self._control_volumes is None:
@@ -491,6 +583,7 @@ class MeshTri(_base_mesh):
             # sum up from self.control_volume_data
             self._control_volumes = numpy.zeros(len(self.node_coords))
             for d in control_volume_data:
+                # TODO fastfunc
                 numpy.add.at(self._control_volumes, d[0], d[1])
 
         return self._control_volumes
@@ -531,13 +624,35 @@ class MeshTri(_base_mesh):
             if self.fcc is not None:
                 centroid_data.append(self.fcc.integral_x())
             # add it all up
-            self._cv_centroids = numpy.zeros((len(self.node_coords), 3))
+            num_components = centroid_data[0][1].shape[-1]
+            self._cv_centroids = \
+                numpy.zeros((len(self.node_coords), num_components))
             for d in centroid_data:
+                # TODO fastfunc
                 numpy.add.at(self._cv_centroids, d[0], d[1])
             # Divide by the control volume
             self._cv_centroids /= self.get_control_volumes()[:, None]
 
         return self._cv_centroids
+
+    def get_signed_tri_areas(self):
+        '''Signed area of a triangle in 2D.
+        '''
+        # http://mathworld.wolfram.com/TriangleArea.html
+        assert self.node_coords.shape[1] == 2, \
+            'Signed areas only make sense for triangles in 2D.'
+
+        if self._signed_tri_areas is None:
+            # One could make p contiguous by adding a copy(), but that's not
+            # really worth it here.
+            p = self.node_coords[self.cells['nodes']].T
+            # <https://stackoverflow.com/q/50411583/353337>
+            self._signed_tri_areas = (
+                + p[0][2] * (p[1][0] - p[1][1])
+                + p[0][0] * (p[1][1] - p[1][2])
+                + p[0][1] * (p[1][2] - p[1][0])
+                ) / 2
+        return self._signed_tri_areas
 
     def mark_boundary(self):
         if self.edges is None:
@@ -548,27 +663,19 @@ class MeshTri(_base_mesh):
             self.idx_hierarchy[..., self.is_boundary_edge]
             ] = True
 
+        assert self.is_boundary_edge is not None
         self.is_boundary_face = self.is_boundary_edge
         return
 
     def create_edges(self):
-        '''Setup edge-node and edge-cell relations.
+        '''Set up edge-node and edge-cell relations.
         '''
         # Reshape into individual edges.
         # Sort the columns to make it possible for `unique()` to identify
         # individual edges.
         s = self.idx_hierarchy.shape
-        a = numpy.sort(self.idx_hierarchy.reshape(s[0], s[1]*s[2]).T)
-
-        b = numpy.ascontiguousarray(a).view(
-            numpy.dtype((numpy.void, a.dtype.itemsize * a.shape[1]))
-            )
-        _, idx, inv, cts = numpy.unique(
-            b,
-            return_index=True,
-            return_inverse=True,
-            return_counts=True
-            )
+        a = numpy.sort(self.idx_hierarchy.reshape(s[0], -1).T)
+        a_unique, inv, cts = unique_rows(a)
 
         # No edge has more than 2 cells. This assertion fails, for example, if
         # cells are listed twice.
@@ -579,28 +686,67 @@ class MeshTri(_base_mesh):
         self.is_boundary_edge_individual = (cts == 1)
 
         self.edges = {
-            'nodes': a[idx],
+            'nodes': a_unique,
             }
 
-        # TODO is any of this needed?
         # cell->edges relationship
-        cells_edges = inv.reshape(3, -1).T
-        self.cells['edges'] = cells_edges
+        self.cells['edges'] = inv.reshape(3, -1).T
 
-        # store inv for possible later use in create_edge_cells
-        self._inv = inv
+        self._edges_cells = None
+        self._edge_gid_to_edge_list = None
+
+        # Store an index {boundary,interior}_edge -> edge_gid
+        self._edge_to_edge_gid = [
+            [],
+            numpy.where(self.is_boundary_edge_individual)[0],
+            numpy.where(~self.is_boundary_edge_individual)[0]
+            ]
         return
 
-    def compute_edge_cells(self):
-        '''This creates edge->cell relations. As an upstream relation, this is
-        relatively expensive to compute and hardly ever necessary.
+    def _compute_edges_cells(self):
+        '''This creates interior edge->cells relations. While it's not
+        necessary for many applications, it sometimes does come in handy.
         '''
-        num_cells = len(self.cells['nodes'])
         num_edges = len(self.edges['nodes'])
-        edge_cells = [[] for k in range(num_edges)]
-        for k, edge_id in enumerate(self._inv):
-            edge_cells[edge_id].append(k % num_cells)
-        return edge_cells
+
+        counts = numpy.zeros(num_edges, dtype=int)
+        fastfunc.add.at(
+            counts,
+            self.cells['edges'],
+            numpy.ones(self.cells['edges'].shape, dtype=int)
+            )
+
+        # <https://stackoverflow.com/a/50395231/353337>
+        edges_flat = self.cells['edges'].flat
+        idx_sort = numpy.argsort(edges_flat)
+        idx_start, count = grp_start_len(edges_flat[idx_sort])
+        res1 = idx_sort[idx_start[count == 1]][:, numpy.newaxis]
+        idx = idx_start[count == 2]
+        res2 = numpy.column_stack([idx_sort[idx], idx_sort[idx + 1]])
+        self._edges_cells = [
+            [],  # no edges with zero adjacent cells
+            res1 // 3,
+            res2 // 3,
+            ]
+        # self._edges_local = [
+        #     [],  # no edges with zero adjacent cells
+        #     res1 % 3,
+        #     res2 % 3,
+        #     ]
+
+        # For each edge, store the number of adjacent cells plus the index into
+        # the respective edge array.
+        self._edge_gid_to_edge_list = numpy.empty((num_edges, 2), dtype=int)
+        self._edge_gid_to_edge_list[:, 0] = count
+        c1 = (count == 1)
+        l1 = numpy.sum(c1)
+        self._edge_gid_to_edge_list[c1, 1] = numpy.arange(l1)
+        c2 = (count == 2)
+        l2 = numpy.sum(c2)
+        self._edge_gid_to_edge_list[c2, 1] = numpy.arange(l2)
+        assert l1 + l2 == len(count)
+
+        return
 
     def get_face_partitions(self):
         # face = edge for triangles.
@@ -707,26 +853,26 @@ class MeshTri(_base_mesh):
 #         for node in self.get_vertices('boundary'):
 #             boundary_matrices[node] = numpy.zeros((2, 2))
 #
-#         for edge_id, edge in enumerate(self.edges['cells']):
+#         for edge_gid, edge in enumerate(self.edges['cells']):
 #             # Compute edge length.
-#             node0 = self.edges['nodes'][edge_id][0]
-#             node1 = self.edges['nodes'][edge_id][1]
+#             node0 = self.edges['nodes'][edge_gid][0]
+#             node1 = self.edges['nodes'][edge_gid][1]
 #
 #             # Compute coedge length.
-#             if len(self.edges['cells'][edge_id]) == 1:
+#             if len(self.edges['cells'][edge_gid]) == 1:
 #                 # Boundary edge.
 #                 edge_midpoint = 0.5 * (
 #                         node_coords2d[node0] +
 #                         node_coords2d[node1]
 #                         )
-#                 cell0 = self.edges['cells'][edge_id][0]
+#                 cell0 = self.edges['cells'][edge_gid][0]
 #                 coedge_midpoint = 0.5 * (
 #                         cell_circumcenters2d[cell0] +
 #                         edge_midpoint
 #                         )
-#             elif len(self.edges['cells'][edge_id]) == 2:
-#                 cell0 = self.edges['cells'][edge_id][0]
-#                 cell1 = self.edges['cells'][edge_id][1]
+#             elif len(self.edges['cells'][edge_gid]) == 2:
+#                 cell0 = self.edges['cells'][edge_gid][0]
+#                 cell1 = self.edges['cells'][edge_gid][1]
 #                 # Interior edge.
 #                 coedge_midpoint = 0.5 * (
 #                         cell_circumcenters2d[cell0] +
@@ -738,8 +884,8 @@ class MeshTri(_base_mesh):
 #                         )
 #
 #             # Compute the coefficient r for both contributions
-#             coeffs = self.ce_ratios[edge_id] / \
-#                 self.control_volumes[self.edges['nodes'][edge_id]]
+#             coeffs = self.ce_ratios[edge_gid] / \
+#                 self.control_volumes[self.edges['nodes'][edge_gid]]
 #
 #             # Compute R*_{IJ} ((11) in [1]).
 #             r0 = (coedge_midpoint - node_coords2d[node0]) * coeffs[0]
@@ -802,13 +948,18 @@ class MeshTri(_base_mesh):
     def num_delaunay_violations(self):
         # Delaunay violations are present exactly on the interior edges where
         # the ce_ratio is negative. Count those.
-        ce_ratios = self.get_ce_ratios_per_edge()
-        return numpy.sum(ce_ratios[~self.is_boundary_edge_individual] < 0.0)
+        return numpy.sum(self.get_ce_ratios_per_interior_edge() < 0.0)
 
     def show(self, *args, **kwargs):
         from matplotlib import pyplot as plt
         self.plot(*args, **kwargs)
         plt.show()
+        return
+
+    def save_png(self, filename, *args, **kwargs):
+        from matplotlib import pyplot as plt
+        self.plot(*args, **kwargs)
+        plt.savefig(filename, transparent=False)
         return
 
     def plot(self,
@@ -856,13 +1007,17 @@ class MeshTri(_base_mesh):
         # Get edges, cut off z-component.
         e = self.node_coords[self.edges['nodes']][:, :, :2]
         # Plot regular edges, mark those with negative ce-ratio red.
-        ce_ratios = self.get_ce_ratios_per_edge()
+        ce_ratios = self.get_ce_ratios_per_interior_edge()
         pos = ce_ratios >= 0
-        line_segments0 = LineCollection(e[pos], color=mesh_color)
+
+        is_pos = numpy.zeros(len(self.edges['nodes']), dtype=bool)
+        print(self._edge_to_edge_gid)
+        is_pos[self._edge_to_edge_gid[2][pos]] = True
+
+        line_segments0 = LineCollection(e[is_pos], color=mesh_color)
         ax.add_collection(line_segments0)
         #
-        neg = numpy.logical_not(pos)
-        line_segments1 = LineCollection(e[neg], color=new_red)
+        line_segments1 = LineCollection(e[~is_pos], color=new_red)
         ax.add_collection(line_segments1)
 
         if show_coedges:
@@ -931,9 +1086,10 @@ class MeshTri(_base_mesh):
         plt.axis('equal')
 
         # Find the edges that contain the vertex
-        edge_ids = numpy.where((self.edges['nodes'] == node_id).any(axis=1))[0]
+        edge_gids = \
+            numpy.where((self.edges['nodes'] == node_id).any(axis=1))[0]
         # ... and plot them
-        for node_ids in self.edges['nodes'][edge_ids]:
+        for node_ids in self.edges['nodes'][edge_gids]:
             x = self.node_coords[node_ids]
             ax.plot(x[:, 0], x[:, 1], 'k')
 
@@ -953,10 +1109,10 @@ class MeshTri(_base_mesh):
                 )[0]
 
             for cell_id in cell_ids:
-                for edge_id in self.cells['edges'][cell_id]:
-                    if node_id not in self.edges['nodes'][edge_id]:
+                for edge_gid in self.cells['edges'][cell_id]:
+                    if node_id not in self.edges['nodes'][edge_gid]:
                         continue
-                    node_ids = self.edges['nodes'][edge_id]
+                    node_ids = self.edges['nodes'][edge_gid]
                     edge_midpoint = 0.5 * (
                         self.node_coords[node_ids[0]] +
                         self.node_coords[node_ids[1]]
@@ -972,4 +1128,300 @@ class MeshTri(_base_mesh):
                         ])
                     ax.fill(q[0], q[1], color='0.5')
                     ax.plot(p[0], p[1], color='0.7')
+        return
+
+    def flip_until_delaunay(self):
+        # There are no interior edges with negative covolume-edge ratio
+        # when using full flat cell correction.
+        assert self.fcc_type != 'full'
+
+        # If all coedge/edge ratios are positive, all cells are Delaunay.
+        ce_ratios = self.get_ce_ratios()
+        if numpy.all(ce_ratios > 0):
+            return False
+
+        # If all _interior_ coedge/edge ratios are positive, all cells are
+        # Delaunay.
+        if self.is_boundary_edge is None:
+            self.create_edges()
+        self.mark_boundary()
+        # pylint: disable=invalid-unary-operand-type
+        if numpy.all(ce_ratios[~self.is_boundary_edge] > 0):
+            return False
+
+        needs_flipping = self.get_ce_ratios_per_interior_edge() < 0.0
+
+        num_flip_steps = 0
+        while numpy.any(needs_flipping):
+            num_flip_steps += 1
+            self._flip_edges(needs_flipping)
+            needs_flipping = self.get_ce_ratios_per_interior_edge() < 0.0
+
+        return num_flip_steps > 1
+
+    def _flip_edges(self, is_flip_interior_edge):
+        '''Flips the given edges.
+        '''
+        assert self.fcc_type != 'full'
+
+        if self._edges_cells is None:
+            self._compute_edges_cells()
+
+        interior_edges_cells = self._edges_cells[2]
+
+        # Can only handle the case where each cell has at most one edge to
+        # flip.  Use `unique` here as there are usually only very edges in the
+        # list.
+        _, counts = numpy.unique(
+            interior_edges_cells[is_flip_interior_edge],
+            return_counts=True
+            )
+        assert numpy.all(counts < 2), 'Can flip at most one edge per cell.'
+
+        orient = self.get_signed_tri_areas() > 0.0
+
+        interior_edge_ids = numpy.where(is_flip_interior_edge)[0]
+        adj_cells_all = interior_edges_cells[interior_edge_ids]
+        edge_gids = self._edge_to_edge_gid[2][interior_edge_ids]
+
+        ec0 = self.cells['edges'][adj_cells_all[:, 0]]
+        lid0 = numpy.empty(edge_gids.shape[0], dtype=int)
+        hit = numpy.zeros(edge_gids.shape[0], dtype=bool)
+        for i in range(3):
+            mask = ec0[:, i] == edge_gids
+            lid0[mask] = i
+            assert numpy.all(~hit[mask])
+            hit[mask] = True
+        assert numpy.all(hit)
+
+        ec1 = self.cells['edges'][adj_cells_all[:, 1]]
+        lid1 = numpy.empty(edge_gids.shape[0], dtype=int)
+        hit = numpy.zeros(edge_gids.shape[0], dtype=bool)
+        for i in range(3):
+            mask = ec1[:, i] == edge_gids
+            lid1[mask] = i
+            assert numpy.all(~hit[mask])
+            hit[mask] = True
+        assert numpy.all(hit)
+
+        lids = numpy.column_stack([lid0, lid1])
+
+        #        3                   3
+        #        A                   A
+        #       /|\                 / \
+        #      / | \               /   \
+        #     /  |  \             /  1  \
+        #   0/ 0 |   \1   ==>   0/_______\1
+        #    \   | 1 /           \       /
+        #     \  |  /             \  0  /
+        #      \ | /               \   /
+        #       \|/                 \ /
+        #        V                   V
+        #        2                   2
+        #
+        verts_all = numpy.array([
+            self.cells['nodes'][adj_cells_all[:, 0], lids[:, 0]],
+            self.cells['nodes'][adj_cells_all[:, 1], lids[:, 1]],
+            self.cells['nodes'][adj_cells_all[:, 0], (lids[:, 0] + 1) % 3],
+            self.cells['nodes'][adj_cells_all[:, 0], (lids[:, 0] + 2) % 3],
+            ])
+
+        self.edges['nodes'][edge_gids] = \
+            numpy.sort(verts_all[[0, 1]].T, axis=1)
+        # No need to touch self.is_boundary_edge,
+        # self.is_boundary_edge_individual; we're only flipping interior edges.
+
+        # Set new cells
+        self.cells['nodes'][adj_cells_all[:, 0]] = verts_all[[0, 1, 2]].T
+        self.cells['nodes'][adj_cells_all[:, 1]] = verts_all[[0, 1, 3]].T
+        # TODO update self.orient
+        # TODO sort cells?
+
+        # Set up new cells->edges relationships.
+        equal_orientation = (
+            orient[adj_cells_all[:, 0]] == orient[adj_cells_all[:, 1]]
+            )
+        i0_all = numpy.empty(equal_orientation.shape[0], dtype=int)
+        i1_all = numpy.empty(equal_orientation.shape[0], dtype=int)
+        i0_all[equal_orientation] = 1
+        i1_all[equal_orientation] = 2
+        i0_all[~equal_orientation] = 2
+        i1_all[~equal_orientation] = 1
+
+        old_edges0_all = self.cells['edges'][adj_cells_all[:, 0]].copy()
+        old_edges1_all = self.cells['edges'][adj_cells_all[:, 1]].copy()
+
+        self.cells['edges'][adj_cells_all[:, 0]] = numpy.column_stack([
+            numpy.choose((lids[:, 1] + i0_all) % 3, old_edges1_all.T),
+            numpy.choose((lids[:, 0] + 2) % 3, old_edges0_all.T),
+            edge_gids,
+            ])
+
+        self.cells['edges'][adj_cells_all[:, 1]] = numpy.column_stack([
+            numpy.choose((lids[:, 1] + i1_all) % 3, old_edges1_all.T),
+            numpy.choose((lids[:, 0] + 1) % 3, old_edges0_all.T),
+            edge_gids,
+            ])
+
+        # Update the edge->cells relationship. It doesn't change for the
+        # edge that was flipped, but for some of the other edges.
+
+        # [adj_cells[0]][(lid[0] + 2) % 3] can remain as it is.
+
+        gids = numpy.choose((lids[:, 0] + 1) % 3, old_edges0_all.T)
+        ks, idxs = self._edge_gid_to_edge_list[gids].T
+
+        assert numpy.all(numpy.logical_or(ks == 1, ks == 2))
+
+        # Outer boundary edge
+        k1 = (ks == 1)
+        idx1 = idxs[k1]
+        assert numpy.all(
+            self._edges_cells[1][idx1][:, 0] == adj_cells_all[k1, 0]
+            )
+        self._edges_cells[1][idx1][:, 0] = adj_cells_all[k1, 1]
+
+        # Interior edges
+        k2 = (ks == 2)
+        idx2 = idxs[k2]
+        is_column0 = self._edges_cells[2][idx2][:, 0] == adj_cells_all[k2, 0]
+        is_column1 = self._edges_cells[2][idx2][:, 1] == adj_cells_all[k2, 0]
+        assert numpy.all(numpy.logical_xor(is_column0, is_column1))
+        #
+        self._edges_cells[2][idx2[is_column0], 0] = \
+            adj_cells_all[k2, 1][is_column0]
+        self._edges_cells[2][idx2[is_column1], 1] = \
+            adj_cells_all[k2, 1][is_column1]
+
+        i1_all = numpy.empty(equal_orientation.shape[0], dtype=int)
+        i1_all[equal_orientation] = 1
+        i1_all[~equal_orientation] = 2
+        gids = numpy.choose((lids[:, 1] + i1_all) % 3, old_edges1_all.T)
+        ks, idxs = self._edge_gid_to_edge_list[gids].T
+        # Outer boundary edge
+        k1 = (ks == 1)
+        idx1 = idxs[k1]
+        assert numpy.all(
+            self._edges_cells[1][idx1][:, 0] == adj_cells_all[k1, 1]
+            )
+        self._edges_cells[1][idx1][:, 0] = adj_cells_all[k1, 0]
+
+        k2 = (ks == 2)
+        idx2 = idxs[k2]
+        is_column0 = self._edges_cells[2][idx2][:, 0] == adj_cells_all[k2, 1]
+        is_column1 = self._edges_cells[2][idx2][:, 1] == adj_cells_all[k2, 1]
+        assert numpy.all(numpy.logical_xor(is_column0, is_column1))
+        #
+        self._edges_cells[2][idx2[is_column0], 0] = \
+            adj_cells_all[k2, 0][is_column0]
+        self._edges_cells[2][idx2[is_column1], 1] = \
+            adj_cells_all[k2, 0][is_column1]
+
+        # Schedule the cell ids for updates.
+        update_cell_ids = numpy.unique(adj_cells_all.flat)
+        # Same for edge ids
+        k, edge_gids = self._edge_gid_to_edge_list[
+            self.cells['edges'][update_cell_ids].flat
+            ].T
+        update_interior_edge_ids = numpy.unique(edge_gids[k == 2])
+
+        self._update_cell_values(update_cell_ids, update_interior_edge_ids)
+        return
+
+    def _update_cell_values(self, cell_ids, interior_edge_ids):
+        '''Updates all sorts of cell information for the given cell IDs.
+        '''
+        # update idx_hierarchy
+        nds = self.cells['nodes'][cell_ids].T
+        self.idx_hierarchy[..., cell_ids] = nds[self.local_idx]
+
+        # update self.half_edge_coords
+        # TODO report numpy bug for vectorization
+        for cell_id in cell_ids:
+            self.half_edge_coords[:, cell_id, :] = (
+                self.node_coords[self.idx_hierarchy[1, ..., cell_id]] -
+                self.node_coords[self.idx_hierarchy[0, ..., cell_id]]
+                )
+
+        # update self.ei_dot_ej
+        self.ei_dot_ej[:, cell_ids] = numpy.einsum(
+            'ijk, ijk->ij',
+            self.half_edge_coords[[1, 2, 0]][:, cell_ids],
+            self.half_edge_coords[[2, 0, 1]][:, cell_ids]
+            )
+
+        # update self.ei_dot_ei
+        e = self.half_edge_coords[:, cell_ids]
+        self.ei_dot_ei[:, cell_ids] = numpy.einsum('ijk, ijk->ij', e, e)
+
+        # update cell_volumes, ce_ratios_per_half_edge
+        cv, ce = compute_tri_areas_and_ce_ratios(self.ei_dot_ej[:, cell_ids])
+        self.cell_volumes[cell_ids] = cv
+        self.ce_ratios_per_half_edge[:, cell_ids] = ce
+
+        if self._interior_ce_ratios is not None:
+            self._interior_ce_ratios[interior_edge_ids] = 0.0
+            edge_gids = self._edge_to_edge_gid[2][interior_edge_ids]
+            adj_cells_all = self._edges_cells[2][interior_edge_ids]
+
+            is0 = self.cells['edges'][adj_cells_all[:, 0]][:, 0] == edge_gids
+            is1 = self.cells['edges'][adj_cells_all[:, 0]][:, 1] == edge_gids
+            is2 = self.cells['edges'][adj_cells_all[:, 0]][:, 2] == edge_gids
+            assert numpy.all(
+                numpy.sum(numpy.column_stack([is0, is1, is2]), axis=1) == 1
+                )
+            #
+            self._interior_ce_ratios[interior_edge_ids[is0]] += \
+                self.ce_ratios_per_half_edge[0, adj_cells_all[is0, 0]]
+            self._interior_ce_ratios[interior_edge_ids[is1]] += \
+                self.ce_ratios_per_half_edge[1, adj_cells_all[is1, 0]]
+            self._interior_ce_ratios[interior_edge_ids[is2]] += \
+                self.ce_ratios_per_half_edge[2, adj_cells_all[is2, 0]]
+
+            is0 = self.cells['edges'][adj_cells_all[:, 1]][:, 0] == edge_gids
+            is1 = self.cells['edges'][adj_cells_all[:, 1]][:, 1] == edge_gids
+            is2 = self.cells['edges'][adj_cells_all[:, 1]][:, 2] == edge_gids
+            assert numpy.all(
+                numpy.sum(numpy.column_stack([is0, is1, is2]), axis=1) == 1
+                )
+            #
+            self._interior_ce_ratios[interior_edge_ids[is0]] += \
+                self.ce_ratios_per_half_edge[0, adj_cells_all[is0, 1]]
+            self._interior_ce_ratios[interior_edge_ids[is1]] += \
+                self.ce_ratios_per_half_edge[1, adj_cells_all[is1, 1]]
+            self._interior_ce_ratios[interior_edge_ids[is2]] += \
+                self.ce_ratios_per_half_edge[2, adj_cells_all[is2, 1]]
+
+        if self._signed_tri_areas is not None:
+            # One could make p contiguous by adding a copy(), but that's not
+            # really worth it here.
+            p = self.node_coords[self.cells['nodes'][cell_ids]].T
+            # <https://stackoverflow.com/q/50411583/353337>
+            self._signed_tri_areas[cell_ids] = (
+                + p[0][2] * (p[1][0] - p[1][1])
+                + p[0][0] * (p[1][1] - p[1][2])
+                + p[0][1] * (p[1][2] - p[1][0])
+                ) / 2
+
+        # TODO update self._edge_lengths
+        assert self._edge_lengths is None
+
+        # TODO update self.cell_circumcenters
+        assert self.cell_circumcenters is None
+
+        # TODO update self._control_volumes
+        assert self._control_volumes is None
+
+        # TODO update self._cell_partitions
+        assert self._cell_partitions is None
+
+        # TODO update self._cv_centroids
+        assert self._cv_centroids is None
+
+        # TODO update self._surface_areas
+        assert self._surface_areas is None
+
+        # TODO update self.subdomains
+        assert self.subdomains == {}
+
         return

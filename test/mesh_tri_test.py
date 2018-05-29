@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 #
 import numpy
-
 import pytest
+import meshio
+
 import voropy
 
 from helpers import download_mesh, near_equal, run
@@ -85,7 +86,7 @@ def test_regular_tri_order():
     tol = 1.0e-14
 
     # ce_ratios
-    assert near_equal(mesh.get_ce_ratios_per_edge().T, [0.5, 0.0, 0.5], tol)
+    assert near_equal(mesh.get_ce_ratios().T, [0.5, 0.0, 0.5], tol)
 
     # control volumes
     assert near_equal(
@@ -249,7 +250,7 @@ def test_degenerate_small0b(h):
     # ce_ratios
     ce0 = 0.5/h * (h**2 - 0.25)
     ce12 = 0.25/h
-    assert near_equal(mesh.get_ce_ratios_per_edge(), [ce0, ce12, ce12], tol)
+    assert near_equal(mesh.get_ce_ratios().T, [ce12, ce12, ce0], tol)
 
     # control volumes
     cv12 = 0.25 * (1.0**2 * ce0 + (0.25 + h**2) * ce12)
@@ -363,7 +364,7 @@ def test_degenerate_small1(h, a):
     # ce_ratios
     ce1 = 0.5 * h / a
     ce2 = 0.5 * h / (1.0 - a)
-    assert near_equal(mesh.get_ce_ratios_per_edge(), [0.0, ce1, ce2], tol)
+    assert near_equal(mesh.get_ce_ratios().T, [ce2, ce1, 0.0], tol)
 
     # control volumes
     cv1 = ce1 * el1
@@ -414,9 +415,16 @@ def test_degenerate_small2(h):
     # ce_ratios
     alpha = h - 1.0 / (4*h)
     beta = 1.0 / (4*h)
+    assert near_equal(mesh.get_ce_ratios_per_interior_edge(), [alpha], tol)
+
+    alpha2 = (h - 1.0 / (4*h)) / 2
     assert near_equal(
-        mesh.get_ce_ratios_per_edge(),
-        [alpha, beta, beta, beta, beta],
+        mesh.get_ce_ratios(),
+        [
+            [beta, beta],
+            [beta, beta],
+            [alpha2, alpha2],
+        ],
         tol
         )
 
@@ -463,9 +471,16 @@ def test_rectanglesmall():
 
     tol = 1.0e-14
 
+    assert near_equal(mesh.get_ce_ratios_per_interior_edge(), [0.0], tol)
+
+    print(mesh.get_ce_ratios())
     assert near_equal(
-        mesh.get_ce_ratios_per_edge(),
-        [0.05, 0.0, 5.0, 5.0, 0.05],
+        mesh.get_ce_ratios(),
+        [
+            [5.0, 0.05],
+            [0.0, 5.0],
+            [0.05, 0.0],
+        ],
         tol
         )
     assert near_equal(
@@ -545,5 +560,28 @@ def test_sphere():
         )
 
     # assertEqual(mesh.num_delaunay_violations(), 60)
-
     return
+
+
+def test_signed_area():
+    filename = download_mesh(
+        'pacman.msh',
+        '2da8ff96537f844a95a83abb48471b6a'
+        )
+    X, cells, _, _, _ = meshio.read(filename)
+    assert numpy.all(numpy.abs(X[:, 2]) < 1.0e-15)
+    X = X[:, :2]
+
+    mesh = voropy.mesh_tri.MeshTri(
+        X, cells['triangle'], flat_cell_correction=None
+        )
+
+    vols = mesh.get_signed_tri_areas()
+    assert numpy.all(
+        abs(abs(vols) - mesh.cell_volumes) < 1.0e-12 * mesh.cell_volumes
+        )
+    return
+
+
+if __name__ == '__main__':
+    test_signed_area()

@@ -32,6 +32,7 @@ setup(
     license=about['__license__'],
     platforms='any',
     install_requires=[
+        'fastfunc',
         'meshio',
         'numpy >= 1.9',  # unique return_counts
         'scipy',

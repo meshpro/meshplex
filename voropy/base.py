@@ -46,7 +46,7 @@ def compute_tri_areas_and_ce_ratios(ei_dot_ej):
     #       |simplex| ||u||^2 = \sum_i \alpha_i <u,e_i> <e_i,u>,
     #
     #     where alpha_i are the covolume contributions for the edges. This
-    #     equation system to hold for all vectors u in the plane spanned by the
+    #     equation system holds for all vectors u in the plane spanned by the
     #     edges, particularly by the edges themselves.
     #
     #     For triangles, the exact solution of the system is
@@ -213,7 +213,7 @@ class _base_mesh(object):
 
         if subdomain.is_boundary_only:
             # Filter for boundary
-            is_inside = numpy.logical_and(is_inside, self.is_boundary_edge)
+            is_inside = (is_inside & self.is_boundary_edge)
 
         return is_inside
 
@@ -236,7 +236,7 @@ class _base_mesh(object):
 
         if subdomain.is_boundary_only:
             # Filter for boundary
-            is_inside = numpy.logical_and(is_inside, self.is_boundary_face)
+            is_inside = (is_inside & self.is_boundary_face)
 
         return is_inside
 
@@ -268,7 +268,7 @@ class _base_mesh(object):
             if subdomain.is_boundary_only:
                 # Filter boundary
                 self.mark_boundary()
-                is_inside = numpy.logical_and(is_inside, self.is_boundary_node)
+                is_inside = (is_inside & self.is_boundary_node)
 
         self.subdomains[subdomain] = {
             'vertices': is_inside,
