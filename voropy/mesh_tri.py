@@ -693,6 +693,13 @@ class MeshTri(_base_mesh):
 
         self._edges_cells = None
         self._edge_gid_to_edge_list = None
+
+        # Store an index {boundary,interior}_edge -> edge_gid
+        self._edge_to_edge_gid = [
+            [],
+            numpy.where(self.is_boundary_edge_individual)[0],
+            numpy.where(~self.is_boundary_edge_individual)[0]
+            ]
         return
 
     def _compute_edges_cells(self):
@@ -725,13 +732,6 @@ class MeshTri(_base_mesh):
         #     res1 % 3,
         #     res2 % 3,
         #     ]
-
-        # Store an index {boundary,interior}_edge -> edge_gid
-        self._edge_to_edge_gid = [
-            [],
-            numpy.where(self.is_boundary_edge_individual)[0],
-            numpy.where(~self.is_boundary_edge_individual)[0]
-            ]
 
         # For each edge, store the number of adjacent cells plus the index into
         # the respective edge array.
@@ -947,8 +947,7 @@ class MeshTri(_base_mesh):
     def num_delaunay_violations(self):
         # Delaunay violations are present exactly on the interior edges where
         # the ce_ratio is negative. Count those.
-        ce_ratios = self.get_ce_ratios_per_edge()
-        return numpy.sum(ce_ratios[~self.is_boundary_edge_individual] < 0.0)
+        return numpy.sum(self.get_ce_ratios_per_interior_edge() < 0.0)
 
     def show(self, *args, **kwargs):
         from matplotlib import pyplot as plt
@@ -1007,13 +1006,17 @@ class MeshTri(_base_mesh):
         # Get edges, cut off z-component.
         e = self.node_coords[self.edges['nodes']][:, :, :2]
         # Plot regular edges, mark those with negative ce-ratio red.
-        ce_ratios = self.get_ce_ratios_per_edge()
+        ce_ratios = self.get_ce_ratios_per_interior_edge()
         pos = ce_ratios >= 0
-        line_segments0 = LineCollection(e[pos], color=mesh_color)
+
+        is_pos = numpy.zeros(len(self.edges['nodes']), dtype=bool)
+        print(self._edge_to_edge_gid)
+        is_pos[self._edge_to_edge_gid[2][pos]] = True
+
+        line_segments0 = LineCollection(e[is_pos], color=mesh_color)
         ax.add_collection(line_segments0)
         #
-        neg = ~pos
-        line_segments1 = LineCollection(e[neg], color=new_red)
+        line_segments1 = LineCollection(e[~is_pos], color=new_red)
         ax.add_collection(line_segments1)
 
         if show_coedges:
