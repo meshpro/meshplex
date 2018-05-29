@@ -630,6 +630,19 @@ def test_flip_delaunay():
     mesh.flip_until_delaunay()
     assert mesh.num_delaunay_violations() == 0
 
+    new_cells = mesh.cells['nodes'].copy()
+    new_coords = mesh.node_coords.copy()
+
+    # Assert that some key values are updated properly
+    mesh2 = voropy.mesh_tri.MeshTri(
+        new_coords, new_cells, flat_cell_correction=None
+        )
+    assert numpy.all(mesh.idx_hierarchy == mesh2.idx_hierarchy)
+    tol = 1.0e-15
+    assert near_equal(mesh.half_edge_coords, mesh2.half_edge_coords, tol)
+    assert near_equal(mesh.cell_volumes, mesh2.cell_volumes, tol)
+    assert near_equal(mesh.ei_dot_ej, mesh2.ei_dot_ej, tol)
+
     return
 
 

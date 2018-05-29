@@ -332,19 +332,21 @@ class MeshTri(_base_mesh):
 
     .. inheritance-diagram:: MeshTri
     '''
-    def __init__(self, nodes, cells, flat_cell_correction=None):
+    def __init__(self, nodes, cells,
+                 flat_cell_correction=None, sort_cells=False):
         '''Initialization.
         '''
-        # Sort cells and nodes, first every row, then the rows themselves. This
-        # helps in many downstream applications, e.g., when constructing linear
-        # systems with the cells/edges. (When converting to CSR format, the
-        # I/J entries must be sorted.)
-        # Don't use cells.sort(axis=1) to avoid
-        # ```
-        # ValueError: sort array is read-only
-        # ```
-        cells = numpy.sort(cells, axis=1)
-        cells = cells[cells[:, 0].argsort()]
+        if sort_cells:
+            # Sort cells and nodes, first every row, then the rows themselves.
+            # This helps in many downstream applications, e.g., when
+            # constructing linear systems with the cells/edges. (When
+            # converting to CSR format, the I/J entries must be sorted.)
+            # Don't use cells.sort(axis=1) to avoid
+            # ```
+            # ValueError: sort array is read-only
+            # ```
+            cells = numpy.sort(cells, axis=1)
+            cells = cells[cells[:, 0].argsort()]
 
         # For fastfunc
         assert cells.dtype == numpy.int
@@ -1211,7 +1213,6 @@ class MeshTri(_base_mesh):
         # Set new cells
         self.cells['nodes'][adj_cells_all[:, 0]] = verts_all[[0, 1, 2]].T
         self.cells['nodes'][adj_cells_all[:, 1]] = verts_all[[0, 1, 3]].T
-        # TODO update self.orient
         # TODO sort cells?
 
         # Set up new cells->edges relationships.
