@@ -583,5 +583,30 @@ def test_signed_area():
     return
 
 
+def test_update_node_coordinates():
+    filename = download_mesh(
+        'pacman.msh',
+        '2da8ff96537f844a95a83abb48471b6a'
+        )
+    X, cells, _, _, _ = meshio.read(filename)
+    assert numpy.all(numpy.abs(X[:, 2]) < 1.0e-15)
+
+    mesh1 = voropy.mesh_tri.MeshTri(
+        X, cells['triangle'], flat_cell_correction=None
+        )
+
+    X2 = X + 1.0e-2 * numpy.random.rand(*X.shape)
+    mesh2 = voropy.mesh_tri.MeshTri(
+        X2, cells['triangle'], flat_cell_correction=None
+        )
+
+    mesh1.update_node_coordinates(X2)
+
+    tol = 1.0e-12
+    assert near_equal(mesh1.ei_dot_ej, mesh2.ei_dot_ej, tol)
+    assert near_equal(mesh1.cell_volumes, mesh2.cell_volumes, tol)
+    return
+
+
 if __name__ == '__main__':
     test_signed_area()
