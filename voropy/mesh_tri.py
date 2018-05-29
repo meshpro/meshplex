@@ -512,29 +512,6 @@ class MeshTri(_base_mesh):
             return self.ce_ratios_per_half_edge[cell_ids]
         return self.ce_ratios_per_half_edge
 
-    def get_nondelaunay_edges(self):
-        if 'edges' not in self.cells:
-            self.create_edges()
-
-        neg = self.get_ce_ratios() < 0.0
-
-        print(neg.shape)
-        candidate_edges = self.cells['edges'].T[neg]
-        print(candidate_edges)
-        print(len(candidate_edges))
-        print(len(numpy.unique(candidate_edges)))
-        exit(1)
-
-        sum_ce_ratios = numpy.zeros(len(candidate_edges))
-        # TODO fastfunc
-        numpy.add.at(
-            sum_ce_ratios,
-            self.cells['edges'].T,
-            self.ce_ratios_per_half_edge
-            )
-        exit(1)
-        return
-
     def get_ce_ratios_per_interior_edge(self):
         if self._interior_ce_ratios is None:
             if 'edges' not in self.cells:
