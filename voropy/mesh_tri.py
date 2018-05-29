@@ -1157,8 +1157,6 @@ class MeshTri(_base_mesh):
             )
         assert numpy.all(counts < 2), 'Can flip at most one edge per cell.'
 
-        orient = self.get_signed_tri_areas() > 0.0
-
         interior_edge_ids = numpy.where(is_flip_interior_edge)[0]
         adj_cells = interior_edges_cells[interior_edge_ids]
         edge_gids = self._edge_to_edge_gid[2][interior_edge_ids]
@@ -1210,14 +1208,18 @@ class MeshTri(_base_mesh):
         # No need to touch self.is_boundary_edge,
         # self.is_boundary_edge_individual; we're only flipping interior edges.
 
+        # Do the neighboring cells have equal orientation (both node sets
+        # clockwise/counterclockwise?
+        equal_orientation = (
+            self.cells['nodes'][adj_cells[:, 0], (lids[:, 0] + 1) % 3] ==
+            self.cells['nodes'][adj_cells[:, 1], (lids[:, 1] + 2) % 3]
+            )
+
         # Set new cells
         self.cells['nodes'][adj_cells[:, 0]] = verts[[0, 1, 2]].T
         self.cells['nodes'][adj_cells[:, 1]] = verts[[0, 1, 3]].T
 
         # Set up new cells->edges relationships.
-        equal_orientation = (
-            orient[adj_cells[:, 0]] == orient[adj_cells[:, 1]]
-            )
         i0 = numpy.empty(equal_orientation.shape[0], dtype=int)
         i1 = numpy.empty(equal_orientation.shape[0], dtype=int)
         i0[equal_orientation] = 1
