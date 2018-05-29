@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 #
+# pylint: disable=too-many-lines
 import numpy
 import fastfunc
 
@@ -325,7 +326,7 @@ class FlatCellCorrector(object):
         return ids, vals
 
 
-# pylint: disable=too-many-instance-attributes
+# pylint: disable=too-many-instance-attributes, too-many-public-methods
 class MeshTri(_base_mesh):
     '''Class for handling triangular meshes.
 
@@ -1144,6 +1145,7 @@ class MeshTri(_base_mesh):
         if self.is_boundary_edge is None:
             self.create_edges()
         self.mark_boundary()
+        # pylint: disable=invalid-unary-operand-type
         if numpy.all(ce_ratios[~self.is_boundary_edge] > 0):
             return False
 

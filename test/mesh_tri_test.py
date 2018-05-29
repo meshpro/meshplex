@@ -86,7 +86,7 @@ def test_regular_tri_order():
     tol = 1.0e-14
 
     # ce_ratios
-    assert near_equal(mesh.get_ce_ratios().T,  [0.5, 0.0, 0.5], tol)
+    assert near_equal(mesh.get_ce_ratios().T, [0.5, 0.0, 0.5], tol)
 
     # control volumes
     assert near_equal(
