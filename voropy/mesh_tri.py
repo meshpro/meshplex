@@ -1314,12 +1314,11 @@ class MeshTri(_base_mesh):
         self.idx_hierarchy[..., cell_ids] = nds[self.local_idx]
 
         # update self.half_edge_coords
-        # TODO report numpy bug for vectorization
-        for cell_id in cell_ids:
-            self.half_edge_coords[:, cell_id, :] = (
-                self.node_coords[self.idx_hierarchy[1, ..., cell_id]] -
-                self.node_coords[self.idx_hierarchy[0, ..., cell_id]]
-                )
+        self.half_edge_coords[:, cell_ids, :] = numpy.moveaxis(
+            self.node_coords[self.idx_hierarchy[1, ..., cell_ids]] -
+            self.node_coords[self.idx_hierarchy[0, ..., cell_ids]],
+            0, 1
+            )
 
         # update self.ei_dot_ej
         self.ei_dot_ej[:, cell_ids] = numpy.einsum(
