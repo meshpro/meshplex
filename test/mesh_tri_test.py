@@ -615,11 +615,9 @@ def test_flip_delaunay():
         '2da8ff96537f844a95a83abb48471b6a'
         )
     X, cells, _, _, _ = meshio.read(filename)
-    assert numpy.all(numpy.abs(X[:, 2]) < 1.0e-15)
-    X = X[:, :2]
 
     numpy.random.seed(123)
-    X += 5.0e-2 * numpy.random.rand(*X.shape)
+    X[:, :2] += 5.0e-2 * numpy.random.rand(*X[:, :2].shape)
 
     mesh = voropy.mesh_tri.MeshTri(
         X, cells['triangle'], flat_cell_correction=None

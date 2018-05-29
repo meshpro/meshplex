@@ -474,6 +474,8 @@ class MeshTri(_base_mesh):
         self.node_coords = X
 
         if self.half_edge_coords is not None:
+            # Constructing the temporary arrays
+            # self.node_coords[self.idx_hierarchy] can take quite a while here.
             self.half_edge_coords = (
                 self.node_coords[self.idx_hierarchy[1]] -
                 self.node_coords[self.idx_hierarchy[0]]
