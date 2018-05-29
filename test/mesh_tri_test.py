@@ -595,6 +595,7 @@ def test_update_node_coordinates():
         X, cells['triangle'], flat_cell_correction=None
         )
 
+    numpy.random.seed(123)
     X2 = X + 1.0e-2 * numpy.random.rand(*X.shape)
     mesh2 = voropy.mesh_tri.MeshTri(
         X2, cells['triangle'], flat_cell_correction=None
@@ -605,6 +606,30 @@ def test_update_node_coordinates():
     tol = 1.0e-12
     assert near_equal(mesh1.ei_dot_ej, mesh2.ei_dot_ej, tol)
     assert near_equal(mesh1.cell_volumes, mesh2.cell_volumes, tol)
+    return
+
+
+def test_flip_delaunay():
+    filename = download_mesh(
+        'pacman.msh',
+        '2da8ff96537f844a95a83abb48471b6a'
+        )
+    X, cells, _, _, _ = meshio.read(filename)
+    assert numpy.all(numpy.abs(X[:, 2]) < 1.0e-15)
+    X = X[:, :2]
+
+    numpy.random.seed(123)
+    X += 5.0e-2 * numpy.random.rand(*X.shape)
+
+    mesh = voropy.mesh_tri.MeshTri(
+        X, cells['triangle'], flat_cell_correction=None
+        )
+
+    assert mesh.num_delaunay_violations() == 16
+
+    mesh.flip_until_delaunay()
+    assert mesh.num_delaunay_violations() == 0
+
     return
 
 
