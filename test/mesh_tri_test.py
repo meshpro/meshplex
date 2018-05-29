@@ -583,5 +583,68 @@ def test_signed_area():
     return
 
 
+def test_update_node_coordinates():
+    filename = download_mesh(
+        'pacman.msh',
+        '2da8ff96537f844a95a83abb48471b6a'
+        )
+    X, cells, _, _, _ = meshio.read(filename)
+    assert numpy.all(numpy.abs(X[:, 2]) < 1.0e-15)
+
+    mesh1 = voropy.mesh_tri.MeshTri(
+        X, cells['triangle'], flat_cell_correction=None
+        )
+
+    numpy.random.seed(123)
+    X2 = X + 1.0e-2 * numpy.random.rand(*X.shape)
+    mesh2 = voropy.mesh_tri.MeshTri(
+        X2, cells['triangle'], flat_cell_correction=None
+        )
+
+    mesh1.update_node_coordinates(X2)
+
+    tol = 1.0e-12
+    assert near_equal(mesh1.ei_dot_ej, mesh2.ei_dot_ej, tol)
+    assert near_equal(mesh1.cell_volumes, mesh2.cell_volumes, tol)
+    return
+
+
+def test_flip_delaunay():
+    filename = download_mesh(
+        'pacman.msh',
+        '2da8ff96537f844a95a83abb48471b6a'
+        )
+    X, cells, _, _, _ = meshio.read(filename)
+    assert numpy.all(numpy.abs(X[:, 2]) < 1.0e-15)
+    X = X[:, :2]
+
+    numpy.random.seed(123)
+    X += 5.0e-2 * numpy.random.rand(*X.shape)
+
+    mesh = voropy.mesh_tri.MeshTri(
+        X, cells['triangle'], flat_cell_correction=None
+        )
+
+    assert mesh.num_delaunay_violations() == 16
+
+    mesh.flip_until_delaunay()
+    assert mesh.num_delaunay_violations() == 0
+
+    new_cells = mesh.cells['nodes'].copy()
+    new_coords = mesh.node_coords.copy()
+
+    # Assert that some key values are updated properly
+    mesh2 = voropy.mesh_tri.MeshTri(
+        new_coords, new_cells, flat_cell_correction=None
+        )
+    assert numpy.all(mesh.idx_hierarchy == mesh2.idx_hierarchy)
+    tol = 1.0e-15
+    assert near_equal(mesh.half_edge_coords, mesh2.half_edge_coords, tol)
+    assert near_equal(mesh.cell_volumes, mesh2.cell_volumes, tol)
+    assert near_equal(mesh.ei_dot_ej, mesh2.ei_dot_ej, tol)
+
+    return
+
+
 if __name__ == '__main__':
     test_signed_area()

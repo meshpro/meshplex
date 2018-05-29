@@ -332,19 +332,21 @@ class MeshTri(_base_mesh):
 
     .. inheritance-diagram:: MeshTri
     '''
-    def __init__(self, nodes, cells, flat_cell_correction=None):
+    def __init__(self, nodes, cells,
+                 flat_cell_correction=None, sort_cells=False):
         '''Initialization.
         '''
-        # Sort cells and nodes, first every row, then the rows themselves. This
-        # helps in many downstream applications, e.g., when constructing linear
-        # systems with the cells/edges. (When converting to CSR format, the
-        # I/J entries must be sorted.)
-        # Don't use cells.sort(axis=1) to avoid
-        # ```
-        # ValueError: sort array is read-only
-        # ```
-        cells = numpy.sort(cells, axis=1)
-        cells = cells[cells[:, 0].argsort()]
+        if sort_cells:
+            # Sort cells and nodes, first every row, then the rows themselves.
+            # This helps in many downstream applications, e.g., when
+            # constructing linear systems with the cells/edges. (When
+            # converting to CSR format, the I/J entries must be sorted.)
+            # Don't use cells.sort(axis=1) to avoid
+            # ```
+            # ValueError: sort array is read-only
+            # ```
+            cells = numpy.sort(cells, axis=1)
+            cells = cells[cells[:, 0].argsort()]
 
         # For fastfunc
         assert cells.dtype == numpy.int
@@ -511,29 +513,6 @@ class MeshTri(_base_mesh):
         if cell_ids is not None:
             return self.ce_ratios_per_half_edge[cell_ids]
         return self.ce_ratios_per_half_edge
-
-    def get_nondelaunay_edges(self):
-        if 'edges' not in self.cells:
-            self.create_edges()
-
-        neg = self.get_ce_ratios() < 0.0
-
-        print(neg.shape)
-        candidate_edges = self.cells['edges'].T[neg]
-        print(candidate_edges)
-        print(len(candidate_edges))
-        print(len(numpy.unique(candidate_edges)))
-        exit(1)
-
-        sum_ce_ratios = numpy.zeros(len(candidate_edges))
-        # TODO fastfunc
-        numpy.add.at(
-            sum_ce_ratios,
-            self.cells['edges'].T,
-            self.ce_ratios_per_half_edge
-            )
-        exit(1)
-        return
 
     def get_ce_ratios_per_interior_edge(self):
         if self._interior_ce_ratios is None:
@@ -1178,13 +1157,11 @@ class MeshTri(_base_mesh):
             )
         assert numpy.all(counts < 2), 'Can flip at most one edge per cell.'
 
-        orient = self.get_signed_tri_areas() > 0.0
-
         interior_edge_ids = numpy.where(is_flip_interior_edge)[0]
-        adj_cells_all = interior_edges_cells[interior_edge_ids]
+        adj_cells = interior_edges_cells[interior_edge_ids]
         edge_gids = self._edge_to_edge_gid[2][interior_edge_ids]
 
-        ec0 = self.cells['edges'][adj_cells_all[:, 0]]
+        ec0 = self.cells['edges'][adj_cells[:, 0]]
         lid0 = numpy.empty(edge_gids.shape[0], dtype=int)
         hit = numpy.zeros(edge_gids.shape[0], dtype=bool)
         for i in range(3):
@@ -1194,7 +1171,7 @@ class MeshTri(_base_mesh):
             hit[mask] = True
         assert numpy.all(hit)
 
-        ec1 = self.cells['edges'][adj_cells_all[:, 1]]
+        ec1 = self.cells['edges'][adj_cells[:, 1]]
         lid1 = numpy.empty(edge_gids.shape[0], dtype=int)
         hit = numpy.zeros(edge_gids.shape[0], dtype=bool)
         for i in range(3):
@@ -1219,47 +1196,49 @@ class MeshTri(_base_mesh):
         #        V                   V
         #        2                   2
         #
-        verts_all = numpy.array([
-            self.cells['nodes'][adj_cells_all[:, 0], lids[:, 0]],
-            self.cells['nodes'][adj_cells_all[:, 1], lids[:, 1]],
-            self.cells['nodes'][adj_cells_all[:, 0], (lids[:, 0] + 1) % 3],
-            self.cells['nodes'][adj_cells_all[:, 0], (lids[:, 0] + 2) % 3],
+        verts = numpy.array([
+            self.cells['nodes'][adj_cells[:, 0], lids[:, 0]],
+            self.cells['nodes'][adj_cells[:, 1], lids[:, 1]],
+            self.cells['nodes'][adj_cells[:, 0], (lids[:, 0] + 1) % 3],
+            self.cells['nodes'][adj_cells[:, 0], (lids[:, 0] + 2) % 3],
             ])
 
         self.edges['nodes'][edge_gids] = \
-            numpy.sort(verts_all[[0, 1]].T, axis=1)
+            numpy.sort(verts[[0, 1]].T, axis=1)
         # No need to touch self.is_boundary_edge,
         # self.is_boundary_edge_individual; we're only flipping interior edges.
 
+        # Do the neighboring cells have equal orientation (both node sets
+        # clockwise/counterclockwise?
+        equal_orientation = (
+            self.cells['nodes'][adj_cells[:, 0], (lids[:, 0] + 1) % 3] ==
+            self.cells['nodes'][adj_cells[:, 1], (lids[:, 1] + 2) % 3]
+            )
+
         # Set new cells
-        self.cells['nodes'][adj_cells_all[:, 0]] = verts_all[[0, 1, 2]].T
-        self.cells['nodes'][adj_cells_all[:, 1]] = verts_all[[0, 1, 3]].T
-        # TODO update self.orient
-        # TODO sort cells?
+        self.cells['nodes'][adj_cells[:, 0]] = verts[[0, 1, 2]].T
+        self.cells['nodes'][adj_cells[:, 1]] = verts[[0, 1, 3]].T
 
         # Set up new cells->edges relationships.
-        equal_orientation = (
-            orient[adj_cells_all[:, 0]] == orient[adj_cells_all[:, 1]]
-            )
-        i0_all = numpy.empty(equal_orientation.shape[0], dtype=int)
-        i1_all = numpy.empty(equal_orientation.shape[0], dtype=int)
-        i0_all[equal_orientation] = 1
-        i1_all[equal_orientation] = 2
-        i0_all[~equal_orientation] = 2
-        i1_all[~equal_orientation] = 1
+        i0 = numpy.empty(equal_orientation.shape[0], dtype=int)
+        i1 = numpy.empty(equal_orientation.shape[0], dtype=int)
+        i0[equal_orientation] = 1
+        i1[equal_orientation] = 2
+        i0[~equal_orientation] = 2
+        i1[~equal_orientation] = 1
 
-        old_edges0_all = self.cells['edges'][adj_cells_all[:, 0]].copy()
-        old_edges1_all = self.cells['edges'][adj_cells_all[:, 1]].copy()
+        old_edges0 = self.cells['edges'][adj_cells[:, 0]].copy()
+        old_edges1 = self.cells['edges'][adj_cells[:, 1]].copy()
 
-        self.cells['edges'][adj_cells_all[:, 0]] = numpy.column_stack([
-            numpy.choose((lids[:, 1] + i0_all) % 3, old_edges1_all.T),
-            numpy.choose((lids[:, 0] + 2) % 3, old_edges0_all.T),
+        self.cells['edges'][adj_cells[:, 0]] = numpy.column_stack([
+            numpy.choose((lids[:, 1] + i0) % 3, old_edges1.T),
+            numpy.choose((lids[:, 0] + 2) % 3, old_edges0.T),
             edge_gids,
             ])
 
-        self.cells['edges'][adj_cells_all[:, 1]] = numpy.column_stack([
-            numpy.choose((lids[:, 1] + i1_all) % 3, old_edges1_all.T),
-            numpy.choose((lids[:, 0] + 1) % 3, old_edges0_all.T),
+        self.cells['edges'][adj_cells[:, 1]] = numpy.column_stack([
+            numpy.choose((lids[:, 1] + i1) % 3, old_edges1.T),
+            numpy.choose((lids[:, 0] + 1) % 3, old_edges0.T),
             edge_gids,
             ])
 
@@ -1268,7 +1247,7 @@ class MeshTri(_base_mesh):
 
         # [adj_cells[0]][(lid[0] + 2) % 3] can remain as it is.
 
-        gids = numpy.choose((lids[:, 0] + 1) % 3, old_edges0_all.T)
+        gids = numpy.choose((lids[:, 0] + 1) % 3, old_edges0.T)
         ks, idxs = self._edge_gid_to_edge_list[gids].T
 
         assert numpy.all(numpy.logical_or(ks == 1, ks == 2))
@@ -1277,48 +1256,46 @@ class MeshTri(_base_mesh):
         k1 = (ks == 1)
         idx1 = idxs[k1]
         assert numpy.all(
-            self._edges_cells[1][idx1][:, 0] == adj_cells_all[k1, 0]
+            self._edges_cells[1][idx1][:, 0] == adj_cells[k1, 0]
             )
-        self._edges_cells[1][idx1][:, 0] = adj_cells_all[k1, 1]
+        self._edges_cells[1][idx1][:, 0] = adj_cells[k1, 1]
 
         # Interior edges
         k2 = (ks == 2)
         idx2 = idxs[k2]
-        is_column0 = self._edges_cells[2][idx2][:, 0] == adj_cells_all[k2, 0]
-        is_column1 = self._edges_cells[2][idx2][:, 1] == adj_cells_all[k2, 0]
+        is_column0 = self._edges_cells[2][idx2][:, 0] == adj_cells[k2, 0]
+        is_column1 = self._edges_cells[2][idx2][:, 1] == adj_cells[k2, 0]
         assert numpy.all(numpy.logical_xor(is_column0, is_column1))
         #
         self._edges_cells[2][idx2[is_column0], 0] = \
-            adj_cells_all[k2, 1][is_column0]
+            adj_cells[k2, 1][is_column0]
         self._edges_cells[2][idx2[is_column1], 1] = \
-            adj_cells_all[k2, 1][is_column1]
+            adj_cells[k2, 1][is_column1]
 
-        i1_all = numpy.empty(equal_orientation.shape[0], dtype=int)
-        i1_all[equal_orientation] = 1
-        i1_all[~equal_orientation] = 2
-        gids = numpy.choose((lids[:, 1] + i1_all) % 3, old_edges1_all.T)
+        i1 = numpy.empty(equal_orientation.shape[0], dtype=int)
+        i1[equal_orientation] = 1
+        i1[~equal_orientation] = 2
+        gids = numpy.choose((lids[:, 1] + i1) % 3, old_edges1.T)
         ks, idxs = self._edge_gid_to_edge_list[gids].T
         # Outer boundary edge
         k1 = (ks == 1)
         idx1 = idxs[k1]
-        assert numpy.all(
-            self._edges_cells[1][idx1][:, 0] == adj_cells_all[k1, 1]
-            )
-        self._edges_cells[1][idx1][:, 0] = adj_cells_all[k1, 0]
+        assert numpy.all(self._edges_cells[1][idx1][:, 0] == adj_cells[k1, 1])
+        self._edges_cells[1][idx1][:, 0] = adj_cells[k1, 0]
 
         k2 = (ks == 2)
         idx2 = idxs[k2]
-        is_column0 = self._edges_cells[2][idx2][:, 0] == adj_cells_all[k2, 1]
-        is_column1 = self._edges_cells[2][idx2][:, 1] == adj_cells_all[k2, 1]
+        is_column0 = self._edges_cells[2][idx2][:, 0] == adj_cells[k2, 1]
+        is_column1 = self._edges_cells[2][idx2][:, 1] == adj_cells[k2, 1]
         assert numpy.all(numpy.logical_xor(is_column0, is_column1))
         #
         self._edges_cells[2][idx2[is_column0], 0] = \
-            adj_cells_all[k2, 0][is_column0]
+            adj_cells[k2, 0][is_column0]
         self._edges_cells[2][idx2[is_column1], 1] = \
-            adj_cells_all[k2, 0][is_column1]
+            adj_cells[k2, 0][is_column1]
 
         # Schedule the cell ids for updates.
-        update_cell_ids = numpy.unique(adj_cells_all.flat)
+        update_cell_ids = numpy.unique(adj_cells.flat)
         # Same for edge ids
         k, edge_gids = self._edge_gid_to_edge_list[
             self.cells['edges'][update_cell_ids].flat
@@ -1336,12 +1313,11 @@ class MeshTri(_base_mesh):
         self.idx_hierarchy[..., cell_ids] = nds[self.local_idx]
 
         # update self.half_edge_coords
-        # TODO report numpy bug for vectorization
-        for cell_id in cell_ids:
-            self.half_edge_coords[:, cell_id, :] = (
-                self.node_coords[self.idx_hierarchy[1, ..., cell_id]] -
-                self.node_coords[self.idx_hierarchy[0, ..., cell_id]]
-                )
+        self.half_edge_coords[:, cell_ids, :] = numpy.moveaxis(
+            self.node_coords[self.idx_hierarchy[1, ..., cell_ids]] -
+            self.node_coords[self.idx_hierarchy[0, ..., cell_ids]],
+            0, 1
+            )
 
         # update self.ei_dot_ej
         self.ei_dot_ej[:, cell_ids] = numpy.einsum(
@@ -1362,35 +1338,35 @@ class MeshTri(_base_mesh):
         if self._interior_ce_ratios is not None:
             self._interior_ce_ratios[interior_edge_ids] = 0.0
             edge_gids = self._edge_to_edge_gid[2][interior_edge_ids]
-            adj_cells_all = self._edges_cells[2][interior_edge_ids]
+            adj_cells = self._edges_cells[2][interior_edge_ids]
 
-            is0 = self.cells['edges'][adj_cells_all[:, 0]][:, 0] == edge_gids
-            is1 = self.cells['edges'][adj_cells_all[:, 0]][:, 1] == edge_gids
-            is2 = self.cells['edges'][adj_cells_all[:, 0]][:, 2] == edge_gids
+            is0 = self.cells['edges'][adj_cells[:, 0]][:, 0] == edge_gids
+            is1 = self.cells['edges'][adj_cells[:, 0]][:, 1] == edge_gids
+            is2 = self.cells['edges'][adj_cells[:, 0]][:, 2] == edge_gids
             assert numpy.all(
                 numpy.sum(numpy.column_stack([is0, is1, is2]), axis=1) == 1
                 )
             #
             self._interior_ce_ratios[interior_edge_ids[is0]] += \
-                self.ce_ratios_per_half_edge[0, adj_cells_all[is0, 0]]
+                self.ce_ratios_per_half_edge[0, adj_cells[is0, 0]]
             self._interior_ce_ratios[interior_edge_ids[is1]] += \
-                self.ce_ratios_per_half_edge[1, adj_cells_all[is1, 0]]
+                self.ce_ratios_per_half_edge[1, adj_cells[is1, 0]]
             self._interior_ce_ratios[interior_edge_ids[is2]] += \
-                self.ce_ratios_per_half_edge[2, adj_cells_all[is2, 0]]
+                self.ce_ratios_per_half_edge[2, adj_cells[is2, 0]]
 
-            is0 = self.cells['edges'][adj_cells_all[:, 1]][:, 0] == edge_gids
-            is1 = self.cells['edges'][adj_cells_all[:, 1]][:, 1] == edge_gids
-            is2 = self.cells['edges'][adj_cells_all[:, 1]][:, 2] == edge_gids
+            is0 = self.cells['edges'][adj_cells[:, 1]][:, 0] == edge_gids
+            is1 = self.cells['edges'][adj_cells[:, 1]][:, 1] == edge_gids
+            is2 = self.cells['edges'][adj_cells[:, 1]][:, 2] == edge_gids
             assert numpy.all(
                 numpy.sum(numpy.column_stack([is0, is1, is2]), axis=1) == 1
                 )
             #
             self._interior_ce_ratios[interior_edge_ids[is0]] += \
-                self.ce_ratios_per_half_edge[0, adj_cells_all[is0, 1]]
+                self.ce_ratios_per_half_edge[0, adj_cells[is0, 1]]
             self._interior_ce_ratios[interior_edge_ids[is1]] += \
-                self.ce_ratios_per_half_edge[1, adj_cells_all[is1, 1]]
+                self.ce_ratios_per_half_edge[1, adj_cells[is1, 1]]
             self._interior_ce_ratios[interior_edge_ids[is2]] += \
-                self.ce_ratios_per_half_edge[2, adj_cells_all[is2, 1]]
+                self.ce_ratios_per_half_edge[2, adj_cells[is2, 1]]
 
         if self._signed_tri_areas is not None:
             # One could make p contiguous by adding a copy(), but that's not
