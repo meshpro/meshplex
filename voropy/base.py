@@ -69,13 +69,13 @@ def compute_tri_areas_and_ce_ratios(ei_dot_ej):
     #     and the conversion formula to Cartesian coordinates, ones gets the
     #     expression
     #
-    #         ce0 = e1_dot_e2 * 0.5 / sqrt(alpha)
+    #         ce0 = <e1, e2> * 0.5 / sqrt(alpha)
     #
     #     with
     #
-    #         alpha = e1_dot_e2 * e0_dot_e1
-    #               + e2_dot_e0 * e1_dot_e2
-    #               + e0_dot_e1 * e2_dot_e0.
+    #         alpha = <e1, e2> * <e0, e1>
+    #               + <e2, e0> * <e1, e2>
+    #               + <e0, e1> * <e2, e0>.
     #
     # Note that some simplifications are achieved by virtue of
     #
@@ -93,7 +93,7 @@ def compute_tri_areas_and_ce_ratios(ei_dot_ej):
 
 
 def compute_triangle_circumcenters(X, ei_dot_ei, ei_dot_ej):
-    '''Computes the center of the circumcenter of all given triangles.
+    '''Computes the circumcenters of all given triangles.
     '''
     # The input argument are the dot products
     #

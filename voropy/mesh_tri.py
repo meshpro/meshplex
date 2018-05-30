@@ -386,6 +386,7 @@ class MeshTri(_base_mesh):
         self._edges_cells = None
         self._edge_gid_to_edge_list = None
         self._edge_to_edge_gid = None
+        self._centroids = None
 
         # compute data
         # Create the idx_hierarchy (nodes->edges->cells), i.e., the value of
@@ -505,6 +506,7 @@ class MeshTri(_base_mesh):
         self._cv_centroids = None
         self._surface_areas = None
         self._signed_tri_areas = None
+        self._centroids = None
         return
 
     def get_boundary_vertices(self):
@@ -578,6 +580,14 @@ class MeshTri(_base_mesh):
                 numpy.append(self._surface_areas[0], ffc_ids)
                 numpy.append(self._surface_areas[1], ffc_vals)
         return self._surface_areas
+
+    def get_centroids(self):
+        '''Computes the centroids (barycenters) of all triangles.
+        '''
+        if self._centroids is None:
+            self._centroids = \
+                numpy.sum(self.node_coords[self.cells['nodes']], axis=1) / 3.0
+        return self._centroids
 
     def get_control_volume_centroids(self):
         # This function is necessary, e.g., for Lloyd's
@@ -1380,6 +1390,9 @@ class MeshTri(_base_mesh):
                 + p[0][0] * (p[1][1] - p[1][2])
                 + p[0][1] * (p[1][2] - p[1][0])
                 ) / 2
+
+        # TODO update self._centroids
+        self._centroids = None
 
         # TODO update self._edge_lengths
         assert self._edge_lengths is None
