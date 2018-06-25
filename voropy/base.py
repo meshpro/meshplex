@@ -17,10 +17,10 @@ def _row_dot(a, b):
 
 
 def compute_tri_areas_and_ce_ratios(ei_dot_ej):
-    '''Given triangles (specified by their edges), this routine will return the
+    """Given triangles (specified by their edges), this routine will return the
     triangle areas and the signed distances of the triangle circumcenters to
     the edge midpoints.
-    '''
+    """
     # The input argument are the dot products
     #
     #   <e1, e2>
@@ -69,23 +69,23 @@ def compute_tri_areas_and_ce_ratios(ei_dot_ej):
     #     and the conversion formula to Cartesian coordinates, ones gets the
     #     expression
     #
-    #         ce0 = e1_dot_e2 * 0.5 / sqrt(alpha)
+    #         ce0 = <e1, e2> * 0.5 / sqrt(alpha)
     #
     #     with
     #
-    #         alpha = e1_dot_e2 * e0_dot_e1
-    #               + e2_dot_e0 * e1_dot_e2
-    #               + e0_dot_e1 * e2_dot_e0.
+    #         alpha = <e1, e2> * <e0, e1>
+    #               + <e2, e0> * <e1, e2>
+    #               + <e0, e1> * <e2, e0>.
     #
     # Note that some simplifications are achieved by virtue of
     #
     #   e1 + e2 + e3 = 0.
     #
     cell_volumes = 0.5 * numpy.sqrt(
-        + ei_dot_ej[2] * ei_dot_ej[0]
+        +ei_dot_ej[2] * ei_dot_ej[0]
         + ei_dot_ej[0] * ei_dot_ej[1]
         + ei_dot_ej[1] * ei_dot_ej[2]
-        )
+    )
 
     ce = -ei_dot_ej * 0.25 / cell_volumes[None]
 
@@ -93,8 +93,8 @@ def compute_tri_areas_and_ce_ratios(ei_dot_ej):
 
 
 def compute_triangle_circumcenters(X, ei_dot_ei, ei_dot_ej):
-    '''Computes the center of the circumcenter of all given triangles.
-    '''
+    """Computes the circumcenters of all given triangles.
+    """
     # The input argument are the dot products
     #
     #   <e1, e2>
@@ -145,42 +145,36 @@ def compute_triangle_circumcenters(X, ei_dot_ei, ei_dot_ej):
 
 
 class _base_mesh(object):
-
-    def __init__(self,
-                 nodes,
-                 cells_nodes):
+    def __init__(self, nodes, cells_nodes):
         self.node_coords = nodes
         self._edge_lengths = None
         return
 
-    def write(self,
-              filename,
-              point_data=None,
-              cell_data=None,
-              field_data=None):
+    def write(self, filename, point_data=None, cell_data=None, field_data=None):
         if self.node_coords.shape[1] == 2:
             n = len(self.node_coords)
             a = numpy.ascontiguousarray(
                 numpy.column_stack([self.node_coords, numpy.zeros(n)])
-                )
+            )
         else:
             a = self.node_coords
 
-        if self.cells['nodes'].shape[1] == 3:
-            cell_type = 'triangle'
+        if self.cells["nodes"].shape[1] == 3:
+            cell_type = "triangle"
         else:
-            assert self.cells['nodes'].shape[1] == 4, \
-                'Only triangles/tetrahedra supported'
-            cell_type = 'tetra'
+            assert (
+                self.cells["nodes"].shape[1] == 4
+            ), "Only triangles/tetrahedra supported"
+            cell_type = "tetra"
 
-        meshio.write(
+        meshio.write_points_cells(
             filename,
             a,
-            {cell_type: self.cells['nodes']},
+            {cell_type: self.cells["nodes"]},
             point_data=point_data,
             cell_data=cell_data,
-            field_data=field_data
-            )
+            field_data=field_data,
+        )
 
     def get_edge_lengths(self):
         if self._edge_lengths is None:
@@ -193,11 +187,11 @@ class _base_mesh(object):
             return numpy.s_[:]
         if subdomain not in self.subdomains:
             self._mark_vertices(subdomain)
-        return self.subdomains[subdomain]['vertices']
+        return self.subdomains[subdomain]["vertices"]
 
     def get_edge_mask(self, subdomain=None):
-        '''Get faces which are fully in subdomain.
-        '''
+        """Get faces which are fully in subdomain.
+        """
         if subdomain is None:
             # https://stackoverflow.com/a/42392791/353337
             return numpy.s_[:]
@@ -207,19 +201,19 @@ class _base_mesh(object):
 
         # A face is inside if all its edges are in.
         # An edge is inside if all its nodes are in.
-        is_in = self.subdomains[subdomain]['vertices'][self.idx_hierarchy]
+        is_in = self.subdomains[subdomain]["vertices"][self.idx_hierarchy]
         # Take `all()` over the first index
         is_inside = numpy.all(is_in, axis=tuple(range(1)))
 
         if subdomain.is_boundary_only:
             # Filter for boundary
-            is_inside = (is_inside & self.is_boundary_edge)
+            is_inside = is_inside & self.is_boundary_edge
 
         return is_inside
 
     def get_face_mask(self, subdomain):
-        '''Get faces which are fully in subdomain.
-        '''
+        """Get faces which are fully in subdomain.
+        """
         if subdomain is None:
             # https://stackoverflow.com/a/42392791/353337
             return numpy.s_[:]
@@ -229,14 +223,14 @@ class _base_mesh(object):
 
         # A face is inside if all its edges are in.
         # An edge is inside if all its nodes are in.
-        is_in = self.subdomains[subdomain]['vertices'][self.idx_hierarchy]
+        is_in = self.subdomains[subdomain]["vertices"][self.idx_hierarchy]
         # Take `all()` over all axes except the last two (face_ids, cell_ids).
         n = len(is_in.shape)
-        is_inside = numpy.all(is_in, axis=tuple(range(n-2)))
+        is_inside = numpy.all(is_in, axis=tuple(range(n - 2)))
 
         if subdomain.is_boundary_only:
             # Filter for boundary
-            is_inside = (is_inside & self.is_boundary_face)
+            is_inside = is_inside & self.is_boundary_face
 
         return is_inside
 
@@ -252,14 +246,14 @@ class _base_mesh(object):
         if subdomain not in self.subdomains:
             self._mark_vertices(subdomain)
 
-        is_in = self.subdomains[subdomain]['vertices'][self.idx_hierarchy]
+        is_in = self.subdomains[subdomain]["vertices"][self.idx_hierarchy]
         # Take `all()` over all axes except the last one (cell_ids).
         n = len(is_in.shape)
-        return numpy.all(is_in, axis=tuple(range(n-1)))
+        return numpy.all(is_in, axis=tuple(range(n - 1)))
 
     def _mark_vertices(self, subdomain):
-        '''Mark faces/edges which are fully in subdomain.
-        '''
+        """Mark faces/edges which are fully in subdomain.
+        """
         if subdomain is None:
             is_inside = numpy.ones(len(self.node_coords), dtype=bool)
         else:
@@ -268,9 +262,7 @@ class _base_mesh(object):
             if subdomain.is_boundary_only:
                 # Filter boundary
                 self.mark_boundary()
-                is_inside = (is_inside & self.is_boundary_node)
+                is_inside = is_inside & self.is_boundary_node
 
-        self.subdomains[subdomain] = {
-            'vertices': is_inside,
-            }
+        self.subdomains[subdomain] = {"vertices": is_inside}
         return
