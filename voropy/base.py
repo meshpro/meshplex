@@ -173,7 +173,7 @@ class _base_mesh(object):
                 'Only triangles/tetrahedra supported'
             cell_type = 'tetra'
 
-        meshio.write(
+        meshio.write_points_cells(
             filename,
             a,
             {cell_type: self.cells['nodes']},

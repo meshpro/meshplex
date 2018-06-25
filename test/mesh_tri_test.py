@@ -568,12 +568,12 @@ def test_signed_area():
         'pacman.msh',
         '2da8ff96537f844a95a83abb48471b6a'
         )
-    X, cells, _, _, _ = meshio.read(filename)
-    assert numpy.all(numpy.abs(X[:, 2]) < 1.0e-15)
-    X = X[:, :2]
+    mesh = meshio.read(filename)
+    assert numpy.all(numpy.abs(mesh.points[:, 2]) < 1.0e-15)
+    X = mesh.points[:, :2]
 
     mesh = voropy.mesh_tri.MeshTri(
-        X, cells['triangle'], flat_cell_correction=None
+        X, mesh.cells['triangle'], flat_cell_correction=None
         )
 
     vols = mesh.get_signed_tri_areas()
@@ -588,17 +588,17 @@ def test_update_node_coordinates():
         'pacman.msh',
         '2da8ff96537f844a95a83abb48471b6a'
         )
-    X, cells, _, _, _ = meshio.read(filename)
-    assert numpy.all(numpy.abs(X[:, 2]) < 1.0e-15)
+    mesh = meshio.read(filename)
+    assert numpy.all(numpy.abs(mesh.points[:, 2]) < 1.0e-15)
 
     mesh1 = voropy.mesh_tri.MeshTri(
-        X, cells['triangle'], flat_cell_correction=None
+        mesh.points, mesh.cells['triangle'], flat_cell_correction=None
         )
 
     numpy.random.seed(123)
-    X2 = X + 1.0e-2 * numpy.random.rand(*X.shape)
+    X2 = mesh.points + 1.0e-2 * numpy.random.rand(*mesh.points.shape)
     mesh2 = voropy.mesh_tri.MeshTri(
-        X2, cells['triangle'], flat_cell_correction=None
+        X2, mesh.cells['triangle'], flat_cell_correction=None
         )
 
     mesh1.update_node_coordinates(X2)
@@ -614,13 +614,13 @@ def test_flip_delaunay():
         'pacman.msh',
         '2da8ff96537f844a95a83abb48471b6a'
         )
-    X, cells, _, _, _ = meshio.read(filename)
+    mesh = meshio.read(filename)
 
     numpy.random.seed(123)
-    X[:, :2] += 5.0e-2 * numpy.random.rand(*X[:, :2].shape)
+    mesh.points[:, :2] += 5.0e-2 * numpy.random.rand(*mesh.points[:, :2].shape)
 
     mesh = voropy.mesh_tri.MeshTri(
-        X, cells['triangle'], flat_cell_correction=None
+        mesh.points, mesh.cells['triangle'], flat_cell_correction=None
         )
 
     assert mesh.num_delaunay_violations() == 16

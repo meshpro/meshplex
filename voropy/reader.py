@@ -33,19 +33,18 @@ def read(filename, flat_cell_correction=None):
     :returns field_data: Field data read from file.
     :type field_data: dict
     '''
-    points, cells, point_data, cell_data, field_data = \
-        meshio.read(filename)
+    mesh = meshio.read(filename)
 
     # make sure to include the used nodes only
-    if 'tetra' in cells:
-        points, cells = _sanitize(points, cells['tetra'])
+    if 'tetra' in mesh.cells:
+        points, cells = _sanitize(mesh.points, mesh.cells['tetra'])
         return voropy.mesh_tetra.MeshTetra(points, cells), \
-            point_data, cell_data, field_data
-    elif 'triangle' in cells:
-        points, cells = _sanitize(points, cells['triangle'])
+            mesh.point_data, mesh.cell_data, mesh.field_data
+    elif 'triangle' in mesh.cells:
+        points, cells = _sanitize(mesh.points, mesh.cells['triangle'])
         return voropy.mesh_tri.MeshTri(
             points, cells,
             flat_cell_correction=flat_cell_correction
-            ), point_data, cell_data, field_data
+            ), mesh.point_data, mesh.cell_data, mesh.field_data
     else:
         raise RuntimeError('Unknown mesh type.')

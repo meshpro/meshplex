@@ -33,7 +33,7 @@ setup(
     platforms='any',
     install_requires=[
         'fastfunc',
-        'meshio',
+        'meshio >=2.0.0, <3.0.0',
         'numpy >= 1.9',  # unique return_counts
         'scipy',
         ],
