@@ -432,7 +432,7 @@ class MeshTetra(_base_mesh):
         from matplotlib import pyplot as plt
 
         fig = plt.figure()
-        ax = fig.gca(projection="3d")
+        ax = fig.gca(projection=Axes3D.name)
         plt.axis("equal")
 
         if self._circumcenters is None:
@@ -478,7 +478,7 @@ class MeshTetra(_base_mesh):
             self.create_face_edge_relationships()
 
         fig = plt.figure()
-        ax = fig.gca(projection="3d")
+        ax = fig.gca(projection=Axes3D.name)
         plt.axis("equal")
 
         # find all faces with this edge
