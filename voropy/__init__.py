@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 #
+from __future__ import print_function
+
 from voropy.__about__ import __version__, __author__, __author_email__
 
 from . import mesh_line
@@ -19,3 +21,11 @@ __all__ = [
     "read",
     "get_signed_simplex_volumes",
 ]
+
+try:
+    import pipdate
+except ImportError:
+    pass
+else:
+    if pipdate.needs_checking(__name__):
+        print(pipdate.check(__name__, __version__), end="")

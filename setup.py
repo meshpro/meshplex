@@ -33,6 +33,7 @@ setup(
         "fastfunc",
         "meshio >=2.0.0, <3.0.0",
         "numpy >= 1.9",  # unique return_counts
+        "pipdate >=0.3.0, <0.4.0",
         "scipy",
     ],
     extras_require={"all": ["matplotlib"], "plot": ["matplotlib"]},
