@@ -13,8 +13,8 @@ jobs:
       - run: pip3 install -r test_requirements.txt
       - run: pip3 install .[all]
       # format and lint
-      - run: LC_ALL=C.UTF-8 black --check setup.py quadpy/ test/*.py
-      - run: flake8 setup.py quadpy/ test/*.py
+      - run: LC_ALL=C.UTF-8 black --check setup.py voropy/ test/*.py
+      - run: flake8 setup.py voropy/ test/*.py
       # The tests
       - run: cd test/ && MPLBACKEND=Agg pytest --cov voropy
       # submit to codecov
