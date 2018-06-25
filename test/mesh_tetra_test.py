@@ -8,21 +8,24 @@ import voropy
 from helpers import download_mesh, near_equal, run
 
 
-@pytest.mark.parametrize(
-    'a',  # edge length
-    [0.5, 1.0, 1.33]
-    )
+@pytest.mark.parametrize("a", [0.5, 1.0, 1.33])  # edge length
 def test_regular_tet0(a):
-    points = a * numpy.array([
-        [1.0, 0, 0],
-        [-0.5, +numpy.sqrt(3.0)/2.0, 0],
-        [-0.5, -numpy.sqrt(3.0)/2.0, 0],
-        [0.0, 0.0, numpy.sqrt(2.0)],
-        ]) / numpy.sqrt(3.0)
+    points = (
+        a
+        * numpy.array(
+            [
+                [1.0, 0, 0],
+                [-0.5, +numpy.sqrt(3.0) / 2.0, 0],
+                [-0.5, -numpy.sqrt(3.0) / 2.0, 0],
+                [0.0, 0.0, numpy.sqrt(2.0)],
+            ]
+        )
+        / numpy.sqrt(3.0)
+    )
     cells = numpy.array([[0, 1, 2, 3]])
     mesh = voropy.mesh_tetra.MeshTetra(points, cells.copy())
 
-    assert all((mesh.cells['nodes'] == cells).flat)
+    assert all((mesh.cells["nodes"] == cells).flat)
 
     mesh.show()
     mesh.show_edge(0)
@@ -34,15 +37,15 @@ def test_regular_tet0(a):
         [[3, 0], [0, 2], [2, 3]],
         [[0, 1], [1, 3], [3, 0]],
         [[1, 2], [2, 0], [0, 1]],
-        ]
+    ]
     assert (mesh.local_idx.T == ref_local_idx).all()
 
     ref_local_idx_inv = [
         [(0, 0, 2), (0, 1, 1), (0, 2, 3), (1, 0, 1), (1, 1, 3), (1, 2, 2)],
         [(0, 0, 3), (0, 1, 2), (0, 2, 0), (1, 0, 2), (1, 1, 0), (1, 2, 3)],
         [(0, 0, 0), (0, 1, 3), (0, 2, 1), (1, 0, 3), (1, 1, 1), (1, 2, 0)],
-        [(0, 0, 1), (0, 1, 0), (0, 2, 2), (1, 0, 0), (1, 1, 2), (1, 2, 1)]
-        ]
+        [(0, 0, 1), (0, 1, 0), (0, 2, 2), (1, 0, 0), (1, 1, 2), (1, 2, 1)],
+    ]
     assert mesh.local_idx_inv == ref_local_idx_inv
 
     tol = 1.0e-14
@@ -60,26 +63,24 @@ def test_regular_tet0(a):
     vals = mesh.ce_ratios
     assert near_equal(
         vals,
-        [[
-            [alpha, alpha, alpha],
-            [alpha, alpha, alpha],
-            [alpha, alpha, alpha],
-            [alpha, alpha, alpha],
-        ]],
-        tol
-        )
+        [
+            [
+                [alpha, alpha, alpha],
+                [alpha, alpha, alpha],
+                [alpha, alpha, alpha],
+                [alpha, alpha, alpha],
+            ]
+        ],
+        tol,
+    )
 
     # cell volumes
-    vol = a**3 / 6.0 / numpy.sqrt(2)
+    vol = a ** 3 / 6.0 / numpy.sqrt(2)
     assert near_equal(mesh.cell_volumes, [vol], tol)
 
     # control volumes
     val = vol / 4.0
-    assert near_equal(
-        mesh.get_control_volumes(),
-        [val, val, val, val],
-        tol
-        )
+    assert near_equal(mesh.get_control_volumes(), [val, val, val, val], tol)
 
     mesh.mark_boundary()
 
@@ -128,101 +129,84 @@ def test_regular_tet0(a):
 #     return
 
 
-@pytest.mark.parametrize(
-    'a',  # basis edge length
-    [0.5, 1.0, 2.0]
-    )
+@pytest.mark.parametrize("a", [0.5, 1.0, 2.0])  # basis edge length
 def test_regular_tet1_geometric(a):
-    points = numpy.array([
-        [0, 0, 0],
-        [a, 0, 0],
-        [0, a, 0],
-        [0, 0, a]
-        ])
+    points = numpy.array([[0, 0, 0], [a, 0, 0], [0, a, 0], [0, 0, a]])
     cells = numpy.array([[0, 1, 2, 3]])
     tol = 1.0e-14
 
-    mesh = voropy.mesh_tetra.MeshTetra(points, cells, mode='geometric')
+    mesh = voropy.mesh_tetra.MeshTetra(points, cells, mode="geometric")
 
-    assert all((mesh.cells['nodes'] == cells).flat)
+    assert all((mesh.cells["nodes"] == cells).flat)
 
-    assert near_equal(
-        mesh.get_cell_circumcenters(),
-        [a/2.0, a/2.0, a/2.0],
-        tol
-        )
+    assert near_equal(mesh.get_cell_circumcenters(), [a / 2.0, a / 2.0, a / 2.0], tol)
 
     # covolume/edge length ratios
-    ref = numpy.array([
-        [[-a/24.0], [a/8.0], [a/8.0], [0.0]],
-        [[-a/24.0], [a/8.0], [0.0], [a/8.0]],
-        [[-a/24.0], [0.0], [a/8.0], [a/8.0]],
-        ])
+    ref = numpy.array(
+        [
+            [[-a / 24.0], [a / 8.0], [a / 8.0], [0.0]],
+            [[-a / 24.0], [a / 8.0], [0.0], [a / 8.0]],
+            [[-a / 24.0], [0.0], [a / 8.0], [a / 8.0]],
+        ]
+    )
     assert near_equal(mesh.ce_ratios, ref, tol)
 
     # cell volumes
-    assert near_equal(mesh.cell_volumes, [a**3/6.0], tol)
+    assert near_equal(mesh.cell_volumes, [a ** 3 / 6.0], tol)
 
     # control volumes
     assert near_equal(
         mesh.get_control_volumes(),
-        [a**3/8.0, a**3/72.0, a**3/72.0, a**3/72.0],
-        tol
-        )
+        [a ** 3 / 8.0, a ** 3 / 72.0, a ** 3 / 72.0, a ** 3 / 72.0],
+        tol,
+    )
 
     assert near_equal(
         mesh.circumcenter_face_distances.T,
-        [-0.5/numpy.sqrt(3)*a, 0.5*a, 0.5*a, 0.5*a],
-        tol
-        )
+        [-0.5 / numpy.sqrt(3) * a, 0.5 * a, 0.5 * a, 0.5 * a],
+        tol,
+    )
 
     return
 
 
 def test_regular_tet1_geometric_order():
     a = 1.0
-    points = numpy.array([
-        [0, 0, a],
-        [0, 0, 0],
-        [a, 0, 0],
-        [0, a, 0],
-        ])
+    points = numpy.array([[0, 0, a], [0, 0, 0], [a, 0, 0], [0, a, 0]])
     cells = numpy.array([[0, 1, 2, 3]])
     tol = 1.0e-14
 
-    mesh = voropy.mesh_tetra.MeshTetra(points, cells, mode='geometric')
+    mesh = voropy.mesh_tetra.MeshTetra(points, cells, mode="geometric")
 
-    assert all((mesh.cells['nodes'] == [0, 1, 2, 3]).flat)
+    assert all((mesh.cells["nodes"] == [0, 1, 2, 3]).flat)
 
-    assert near_equal(
-        mesh.get_cell_circumcenters(),
-        [a/2.0, a/2.0, a/2.0],
-        tol
-        )
+    assert near_equal(mesh.get_cell_circumcenters(), [a / 2.0, a / 2.0, a / 2.0], tol)
 
     # covolume/edge length ratios
-    ref = numpy.array([
-        [[0.0], [-a/24.0], [a/8.0], [a/8.0]],
-        [[a/8.0], [-a/24.0], [a/8.0], [0.0]],
-        [[a/8.0], [-a/24.0], [0.0], [a/8.0]],
-        ])
+    ref = numpy.array(
+        [
+            [[0.0], [-a / 24.0], [a / 8.0], [a / 8.0]],
+            [[a / 8.0], [-a / 24.0], [a / 8.0], [0.0]],
+            [[a / 8.0], [-a / 24.0], [0.0], [a / 8.0]],
+        ]
+    )
     assert near_equal(mesh.ce_ratios, ref, tol)
 
     # cell volumes
-    assert near_equal(mesh.cell_volumes, [a**3/6.0], tol)
+    assert near_equal(mesh.cell_volumes, [a ** 3 / 6.0], tol)
 
     # control volumes
     assert near_equal(
         mesh.get_control_volumes(),
-        [a**3/72.0, a**3/8.0, a**3/72.0, a**3/72.0],
-        tol
-        )
+        [a ** 3 / 72.0, a ** 3 / 8.0, a ** 3 / 72.0, a ** 3 / 72.0],
+        tol,
+    )
 
     assert near_equal(
         mesh.circumcenter_face_distances.T,
-        [0.5*a, -0.5/numpy.sqrt(3)*a, 0.5*a, 0.5*a],
-        tol
-        )
+        [0.5 * a, -0.5 / numpy.sqrt(3) * a, 0.5 * a, 0.5 * a],
+        tol,
+    )
 
     return
 
@@ -311,66 +295,52 @@ def test_regular_tet1_geometric_order():
 
 
 def test_cubesmall():
-    points = numpy.array([
-        [-0.5, -0.5, -5.0],
-        [-0.5, +0.5, -5.0],
-        [+0.5, -0.5, -5.0],
-        [-0.5, -0.5, +5.0],
-        [+0.5, +0.5, -5.0],
-        [+0.5, +0.5, +5.0],
-        [-0.5, +0.5, +5.0],
-        [+0.5, -0.5, +5.0]
-        ])
-    cells = numpy.array([
-        [0, 1, 2, 3],
-        [1, 2, 4, 5],
-        [1, 2, 3, 5],
-        [1, 3, 5, 6],
-        [2, 3, 5, 7]
-        ])
+    points = numpy.array(
+        [
+            [-0.5, -0.5, -5.0],
+            [-0.5, +0.5, -5.0],
+            [+0.5, -0.5, -5.0],
+            [-0.5, -0.5, +5.0],
+            [+0.5, +0.5, -5.0],
+            [+0.5, +0.5, +5.0],
+            [-0.5, +0.5, +5.0],
+            [+0.5, -0.5, +5.0],
+        ]
+    )
+    cells = numpy.array(
+        [[0, 1, 2, 3], [1, 2, 4, 5], [1, 2, 3, 5], [1, 3, 5, 6], [2, 3, 5, 7]]
+    )
     mesh = voropy.mesh_tetra.MeshTetra(points, cells)
 
     tol = 1.0e-14
 
     cv = numpy.ones(8) * 1.25
-    cellvols = [5.0/3.0, 5.0/3.0, 10.0/3.0, 5.0/3.0, 5.0/3.0]
+    cellvols = [5.0 / 3.0, 5.0 / 3.0, 10.0 / 3.0, 5.0 / 3.0, 5.0 / 3.0]
 
     assert near_equal(mesh.get_control_volumes(), cv, tol)
     assert near_equal(mesh.cell_volumes, cellvols, tol)
 
-    cv_norms = [
-        numpy.linalg.norm(cv, ord=2),
-        numpy.linalg.norm(cv, ord=numpy.Inf),
-        ]
+    cv_norms = [numpy.linalg.norm(cv, ord=2), numpy.linalg.norm(cv, ord=numpy.Inf)]
     cellvol_norms = [
         numpy.linalg.norm(cellvols, ord=2),
         numpy.linalg.norm(cellvols, ord=numpy.Inf),
-        ]
-    run(
-        mesh,
-        10.0,
-        cv_norms,
-        [28.095851618771825, 1.25],
-        cellvol_norms,
-        )
+    ]
+    run(mesh, 10.0, cv_norms, [28.095851618771825, 1.25], cellvol_norms)
     return
 
 
 def test_arrow3d():
-    nodes = numpy.array([
-        [+0.0, +0.0, +0.0],
-        [+2.0, -1.0, +0.0],
-        [+2.0, +0.0, +0.0],
-        [+2.0, +1.0, +0.0],
-        [+0.5, +0.0, -0.9],
-        [+0.5, +0.0, +0.9]
-        ])
-    cellsNodes = numpy.array([
-        [1, 2, 4, 5],
-        [2, 3, 4, 5],
-        [0, 1, 4, 5],
-        [0, 3, 4, 5]
-        ])
+    nodes = numpy.array(
+        [
+            [+0.0, +0.0, +0.0],
+            [+2.0, -1.0, +0.0],
+            [+2.0, +0.0, +0.0],
+            [+2.0, +1.0, +0.0],
+            [+0.5, +0.0, -0.9],
+            [+0.5, +0.0, +0.9],
+        ]
+    )
+    cellsNodes = numpy.array([[1, 2, 4, 5], [2, 3, 4, 5], [0, 1, 4, 5], [0, 3, 4, 5]])
     mesh = voropy.mesh_tetra.MeshTetra(nodes, cellsNodes)
 
     run(
@@ -378,8 +348,8 @@ def test_arrow3d():
         1.2,
         [0.58276428453480922, 0.459],
         [0.40826901831985885, 0.2295],
-        [numpy.sqrt(0.45), 0.45]
-        )
+        [numpy.sqrt(0.45), 0.45],
+    )
 
     assert mesh.num_delaunay_violations() == 2
 
@@ -387,10 +357,7 @@ def test_arrow3d():
 
 
 def test_tetrahedron():
-    filename = download_mesh(
-        'tetrahedron.msh',
-        '27a5d7e102e6613a1e58629c252cb293'
-        )
+    filename = download_mesh("tetrahedron.msh", "27a5d7e102e6613a1e58629c252cb293")
     mesh, _, _, _ = voropy.read(filename)
 
     run(
@@ -398,8 +365,8 @@ def test_tetrahedron():
         64.1500299099584,
         [16.308991595922095, 7.0264329635751395],
         [6.898476155562041, 0.34400453539215237],
-        [11.571692332290635, 2.9699087921277054]
-        )
+        [11.571692332290635, 2.9699087921277054],
+    )
     return
 
 
@@ -447,17 +414,12 @@ def test_tetrahedron():
 
 
 def test_toy_geometric():
-    filename = download_mesh(
-        'toy.msh',
-        '1d125d3fa9f373823edd91ebae5f7a81'
-        )
+    filename = download_mesh("toy.msh", "1d125d3fa9f373823edd91ebae5f7a81")
     mesh, _, _, _ = voropy.read(filename)
 
     mesh = voropy.mesh_tetra.MeshTetra(
-        mesh.node_coords,
-        mesh.cells['nodes'],
-        mode='geometric'
-        )
+        mesh.node_coords, mesh.cells["nodes"], mode="geometric"
+    )
 
     run(
         mesh,
@@ -465,8 +427,8 @@ def test_toy_geometric():
         convol_norms=[0.20175742659663737, 0.0093164692200450819],
         ce_ratio_norms=[13.497977312281323, 0.42980191511570004],
         cellvol_norms=[0.091903119589148916, 0.0019959463063558944],
-        tol=1.0e-6
-        )
+        tol=1.0e-6,
+    )
 
     cc = mesh.get_cell_circumcenters()
     cc_norm_2 = fsum(cc.flat)
@@ -477,20 +439,14 @@ def test_toy_geometric():
 
 
 def test_signed_volume():
-    filename = download_mesh(
-        'toy.msh',
-        '1d125d3fa9f373823edd91ebae5f7a81'
-        )
+    filename = download_mesh("toy.msh", "1d125d3fa9f373823edd91ebae5f7a81")
     mesh, _, _, _ = voropy.read(filename, flat_cell_correction=None)
 
-    vols = \
-        voropy.get_signed_simplex_volumes(mesh.cells['nodes'], mesh.node_coords)
+    vols = voropy.get_signed_simplex_volumes(mesh.cells["nodes"], mesh.node_coords)
 
-    assert numpy.all(
-        abs(abs(vols) - mesh.cell_volumes) < 1.0e-12 * mesh.cell_volumes
-        )
+    assert numpy.all(abs(abs(vols) - mesh.cell_volumes) < 1.0e-12 * mesh.cell_volumes)
     return
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     test_signed_volume()

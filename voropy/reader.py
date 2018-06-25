@@ -1,18 +1,18 @@
 # -*- coding: utf-8 -*-
 #
-'''
+"""
 Module for reading unstructured grids (and related data) from various file
 formats.
 
 .. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
-'''
+"""
 import numpy
 
 import meshio
 import voropy
 
 
-__all__ = ['read']
+__all__ = ["read"]
 
 
 def _sanitize(points, cells):
@@ -23,7 +23,7 @@ def _sanitize(points, cells):
 
 
 def read(filename, flat_cell_correction=None):
-    '''Reads an unstructured mesh with added data.
+    """Reads an unstructured mesh with added data.
 
     :param filenames: The files to read from.
     :type filenames: str
@@ -32,19 +32,27 @@ def read(filename, flat_cell_correction=None):
     :type point_data: dict
     :returns field_data: Field data read from file.
     :type field_data: dict
-    '''
+    """
     mesh = meshio.read(filename)
 
     # make sure to include the used nodes only
-    if 'tetra' in mesh.cells:
-        points, cells = _sanitize(mesh.points, mesh.cells['tetra'])
-        return voropy.mesh_tetra.MeshTetra(points, cells), \
-            mesh.point_data, mesh.cell_data, mesh.field_data
-    elif 'triangle' in mesh.cells:
-        points, cells = _sanitize(mesh.points, mesh.cells['triangle'])
-        return voropy.mesh_tri.MeshTri(
-            points, cells,
-            flat_cell_correction=flat_cell_correction
-            ), mesh.point_data, mesh.cell_data, mesh.field_data
+    if "tetra" in mesh.cells:
+        points, cells = _sanitize(mesh.points, mesh.cells["tetra"])
+        return (
+            voropy.mesh_tetra.MeshTetra(points, cells),
+            mesh.point_data,
+            mesh.cell_data,
+            mesh.field_data,
+        )
+    elif "triangle" in mesh.cells:
+        points, cells = _sanitize(mesh.points, mesh.cells["triangle"])
+        return (
+            voropy.mesh_tri.MeshTri(
+                points, cells, flat_cell_correction=flat_cell_correction
+            ),
+            mesh.point_data,
+            mesh.cell_data,
+            mesh.field_data,
+        )
     else:
-        raise RuntimeError('Unknown mesh type.')
+        raise RuntimeError("Unknown mesh type.")

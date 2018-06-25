@@ -7,27 +7,24 @@ import voropy
 
 
 def test_io_2d():
-    vertices, cells = meshzoo.rectangle(
-        0.0, 1.0, 0.0, 1.0,
-        2, 2,
-        zigzag=True
-        )
+    vertices, cells = meshzoo.rectangle(0.0, 1.0, 0.0, 1.0, 2, 2, zigzag=True)
     mesh = voropy.mesh_tri.MeshTri(vertices, cells)
     # mesh, _, _, _ = voropy.read('pacman.vtu')
 
     assert mesh.num_delaunay_violations() == 0
 
-    mesh.show(show_axes=False, boundary_edge_color='g')
+    mesh.show(show_axes=False, boundary_edge_color="g")
     mesh.show_vertex(0)
 
-    _, fname = tempfile.mkstemp(suffix='.msh')
+    _, fname = tempfile.mkstemp(suffix=".msh")
     mesh.write(fname)
 
     mesh2, _, _, _ = voropy.read(fname)
 
-    for k in range(len(mesh.cells['nodes'])):
-        assert tuple(mesh.cells['nodes'][k]) == tuple(mesh2.cells['nodes'][k])
+    for k in range(len(mesh.cells["nodes"])):
+        assert tuple(mesh.cells["nodes"][k]) == tuple(mesh2.cells["nodes"][k])
     return
+
 
 # def test_io_3d(self):
 #     vertices, cells = meshzoo.cube(
