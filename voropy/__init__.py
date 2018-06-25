@@ -6,7 +6,7 @@ from . import mesh_line
 from . import mesh_tri
 from . import mesh_tetra
 
-# from .helpers import *
+from .helpers import get_signed_simplex_volumes
 from .reader import read
 
 __all__ = [
@@ -17,4 +17,5 @@ __all__ = [
     "mesh_tri",
     "mesh_tetra",
     "read",
+    "get_signed_simplex_volumes",
 ]
