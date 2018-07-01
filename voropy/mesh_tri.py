@@ -358,9 +358,6 @@ class MeshTri(_base_mesh):
             cells = numpy.sort(cells, axis=1)
             cells = cells[cells[:, 0].argsort()]
 
-        # For fastfunc
-        assert cells.dtype == numpy.int
-
         super(MeshTri, self).__init__(nodes, cells)
 
         # Assert that all vertices are used.
@@ -997,7 +994,6 @@ class MeshTri(_base_mesh):
         pos = ce_ratios >= 0
 
         is_pos = numpy.zeros(len(self.edges["nodes"]), dtype=bool)
-        print(self._edge_to_edge_gid)
         is_pos[self._edge_to_edge_gid[2][pos]] = True
 
         line_segments0 = LineCollection(e[is_pos], color=mesh_color)
