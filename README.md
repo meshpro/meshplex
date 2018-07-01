@@ -3,6 +3,7 @@
 [![CircleCI](https://img.shields.io/circleci/project/github/nschloe/voropy/master.svg)](https://circleci.com/gh/nschloe/voropy/tree/master)
 [![codecov](https://img.shields.io/codecov/c/github/nschloe/voropy.svg)](https://codecov.io/gh/nschloe/voropy)
 [![Codacy grade](https://img.shields.io/codacy/grade/b524f1e339244cf9a429784681a7f248.svg)](https://app.codacy.com/app/nschloe/voropy/dashboard)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 [![PyPi Version](https://img.shields.io/pypi/v/voropy.svg)](https://pypi.org/project/voropy)
 [![GitHub stars](https://img.shields.io/github/stars/nschloe/voropy.svg?logo=github&label=Stars)](https://github.com/nschloe/voropy)
 
