@@ -1191,25 +1191,18 @@ class MeshTri(_base_mesh):
         print(adj_cells)
 
         # Get the local ids of the edge in the two adjacent cells.
-        lids = numpy.empty((2, edge_gids.shape[0]), dtype=int)
-        ec = self.cells["edges"][adj_cells.T]
-
-        for k in [0, 1]:
-            # Get all edges of the adjacent cell
-            eck = ec[:, k]
-
-            # Find where the edge sits.
-            hits = numpy.array([
-                eck[i] == edge_gids[i]
-                for i in range(len(edge_gids))
-            ])
-            # Make sure that there is exactly one match per cell
-            assert numpy.all(numpy.sum(hits, axis=1) == 1)
-
-            # translate to lids
-            for i in range(3):
-                mask = hits[:, i]
-                lids[k, mask] = i
+        # Get all edges of the adjacent cells
+        ec = self.cells["edges"][adj_cells]
+        # Find where the edge sits.
+        hits = ec == edge_gids[None, :, None]
+        # Make sure that there is exactly one match per cell
+        assert numpy.all(numpy.sum(hits, axis=2) == 1)
+        # translate to lids
+        idx = numpy.empty(hits.shape, dtype=int)
+        idx[..., 0] = 0
+        idx[..., 1] = 1
+        idx[..., 2] = 2
+        lids = idx[hits].reshape((2, -1))
 
         #        3                   3
         #        A                   A
