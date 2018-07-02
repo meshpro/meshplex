@@ -752,6 +752,40 @@ class MeshTri(_base_mesh):
             )
         return self.cell_circumcenters
 
+    def get_inradius(self):
+        # See <http://mathworld.wolfram.com/Incircle.html>.
+        abc = numpy.sqrt(self.ei_dot_ei)
+        return 2 * self.cell_volumes / numpy.sum(abc, axis=0)
+
+    def get_circumradius(self):
+        # See <http://mathworld.wolfram.com/Incircle.html>.
+        a, b, c = numpy.sqrt(self.ei_dot_ei)
+        return (a * b * c) / numpy.sqrt(
+            (a + b + c) * (-a + b + c) * (a - b + c) * (a + b - c)
+        )
+
+    def get_quality(self):
+        # q = 2 * r_in / r_out
+        #   = (-a+b+c) * (+a-b+c) * (+a+b-c) / (a*b*c),
+        #
+        # where r_in is the incircle radius and r_out the circumcircle radius
+        # and a, b, c are the edge lengths.
+        a, b, c = numpy.sqrt(self.ei_dot_ei)
+        return (-a + b + c) * (a - b + c) * (a + b - c) / (a * b * c)
+
+    def get_angles(self):
+        # The cosines of the angles are the negative dot products of the normalized
+        # edges adjacent to the angle.
+        norms = numpy.sqrt(self.ei_dot_ei)
+        normalized_ei_dot_ej = numpy.array(
+            [
+                self.ei_dot_ej[0] / norms[1] / norms[2],
+                self.ei_dot_ej[1] / norms[2] / norms[0],
+                self.ei_dot_ej[2] / norms[0] / norms[1],
+            ]
+        )
+        return numpy.arccos(-normalized_ei_dot_ej)
+
     def _compute_integral_x(self, cell_ids):
         """Computes the integral of x,
 

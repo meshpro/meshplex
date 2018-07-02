@@ -511,5 +511,103 @@ def test_flip_delaunay():
     return
 
 
+def test_inradius():
+    # 3-4-5 triangle
+    points = numpy.array([[0.0, 0.0, 0.0], [3.0, 0.0, 0.0], [0.0, 4.0, 0.0]])
+    cells = numpy.array([[0, 1, 2]])
+    mesh = voropy.mesh_tri.MeshTri(points, cells)
+
+    tol = 1.0e-15
+
+    ic = mesh.get_inradius()
+    assert near_equal(ic, [1.0], tol)
+
+    # 30-60-90 triangle
+    a = 1.0
+    points = numpy.array(
+        [[0.0, 0.0, 0.0], [a / 2, 0.0, 0.0], [0.0, a / 2 * numpy.sqrt(3.0), 0.0]]
+    )
+    cells = numpy.array([[0, 1, 2]])
+    mesh = voropy.mesh_tri.MeshTri(points, cells)
+
+    ic = mesh.get_inradius()
+    assert near_equal(ic, [a / 4 * (numpy.sqrt(3) - 1)], tol)
+    return
+
+
+def test_circumradius():
+    # 3-4-5 triangle
+    points = numpy.array([[0.0, 0.0, 0.0], [3.0, 0.0, 0.0], [0.0, 4.0, 0.0]])
+    cells = numpy.array([[0, 1, 2]])
+    mesh = voropy.mesh_tri.MeshTri(points, cells)
+
+    tol = 1.0e-15
+
+    ic = mesh.get_circumradius()
+    assert near_equal(ic, [2.5], tol)
+
+    # 30-60-90 triangle
+    a = 1.0
+    points = numpy.array(
+        [[0.0, 0.0, 0.0], [a / 2, 0.0, 0.0], [0.0, a / 2 * numpy.sqrt(3.0), 0.0]]
+    )
+    cells = numpy.array([[0, 1, 2]])
+    mesh = voropy.mesh_tri.MeshTri(points, cells)
+
+    ic = mesh.get_circumradius()
+    assert near_equal(ic, [a / 2], tol)
+    return
+
+
+def test_quality():
+    # 3-4-5 triangle
+    points = numpy.array([[0.0, 0.0, 0.0], [3.0, 0.0, 0.0], [0.0, 4.0, 0.0]])
+    cells = numpy.array([[0, 1, 2]])
+    mesh = voropy.mesh_tri.MeshTri(points, cells)
+
+    tol = 1.0e-15
+
+    ic = mesh.get_quality()
+    assert near_equal(ic, 2 * mesh.get_inradius() / mesh.get_circumradius(), tol)
+
+    # 30-60-90 triangle
+    a = 1.0
+    points = numpy.array(
+        [[0.0, 0.0, 0.0], [a / 2, 0.0, 0.0], [0.0, a / 2 * numpy.sqrt(3.0), 0.0]]
+    )
+    cells = numpy.array([[0, 1, 2]])
+    mesh = voropy.mesh_tri.MeshTri(points, cells)
+
+    ic = mesh.get_quality()
+    assert near_equal(ic, 2 * mesh.get_inradius() / mesh.get_circumradius(), tol)
+    return
+
+
+def test_angles():
+    # 3-4-5 triangle
+    points = numpy.array([[0.0, 0.0, 0.0], [3.0, 0.0, 0.0], [0.0, 4.0, 0.0]])
+    cells = numpy.array([[0, 1, 2]])
+    mesh = voropy.mesh_tri.MeshTri(points, cells)
+
+    tol = 1.0e-14
+
+    ic = mesh.get_angles()
+    assert near_equal(
+        ic, [[numpy.pi / 2], [numpy.arcsin(4.0 / 5.0)], [numpy.arcsin(3.0 / 5.0)]], tol
+    )
+
+    # 30-60-90 triangle
+    a = 1.0
+    points = numpy.array(
+        [[0.0, 0.0, 0.0], [a / 2, 0.0, 0.0], [0.0, a / 2 * numpy.sqrt(3.0), 0.0]]
+    )
+    cells = numpy.array([[0, 1, 2]])
+    mesh = voropy.mesh_tri.MeshTri(points, cells)
+
+    ic = mesh.get_angles() / numpy.pi * 180
+    assert near_equal(ic, [[90], [60], [30]], tol)
+    return
+
+
 if __name__ == "__main__":
     test_signed_area()
