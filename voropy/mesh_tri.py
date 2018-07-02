@@ -757,6 +757,13 @@ class MeshTri(_base_mesh):
         abc = numpy.sqrt(self.ei_dot_ei)
         return 2 * self.cell_volumes / numpy.sum(abc, axis=0)
 
+    def get_circumradius(self):
+        # See <http://mathworld.wolfram.com/Incircle.html>.
+        a, b, c = numpy.sqrt(self.ei_dot_ei)
+        return (a * b * c) / numpy.sqrt(
+            (a + b + c) * (-a + b + c) * (a - b + c) * (a + b - c)
+        )
+
     def _compute_integral_x(self, cell_ids):
         """Computes the integral of x,
 
