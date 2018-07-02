@@ -1184,14 +1184,15 @@ class MeshTri(_base_mesh):
         )
         assert numpy.all(counts < 2), "Can flip at most one edge per cell."
 
-        adj_cells = interior_edges_cells[is_flip_interior_edge]
+        adj_cells = interior_edges_cells[is_flip_interior_edge].T
+
         edge_gids = self._edge_to_edge_gid[2][is_flip_interior_edge]
         print(edge_gids)
         print(adj_cells)
 
         # Get the local ids of the edge in the two adjacent cells.
         lids = numpy.empty((edge_gids.shape[0], 2), dtype=int)
-        ec = self.cells["edges"][adj_cells]
+        ec = self.cells["edges"][adj_cells.T]
 
         for k in [0, 1]:
             # Get all edges of the adjacent cell
@@ -1226,10 +1227,10 @@ class MeshTri(_base_mesh):
         #
         verts = numpy.array(
             [
-                self.cells["nodes"][adj_cells[:, 0], lids[:, 0]],
-                self.cells["nodes"][adj_cells[:, 1], lids[:, 1]],
-                self.cells["nodes"][adj_cells[:, 0], (lids[:, 0] + 1) % 3],
-                self.cells["nodes"][adj_cells[:, 0], (lids[:, 0] + 2) % 3],
+                self.cells["nodes"][adj_cells[0], lids[:, 0]],
+                self.cells["nodes"][adj_cells[1], lids[:, 1]],
+                self.cells["nodes"][adj_cells[0], (lids[:, 0] + 1) % 3],
+                self.cells["nodes"][adj_cells[0], (lids[:, 0] + 2) % 3],
             ]
         )
 
@@ -1240,13 +1241,13 @@ class MeshTri(_base_mesh):
         # Do the neighboring cells have equal orientation (both node sets
         # clockwise/counterclockwise?
         equal_orientation = (
-            self.cells["nodes"][adj_cells[:, 0], (lids[:, 0] + 1) % 3]
-            == self.cells["nodes"][adj_cells[:, 1], (lids[:, 1] + 2) % 3]
+            self.cells["nodes"][adj_cells[0], (lids[:, 0] + 1) % 3]
+            == self.cells["nodes"][adj_cells[1], (lids[:, 1] + 2) % 3]
         )
 
         # Set new cells
-        self.cells["nodes"][adj_cells[:, 0]] = verts[[0, 1, 2]].T
-        self.cells["nodes"][adj_cells[:, 1]] = verts[[0, 1, 3]].T
+        self.cells["nodes"][adj_cells[0]] = verts[[0, 1, 2]].T
+        self.cells["nodes"][adj_cells[1]] = verts[[0, 1, 3]].T
 
         # Set up new cells->edges relationships.
         i0 = numpy.empty(equal_orientation.shape[0], dtype=int)
@@ -1256,10 +1257,10 @@ class MeshTri(_base_mesh):
         i0[~equal_orientation] = 2
         i1[~equal_orientation] = 1
 
-        old_edges0 = self.cells["edges"][adj_cells[:, 0]].copy()
-        old_edges1 = self.cells["edges"][adj_cells[:, 1]].copy()
+        old_edges0 = self.cells["edges"][adj_cells[0]].copy()
+        old_edges1 = self.cells["edges"][adj_cells[1]].copy()
 
-        self.cells["edges"][adj_cells[:, 0]] = numpy.column_stack(
+        self.cells["edges"][adj_cells[0]] = numpy.column_stack(
             [
                 numpy.choose((lids[:, 1] + i0) % 3, old_edges1.T),
                 numpy.choose((lids[:, 0] + 2) % 3, old_edges0.T),
@@ -1267,7 +1268,7 @@ class MeshTri(_base_mesh):
             ]
         )
 
-        self.cells["edges"][adj_cells[:, 1]] = numpy.column_stack(
+        self.cells["edges"][adj_cells[1]] = numpy.column_stack(
             [
                 numpy.choose((lids[:, 1] + i1) % 3, old_edges1.T),
                 numpy.choose((lids[:, 0] + 1) % 3, old_edges0.T),
@@ -1278,7 +1279,7 @@ class MeshTri(_base_mesh):
         # Update the edge->cells relationship. It doesn't change for the
         # edge that was flipped, but for some of the other edges.
 
-        # [adj_cells[0]][(lid[0] + 2) % 3] can remain as it is.
+        # [adj_cells[:, 0]][(lid[0] + 2) % 3] can remain as it is.
 
         gids = numpy.choose((lids[:, 0] + 1) % 3, old_edges0.T)
         print(gids)
@@ -1292,18 +1293,18 @@ class MeshTri(_base_mesh):
         # outer boundary edges
         idx1 = idxs[k1]
         print(self._edges_cells[1][idx1][:, 0])
-        print(adj_cells[k1, 0])
-        assert numpy.all(self._edges_cells[1][idx1][:, 0] == adj_cells[k1, 0])
-        self._edges_cells[1][idx1][:, 0] = adj_cells[k1, 1]
+        print(adj_cells[0, k1])
+        assert numpy.all(self._edges_cells[1][idx1][:, 0] == adj_cells[0, k1])
+        self._edges_cells[1][idx1][:, 0] = adj_cells[1, k1]
 
         # interior edges
         idx2 = idxs[k2]
-        is_column0 = self._edges_cells[2][idx2][:, 0] == adj_cells[k2, 0]
-        is_column1 = self._edges_cells[2][idx2][:, 1] == adj_cells[k2, 0]
+        is_column0 = self._edges_cells[2][idx2][:, 0] == adj_cells[0, k2]
+        is_column1 = self._edges_cells[2][idx2][:, 1] == adj_cells[0, k2]
         assert numpy.all(numpy.logical_xor(is_column0, is_column1))
         #
-        self._edges_cells[2][idx2[is_column0], 0] = adj_cells[k2, 1][is_column0]
-        self._edges_cells[2][idx2[is_column1], 1] = adj_cells[k2, 1][is_column1]
+        self._edges_cells[2][idx2[is_column0], 0] = adj_cells[1, k2][is_column0]
+        self._edges_cells[2][idx2[is_column1], 1] = adj_cells[1, k2][is_column1]
 
         i1 = numpy.empty(equal_orientation.shape[0], dtype=int)
         i1[equal_orientation] = 1
@@ -1313,20 +1314,20 @@ class MeshTri(_base_mesh):
         # Outer boundary edge
         k1 = ks == 1
         idx1 = idxs[k1]
-        assert numpy.all(self._edges_cells[1][idx1][:, 0] == adj_cells[k1, 1])
-        self._edges_cells[1][idx1][:, 0] = adj_cells[k1, 0]
+        assert numpy.all(self._edges_cells[1][idx1][:, 0] == adj_cells[1, k1])
+        self._edges_cells[1][idx1][:, 0] = adj_cells[0, k1]
 
         k2 = ks == 2
         idx2 = idxs[k2]
-        is_column0 = self._edges_cells[2][idx2][:, 0] == adj_cells[k2, 1]
-        is_column1 = self._edges_cells[2][idx2][:, 1] == adj_cells[k2, 1]
+        is_column0 = self._edges_cells[2][idx2][:, 0] == adj_cells[1, k2]
+        is_column1 = self._edges_cells[2][idx2][:, 1] == adj_cells[1, k2]
         assert numpy.all(numpy.logical_xor(is_column0, is_column1))
         #
-        self._edges_cells[2][idx2[is_column0], 0] = adj_cells[k2, 0][is_column0]
-        self._edges_cells[2][idx2[is_column1], 1] = adj_cells[k2, 0][is_column1]
+        self._edges_cells[2][idx2[is_column0], 0] = adj_cells[0, k2][is_column0]
+        self._edges_cells[2][idx2[is_column1], 1] = adj_cells[0, k2][is_column1]
 
         # Schedule the cell ids for updates.
-        update_cell_ids = numpy.unique(adj_cells.flat)
+        update_cell_ids = numpy.unique(adj_cells.T.flat)
         # Same for edge ids
         k, edge_gids = self._edge_gid_to_edge_list[
             self.cells["edges"][update_cell_ids].flat
