@@ -1167,46 +1167,49 @@ class MeshTri(_base_mesh):
     def _flip_edges(self, is_flip_interior_edge):
         """Flips the given edges.
         """
+        print("\nflip")
         assert self.fcc_type != "full"
+
+        print(sum(is_flip_interior_edge))
 
         if self._edges_cells is None:
             self._compute_edges_cells()
 
         interior_edges_cells = self._edges_cells[2]
 
-        # Can only handle the case where each cell has at most one edge to
-        # flip.  Use `unique` here as there are usually only very edges in the
-        # list.
+        # For now, can only handle the case where each cell has at most one edge to
+        # flip. Use `unique` here as there are usually only very few edges in the list.
         _, counts = numpy.unique(
             interior_edges_cells[is_flip_interior_edge], return_counts=True
         )
         assert numpy.all(counts < 2), "Can flip at most one edge per cell."
 
-        interior_edge_ids = numpy.where(is_flip_interior_edge)[0]
-        adj_cells = interior_edges_cells[interior_edge_ids]
-        edge_gids = self._edge_to_edge_gid[2][interior_edge_ids]
+        adj_cells = interior_edges_cells[is_flip_interior_edge]
+        edge_gids = self._edge_to_edge_gid[2][is_flip_interior_edge]
+        print(edge_gids)
+        print(adj_cells)
 
-        ec0 = self.cells["edges"][adj_cells[:, 0]]
-        lid0 = numpy.empty(edge_gids.shape[0], dtype=int)
-        hit = numpy.zeros(edge_gids.shape[0], dtype=bool)
-        for i in range(3):
-            mask = ec0[:, i] == edge_gids
-            lid0[mask] = i
-            assert numpy.all(~hit[mask])
-            hit[mask] = True
-        assert numpy.all(hit)
+        # Get the local ids of the edge in the two adjacent cells.
+        lids = numpy.empty((edge_gids.shape[0], 2), dtype=int)
+        ec = self.cells["edges"][adj_cells]
 
-        ec1 = self.cells["edges"][adj_cells[:, 1]]
-        lid1 = numpy.empty(edge_gids.shape[0], dtype=int)
-        hit = numpy.zeros(edge_gids.shape[0], dtype=bool)
-        for i in range(3):
-            mask = ec1[:, i] == edge_gids
-            lid1[mask] = i
-            assert numpy.all(~hit[mask])
-            hit[mask] = True
-        assert numpy.all(hit)
+        for k in [0, 1]:
+            # Get all edges of the adjacent cell
+            eck = ec[:, k]
 
-        lids = numpy.column_stack([lid0, lid1])
+            # Find where the edge sits.
+            hits = numpy.array([
+                eck[i] == edge_gids[i]
+                for i in range(len(edge_gids))
+            ])
+            # Make sure that there is exactly one match per cell
+            assert numpy.all(numpy.sum(hits, axis=1) == 1)
+
+            # translate to lids
+            for i in range(3):
+                mask = hits[:, i]
+                lids[mask, k] = i
+
 
         #        3                   3
         #        A                   A
@@ -1278,18 +1281,22 @@ class MeshTri(_base_mesh):
         # [adj_cells[0]][(lid[0] + 2) % 3] can remain as it is.
 
         gids = numpy.choose((lids[:, 0] + 1) % 3, old_edges0.T)
-        ks, idxs = self._edge_gid_to_edge_list[gids].T
+        print(gids)
+        num_adj_cells, idxs = self._edge_gid_to_edge_list[gids].T
+        print(num_adj_cells)
 
-        assert numpy.all(numpy.logical_or(ks == 1, ks == 2))
+        k1 = num_adj_cells == 1
+        k2 = num_adj_cells == 2
+        assert numpy.all(numpy.logical_or(k1, k2))
 
-        # Outer boundary edge
-        k1 = ks == 1
+        # outer boundary edges
         idx1 = idxs[k1]
+        print(self._edges_cells[1][idx1][:, 0])
+        print(adj_cells[k1, 0])
         assert numpy.all(self._edges_cells[1][idx1][:, 0] == adj_cells[k1, 0])
         self._edges_cells[1][idx1][:, 0] = adj_cells[k1, 1]
 
-        # Interior edges
-        k2 = ks == 2
+        # interior edges
         idx2 = idxs[k2]
         is_column0 = self._edges_cells[2][idx2][:, 0] == adj_cells[k2, 0]
         is_column1 = self._edges_cells[2][idx2][:, 1] == adj_cells[k2, 0]
