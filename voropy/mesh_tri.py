@@ -764,6 +764,15 @@ class MeshTri(_base_mesh):
             (a + b + c) * (-a + b + c) * (a - b + c) * (a + b - c)
         )
 
+    def get_quality(self):
+        # q = 2 * r_in / r_out
+        #   = (-a+b+c) * (+a-b+c) * (+a+b-c) / (a*b*c),
+        #
+        # where r_in is the incircle radius and r_out the circumcircle radius
+        # and a, b, c are the edge lengths.
+        a, b, c = numpy.sqrt(self.ei_dot_ei)
+        return (-a + b + c) * (a - b + c) * (a + b - c) / (a * b * c)
+
     def _compute_integral_x(self, cell_ids):
         """Computes the integral of x,
 
