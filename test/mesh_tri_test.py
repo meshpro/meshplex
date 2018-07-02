@@ -511,6 +511,21 @@ def test_flip_delaunay():
     return
 
 
+def test_flip_delaunay_near_boundary():
+    points = numpy.array(
+        [[0.0, +0.0, 0.0], [0.5, -0.1, 0.0], [1.0, +0.0, 0.0], [0.5, +0.1, 0.0]]
+    )
+    cells = numpy.array([[0, 1, 2], [0, 2, 3]])
+    mesh = voropy.mesh_tri.MeshTri(points, cells, flat_cell_correction=None)
+
+    assert mesh.num_delaunay_violations() == 1
+
+    mesh.flip_until_delaunay()
+    assert mesh.num_delaunay_violations() == 0
+    assert numpy.array_equal(mesh.cells["nodes"], [[1, 3, 2], [1, 3, 0]])
+    return
+
+
 def test_inradius():
     # 3-4-5 triangle
     points = numpy.array([[0.0, 0.0, 0.0], [3.0, 0.0, 0.0], [0.0, 4.0, 0.0]])
