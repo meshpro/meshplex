@@ -773,6 +773,19 @@ class MeshTri(_base_mesh):
         a, b, c = numpy.sqrt(self.ei_dot_ei)
         return (-a + b + c) * (a - b + c) * (a + b - c) / (a * b * c)
 
+    def get_angles(self):
+        # The cosines of the angles are the negative dot products of the normalized
+        # edges adjacent to the angle.
+        norms = numpy.sqrt(self.ei_dot_ei)
+        normalized_ei_dot_ej = numpy.array(
+            [
+                self.ei_dot_ej[0] / norms[1] / norms[2],
+                self.ei_dot_ej[1] / norms[2] / norms[0],
+                self.ei_dot_ej[2] / norms[0] / norms[1],
+            ]
+        )
+        return numpy.arccos(-normalized_ei_dot_ej)
+
     def _compute_integral_x(self, cell_ids):
         """Computes the integral of x,
 
