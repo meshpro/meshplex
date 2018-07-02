@@ -1191,7 +1191,7 @@ class MeshTri(_base_mesh):
         print(adj_cells)
 
         # Get the local ids of the edge in the two adjacent cells.
-        lids = numpy.empty((edge_gids.shape[0], 2), dtype=int)
+        lids = numpy.empty((2, edge_gids.shape[0]), dtype=int)
         ec = self.cells["edges"][adj_cells.T]
 
         for k in [0, 1]:
@@ -1209,8 +1209,7 @@ class MeshTri(_base_mesh):
             # translate to lids
             for i in range(3):
                 mask = hits[:, i]
-                lids[mask, k] = i
-
+                lids[k, mask] = i
 
         #        3                   3
         #        A                   A
@@ -1227,10 +1226,10 @@ class MeshTri(_base_mesh):
         #
         verts = numpy.array(
             [
-                self.cells["nodes"][adj_cells[0], lids[:, 0]],
-                self.cells["nodes"][adj_cells[1], lids[:, 1]],
-                self.cells["nodes"][adj_cells[0], (lids[:, 0] + 1) % 3],
-                self.cells["nodes"][adj_cells[0], (lids[:, 0] + 2) % 3],
+                self.cells["nodes"][adj_cells[0], lids[0]],
+                self.cells["nodes"][adj_cells[1], lids[1]],
+                self.cells["nodes"][adj_cells[0], (lids[0] + 1) % 3],
+                self.cells["nodes"][adj_cells[0], (lids[0] + 2) % 3],
             ]
         )
 
@@ -1241,8 +1240,8 @@ class MeshTri(_base_mesh):
         # Do the neighboring cells have equal orientation (both node sets
         # clockwise/counterclockwise?
         equal_orientation = (
-            self.cells["nodes"][adj_cells[0], (lids[:, 0] + 1) % 3]
-            == self.cells["nodes"][adj_cells[1], (lids[:, 1] + 2) % 3]
+            self.cells["nodes"][adj_cells[0], (lids[0] + 1) % 3]
+            == self.cells["nodes"][adj_cells[1], (lids[1] + 2) % 3]
         )
 
         # Set new cells
@@ -1262,16 +1261,16 @@ class MeshTri(_base_mesh):
 
         self.cells["edges"][adj_cells[0]] = numpy.column_stack(
             [
-                numpy.choose((lids[:, 1] + i0) % 3, old_edges1.T),
-                numpy.choose((lids[:, 0] + 2) % 3, old_edges0.T),
+                numpy.choose((lids[1] + i0) % 3, old_edges1.T),
+                numpy.choose((lids[0] + 2) % 3, old_edges0.T),
                 edge_gids,
             ]
         )
 
         self.cells["edges"][adj_cells[1]] = numpy.column_stack(
             [
-                numpy.choose((lids[:, 1] + i1) % 3, old_edges1.T),
-                numpy.choose((lids[:, 0] + 1) % 3, old_edges0.T),
+                numpy.choose((lids[1] + i1) % 3, old_edges1.T),
+                numpy.choose((lids[0] + 1) % 3, old_edges0.T),
                 edge_gids,
             ]
         )
@@ -1281,7 +1280,7 @@ class MeshTri(_base_mesh):
 
         # [adj_cells[:, 0]][(lid[0] + 2) % 3] can remain as it is.
 
-        gids = numpy.choose((lids[:, 0] + 1) % 3, old_edges0.T)
+        gids = numpy.choose((lids[0] + 1) % 3, old_edges0.T)
         print(gids)
         num_adj_cells, idxs = self._edge_gid_to_edge_list[gids].T
         print(num_adj_cells)
@@ -1309,7 +1308,7 @@ class MeshTri(_base_mesh):
         i1 = numpy.empty(equal_orientation.shape[0], dtype=int)
         i1[equal_orientation] = 1
         i1[~equal_orientation] = 2
-        gids = numpy.choose((lids[:, 1] + i1) % 3, old_edges1.T)
+        gids = numpy.choose((lids[1] + i1) % 3, old_edges1.T)
         ks, idxs = self._edge_gid_to_edge_list[gids].T
         # Outer boundary edge
         k1 = ks == 1
