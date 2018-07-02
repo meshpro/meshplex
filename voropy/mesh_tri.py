@@ -1230,10 +1230,6 @@ class MeshTri(_base_mesh):
         # No need to touch self.is_boundary_edge,
         # self.is_boundary_edge_individual; we're only flipping interior edges.
 
-        # Set new cells
-        self.cells["nodes"][adj_cells[0]] = verts[[0, 1, 2]].T
-        self.cells["nodes"][adj_cells[1]] = verts[[0, 1, 3]].T
-
         # Do the neighboring cells have equal orientation (both node sets
         # clockwise/counterclockwise?
         equal_orientation = (
@@ -1241,7 +1237,16 @@ class MeshTri(_base_mesh):
             == self.cells["nodes"][adj_cells[1], (lids[1] + 2) % 3]
         )
 
+        # Set new cells
+        self.cells["nodes"][adj_cells[0]] = verts[[0, 1, 2]].T
+        self.cells["nodes"][adj_cells[1]] = verts[[0, 1, 3]].T
+
         # Set up new cells->edges relationships.
+        previous_edges = self.cells["edges"][adj_cells].copy()
+
+        print("previous_edges[0]", previous_edges[0])
+        print("previous_edges[1]", previous_edges[1])
+
         i0 = numpy.empty(equal_orientation.shape[0], dtype=int)
         i0[equal_orientation] = 1
         i0[~equal_orientation] = 2
@@ -1249,65 +1254,58 @@ class MeshTri(_base_mesh):
         i1[equal_orientation] = 2
         i1[~equal_orientation] = 1
 
-        old_edges = numpy.moveaxis(self.cells["edges"][adj_cells].copy(), 1, 2)
-
         self.cells["edges"][adj_cells[0]] = numpy.column_stack(
             [
-                numpy.choose((lids[1] + i0) % 3, old_edges[1]),
-                numpy.choose((lids[0] + 2) % 3, old_edges[0]),
+                numpy.choose((lids[1] + i0) % 3, previous_edges[1].T),
+                numpy.choose((lids[0] + 2) % 3, previous_edges[0].T),
                 edge_gids,
             ]
         )
-
         self.cells["edges"][adj_cells[1]] = numpy.column_stack(
             [
-                numpy.choose((lids[1] + i1) % 3, old_edges[1]),
-                numpy.choose((lids[0] + 1) % 3, old_edges[0]),
+                numpy.choose((lids[1] + i1) % 3, previous_edges[1].T),
+                numpy.choose((lids[0] + 1) % 3, previous_edges[0].T),
                 edge_gids,
             ]
         )
 
         # Update the edge->cells relationship. It doesn't change for the
         # edge that was flipped, but for two of the other edges.
-
-        # [adj_cells[:, 0]][(lid[0] + 2) % 3] can remain as it is.
-
-        print(((lids[0] + 1) % 3).shape)
-        print((lids[0] + 1) % 3)
-        print(old_edges[0].shape)
-        print(old_edges[0])
-
+        print("(lids[1] + i0) % 3", ((lids[1] + i0) % 3).shape, (lids[1] + i0) % 3)
         confs = [
-            (0, 1, numpy.choose((lids[0] + 1) % 3, old_edges[0])),
-            (1, 0, numpy.choose((lids[1] + i0) % 3, old_edges[1])),
+            (0, 1, numpy.choose((lids[0] + 1) % 3, previous_edges[0].T)),
+            (1, 0, numpy.choose((lids[1] + i0) % 3, previous_edges[1].T)),
         ]
 
         for conf in confs:
             c, d, edge_gids = conf
-            print(edge_gids)
-            print(edge_gids.shape)
-            num_adj_cells, idxs = self._edge_gid_to_edge_list[edge_gids].T
-            print(num_adj_cells)
+            print("edge_gids", edge_gids.shape, edge_gids)
+
+            assert len(edge_gids) == len(set(edge_gids))  # make sure the list is unique
+
+            num_adj_cells, edge_id = self._edge_gid_to_edge_list[edge_gids].T
+            print("num_adj_cells", num_adj_cells)
 
             k1 = num_adj_cells == 1
             k2 = num_adj_cells == 2
-            assert numpy.all(numpy.logical_or(k1, k2))
+            assert numpy.all(numpy.logical_xor(k1, k2))
 
             # outer boundary edges
-            idx1 = idxs[k1]
-            print(self._edges_cells[1][idx1][:, 0])
-            print(adj_cells[0, k1])
-            assert numpy.all(self._edges_cells[1][idx1][:, 0] == adj_cells[c, k1])
-            self._edges_cells[1][idx1][:, 0] = adj_cells[d, k1]
+            edge_id1 = edge_id[k1]
+            print(self._edges_cells[1][edge_id1][:, 0])
+            print(adj_cells[c, k1])
+            print(self._edges_cells[1][edge_id1])
+            assert numpy.all(self._edges_cells[1][edge_id1][:, 0] == adj_cells[c, k1])
+            self._edges_cells[1][edge_id1][:, 0] = adj_cells[d, k1]
 
             # interior edges
-            idx2 = idxs[k2]
-            is_column0 = self._edges_cells[2][idx2][:, 0] == adj_cells[c, k2]
-            is_column1 = self._edges_cells[2][idx2][:, 1] == adj_cells[c, k2]
+            edge_id2 = edge_id[k2]
+            is_column0 = self._edges_cells[2][edge_id2][:, 0] == adj_cells[c, k2]
+            is_column1 = self._edges_cells[2][edge_id2][:, 1] == adj_cells[c, k2]
             assert numpy.all(numpy.logical_xor(is_column0, is_column1))
             #
-            self._edges_cells[2][idx2[is_column0], 0] = adj_cells[d, k2][is_column0]
-            self._edges_cells[2][idx2[is_column1], 1] = adj_cells[d, k2][is_column1]
+            self._edges_cells[2][edge_id2[is_column0], 0] = adj_cells[d, k2][is_column0]
+            self._edges_cells[2][edge_id2[is_column1], 1] = adj_cells[d, k2][is_column1]
 
         # Schedule the cell ids for updates.
         update_cell_ids = numpy.unique(adj_cells.T.flat)
@@ -1405,24 +1403,24 @@ class MeshTri(_base_mesh):
         self._centroids = None
 
         # TODO update self._edge_lengths
-        assert self._edge_lengths is None
+        self._edge_lengths = None
 
         # TODO update self.cell_circumcenters
-        assert self.cell_circumcenters is None
+        self.cell_circumcenters = None
 
         # TODO update self._control_volumes
-        assert self._control_volumes is None
+        self._control_volumes = None
 
         # TODO update self._cell_partitions
-        assert self._cell_partitions is None
+        self._cell_partitions = None
 
         # TODO update self._cv_centroids
-        assert self._cv_centroids is None
+        self._cv_centroids = None
 
         # TODO update self._surface_areas
-        assert self._surface_areas is None
+        self._surface_areas = None
 
         # TODO update self.subdomains
-        assert self.subdomains == {}
+        self.subdomains = {}
 
         return

@@ -518,11 +518,16 @@ def test_flip_delaunay_near_boundary():
     cells = numpy.array([[0, 1, 2], [0, 2, 3]])
     mesh = voropy.mesh_tri.MeshTri(points, cells, flat_cell_correction=None)
 
+    mesh.create_edges()
     assert mesh.num_delaunay_violations() == 1
+    assert numpy.array_equal(mesh.cells["nodes"], [[0, 1, 2], [0, 2, 3]])
+    assert numpy.array_equal(mesh.cells["edges"], [[3, 1, 0], [4, 2, 1]])
 
     mesh.flip_until_delaunay()
+
     assert mesh.num_delaunay_violations() == 0
     assert numpy.array_equal(mesh.cells["nodes"], [[1, 3, 2], [1, 3, 0]])
+    assert numpy.array_equal(mesh.cells["edges"], [[4, 3, 1], [2, 0, 1]])
     return
 
 
@@ -625,4 +630,5 @@ def test_angles():
 
 
 if __name__ == "__main__":
-    test_signed_area()
+    # test_signed_area()
+    test_flip_delaunay_near_boundary()
