@@ -82,7 +82,7 @@ def compute_tri_areas_and_ce_ratios(ei_dot_ej):
     #   e1 + e2 + e3 = 0.
     #
     cell_volumes = 0.5 * numpy.sqrt(
-        +ei_dot_ej[2] * ei_dot_ej[0]
+        ei_dot_ej[2] * ei_dot_ej[0]
         + ei_dot_ej[0] * ei_dot_ej[1]
         + ei_dot_ej[1] * ei_dot_ej[2]
     )
