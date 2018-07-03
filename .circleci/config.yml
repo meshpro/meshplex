@@ -10,11 +10,12 @@ jobs:
       - run: apt-get install -y git python3-pip
       - run: pip3 install -U pytest pytest-cov black flake8
       - checkout
-      - run: pip3 install -r test_requirements.txt
-      - run: pip3 install .[all]
       # format and lint
       - run: LC_ALL=C.UTF-8 black --check setup.py voropy/ test/*.py
       - run: flake8 setup.py voropy/ test/*.py
+      # install
+      - run: pip3 install -r test_requirements.txt
+      - run: pip3 install .[all]
       # The tests
       - run: cd test/ && MPLBACKEND=Agg pytest --cov voropy
       # submit to codecov
