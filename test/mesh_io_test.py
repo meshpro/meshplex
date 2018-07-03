@@ -8,7 +8,7 @@ import meshplex
 
 def test_io_2d():
     vertices, cells = meshzoo.rectangle(0.0, 1.0, 0.0, 1.0, 2, 2, zigzag=True)
-    mesh = meshplex.mesh_tri.MeshTri(vertices, cells)
+    mesh = meshplex.MeshTri(vertices, cells)
     # mesh, _, _, _ = meshplex.read('pacman.vtu')
 
     assert mesh.num_delaunay_violations() == 0
@@ -31,7 +31,7 @@ def test_io_2d():
 #             0.0, 1.0, 0.0, 1.0, 0.0, 1.0,
 #             2, 2, 2
 #             )
-#     mesh = meshplex.mesh_tetra.MeshTetra(vertices, cells)
+#     mesh = meshplex.MeshTetra(vertices, cells)
 
 #     self.assertEqual(mesh.num_delaunay_violations(), 0)
 

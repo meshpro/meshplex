@@ -9,47 +9,41 @@ import meshplex
 
 def _parse_input_arguments():
     parser = argparse.ArgumentParser(
-        description='Show triangular mesh with control volumes etc.'
-        )
+        description="Show triangular mesh with control volumes etc."
+    )
+
+    parser.add_argument("file", metavar="FILE", type=str, help="Input file")
 
     parser.add_argument(
-        'file',
-        metavar='FILE',
-        type=str,
-        help='Input file'
-        )
+        "--show-centroids",
+        "-c",
+        action="store_true",
+        help="show control volume centroids (default: false)",
+        default=False,
+    )
 
     parser.add_argument(
-        '--show-centroids', '-c',
-        action='store_true',
-        help='show control volume centroids (default: false)',
-        default=False
-        )
-
-    parser.add_argument(
-        '--show-coedges', '-s',
-        action='store_true',
-        help='show co-edges (default: false)',
-        default=False
-        )
+        "--show-coedges",
+        "-s",
+        action="store_true",
+        help="show co-edges (default: false)",
+        default=False,
+    )
 
     return parser.parse_args()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     args = _parse_input_arguments()
 
     mesh = meshio.read(args.file)
-    cells = mesh.cells['triangle']
+    cells = mesh.cells["triangle"]
 
     # toss away all nodes which don't belong to cells
     uvertices, uidx = numpy.unique(cells, return_inverse=True)
     cells = uidx.reshape(cells.shape)
     pts = mesh.points[uvertices]
 
-    mesh = meshplex.mesh_tri.MeshTri(pts, cells)
+    mesh = meshplex.MeshTri(pts, cells)
 
-    mesh.show(
-        show_centroids=args.show_centroids,
-        show_coedges=args.show_coedges
-        )
+    mesh.show(show_centroids=args.show_centroids, show_coedges=args.show_coedges)

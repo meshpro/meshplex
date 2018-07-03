@@ -6,7 +6,6 @@
 # the iteration trapped in a point away from the minimum.  Lloyd's smoothing is
 # clearly superior.
 #
-from meshplex import mesh_tri
 import meshio
 import numpy
 import meshplex
@@ -15,10 +14,7 @@ import meshplex
 def _objective(mesh):
     double_vol = 2 * mesh.cell_volumes
     num_cells = len(mesh.cell_volumes)
-    return (
-        -numpy.sum(numpy.sum(mesh.ei_dot_ej, axis=0) / double_vol)
-        / num_cells
-        )
+    return -numpy.sum(numpy.sum(mesh.ei_dot_ej, axis=0) / double_vol) / num_cells
 
 
 def _grad(mesh):
@@ -27,36 +23,40 @@ def _grad(mesh):
     s = numpy.sum(mesh.ei_dot_ej, axis=0)
     e = mesh.half_edge_coords
 
-    ei_dot_ei = numpy.einsum('ijk, ijk->ij', e, e)
+    ei_dot_ei = numpy.einsum("ijk, ijk->ij", e, e)
     grad_x0 = (
-        + (e[1] - e[2]) * double_vol[..., None]**2
-        + 0.5 * s[..., None] * (
-            + ei_dot_ei[0][..., None] * (e[1] - e[2])
+        +(e[1] - e[2]) * double_vol[..., None] ** 2
+        + 0.5
+        * s[..., None]
+        * (
+            +ei_dot_ei[0][..., None] * (e[1] - e[2])
             + (mesh.ei_dot_ej[1] - mesh.ei_dot_ej[2])[..., None] * e[0]
-            )
-        ) / double_vol[..., None]**3
+        )
+    ) / double_vol[..., None] ** 3
     grad_x1 = (
-        + (e[2] - e[0]) * double_vol[..., None]**2
-        + 0.5 * s[..., None] * (
-            + ei_dot_ei[1][..., None] * (e[2] - e[0])
+        +(e[2] - e[0]) * double_vol[..., None] ** 2
+        + 0.5
+        * s[..., None]
+        * (
+            +ei_dot_ei[1][..., None] * (e[2] - e[0])
             + (mesh.ei_dot_ej[2] - mesh.ei_dot_ej[0])[..., None] * e[1]
-            )
-        ) / double_vol[..., None]**3
+        )
+    ) / double_vol[..., None] ** 3
     grad_x2 = (
-        + (e[0] - e[1]) * double_vol[..., None]**2
-        + 0.5 * s[..., None] * (
-            + ei_dot_ei[2][..., None] * (e[0] - e[1])
+        +(e[0] - e[1]) * double_vol[..., None] ** 2
+        + 0.5
+        * s[..., None]
+        * (
+            +ei_dot_ei[2][..., None] * (e[0] - e[1])
             + (mesh.ei_dot_ej[0] - mesh.ei_dot_ej[1])[..., None] * e[2]
-            )
-        ) / double_vol[..., None]**3
+        )
+    ) / double_vol[..., None] ** 3
 
-    grad_stack = numpy.array([
-        grad_x0, grad_x1, grad_x2
-        ])
+    grad_stack = numpy.array([grad_x0, grad_x1, grad_x2])
 
     # add up all the contributions
     grad = numpy.zeros(mesh.node_coords.shape)
-    numpy.add.at(grad, mesh.cells['nodes'].T, grad_stack)
+    numpy.add.at(grad, mesh.cells["nodes"].T, grad_stack)
 
     return grad
 
@@ -69,8 +69,8 @@ def smooth(mesh, t=1.0e-3, num_iters=10):
         x = mesh.node_coords.copy()
         x -= t * _grad(mesh)
         x[boundary_verts] = mesh.node_coords[boundary_verts]
-        mesh = mesh_tri.MeshTri(x, mesh.cells['nodes'])
-        mesh.write('smoo%04d.vtu' % k)
+        mesh = MeshTri(x, mesh.cells["nodes"])
+        mesh.write("smoo%04d.vtu" % k)
         print(_objective(mesh))
     return mesh
 
@@ -85,33 +85,31 @@ def read(filename):
     # x[boundary_verts] = mesh.node_coords[boundary_verts]
 
     # only include nodes which are part of a cell
-    uvertices, uidx = numpy.unique(cells['triangle'], return_inverse=True)
-    cells = uidx.reshape(cells['triangle'].shape)
+    uvertices, uidx = numpy.unique(cells["triangle"], return_inverse=True)
+    cells = uidx.reshape(cells["triangle"].shape)
     pts = pts[uvertices]
 
     return pts, cells
 
 
 def circle(num_segments=7):
-    angles = numpy.linspace(0.0, 2*numpy.pi, num_segments, endpoint=False)
-    pts = numpy.array([
-        numpy.cos(angles), numpy.sin(angles), numpy.zeros(len(angles))
-        ]).transpose()
+    angles = numpy.linspace(0.0, 2 * numpy.pi, num_segments, endpoint=False)
+    pts = numpy.array(
+        [numpy.cos(angles), numpy.sin(angles), numpy.zeros(len(angles))]
+    ).transpose()
     pts = numpy.vstack([pts, [[-0.8, 0.0, 0.0]]])
 
     n = len(pts) - 1
-    cells = numpy.array([
-        [k, (k+1) % n, n] for k in range(n)
-        ])
+    cells = numpy.array([[k, (k + 1) % n, n] for k in range(n)])
 
     pts = numpy.ascontiguousarray(pts)
     cells = numpy.ascontiguousarray(cells)
     return pts, cells
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # pts, cells = read('pacman.vtu')
-    pts, cells = read('boundary_layers.vtu')
+    pts, cells = read("boundary_layers.vtu")
     # pts, cells = circle()
-    mesh = meshplex.mesh_tri.MeshTri(pts, cells)
+    mesh = meshplex.MeshTri(pts, cells)
     smooth(mesh, t=1.0e-3, num_iters=100)
