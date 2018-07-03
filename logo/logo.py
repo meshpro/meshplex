@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 import numpy
 import pygmsh as pg
-import voropy
+import meshplex
 
 
 def generate():
@@ -41,7 +41,7 @@ if __name__ == '__main__':
     cells = uidx.reshape(cells['triangle'].shape)
     X = X[uvertices]
 
-    mesh = voropy.smoothing.lloyd(X, cells, 1.0e-10)
+    mesh = meshplex.smoothing.lloyd(X, cells, 1.0e-10)
     mesh.show(
             show_centroids=False,
             mesh_color=[0.8, 0.8, 0.8],

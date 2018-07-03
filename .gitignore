@@ -3,7 +3,7 @@ build/
 doc/_build/
 doc/build/
 README.rst
-voropy.egg-info/
+*.egg-info/
 dist/
 *.png
 .pytest_cache/

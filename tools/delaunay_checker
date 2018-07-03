@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import voropy
+import meshplex
 
 import argparse
 import numpy as np
@@ -14,7 +14,7 @@ def _main():
 
     # read the mesh
     print 'Reading the mesh...',
-    mesh, _, _, _ = voropy.read(args.filename)
+    mesh, _, _, _ = meshplex.read(args.filename)
     print 'done.'
 
     num_delaunay_violations = mesh.num_delaunay_violations()

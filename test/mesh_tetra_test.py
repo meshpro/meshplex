@@ -3,7 +3,7 @@
 from math import fsum
 import numpy
 import pytest
-import voropy
+import meshplex
 
 from helpers import download_mesh, near_equal, run
 
@@ -23,7 +23,7 @@ def test_regular_tet0(a):
         / numpy.sqrt(3.0)
     )
     cells = numpy.array([[0, 1, 2, 3]])
-    mesh = voropy.mesh_tetra.MeshTetra(points, cells.copy())
+    mesh = meshplex.MeshTetra(points, cells.copy())
 
     assert all((mesh.cells["nodes"] == cells).flat)
 
@@ -101,7 +101,7 @@ def test_regular_tet0(a):
 #     cells = numpy.array([[0, 1, 2, 3]])
 #     tol = 1.0e-14
 #
-#     mesh = voropy.mesh_tetra.MeshTetra(points, cells, mode='algebraic')
+#     mesh = meshplex.MeshTetra(points, cells, mode='algebraic')
 #
 #     assert near_equal(
 #         mesh.get_cell_circumcenters(),
@@ -135,7 +135,7 @@ def test_regular_tet1_geometric(a):
     cells = numpy.array([[0, 1, 2, 3]])
     tol = 1.0e-14
 
-    mesh = voropy.mesh_tetra.MeshTetra(points, cells, mode="geometric")
+    mesh = meshplex.MeshTetra(points, cells, mode="geometric")
 
     assert all((mesh.cells["nodes"] == cells).flat)
 
@@ -176,7 +176,7 @@ def test_regular_tet1_geometric_order():
     cells = numpy.array([[0, 1, 2, 3]])
     tol = 1.0e-14
 
-    mesh = voropy.mesh_tetra.MeshTetra(points, cells, mode="geometric")
+    mesh = meshplex.MeshTetra(points, cells, mode="geometric")
 
     assert all((mesh.cells["nodes"] == [0, 1, 2, 3]).flat)
 
@@ -223,7 +223,7 @@ def test_regular_tet1_geometric_order():
 #         [0.5, 0.5, h],
 #         ])
 #     cells = numpy.array([[0, 1, 2, 3]])
-#     mesh = voropy.mesh_tetra.MeshTetra(points, cells, mode='algebraic')
+#     mesh = meshplex.MeshTetra(points, cells, mode='algebraic')
 #
 #     tol = 1.0e-14
 #
@@ -280,7 +280,7 @@ def test_regular_tet1_geometric_order():
 #         [0, 1, 2, 3],
 #         [0, 1, 2, 4]
 #         ])
-#     mesh = voropy.mesh_tetra.MeshTetra(points, cells, mode='algebraic')
+#     mesh = meshplex.MeshTetra(points, cells, mode='algebraic')
 #
 #     total_vol = h / 3.0
 #
@@ -310,7 +310,7 @@ def test_cubesmall():
     cells = numpy.array(
         [[0, 1, 2, 3], [1, 2, 4, 5], [1, 2, 3, 5], [1, 3, 5, 6], [2, 3, 5, 7]]
     )
-    mesh = voropy.mesh_tetra.MeshTetra(points, cells)
+    mesh = meshplex.MeshTetra(points, cells)
 
     tol = 1.0e-14
 
@@ -341,7 +341,7 @@ def test_arrow3d():
         ]
     )
     cellsNodes = numpy.array([[1, 2, 4, 5], [2, 3, 4, 5], [0, 1, 4, 5], [0, 3, 4, 5]])
-    mesh = voropy.mesh_tetra.MeshTetra(nodes, cellsNodes)
+    mesh = meshplex.MeshTetra(nodes, cellsNodes)
 
     run(
         mesh,
@@ -358,7 +358,7 @@ def test_arrow3d():
 
 def test_tetrahedron():
     filename = download_mesh("tetrahedron.msh", "27a5d7e102e6613a1e58629c252cb293")
-    mesh, _, _, _ = voropy.read(filename)
+    mesh, _, _, _ = meshplex.read(filename)
 
     run(
         mesh,
@@ -375,7 +375,7 @@ def test_tetrahedron():
 #         'toy.msh',
 #         '1d125d3fa9f373823edd91ebae5f7a81'
 #         )
-#     mesh, _, _, _ = voropy.read(filename)
+#     mesh, _, _, _ = meshplex.read(filename)
 #
 #     # Even if the input data has only a small error, the error in the
 #     # ce_ratios can be magnitudes larger. This is demonstrated here: Take
@@ -385,7 +385,7 @@ def test_tetrahedron():
 #         print(mesh.cells.keys())
 #         pts = mesh.node_coords.copy()
 #         pts += 1.0e-16 * numpy.random.rand(pts.shape[0], pts.shape[1])
-#         mesh2 = voropy.mesh_tetra.MeshTetra(pts, mesh.cells['nodes'])
+#         mesh2 = meshplex.MeshTetra(pts, mesh.cells['nodes'])
 #         #
 #         diff_coords = mesh.node_coords - mesh2.node_coords
 #         max_diff_coords = max(diff_coords.flatten())
@@ -415,11 +415,9 @@ def test_tetrahedron():
 
 def test_toy_geometric():
     filename = download_mesh("toy.msh", "1d125d3fa9f373823edd91ebae5f7a81")
-    mesh, _, _, _ = voropy.read(filename)
+    mesh, _, _, _ = meshplex.read(filename)
 
-    mesh = voropy.mesh_tetra.MeshTetra(
-        mesh.node_coords, mesh.cells["nodes"], mode="geometric"
-    )
+    mesh = meshplex.MeshTetra(mesh.node_coords, mesh.cells["nodes"], mode="geometric")
 
     run(
         mesh,
@@ -440,9 +438,9 @@ def test_toy_geometric():
 
 def test_signed_volume():
     filename = download_mesh("toy.msh", "1d125d3fa9f373823edd91ebae5f7a81")
-    mesh, _, _, _ = voropy.read(filename, flat_cell_correction=None)
+    mesh, _, _, _ = meshplex.read(filename, flat_cell_correction=None)
 
-    vols = voropy.get_signed_simplex_volumes(mesh.cells["nodes"], mesh.node_coords)
+    vols = meshplex.get_signed_simplex_volumes(mesh.cells["nodes"], mesh.node_coords)
 
     assert numpy.all(abs(abs(vols) - mesh.cell_volumes) < 1.0e-12 * mesh.cell_volumes)
     return
