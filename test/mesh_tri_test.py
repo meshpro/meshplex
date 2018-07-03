@@ -4,7 +4,7 @@ import numpy
 import pytest
 import meshio
 
-import voropy
+import meshplex
 
 from helpers import download_mesh, near_equal, run
 
@@ -12,7 +12,7 @@ from helpers import download_mesh, near_equal, run
 def test_regular_tri():
     points = numpy.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
     cells = numpy.array([[0, 1, 2]])
-    mesh = voropy.mesh_tri.MeshTri(points, cells)
+    mesh = meshplex.mesh_tri.MeshTri(points, cells)
 
     tol = 1.0e-14
 
@@ -63,7 +63,7 @@ def test_regular_tri_order():
     points = numpy.array([[0.0, 1.0, 0.0], [0.0, 0.0, 0.0], [1.0, 0.0, 0.0]])
     cells = numpy.array([[0, 1, 2]])
 
-    mesh = voropy.mesh_tri.MeshTri(points, cells)
+    mesh = meshplex.mesh_tri.MeshTri(points, cells)
     assert all((mesh.cells["nodes"] == [0, 1, 2]).flat)
 
     tol = 1.0e-14
@@ -106,7 +106,7 @@ def test_regular_tri2(a):
         * a
     )
     cells = numpy.array([[0, 1, 2]])
-    mesh = voropy.mesh_tri.MeshTri(points, cells)
+    mesh = meshplex.mesh_tri.MeshTri(points, cells)
 
     tol = 1.0e-14
 
@@ -137,7 +137,7 @@ def test_regular_tri2(a):
 #         [0.5, h, 0.0],
 #         ])
 #     cells = numpy.array([[0, 1, 2]])
-#     mesh = voropy.mesh_tri.MeshTri(
+#     mesh = meshplex.mesh_tri.MeshTri(
 #             points,
 #             cells,
 #             allow_negative_volumes=True
@@ -203,7 +203,7 @@ def test_regular_tri2(a):
 def test_degenerate_small0b(h):
     points = numpy.array([[0, 0, 0], [1, 0, 0], [0.5, h, 0.0]])
     cells = numpy.array([[0, 1, 2]])
-    mesh = voropy.mesh_tri.MeshTri(points, cells, flat_cell_correction=None)
+    mesh = meshplex.mesh_tri.MeshTri(points, cells, flat_cell_correction=None)
 
     tol = 1.0e-14
 
@@ -245,7 +245,7 @@ def test_degenerate_small0b_fcc():
     h = 1.0e-3
     points = numpy.array([[0, 0, 0], [1, 0, 0], [0.5, h, 0.0]])
     cells = numpy.array([[0, 1, 2]])
-    mesh = voropy.mesh_tri.MeshTri(points, cells, flat_cell_correction="full")
+    mesh = meshplex.mesh_tri.MeshTri(points, cells, flat_cell_correction="full")
 
     tol = 1.0e-14
 
@@ -288,7 +288,7 @@ def test_degenerate_small0b_fcc():
 def test_degenerate_small1(h, a):
     points = numpy.array([[0, 0, 0], [1, 0, 0], [a, h, 0.0]])
     cells = numpy.array([[0, 1, 2]])
-    mesh = voropy.mesh_tri.MeshTri(points, cells, flat_cell_correction="full")
+    mesh = meshplex.mesh_tri.MeshTri(points, cells, flat_cell_correction="full")
 
     tol = 1.0e-14
 
@@ -332,7 +332,7 @@ def test_degenerate_small1(h, a):
 def test_degenerate_small2(h):
     points = numpy.array([[0, 0, 0], [1, 0, 0], [0.5, h, 0.0], [0.5, -h, 0.0]])
     cells = numpy.array([[0, 1, 2], [0, 1, 3]])
-    mesh = voropy.mesh_tri.MeshTri(points, cells)
+    mesh = meshplex.mesh_tri.MeshTri(points, cells)
 
     tol = 1.0e-11
 
@@ -370,7 +370,7 @@ def test_rectanglesmall():
     )
     cells = numpy.array([[0, 1, 2], [0, 2, 3]])
 
-    mesh = voropy.mesh_tri.MeshTri(points, cells)
+    mesh = meshplex.mesh_tri.MeshTri(points, cells)
 
     tol = 1.0e-14
 
@@ -387,7 +387,7 @@ def test_rectanglesmall():
 
 def test_pacman():
     filename = download_mesh("pacman.msh", "2da8ff96537f844a95a83abb48471b6a")
-    mesh, _, _, _ = voropy.read(filename, flat_cell_correction="boundary")
+    mesh, _, _, _ = meshplex.read(filename, flat_cell_correction="boundary")
 
     run(
         mesh,
@@ -413,7 +413,7 @@ def test_shell():
         ]
     )
     cells = numpy.array([[0, 1, 2], [0, 2, 3], [0, 3, 4], [0, 1, 4]])
-    mesh = voropy.mesh_tri.MeshTri(points, cells)
+    mesh = meshplex.mesh_tri.MeshTri(points, cells)
 
     tol = 1.0e-14
     ce_ratios = 0.5 / numpy.sqrt(3.0) * numpy.ones((4, 3))
@@ -432,7 +432,7 @@ def test_shell():
 
 def test_sphere():
     filename = download_mesh("sphere.msh", "70a5dbf79c3b259ed993458ff4aa2e93")
-    mesh, _, _, _ = voropy.read(filename)
+    mesh, _, _, _ = meshplex.read(filename)
     run(
         mesh,
         12.273645818711595,
@@ -451,7 +451,7 @@ def test_signed_area():
     assert numpy.all(numpy.abs(mesh.points[:, 2]) < 1.0e-15)
     X = mesh.points[:, :2]
 
-    mesh = voropy.mesh_tri.MeshTri(X, mesh.cells["triangle"], flat_cell_correction=None)
+    mesh = meshplex.mesh_tri.MeshTri(X, mesh.cells["triangle"], flat_cell_correction=None)
 
     vols = mesh.get_signed_tri_areas()
     assert numpy.all(abs(abs(vols) - mesh.cell_volumes) < 1.0e-12 * mesh.cell_volumes)
@@ -463,13 +463,13 @@ def test_update_node_coordinates():
     mesh = meshio.read(filename)
     assert numpy.all(numpy.abs(mesh.points[:, 2]) < 1.0e-15)
 
-    mesh1 = voropy.mesh_tri.MeshTri(
+    mesh1 = meshplex.mesh_tri.MeshTri(
         mesh.points, mesh.cells["triangle"], flat_cell_correction=None
     )
 
     numpy.random.seed(123)
     X2 = mesh.points + 1.0e-2 * numpy.random.rand(*mesh.points.shape)
-    mesh2 = voropy.mesh_tri.MeshTri(
+    mesh2 = meshplex.mesh_tri.MeshTri(
         X2, mesh.cells["triangle"], flat_cell_correction=None
     )
 
@@ -488,7 +488,7 @@ def test_flip_delaunay():
     numpy.random.seed(123)
     mesh.points[:, :2] += 5.0e-2 * numpy.random.rand(*mesh.points[:, :2].shape)
 
-    mesh = voropy.mesh_tri.MeshTri(
+    mesh = meshplex.mesh_tri.MeshTri(
         mesh.points, mesh.cells["triangle"], flat_cell_correction=None
     )
 
@@ -507,7 +507,7 @@ def test_flip_delaunay():
     new_coords = mesh.node_coords.copy()
 
     # Assert that some key values are updated properly
-    mesh2 = voropy.mesh_tri.MeshTri(new_coords, new_cells, flat_cell_correction=None)
+    mesh2 = meshplex.mesh_tri.MeshTri(new_coords, new_cells, flat_cell_correction=None)
     assert numpy.all(mesh.idx_hierarchy == mesh2.idx_hierarchy)
     tol = 1.0e-15
     assert near_equal(mesh.half_edge_coords, mesh2.half_edge_coords, tol)
@@ -522,7 +522,7 @@ def test_flip_delaunay_near_boundary():
         [[0.0, +0.0, 0.0], [0.5, -0.1, 0.0], [1.0, +0.0, 0.0], [0.5, +0.1, 0.0]]
     )
     cells = numpy.array([[0, 1, 2], [0, 2, 3]])
-    mesh = voropy.mesh_tri.MeshTri(points, cells, flat_cell_correction=None)
+    mesh = meshplex.mesh_tri.MeshTri(points, cells, flat_cell_correction=None)
 
     mesh.create_edges()
     assert mesh.num_delaunay_violations() == 1
@@ -542,7 +542,7 @@ def test_flip_same_edge_twice():
         [[0.0, +0.0, 0.0], [0.5, -0.1, 0.0], [1.0, +0.0, 0.0], [0.5, +0.1, 0.0]]
     )
     cells = numpy.array([[0, 1, 2], [0, 2, 3]])
-    mesh = voropy.mesh_tri.MeshTri(points, cells, flat_cell_correction=None)
+    mesh = meshplex.mesh_tri.MeshTri(points, cells, flat_cell_correction=None)
     assert mesh.num_delaunay_violations() == 1
 
     mesh.flip_until_delaunay()
@@ -571,7 +571,7 @@ def test_inradius():
     # 3-4-5 triangle
     points = numpy.array([[0.0, 0.0, 0.0], [3.0, 0.0, 0.0], [0.0, 4.0, 0.0]])
     cells = numpy.array([[0, 1, 2]])
-    mesh = voropy.mesh_tri.MeshTri(points, cells)
+    mesh = meshplex.mesh_tri.MeshTri(points, cells)
 
     tol = 1.0e-15
 
@@ -584,7 +584,7 @@ def test_inradius():
         [[0.0, 0.0, 0.0], [a / 2, 0.0, 0.0], [0.0, a / 2 * numpy.sqrt(3.0), 0.0]]
     )
     cells = numpy.array([[0, 1, 2]])
-    mesh = voropy.mesh_tri.MeshTri(points, cells)
+    mesh = meshplex.mesh_tri.MeshTri(points, cells)
 
     ic = mesh.get_inradius()
     assert near_equal(ic, [a / 4 * (numpy.sqrt(3) - 1)], tol)
@@ -595,7 +595,7 @@ def test_circumradius():
     # 3-4-5 triangle
     points = numpy.array([[0.0, 0.0, 0.0], [3.0, 0.0, 0.0], [0.0, 4.0, 0.0]])
     cells = numpy.array([[0, 1, 2]])
-    mesh = voropy.mesh_tri.MeshTri(points, cells)
+    mesh = meshplex.mesh_tri.MeshTri(points, cells)
 
     tol = 1.0e-15
 
@@ -608,7 +608,7 @@ def test_circumradius():
         [[0.0, 0.0, 0.0], [a / 2, 0.0, 0.0], [0.0, a / 2 * numpy.sqrt(3.0), 0.0]]
     )
     cells = numpy.array([[0, 1, 2]])
-    mesh = voropy.mesh_tri.MeshTri(points, cells)
+    mesh = meshplex.mesh_tri.MeshTri(points, cells)
 
     ic = mesh.get_circumradius()
     assert near_equal(ic, [a / 2], tol)
@@ -619,7 +619,7 @@ def test_quality():
     # 3-4-5 triangle
     points = numpy.array([[0.0, 0.0, 0.0], [3.0, 0.0, 0.0], [0.0, 4.0, 0.0]])
     cells = numpy.array([[0, 1, 2]])
-    mesh = voropy.mesh_tri.MeshTri(points, cells)
+    mesh = meshplex.mesh_tri.MeshTri(points, cells)
 
     tol = 1.0e-15
 
@@ -632,7 +632,7 @@ def test_quality():
         [[0.0, 0.0, 0.0], [a / 2, 0.0, 0.0], [0.0, a / 2 * numpy.sqrt(3.0), 0.0]]
     )
     cells = numpy.array([[0, 1, 2]])
-    mesh = voropy.mesh_tri.MeshTri(points, cells)
+    mesh = meshplex.mesh_tri.MeshTri(points, cells)
 
     ic = mesh.get_quality()
     assert near_equal(ic, 2 * mesh.get_inradius() / mesh.get_circumradius(), tol)
@@ -643,7 +643,7 @@ def test_angles():
     # 3-4-5 triangle
     points = numpy.array([[0.0, 0.0, 0.0], [3.0, 0.0, 0.0], [0.0, 4.0, 0.0]])
     cells = numpy.array([[0, 1, 2]])
-    mesh = voropy.mesh_tri.MeshTri(points, cells)
+    mesh = meshplex.mesh_tri.MeshTri(points, cells)
 
     tol = 1.0e-14
 
@@ -658,7 +658,7 @@ def test_angles():
         [[0.0, 0.0, 0.0], [a / 2, 0.0, 0.0], [0.0, a / 2 * numpy.sqrt(3.0), 0.0]]
     )
     cells = numpy.array([[0, 1, 2]])
-    mesh = voropy.mesh_tri.MeshTri(points, cells)
+    mesh = meshplex.mesh_tri.MeshTri(points, cells)
 
     ic = mesh.get_angles() / numpy.pi * 180
     assert near_equal(ic, [[90], [60], [30]], tol)

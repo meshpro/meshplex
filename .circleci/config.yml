@@ -11,13 +11,13 @@ jobs:
       - run: pip3 install -U pytest pytest-cov black flake8
       - checkout
       # format and lint
-      - run: LC_ALL=C.UTF-8 black --check setup.py voropy/ test/*.py
-      - run: flake8 setup.py voropy/ test/*.py
+      - run: LC_ALL=C.UTF-8 black --check setup.py meshplex/ test/*.py
+      - run: flake8 setup.py meshplex/ test/*.py
       # install
       - run: pip3 install -r test_requirements.txt
       - run: pip3 install .[all]
       # The tests
-      - run: cd test/ && MPLBACKEND=Agg pytest --cov voropy
+      - run: cd test/ && MPLBACKEND=Agg pytest --cov meshplex
       # submit to codecov
       - run: apt-get install -y curl
       - run: bash <(curl -s https://codecov.io/bash) -R ~/work

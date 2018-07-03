@@ -6,10 +6,10 @@
 # the iteration trapped in a point away from the minimum.  Lloyd's smoothing is
 # clearly superior.
 #
-from voropy import mesh_tri
+from meshplex import mesh_tri
 import meshio
 import numpy
-import voropy
+import meshplex
 
 
 def _objective(mesh):
@@ -113,5 +113,5 @@ if __name__ == '__main__':
     # pts, cells = read('pacman.vtu')
     pts, cells = read('boundary_layers.vtu')
     # pts, cells = circle()
-    mesh = voropy.mesh_tri.MeshTri(pts, cells)
+    mesh = meshplex.mesh_tri.MeshTri(pts, cells)
     smooth(mesh, t=1.0e-3, num_iters=100)

@@ -1,4 +1,4 @@
-VERSION=$(shell python3 -c "import voropy; print(voropy.__version__)")
+VERSION=$(shell python3 -c "import meshplex; print(meshplex.__version__)")
 
 default:
 	@echo "\"make publish\"?"
@@ -21,8 +21,8 @@ publish: tag upload
 
 clean:
 	@find . | grep -E "(__pycache__|\.pyc|\.pyo$\)" | xargs rm -rf
-	@rm -rf *.egg-info/ build/ dist/ MANIFEST
+	@rm -rf *.egg-info/ build/ dist/ MANIFEST .pytest_cache
 
 lint:
-	black --check setup.py voropy/ test/*.py
-	flake8 setup.py voropy/ test/*.py
+	black --check setup.py meshplex/ test/*.py
+	flake8 setup.py meshplex/ test/*.py

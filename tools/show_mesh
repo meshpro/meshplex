@@ -4,7 +4,7 @@ import argparse
 import numpy
 from matplotlib import pyplot as plt
 import meshio
-import voropy
+import meshplex
 
 
 def _parse_input_arguments():
@@ -47,7 +47,7 @@ if __name__ == '__main__':
     cells = uidx.reshape(cells.shape)
     pts = mesh.points[uvertices]
 
-    mesh = voropy.mesh_tri.MeshTri(pts, cells)
+    mesh = meshplex.mesh_tri.MeshTri(pts, cells)
 
     mesh.show(
         show_centroids=args.show_centroids,

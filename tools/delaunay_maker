@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import voropy
+import meshplex
 import numpy as np
 from scipy.spatial import Delaunay
 
@@ -13,7 +13,7 @@ def _main():
 
     # read the mesh
     print 'Reading the point set...',
-    mesh, _, _ = voropy.read(args.in_file)
+    mesh, _, _ = meshplex.read(args.in_file)
     print 'done.'
 
     print 'Creating Delaunay structure...',
@@ -21,9 +21,9 @@ def _main():
     print 'done.'
 
     if mesh.node_coords.shape[1] == 2:
-        dmesh = voropy.mesh2d(mesh.node_coords, dl.vertices)
+        dmesh = meshplex.mesh2d(mesh.node_coords, dl.vertices)
     elif mesh.node_coords.shape[1] == 3:
-        dmesh = voropy.mesh3d(mesh.node_coords, dl.vertices)
+        dmesh = meshplex.mesh3d(mesh.node_coords, dl.vertices)
     else:
         raise RuntimeError('Unknown mesh dimension.')
 

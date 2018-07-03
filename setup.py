@@ -8,7 +8,7 @@ from setuptools import setup, find_packages
 # https://packaging.python.org/single_source_version/
 base_dir = os.path.abspath(os.path.dirname(__file__))
 about = {}
-with open(os.path.join(base_dir, "voropy", "__about__.py"), "rb") as f:
+with open(os.path.join(base_dir, "meshplex", "__about__.py"), "rb") as f:
     # pylint: disable=exec-used
     exec(f.read(), about)
 
@@ -18,15 +18,15 @@ def read(fname):
 
 
 setup(
-    name="voropy",
+    name="meshplex",
     version=about["__version__"],
     author=about["__author__"],
     author_email=about["__author_email__"],
     packages=find_packages(),
-    description=("Voronoi regions and more for triangular and tetrehedral meshes"),
+    description=("Tools and helpers for simplex meshes"),
     long_description=read("README.md"),
     long_description_content_type="text/markdown",
-    url="https://github.com/nschloe/voropy",
+    url="https://github.com/nschloe/meshplex",
     license=about["__license__"],
     platforms="any",
     install_requires=[

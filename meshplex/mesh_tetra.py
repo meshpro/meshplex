@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 import numpy
-from voropy.base import _base_mesh, compute_triangle_circumcenters
+from .base import _base_mesh, compute_triangle_circumcenters
 
 __all__ = ["MeshTetra"]
 
