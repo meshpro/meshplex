@@ -497,6 +497,12 @@ def test_flip_delaunay():
     mesh.flip_until_delaunay()
     assert mesh.num_delaunay_violations() == 0
 
+    # Assert edges_cells integrity
+    for cell_gid, edge_gids in enumerate(mesh.cells["edges"]):
+        for edge_gid in edge_gids:
+            num_adj_cells, edge_id = mesh._edge_gid_to_edge_list[edge_gid]
+            assert cell_gid in mesh._edges_cells[num_adj_cells][edge_id]
+
     new_cells = mesh.cells["nodes"].copy()
     new_coords = mesh.node_coords.copy()
 
@@ -507,6 +513,56 @@ def test_flip_delaunay():
     assert near_equal(mesh.half_edge_coords, mesh2.half_edge_coords, tol)
     assert near_equal(mesh.cell_volumes, mesh2.cell_volumes, tol)
     assert near_equal(mesh.ei_dot_ej, mesh2.ei_dot_ej, tol)
+
+    return
+
+
+def test_flip_delaunay_near_boundary():
+    points = numpy.array(
+        [[0.0, +0.0, 0.0], [0.5, -0.1, 0.0], [1.0, +0.0, 0.0], [0.5, +0.1, 0.0]]
+    )
+    cells = numpy.array([[0, 1, 2], [0, 2, 3]])
+    mesh = voropy.mesh_tri.MeshTri(points, cells, flat_cell_correction=None)
+
+    mesh.create_edges()
+    assert mesh.num_delaunay_violations() == 1
+    assert numpy.array_equal(mesh.cells["nodes"], [[0, 1, 2], [0, 2, 3]])
+    assert numpy.array_equal(mesh.cells["edges"], [[3, 1, 0], [4, 2, 1]])
+
+    mesh.flip_until_delaunay()
+
+    assert mesh.num_delaunay_violations() == 0
+    assert numpy.array_equal(mesh.cells["nodes"], [[1, 3, 2], [1, 3, 0]])
+    assert numpy.array_equal(mesh.cells["edges"], [[4, 3, 1], [2, 0, 1]])
+    return
+
+
+def test_flip_same_edge_twice():
+    points = numpy.array(
+        [[0.0, +0.0, 0.0], [0.5, -0.1, 0.0], [1.0, +0.0, 0.0], [0.5, +0.1, 0.0]]
+    )
+    cells = numpy.array([[0, 1, 2], [0, 2, 3]])
+    mesh = voropy.mesh_tri.MeshTri(points, cells, flat_cell_correction=None)
+    assert mesh.num_delaunay_violations() == 1
+
+    mesh.flip_until_delaunay()
+    assert mesh.num_delaunay_violations() == 0
+
+    # Assert edges_cells integrity
+    for cell_gid, edge_gids in enumerate(mesh.cells["edges"]):
+        for edge_gid in edge_gids:
+            num_adj_cells, edge_id = mesh._edge_gid_to_edge_list[edge_gid]
+            assert cell_gid in mesh._edges_cells[num_adj_cells][edge_id]
+
+    new_points = numpy.array(
+        [[0.0, +0.0, 0.0], [0.1, -0.5, 0.0], [0.2, +0.0, 0.0], [0.1, +0.5, 0.0]]
+    )
+    mesh.update_node_coordinates(new_points)
+    assert mesh.num_delaunay_violations() == 1
+
+    mesh.flip_until_delaunay()
+    assert mesh.num_delaunay_violations() == 0
+    mesh.show()
 
     return
 
@@ -610,4 +666,6 @@ def test_angles():
 
 
 if __name__ == "__main__":
-    test_signed_area()
+    # test_signed_area()
+    # test_flip_delaunay_near_boundary()
+    test_flip_same_edge_twice()
