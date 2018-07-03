@@ -565,6 +565,44 @@ def test_flip_same_edge_twice():
     return
 
 
+def test_flip_two_edges():
+    alpha = numpy.array([1.0, 3.0, 5.0, 7.0, 9.0, 11.0]) / 6.0 * numpy.pi
+    R = [0.9, 1.0, 0.9, 1.0, 1.2, 1.0]
+    points = numpy.array([
+        [r * numpy.cos(a), r * numpy.sin(a), 0.0] for a, r in zip(alpha, R)
+    ])
+    cells = numpy.array([
+        [1, 3, 5],
+        [0, 1, 5],
+        [1, 2, 3],
+        [3, 4, 5],
+    ])
+    mesh = meshplex.MeshTri(points, cells, flat_cell_correction=None)
+    assert mesh.num_delaunay_violations() == 2
+    # mesh.show()
+
+    mesh.flip_until_delaunay()
+    assert mesh.num_delaunay_violations() == 0
+
+    # Assert edges_cells integrity
+    for cell_gid, edge_gids in enumerate(mesh.cells["edges"]):
+        for edge_gid in edge_gids:
+            num_adj_cells, edge_id = mesh._edge_gid_to_edge_list[edge_gid]
+            assert cell_gid in mesh._edges_cells[num_adj_cells][edge_id]
+
+    new_points = numpy.array(
+        [[0.0, +0.0, 0.0], [0.1, -0.5, 0.0], [0.2, +0.0, 0.0], [0.1, +0.5, 0.0]]
+    )
+    mesh.update_node_coordinates(new_points)
+    assert mesh.num_delaunay_violations() == 1
+
+    mesh.flip_until_delaunay()
+    assert mesh.num_delaunay_violations() == 0
+    mesh.show()
+
+    return
+
+
 def test_inradius():
     # 3-4-5 triangle
     points = numpy.array([[0.0, 0.0, 0.0], [3.0, 0.0, 0.0], [0.0, 4.0, 0.0]])
@@ -664,6 +702,4 @@ def test_angles():
 
 
 if __name__ == "__main__":
-    # test_signed_area()
-    # test_flip_delaunay_near_boundary()
-    test_flip_same_edge_twice()
+    test_flip_two_edges()
