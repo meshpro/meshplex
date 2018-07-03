@@ -469,9 +469,7 @@ def test_update_node_coordinates():
 
     numpy.random.seed(123)
     X2 = mesh.points + 1.0e-2 * numpy.random.rand(*mesh.points.shape)
-    mesh2 = meshplex.MeshTri(
-        X2, mesh.cells["triangle"], flat_cell_correction=None
-    )
+    mesh2 = meshplex.MeshTri(X2, mesh.cells["triangle"], flat_cell_correction=None)
 
     mesh1.update_node_coordinates(X2)
 

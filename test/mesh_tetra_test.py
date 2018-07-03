@@ -417,9 +417,7 @@ def test_toy_geometric():
     filename = download_mesh("toy.msh", "1d125d3fa9f373823edd91ebae5f7a81")
     mesh, _, _, _ = meshplex.read(filename)
 
-    mesh = meshplex.MeshTetra(
-        mesh.node_coords, mesh.cells["nodes"], mode="geometric"
-    )
+    mesh = meshplex.MeshTetra(mesh.node_coords, mesh.cells["nodes"], mode="geometric")
 
     run(
         mesh,
