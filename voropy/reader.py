@@ -9,7 +9,7 @@ formats.
 import numpy
 
 import meshio
-import voropy
+from . import mesh_tri, mesh_tetra
 
 
 __all__ = ["read"]
@@ -39,7 +39,7 @@ def read(filename, flat_cell_correction=None):
     if "tetra" in mesh.cells:
         points, cells = _sanitize(mesh.points, mesh.cells["tetra"])
         return (
-            voropy.mesh_tetra.MeshTetra(points, cells),
+            mesh_tetra.MeshTetra(points, cells),
             mesh.point_data,
             mesh.cell_data,
             mesh.field_data,
@@ -47,7 +47,7 @@ def read(filename, flat_cell_correction=None):
     elif "triangle" in mesh.cells:
         points, cells = _sanitize(mesh.points, mesh.cells["triangle"])
         return (
-            voropy.mesh_tri.MeshTri(
+            mesh_tri.MeshTri(
                 points, cells, flat_cell_correction=flat_cell_correction
             ),
             mesh.point_data,
