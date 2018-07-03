@@ -47,9 +47,7 @@ def read(filename, flat_cell_correction=None):
     elif "triangle" in mesh.cells:
         points, cells = _sanitize(mesh.points, mesh.cells["triangle"])
         return (
-            mesh_tri.MeshTri(
-                points, cells, flat_cell_correction=flat_cell_correction
-            ),
+            mesh_tri.MeshTri(points, cells, flat_cell_correction=flat_cell_correction),
             mesh.point_data,
             mesh.cell_data,
             mesh.field_data,
