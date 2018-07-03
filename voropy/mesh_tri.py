@@ -1167,10 +1167,7 @@ class MeshTri(_base_mesh):
     def _flip_edges(self, is_flip_interior_edge):
         """Flips the given edges.
         """
-        print("\nflip")
         assert self.fcc_type != "full"
-
-        print(sum(is_flip_interior_edge))
 
         if self._edges_cells is None:
             self._compute_edges_cells()
@@ -1187,8 +1184,6 @@ class MeshTri(_base_mesh):
         adj_cells = interior_edges_cells[is_flip_interior_edge].T
 
         edge_gids = self._edge_to_edge_gid[2][is_flip_interior_edge]
-        print("edge_gids", edge_gids)
-        print("adj_cells", adj_cells)
 
         # Get the local ids of the edge in the two adjacent cells.
         # Get all edges of the adjacent cells
@@ -1244,15 +1239,10 @@ class MeshTri(_base_mesh):
         # Set up new cells->edges relationships.
         previous_edges = self.cells["edges"][adj_cells].copy()
 
-        print("previous_edges[0]", previous_edges[0])
-        print("previous_edges[1]", previous_edges[1])
-
-        i0 = numpy.empty(equal_orientation.shape[0], dtype=int)
-        i0[equal_orientation] = 1
+        i0 = numpy.ones(equal_orientation.shape[0], dtype=int)
         i0[~equal_orientation] = 2
-        i1 = numpy.empty(equal_orientation.shape[0], dtype=int)
+        i1 = numpy.ones(equal_orientation.shape[0], dtype=int)
         i1[equal_orientation] = 2
-        i1[~equal_orientation] = 1
 
         self.cells["edges"][adj_cells[0]] = numpy.column_stack(
             [
@@ -1269,22 +1259,15 @@ class MeshTri(_base_mesh):
             ]
         )
 
-        # Update the edge->cells relationship. It doesn't change for the
-        # edge that was flipped, but for two of the other edges.
-        print("(lids[1] + i0) % 3", ((lids[1] + i0) % 3).shape, (lids[1] + i0) % 3)
+        # Update the edge->cells relationship. It doesn't change for the edge that was
+        # flipped, but for two of the other edges.
         confs = [
             (0, 1, numpy.choose((lids[0] + 1) % 3, previous_edges[0].T)),
             (1, 0, numpy.choose((lids[1] + i0) % 3, previous_edges[1].T)),
         ]
-
         for conf in confs:
             c, d, edge_gids = conf
-            print("edge_gids", edge_gids.shape, edge_gids)
-
-            assert len(edge_gids) == len(set(edge_gids))  # make sure the list is unique
-
             num_adj_cells, edge_id = self._edge_gid_to_edge_list[edge_gids].T
-            print("num_adj_cells", num_adj_cells)
 
             k1 = num_adj_cells == 1
             k2 = num_adj_cells == 2
@@ -1292,11 +1275,8 @@ class MeshTri(_base_mesh):
 
             # outer boundary edges
             edge_id1 = edge_id[k1]
-            print(self._edges_cells[1][edge_id1][:, 0])
-            print(adj_cells[c, k1])
-            print(self._edges_cells[1][edge_id1])
             assert numpy.all(self._edges_cells[1][edge_id1][:, 0] == adj_cells[c, k1])
-            self._edges_cells[1][edge_id1][:, 0] = adj_cells[d, k1]
+            self._edges_cells[1][edge_id1, 0] = adj_cells[d, k1]
 
             # interior edges
             edge_id2 = edge_id[k2]
