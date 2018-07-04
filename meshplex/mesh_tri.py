@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 #
-# pylint: disable=too-many-lines
+import os
+
 import numpy
+import meshio
 import fastfunc
 
 from .base import (
@@ -577,15 +579,6 @@ class MeshTri(_base_mesh):
                 numpy.append(self._surface_areas[1], ffc_vals)
         return self._surface_areas
 
-    def get_centroids(self):
-        """Computes the centroids (barycenters) of all triangles.
-        """
-        if self._centroids is None:
-            self._centroids = (
-                numpy.sum(self.node_coords[self.cells["nodes"]], axis=1) / 3.0
-            )
-        return self._centroids
-
     def get_control_volume_centroids(self):
         # This function is necessary, e.g., for Lloyd's
         # smoothing <https://en.wikipedia.org/wiki/Lloyd%27s_algorithm>.
@@ -752,6 +745,18 @@ class MeshTri(_base_mesh):
                 self.node_coords[node_cells], self.ei_dot_ei, self.ei_dot_ej
             )
         return self.cell_circumcenters
+
+    def get_centroids(self):
+        """Computes the centroids (barycenters) of all triangles.
+        """
+        if self._centroids is None:
+            self._centroids = (
+                numpy.sum(self.node_coords[self.cells["nodes"]], axis=1) / 3.0
+            )
+        return self._centroids
+
+    def get_cell_barycenters(self):
+        return self.get_centroids()
 
     def get_inradius(self):
         # See <http://mathworld.wolfram.com/Incircle.html>.
@@ -969,13 +974,18 @@ class MeshTri(_base_mesh):
 
         self.plot(*args, **kwargs)
         plt.show()
+        plt.close()
         return
 
-    def save_png(self, filename, *args, **kwargs):
-        from matplotlib import pyplot as plt
-
-        self.plot(*args, **kwargs)
-        plt.savefig(filename, transparent=False)
+    def save(self, filename, *args, **kwargs):
+        _, file_extension = os.path.splitext(filename)
+        if file_extension == ".png":
+            from matplotlib import pyplot as plt
+            self.plot(*args, **kwargs)
+            plt.savefig(filename, transparent=False)
+            plt.close()
+        else:
+            self.write(filename)
         return
 
     def plot(
