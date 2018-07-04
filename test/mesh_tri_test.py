@@ -565,6 +565,54 @@ def test_flip_same_edge_twice():
     return
 
 
+def test_flip_two_edges():
+    alpha = numpy.array([1.0, 3.0, 5.0, 7.0, 9.0, 11.0]) / 6.0 * numpy.pi
+    R = [0.9, 1.0, 0.9, 1.0, 1.2, 1.0]
+    points = numpy.array(
+        [[r * numpy.cos(a), r * numpy.sin(a), 0.0] for a, r in zip(alpha, R)]
+    )
+    cells = numpy.array([[1, 3, 5], [0, 1, 5], [1, 2, 3], [3, 4, 5]])
+    mesh = meshplex.MeshTri(points, cells, flat_cell_correction=None)
+    assert mesh.num_delaunay_violations() == 2
+
+    mesh.flip_until_delaunay()
+    assert mesh.num_delaunay_violations() == 0
+
+    assert numpy.array_equal(
+        mesh.cells["nodes"], [[5, 2, 3], [0, 2, 1], [5, 2, 0], [3, 4, 5]]
+    )
+    return
+
+
+def test_flip_delaunay_near_boundary_preserve_boundary_count():
+    # This test is to make sure meshplex preserves the boundary node count.
+    points = numpy.array(
+        [
+            [+0.0, +0.0, 0.0],
+            [+0.5, -0.5, 0.0],
+            [+0.5, +0.5, 0.0],
+            [+0.0, +0.6, 0.0],
+            [-0.5, +0.5, 0.0],
+            [-0.5, -0.5, 0.0],
+        ]
+    )
+    cells = numpy.array([[0, 1, 2], [0, 2, 4], [0, 4, 5], [0, 5, 1], [2, 3, 4]])
+    mesh = meshplex.MeshTri(points, cells, flat_cell_correction=None)
+
+    mesh.create_edges()
+    assert mesh.num_delaunay_violations() == 1
+
+    mesh.mark_boundary()
+    is_boundary_node_ref = [False, True, True, True, True, True]
+    assert numpy.array_equal(mesh.is_boundary_node, is_boundary_node_ref)
+
+    mesh.flip_until_delaunay()
+
+    mesh.mark_boundary()
+    assert numpy.array_equal(mesh.is_boundary_node, is_boundary_node_ref)
+    return
+
+
 def test_inradius():
     # 3-4-5 triangle
     points = numpy.array([[0.0, 0.0, 0.0], [3.0, 0.0, 0.0], [0.0, 4.0, 0.0]])
@@ -664,6 +712,4 @@ def test_angles():
 
 
 if __name__ == "__main__":
-    # test_signed_area()
-    # test_flip_delaunay_near_boundary()
-    test_flip_same_edge_twice()
+    test_flip_delaunay_near_boundary_preserve_boundary_count()

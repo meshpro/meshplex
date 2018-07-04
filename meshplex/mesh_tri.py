@@ -644,10 +644,11 @@ class MeshTri(_base_mesh):
         if self.edges is None:
             self.create_edges()
 
+        assert self.is_boundary_edge is not None
+
         self.is_boundary_node = numpy.zeros(len(self.node_coords), dtype=bool)
         self.is_boundary_node[self.idx_hierarchy[..., self.is_boundary_edge]] = True
 
-        assert self.is_boundary_edge is not None
         self.is_boundary_face = self.is_boundary_edge
         return
 
@@ -1154,36 +1155,41 @@ class MeshTri(_base_mesh):
         if numpy.all(ce_ratios[~self.is_boundary_edge] > 0):
             return False
 
-        needs_flipping = self.get_ce_ratios_per_interior_edge() < 0.0
-
         num_flip_steps = 0
-        while numpy.any(needs_flipping):
+        ce_ratios_per_interior_edge = self.get_ce_ratios_per_interior_edge()
+        while numpy.any(ce_ratios_per_interior_edge < 0.0):
             num_flip_steps += 1
-            self._flip_edges(needs_flipping)
-            needs_flipping = self.get_ce_ratios_per_interior_edge() < 0.0
+            self._flip_edges(ce_ratios_per_interior_edge)
+            ce_ratios_per_interior_edge = self.get_ce_ratios_per_interior_edge()
 
         return num_flip_steps > 1
 
-    def _flip_edges(self, is_flip_interior_edge):
-        """Flips the given edges.
-        """
+    def _flip_edges(self, ce_ratios_per_interior_edge):
         assert self.fcc_type != "full"
 
         if self._edges_cells is None:
             self._compute_edges_cells()
 
+        is_flip_interior_edge = ce_ratios_per_interior_edge < 0.0
+
         interior_edges_cells = self._edges_cells[2]
-
-        # For now, can only handle the case where each cell has at most one edge to
-        # flip. Use `unique` here as there are usually only very few edges in the list.
-        _, counts = numpy.unique(
-            interior_edges_cells[is_flip_interior_edge], return_counts=True
-        )
-        assert numpy.all(counts < 2), "Can flip at most one edge per cell."
-
         adj_cells = interior_edges_cells[is_flip_interior_edge].T
 
+        # Check if there are cells for which more than one edge needs to be flipped. For
+        # those, only flip one edge, namely that with the smaller (more negative)
+        # ce_ratio.
+        cell_gids, num_flips_per_cell = numpy.unique(adj_cells, return_counts=True)
+        critical_cell_gids = cell_gids[num_flips_per_cell > 1]
+        for cell_gid in critical_cell_gids:
+            edge_gids = self.cells["edges"][cell_gid]
+            num_adj_cells, edge_id = self._edge_gid_to_edge_list[edge_gids].T
+            edge_ids = edge_id[num_adj_cells == 2]
+            k = numpy.argmin(ce_ratios_per_interior_edge[edge_ids])
+            is_flip_interior_edge[edge_ids] = False
+            is_flip_interior_edge[edge_ids[k]] = True
+
         edge_gids = self._edge_to_edge_gid[2][is_flip_interior_edge]
+        adj_cells = interior_edges_cells[is_flip_interior_edge].T
 
         # Get the local ids of the edge in the two adjacent cells.
         # Get all edges of the adjacent cells
@@ -1258,6 +1264,12 @@ class MeshTri(_base_mesh):
                 edge_gids,
             ]
         )
+
+        # update is_boundary_edge
+        for k in range(3):
+            self.is_boundary_edge[k, adj_cells] = self.is_boundary_edge_individual[
+                self.cells["edges"][adj_cells, k]
+            ]
 
         # Update the edge->cells relationship. It doesn't change for the edge that was
         # flipped, but for two of the other edges.
