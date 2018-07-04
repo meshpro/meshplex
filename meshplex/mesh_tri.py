@@ -679,6 +679,11 @@ class MeshTri(_base_mesh):
         ]
         return
 
+    def get_edges_cells(self):
+        if self._edges_cells is None:
+            self._compute_edges_cells()
+        return self._edges_cells
+
     def _compute_edges_cells(self):
         """This creates interior edge->cells relations. While it's not
         necessary for many applications, it sometimes does come in handy.
