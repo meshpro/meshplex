@@ -644,10 +644,11 @@ class MeshTri(_base_mesh):
         if self.edges is None:
             self.create_edges()
 
+        assert self.is_boundary_edge is not None
+
         self.is_boundary_node = numpy.zeros(len(self.node_coords), dtype=bool)
         self.is_boundary_node[self.idx_hierarchy[..., self.is_boundary_edge]] = True
 
-        assert self.is_boundary_edge is not None
         self.is_boundary_face = self.is_boundary_edge
         return
 
@@ -1164,8 +1165,6 @@ class MeshTri(_base_mesh):
         return num_flip_steps > 1
 
     def _flip_edges(self, ce_ratios_per_interior_edge):
-        """Flips the given edges.
-        """
         assert self.fcc_type != "full"
 
         if self._edges_cells is None:
@@ -1265,6 +1264,21 @@ class MeshTri(_base_mesh):
                 edge_gids,
             ]
         )
+
+        # update is_boundary_edge
+        self.is_boundary_edge[0, adj_cells[0]] = \
+            self.is_boundary_edge_individual[numpy.choose((lids[1] + i0) % 3, previous_edges[1].T)]
+        self.is_boundary_edge[1, adj_cells[0]] = \
+            self.is_boundary_edge_individual[numpy.choose((lids[0] + 2) % 3, previous_edges[0].T)]
+        self.is_boundary_edge[2, adj_cells[0]] = \
+            self.is_boundary_edge_individual[edge_gids]
+        #
+        self.is_boundary_edge[0, adj_cells[1]] = \
+            self.is_boundary_edge_individual[numpy.choose((lids[1] + i1) % 3, previous_edges[1].T)]
+        self.is_boundary_edge[1, adj_cells[1]] = \
+            self.is_boundary_edge_individual[numpy.choose((lids[0] + 1) % 3, previous_edges[0].T)]
+        self.is_boundary_edge[2, adj_cells[1]] = \
+            self.is_boundary_edge_individual[edge_gids]
 
         # Update the edge->cells relationship. It doesn't change for the edge that was
         # flipped, but for two of the other edges.

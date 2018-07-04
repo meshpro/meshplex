@@ -584,6 +584,35 @@ def test_flip_two_edges():
     return
 
 
+def test_flip_delaunay_near_boundary_preserve_boundary_count():
+    # This test is to make sure meshplex preserves the boundary node count.
+    points = numpy.array(
+        [
+            [+0.0, +0.0, 0.0],
+            [+0.5, -0.5, 0.0],
+            [+0.5, +0.5, 0.0],
+            [+0.0, +0.6, 0.0],
+            [-0.5, +0.5, 0.0],
+            [-0.5, -0.5, 0.0],
+        ]
+    )
+    cells = numpy.array([[0, 1, 2], [0, 2, 4], [0, 4, 5], [0, 5, 1], [2, 3, 4]])
+    mesh = meshplex.MeshTri(points, cells, flat_cell_correction=None)
+
+    mesh.create_edges()
+    assert mesh.num_delaunay_violations() == 1
+
+    mesh.mark_boundary()
+    is_boundary_node_ref = [False, True, True, True, True, True]
+    assert numpy.array_equal(mesh.is_boundary_node, is_boundary_node_ref)
+
+    mesh.flip_until_delaunay()
+
+    mesh.mark_boundary()
+    assert numpy.array_equal(mesh.is_boundary_node, is_boundary_node_ref)
+    return
+
+
 def test_inradius():
     # 3-4-5 triangle
     points = numpy.array([[0.0, 0.0, 0.0], [3.0, 0.0, 0.0], [0.0, 4.0, 0.0]])
@@ -683,4 +712,4 @@ def test_angles():
 
 
 if __name__ == "__main__":
-    test_flip_two_edges()
+    test_flip_delaunay_near_boundary_preserve_boundary_count()
