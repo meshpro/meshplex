@@ -1266,19 +1266,9 @@ class MeshTri(_base_mesh):
         )
 
         # update is_boundary_edge
-        self.is_boundary_edge[0, adj_cells[0]] = \
-            self.is_boundary_edge_individual[numpy.choose((lids[1] + i0) % 3, previous_edges[1].T)]
-        self.is_boundary_edge[1, adj_cells[0]] = \
-            self.is_boundary_edge_individual[numpy.choose((lids[0] + 2) % 3, previous_edges[0].T)]
-        self.is_boundary_edge[2, adj_cells[0]] = \
-            self.is_boundary_edge_individual[edge_gids]
-        #
-        self.is_boundary_edge[0, adj_cells[1]] = \
-            self.is_boundary_edge_individual[numpy.choose((lids[1] + i1) % 3, previous_edges[1].T)]
-        self.is_boundary_edge[1, adj_cells[1]] = \
-            self.is_boundary_edge_individual[numpy.choose((lids[0] + 1) % 3, previous_edges[0].T)]
-        self.is_boundary_edge[2, adj_cells[1]] = \
-            self.is_boundary_edge_individual[edge_gids]
+        for k in range(3):
+            self.is_boundary_edge[k, adj_cells] = \
+                self.is_boundary_edge_individual[self.cells["edges"][adj_cells, k]]
 
         # Update the edge->cells relationship. It doesn't change for the edge that was
         # flipped, but for two of the other edges.
