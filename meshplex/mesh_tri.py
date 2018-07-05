@@ -370,9 +370,8 @@ class MeshTri(_base_mesh):
         # nodes = nodes[uvertices]
         # ```
         # helps.
-        is_used = numpy.zeros(len(nodes), dtype=bool)
-        is_used[cells] = True
-        self.is_all_used = all(is_used)
+        self.node_is_used = numpy.zeros(len(nodes), dtype=bool)
+        self.node_is_used[cells] = True
 
         self.cells = {"nodes": cells}
 
@@ -385,6 +384,7 @@ class MeshTri(_base_mesh):
         self.cell_circumcenters = None
         self._signed_tri_areas = None
         self.subdomains = {}
+        self.is_interior_node = None
         self.is_boundary_node = None
         self.is_boundary_edge = None
         self.is_boundary_face = None
@@ -590,9 +590,6 @@ class MeshTri(_base_mesh):
         # The denominator is the control volume. The numerator can be computed
         # by making use of the fact that the control volume around any vertex
         # v_0 is composed of right triangles, two for each adjacent cell.
-        assert self.is_all_used, \
-            "Can only compute control volume centroids is all points are used."
-
         if self._cv_centroids is None:
             _, v = self._compute_integral_x(self.regular_cells)
             # Again, make use of the fact that edge k is opposite of node k in
@@ -644,6 +641,8 @@ class MeshTri(_base_mesh):
 
         self.is_boundary_node = numpy.zeros(len(self.node_coords), dtype=bool)
         self.is_boundary_node[self.idx_hierarchy[..., self.is_boundary_edge]] = True
+
+        self.is_interior_node = self.node_is_used & ~self.is_boundary_node
 
         self.is_boundary_face = self.is_boundary_edge
         return
