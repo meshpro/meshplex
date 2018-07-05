@@ -106,11 +106,7 @@ def test_regular_tri_additional_points():
     assert numpy.all(numpy.isnan(cvc[4]))
     assert near_equal(
         cvc[1:4],
-        [
-            [0.25, 0.25, 0.0],
-            [2.0 / 3.0, 1.0 / 6.0, 0.0],
-            [1.0 / 6.0, 2.0 / 3.0, 0.0],
-        ],
+        [[0.25, 0.25, 0.0], [2.0 / 3.0, 1.0 / 6.0, 0.0], [1.0 / 6.0, 2.0 / 3.0, 0.0]],
         tol,
     )
 

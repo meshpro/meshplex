@@ -988,6 +988,7 @@ class MeshTri(_base_mesh):
         _, file_extension = os.path.splitext(filename)
         if file_extension == ".png":
             from matplotlib import pyplot as plt
+
             self.plot(*args, **kwargs)
             plt.savefig(filename, transparent=False)
             plt.close()
