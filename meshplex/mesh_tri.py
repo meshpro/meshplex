@@ -3,7 +3,6 @@
 import os
 
 import numpy
-import meshio
 import fastfunc
 
 from .base import (
@@ -466,12 +465,21 @@ class MeshTri(_base_mesh):
 
         return
 
+    def update_node_coordinates(self, X):
+        assert self.fcc is None
+        assert X.shape == self.node_coords.shape
+        self.node_coords = X
+        self._update_values()
+        return
+
     def update_interior_node_coordinates(self, X):
         assert self.fcc is None
         assert X.shape == self.node_coords[self.is_interior_node].shape
-
         self.node_coords[self.is_interior_node] = X
+        self._update_values()
+        return
 
+    def _update_values(self):
         if self.half_edge_coords is not None:
             # Constructing the temporary arrays
             # self.node_coords[self.idx_hierarchy] can take quite a while here.
