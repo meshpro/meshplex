@@ -466,11 +466,11 @@ class MeshTri(_base_mesh):
 
         return
 
-    def update_node_coordinates(self, X):
+    def update_interior_node_coordinates(self, X):
         assert self.fcc is None
-        assert X.shape == self.node_coords.shape
+        assert X.shape == self.node_coords[self.is_interior_node].shape
 
-        self.node_coords = X
+        self.node_coords[self.is_interior_node] = X
 
         if self.half_edge_coords is not None:
             # Constructing the temporary arrays
