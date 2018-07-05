@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 #
-# pylint: disable=too-many-lines
+import os
+
 import numpy
 import fastfunc
 
@@ -368,9 +369,8 @@ class MeshTri(_base_mesh):
         # nodes = nodes[uvertices]
         # ```
         # helps.
-        is_used = numpy.zeros(len(nodes), dtype=bool)
-        is_used[cells] = True
-        assert all(is_used)
+        self.node_is_used = numpy.zeros(len(nodes), dtype=bool)
+        self.node_is_used[cells] = True
 
         self.cells = {"nodes": cells}
 
@@ -383,6 +383,7 @@ class MeshTri(_base_mesh):
         self.cell_circumcenters = None
         self._signed_tri_areas = None
         self.subdomains = {}
+        self.is_interior_node = None
         self.is_boundary_node = None
         self.is_boundary_edge = None
         self.is_boundary_face = None
@@ -467,9 +468,18 @@ class MeshTri(_base_mesh):
     def update_node_coordinates(self, X):
         assert self.fcc is None
         assert X.shape == self.node_coords.shape
-
         self.node_coords = X
+        self._update_values()
+        return
 
+    def update_interior_node_coordinates(self, X):
+        assert self.fcc is None
+        assert X.shape == self.node_coords[self.is_interior_node].shape
+        self.node_coords[self.is_interior_node] = X
+        self._update_values()
+        return
+
+    def _update_values(self):
         if self.half_edge_coords is not None:
             # Constructing the temporary arrays
             # self.node_coords[self.idx_hierarchy] can take quite a while here.
@@ -577,15 +587,6 @@ class MeshTri(_base_mesh):
                 numpy.append(self._surface_areas[1], ffc_vals)
         return self._surface_areas
 
-    def get_centroids(self):
-        """Computes the centroids (barycenters) of all triangles.
-        """
-        if self._centroids is None:
-            self._centroids = (
-                numpy.sum(self.node_coords[self.cells["nodes"]], axis=1) / 3.0
-            )
-        return self._centroids
-
     def get_control_volume_centroids(self):
         # This function is necessary, e.g., for Lloyd's
         # smoothing <https://en.wikipedia.org/wiki/Lloyd%27s_algorithm>.
@@ -649,6 +650,8 @@ class MeshTri(_base_mesh):
         self.is_boundary_node = numpy.zeros(len(self.node_coords), dtype=bool)
         self.is_boundary_node[self.idx_hierarchy[..., self.is_boundary_edge]] = True
 
+        self.is_interior_node = self.node_is_used & ~self.is_boundary_node
+
         self.is_boundary_face = self.is_boundary_edge
         return
 
@@ -685,6 +688,11 @@ class MeshTri(_base_mesh):
             numpy.where(~self.is_boundary_edge_individual)[0],
         ]
         return
+
+    def get_edges_cells(self):
+        if self._edges_cells is None:
+            self._compute_edges_cells()
+        return self._edges_cells
 
     def _compute_edges_cells(self):
         """This creates interior edge->cells relations. While it's not
@@ -752,6 +760,18 @@ class MeshTri(_base_mesh):
                 self.node_coords[node_cells], self.ei_dot_ei, self.ei_dot_ej
             )
         return self.cell_circumcenters
+
+    def get_centroids(self):
+        """Computes the centroids (barycenters) of all triangles.
+        """
+        if self._centroids is None:
+            self._centroids = (
+                numpy.sum(self.node_coords[self.cells["nodes"]], axis=1) / 3.0
+            )
+        return self._centroids
+
+    def get_cell_barycenters(self):
+        return self.get_centroids()
 
     def get_inradius(self):
         # See <http://mathworld.wolfram.com/Incircle.html>.
@@ -969,13 +989,19 @@ class MeshTri(_base_mesh):
 
         self.plot(*args, **kwargs)
         plt.show()
+        plt.close()
         return
 
-    def save_png(self, filename, *args, **kwargs):
-        from matplotlib import pyplot as plt
+    def save(self, filename, *args, **kwargs):
+        _, file_extension = os.path.splitext(filename)
+        if file_extension == ".png":
+            from matplotlib import pyplot as plt
 
-        self.plot(*args, **kwargs)
-        plt.savefig(filename, transparent=False)
+            self.plot(*args, **kwargs)
+            plt.savefig(filename, transparent=False)
+            plt.close()
+        else:
+            self.write(filename)
         return
 
     def plot(

@@ -59,6 +59,61 @@ def test_regular_tri():
     return
 
 
+def test_regular_tri_additional_points():
+    points = numpy.array(
+        [
+            [0.0, 3.4, 0.0],
+            [0.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0],
+            [3.3, 4.4, 0.0],
+        ]
+    )
+    cells = numpy.array([[1, 2, 3]])
+    mesh = meshplex.MeshTri(points, cells)
+
+    mesh.mark_boundary()
+
+    assert numpy.array_equal(mesh.node_is_used, [False, True, True, True, False])
+    assert numpy.array_equal(mesh.is_boundary_node, [False, True, True, True, False])
+    assert numpy.array_equal(mesh.is_interior_node, [False, False, False, False, False])
+
+    tol = 1.0e-14
+
+    assert numpy.array_equal(mesh.cells["nodes"], [[1, 2, 3]])
+
+    mesh.create_edges()
+    assert numpy.array_equal(mesh.cells["edges"], [[2, 1, 0]])
+    assert numpy.array_equal(mesh.edges["nodes"], [[1, 2], [1, 3], [2, 3]])
+
+    # ce_ratios
+    assert near_equal(mesh.get_ce_ratios().T, [0.0, 0.5, 0.5], tol)
+
+    # control volumes
+    assert near_equal(mesh.get_control_volumes(), [0.0, 0.25, 0.125, 0.125, 0.0], tol)
+
+    # cell volumes
+    assert near_equal(mesh.cell_volumes, [0.5], tol)
+
+    # circumcenters
+    assert near_equal(mesh.get_cell_circumcenters(), [0.5, 0.5, 0.0], tol)
+
+    # Centroids.
+    # Nans appear here as the some points aren't part of any cell and hence have no
+    # control volume.
+    cvc = mesh.get_control_volume_centroids()
+    assert numpy.all(numpy.isnan(cvc[0]))
+    assert numpy.all(numpy.isnan(cvc[4]))
+    assert near_equal(
+        cvc[1:4],
+        [[0.25, 0.25, 0.0], [2.0 / 3.0, 1.0 / 6.0, 0.0], [1.0 / 6.0, 2.0 / 3.0, 0.0]],
+        tol,
+    )
+
+    assert mesh.num_delaunay_violations() == 0
+    return
+
+
 def test_regular_tri_order():
     points = numpy.array([[0.0, 1.0, 0.0], [0.0, 0.0, 0.0], [1.0, 0.0, 0.0]])
     cells = numpy.array([[0, 1, 2]])
