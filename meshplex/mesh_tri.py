@@ -359,10 +359,12 @@ class MeshTri(_base_mesh):
             cells = numpy.sort(cells, axis=1)
             cells = cells[cells[:, 0].argsort()]
 
-        assert len(nodes.shape) == 2, \
-            "Illegal node coordinates shape {}".format(nodes.shape)
-        assert len(cells.shape) == 2 and cells.shape[1] == 3, \
-            "Illegal cells shape {}".format(cells.shape)
+        assert len(nodes.shape) == 2, "Illegal node coordinates shape {}".format(
+            nodes.shape
+        )
+        assert (
+            len(cells.shape) == 2 and cells.shape[1] == 3
+        ), "Illegal cells shape {}".format(cells.shape)
 
         super(MeshTri, self).__init__(nodes, cells)
 
@@ -1107,7 +1109,7 @@ class MeshTri(_base_mesh):
                 centroids[:, 1],
                 linestyle="",
                 marker=".",
-                color=new_red,
+                color="#d62728",
             )
 
         return fig
