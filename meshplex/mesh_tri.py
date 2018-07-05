@@ -372,7 +372,7 @@ class MeshTri(_base_mesh):
         # helps.
         is_used = numpy.zeros(len(nodes), dtype=bool)
         is_used[cells] = True
-        assert all(is_used)
+        self.is_all_used = all(is_used)
 
         self.cells = {"nodes": cells}
 
@@ -590,6 +590,9 @@ class MeshTri(_base_mesh):
         # The denominator is the control volume. The numerator can be computed
         # by making use of the fact that the control volume around any vertex
         # v_0 is composed of right triangles, two for each adjacent cell.
+        assert self.is_all_used, \
+            "Can only compute control volume centroids is all points are used."
+
         if self._cv_centroids is None:
             _, v = self._compute_integral_x(self.regular_cells)
             # Again, make use of the fact that edge k is opposite of node k in
