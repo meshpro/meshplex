@@ -359,6 +359,13 @@ class MeshTri(_base_mesh):
             cells = numpy.sort(cells, axis=1)
             cells = cells[cells[:, 0].argsort()]
 
+        assert len(nodes.shape) == 2, "Illegal node coordinates shape {}".format(
+            nodes.shape
+        )
+        assert (
+            len(cells.shape) == 2 and cells.shape[1] == 3
+        ), "Illegal cells shape {}".format(cells.shape)
+
         super(MeshTri, self).__init__(nodes, cells)
 
         # Assert that all vertices are used.
@@ -998,7 +1005,7 @@ class MeshTri(_base_mesh):
             from matplotlib import pyplot as plt
 
             self.plot(*args, **kwargs)
-            plt.savefig(filename, transparent=False)
+            plt.savefig(filename, transparent=True, bbox_inches="tight")
             plt.close()
         else:
             self.write(filename)
@@ -1009,6 +1016,7 @@ class MeshTri(_base_mesh):
         show_coedges=True,
         show_centroids=True,
         mesh_color="k",
+        nondelaunay_edge_color="#d62728",  # mpl 2.0 default red
         boundary_edge_color=None,
         comesh_color=(0.8, 0.8, 0.8),
         show_axes=True,
@@ -1043,8 +1051,6 @@ class MeshTri(_base_mesh):
         ax.set_xlim(xmin, xmax)
         ax.set_ylim(ymin, ymax)
 
-        new_red = "#d62728"  # mpl 2.0 default red
-
         if self.edges is None:
             self.create_edges()
 
@@ -1060,7 +1066,7 @@ class MeshTri(_base_mesh):
         line_segments0 = LineCollection(e[is_pos], color=mesh_color)
         ax.add_collection(line_segments0)
         #
-        line_segments1 = LineCollection(e[~is_pos], color=new_red)
+        line_segments1 = LineCollection(e[~is_pos], color=nondelaunay_edge_color)
         ax.add_collection(line_segments1)
 
         if show_coedges:
@@ -1103,7 +1109,7 @@ class MeshTri(_base_mesh):
                 centroids[:, 1],
                 linestyle="",
                 marker=".",
-                color=new_red,
+                color="#d62728",
             )
 
         return fig
