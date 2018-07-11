@@ -61,8 +61,8 @@ def run(mesh, volume, convol_norms, ce_ratio_norms, cellvol_norms, tol=1.0e-12):
     # ```
     # Check ce_ratio norms.
     # TODO reinstate
-    alpha2 = fsum((mesh.get_ce_ratios() ** 2).flat)
-    alpha_inf = max(abs(mesh.get_ce_ratios()).flat)
+    alpha2 = fsum((mesh.ce_ratios ** 2).flat)
+    alpha_inf = max(abs(mesh.ce_ratios).flat)
     assert near_equal(ce_ratio_norms, [alpha2, alpha_inf], tol)
 
     # Check the volume by summing over the absolute value of the control

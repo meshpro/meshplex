@@ -440,7 +440,7 @@ class MeshTri(_base_mesh):
         e = self.half_edge_coords
         self.ei_dot_ei = numpy.einsum("ijk, ijk->ij", e, e)
 
-        self.cell_volumes, self.ce_ratios_per_half_edge = compute_tri_areas_and_ce_ratios(
+        self.cell_volumes, self.ce_ratios = compute_tri_areas_and_ce_ratios(
             self.ei_dot_ej
         )
 
@@ -451,7 +451,7 @@ class MeshTri(_base_mesh):
         else:
             if flat_cell_correction == "full":
                 # All cells with a negative c/e ratio are redone.
-                edge_needs_fcc = self.ce_ratios_per_half_edge < 0.0
+                edge_needs_fcc = self.ce_ratios < 0.0
             else:
                 assert flat_cell_correction == "boundary"
                 # This best imitates the classical notion of control volumes.
@@ -461,7 +461,7 @@ class MeshTri(_base_mesh):
                 if self.edges is None:
                     self.create_edges()
                 edge_needs_fcc = numpy.logical_and(
-                    self.ce_ratios_per_half_edge < 0.0, self.is_boundary_edge
+                    self.ce_ratios < 0.0, self.is_boundary_edge
                 )
 
             fcc_local_edge, self.fcc_cells = numpy.where(edge_needs_fcc)
@@ -470,7 +470,7 @@ class MeshTri(_base_mesh):
             self.fcc = FlatCellCorrector(
                 self.cells["nodes"][self.fcc_cells], fcc_local_edge, self.node_coords
             )
-            self.ce_ratios_per_half_edge[:, self.fcc_cells] = self.fcc.ce_ratios.T
+            self.ce_ratios[:, self.fcc_cells] = self.fcc.ce_ratios.T
 
         return
 
@@ -508,8 +508,8 @@ class MeshTri(_base_mesh):
             e = self.half_edge_coords
             self.ei_dot_ei = numpy.einsum("ijk, ijk->ij", e, e)
 
-        if self.cell_volumes is not None or self.ce_ratios_per_half_edge is not None:
-            self.cell_volumes, self.ce_ratios_per_half_edge = compute_tri_areas_and_ce_ratios(
+        if self.cell_volumes is not None or self.ce_ratios is not None:
+            self.cell_volumes, self.ce_ratios = compute_tri_areas_and_ce_ratios(
                 self.ei_dot_ej
             )
 
@@ -529,11 +529,6 @@ class MeshTri(_base_mesh):
         self.mark_boundary()
         return numpy.where(self.is_boundary_node)[0]
 
-    def get_ce_ratios(self, cell_ids=None):
-        if cell_ids is not None:
-            return self.ce_ratios_per_half_edge[cell_ids]
-        return self.ce_ratios_per_half_edge
-
     @property
     def ce_ratios_per_interior_edge(self):
         if self._interior_ce_ratios is None:
@@ -541,14 +536,12 @@ class MeshTri(_base_mesh):
                 self.create_edges()
 
             self._ce_ratios = numpy.zeros(len(self.edges["nodes"]))
-            fastfunc.add.at(
-                self._ce_ratios, self.cells["edges"].T, self.ce_ratios_per_half_edge
-            )
+            fastfunc.add.at(self._ce_ratios, self.cells["edges"].T, self.ce_ratios)
             self._interior_ce_ratios = self._ce_ratios[
                 ~self.is_boundary_edge_individual
             ]
 
-            # # sum up from self.ce_ratios_per_half_edge
+            # # sum up from self.ce_ratios
             # if self._edges_cells is None:
             #     self._compute_edges_cells()
 
@@ -560,7 +553,7 @@ class MeshTri(_base_mesh):
             #         self._edges_local[2][:, i],
             #         self._edges_cells[2][:, i],
             #         ]
-            #     self._interior_ce_ratios += self.ce_ratios_per_half_edge[idx]
+            #     self._interior_ce_ratios += self.ce_ratios[idx]
 
         return self._interior_ce_ratios
 
@@ -768,7 +761,7 @@ class MeshTri(_base_mesh):
             # Compute the control volumes. Note that
             #   0.5 * (0.5 * edge_length) * covolume
             # = 0.25 * edge_length**2 * ce_ratio_edge_ratio
-            self._cell_partitions = 0.25 * self.ei_dot_ei * self.ce_ratios_per_half_edge
+            self._cell_partitions = 0.25 * self.ei_dot_ei * self.ce_ratios
         return self._cell_partitions
 
     @property
@@ -1192,8 +1185,7 @@ class MeshTri(_base_mesh):
         assert self.fcc_type != "full"
 
         # If all coedge/edge ratios are positive, all cells are Delaunay.
-        ce_ratios = self.get_ce_ratios()
-        if numpy.all(ce_ratios > 0):
+        if numpy.all(self.ce_ratios > 0):
             return False
 
         # If all _interior_ coedge/edge ratios are positive, all cells are
@@ -1202,7 +1194,7 @@ class MeshTri(_base_mesh):
             self.create_edges()
         self.mark_boundary()
         # pylint: disable=invalid-unary-operand-type
-        if numpy.all(ce_ratios[~self.is_boundary_edge] > 0):
+        if numpy.all(self.ce_ratios[~self.is_boundary_edge] > 0):
             return False
 
         num_flip_steps = 0
@@ -1389,7 +1381,7 @@ class MeshTri(_base_mesh):
         # update cell_volumes, ce_ratios_per_half_edge
         cv, ce = compute_tri_areas_and_ce_ratios(self.ei_dot_ej[:, cell_ids])
         self.cell_volumes[cell_ids] = cv
-        self.ce_ratios_per_half_edge[:, cell_ids] = ce
+        self.ce_ratios[:, cell_ids] = ce
 
         if self._interior_ce_ratios is not None:
             self._interior_ce_ratios[interior_edge_ids] = 0.0
@@ -1403,15 +1395,15 @@ class MeshTri(_base_mesh):
                 numpy.sum(numpy.column_stack([is0, is1, is2]), axis=1) == 1
             )
             #
-            self._interior_ce_ratios[
-                interior_edge_ids[is0]
-            ] += self.ce_ratios_per_half_edge[0, adj_cells[is0, 0]]
-            self._interior_ce_ratios[
-                interior_edge_ids[is1]
-            ] += self.ce_ratios_per_half_edge[1, adj_cells[is1, 0]]
-            self._interior_ce_ratios[
-                interior_edge_ids[is2]
-            ] += self.ce_ratios_per_half_edge[2, adj_cells[is2, 0]]
+            self._interior_ce_ratios[interior_edge_ids[is0]] += self.ce_ratios[
+                0, adj_cells[is0, 0]
+            ]
+            self._interior_ce_ratios[interior_edge_ids[is1]] += self.ce_ratios[
+                1, adj_cells[is1, 0]
+            ]
+            self._interior_ce_ratios[interior_edge_ids[is2]] += self.ce_ratios[
+                2, adj_cells[is2, 0]
+            ]
 
             is0 = self.cells["edges"][adj_cells[:, 1]][:, 0] == edge_gids
             is1 = self.cells["edges"][adj_cells[:, 1]][:, 1] == edge_gids
@@ -1420,15 +1412,15 @@ class MeshTri(_base_mesh):
                 numpy.sum(numpy.column_stack([is0, is1, is2]), axis=1) == 1
             )
             #
-            self._interior_ce_ratios[
-                interior_edge_ids[is0]
-            ] += self.ce_ratios_per_half_edge[0, adj_cells[is0, 1]]
-            self._interior_ce_ratios[
-                interior_edge_ids[is1]
-            ] += self.ce_ratios_per_half_edge[1, adj_cells[is1, 1]]
-            self._interior_ce_ratios[
-                interior_edge_ids[is2]
-            ] += self.ce_ratios_per_half_edge[2, adj_cells[is2, 1]]
+            self._interior_ce_ratios[interior_edge_ids[is0]] += self.ce_ratios[
+                0, adj_cells[is0, 1]
+            ]
+            self._interior_ce_ratios[interior_edge_ids[is1]] += self.ce_ratios[
+                1, adj_cells[is1, 1]
+            ]
+            self._interior_ce_ratios[interior_edge_ids[is2]] += self.ce_ratios[
+                2, adj_cells[is2, 1]
+            ]
 
         if self._signed_tri_areas is not None:
             # One could make p contiguous by adding a copy(), but that's not
