@@ -23,17 +23,17 @@ def test_regular_tri():
     assert near_equal(mesh.get_ce_ratios().T, [0.0, 0.5, 0.5], tol)
 
     # control volumes
-    assert near_equal(mesh.get_control_volumes(), [0.25, 0.125, 0.125], tol)
+    assert near_equal(mesh.control_volumes, [0.25, 0.125, 0.125], tol)
 
     # cell volumes
     assert near_equal(mesh.cell_volumes, [0.5], tol)
 
     # circumcenters
-    assert near_equal(mesh.get_cell_circumcenters(), [0.5, 0.5, 0.0], tol)
+    assert near_equal(mesh.cell_circumcenters, [0.5, 0.5, 0.0], tol)
 
     # centroids
     assert near_equal(
-        mesh.get_control_volume_centroids(),
+        mesh.control_volume_centroids,
         [[0.25, 0.25, 0.0], [2.0 / 3.0, 1.0 / 6.0, 0.0], [1.0 / 6.0, 2.0 / 3.0, 0.0]],
         tol,
     )
@@ -90,18 +90,18 @@ def test_regular_tri_additional_points():
     assert near_equal(mesh.get_ce_ratios().T, [0.0, 0.5, 0.5], tol)
 
     # control volumes
-    assert near_equal(mesh.get_control_volumes(), [0.0, 0.25, 0.125, 0.125, 0.0], tol)
+    assert near_equal(mesh.control_volumes, [0.0, 0.25, 0.125, 0.125, 0.0], tol)
 
     # cell volumes
     assert near_equal(mesh.cell_volumes, [0.5], tol)
 
     # circumcenters
-    assert near_equal(mesh.get_cell_circumcenters(), [0.5, 0.5, 0.0], tol)
+    assert near_equal(mesh.cell_circumcenters, [0.5, 0.5, 0.0], tol)
 
     # Centroids.
     # Nans appear here as the some points aren't part of any cell and hence have no
     # control volume.
-    cvc = mesh.get_control_volume_centroids()
+    cvc = mesh.control_volume_centroids
     assert numpy.all(numpy.isnan(cvc[0]))
     assert numpy.all(numpy.isnan(cvc[4]))
     assert near_equal(
@@ -127,17 +127,17 @@ def test_regular_tri_order():
     assert near_equal(mesh.get_ce_ratios().T, [0.5, 0.0, 0.5], tol)
 
     # control volumes
-    assert near_equal(mesh.get_control_volumes(), [0.125, 0.25, 0.125], tol)
+    assert near_equal(mesh.control_volumes, [0.125, 0.25, 0.125], tol)
 
     # cell volumes
     assert near_equal(mesh.cell_volumes, [0.5], tol)
 
     # circumcenters
-    assert near_equal(mesh.get_cell_circumcenters(), [0.5, 0.5, 0.0], tol)
+    assert near_equal(mesh.cell_circumcenters, [0.5, 0.5, 0.0], tol)
 
     # centroids
     assert near_equal(
-        mesh.get_control_volume_centroids(),
+        mesh.control_volume_centroids,
         [[1.0 / 6.0, 2.0 / 3.0, 0.0], [0.25, 0.25, 0.0], [2.0 / 3.0, 1.0 / 6.0, 0.0]],
         tol,
     )
@@ -172,14 +172,14 @@ def test_regular_tri2(a):
     # control volumes
     vol = numpy.sqrt(3.0) / 4 * a ** 2
     assert near_equal(
-        mesh.get_control_volumes(), [vol / 3.0, vol / 3.0, vol / 3.0], tol
+        mesh.control_volumes, [vol / 3.0, vol / 3.0, vol / 3.0], tol
     )
 
     # cell volumes
     assert near_equal(mesh.cell_volumes, [vol], tol)
 
     # circumcenters
-    assert near_equal(mesh.get_cell_circumcenters(), [0.0, 0.0, 0.0], tol)
+    assert near_equal(mesh.cell_circumcenters, [0.0, 0.0, 0.0], tol)
 
     return
 
@@ -264,7 +264,7 @@ def test_degenerate_small0b(h):
 
     # edge lengths
     el = numpy.sqrt(0.5 ** 2 + h ** 2)
-    assert near_equal(mesh.get_edge_lengths().T, [el, el, 1.0], tol)
+    assert near_equal(mesh.edge_lengths.T, [el, el, 1.0], tol)
 
     # ce_ratios
     ce0 = 0.5 / h * (h ** 2 - 0.25)
@@ -274,16 +274,16 @@ def test_degenerate_small0b(h):
     # control volumes
     cv12 = 0.25 * (1.0 ** 2 * ce0 + (0.25 + h ** 2) * ce12)
     cv0 = 0.5 * (0.25 + h ** 2) * ce12
-    assert near_equal(mesh.get_control_volumes(), [cv12, cv12, cv0], tol)
+    assert near_equal(mesh.control_volumes, [cv12, cv12, cv0], tol)
 
     # cell volumes
     assert near_equal(mesh.cell_volumes, [0.5 * h], tol)
 
     # circumcenters
-    assert near_equal(mesh.get_cell_circumcenters(), [0.5, 0.375, 0.0], tol)
+    assert near_equal(mesh.cell_circumcenters, [0.5, 0.375, 0.0], tol)
 
     # surface areas
-    ids, vals = mesh.get_surface_areas()
+    ids, vals = mesh.surface_areas
     assert numpy.all(ids == [[0, 1, 2], [0, 1, 2], [0, 1, 2]])
     assert near_equal(
         vals,
@@ -306,7 +306,7 @@ def test_degenerate_small0b_fcc():
 
     # edge lengths
     el = numpy.sqrt(0.5 ** 2 + h ** 2)
-    assert near_equal(mesh.get_edge_lengths().T, [el, el, 1.0], tol)
+    assert near_equal(mesh.edge_lengths.T, [el, el, 1.0], tol)
 
     # ce_ratios
     ce = h
@@ -316,7 +316,7 @@ def test_degenerate_small0b_fcc():
     cv = ce * el
     alpha = 0.25 * el * cv
     beta = 0.5 * h - 2 * alpha
-    assert near_equal(mesh.get_control_volumes(), [alpha, alpha, beta], tol)
+    assert near_equal(mesh.control_volumes, [alpha, alpha, beta], tol)
 
     # cell volumes
     assert near_equal(mesh.cell_volumes, [0.5 * h], tol)
@@ -325,10 +325,10 @@ def test_degenerate_small0b_fcc():
     g = numpy.sqrt((0.5 * el) ** 2 + (ce * el) ** 2)
     alpha = 0.5 * el + g
     beta = el + (1.0 - 2 * g)
-    assert near_equal(mesh.get_surface_areas(), [alpha, alpha, beta], tol)
+    assert near_equal(mesh.surface_areas, [alpha, alpha, beta], tol)
 
     # centroids
-    centroids = mesh.get_control_volume_centroids()
+    centroids = mesh.control_volume_centroids
     alpha = 1.0 / 6000.0
     gamma = 0.00038888918518558031
     assert near_equal(centroids[0], [0.166667, alpha, 0.0], tol)
@@ -350,7 +350,7 @@ def test_degenerate_small1(h, a):
     # edge lengths
     el1 = numpy.sqrt(a ** 2 + h ** 2)
     el2 = numpy.sqrt((1.0 - a) ** 2 + h ** 2)
-    assert near_equal(mesh.get_edge_lengths().T, [[el2, el1, 1.0]], tol)
+    assert near_equal(mesh.edge_lengths.T, [[el2, el1, 1.0]], tol)
 
     # ce_ratios
     ce1 = 0.5 * h / a
@@ -363,8 +363,8 @@ def test_degenerate_small1(h, a):
     cv2 = ce2 * el2
     alpha2 = 0.25 * el2 * cv2
     beta = 0.5 * h - (alpha1 + alpha2)
-    assert near_equal(mesh.get_control_volumes(), [alpha1, alpha2, beta], tol)
-    assert abs(sum(mesh.get_control_volumes()) - 0.5 * h) < tol
+    assert near_equal(mesh.control_volumes, [alpha1, alpha2, beta], tol)
+    assert abs(sum(mesh.control_volumes) - 0.5 * h) < tol
 
     # cell volumes
     assert near_equal(mesh.cell_volumes, [0.5 * h], tol)
@@ -376,8 +376,7 @@ def test_degenerate_small1(h, a):
     alpha1 = b2 + 0.5 * el2
     total = 1.0 + el1 + el2
     alpha2 = total - alpha0 - alpha1
-    surf = mesh.get_surface_areas()
-    assert near_equal(surf, [alpha0, alpha1, alpha2], tol)
+    assert near_equal(mesh.surface_areas, [alpha0, alpha1, alpha2], tol)
 
     assert mesh.num_delaunay_violations() == 0
     return
@@ -394,7 +393,7 @@ def test_degenerate_small2(h):
     # ce_ratios
     alpha = h - 1.0 / (4 * h)
     beta = 1.0 / (4 * h)
-    assert near_equal(mesh.get_ce_ratios_per_interior_edge(), [alpha], tol)
+    assert near_equal(mesh.ce_ratios_per_interior_edge, [alpha], tol)
 
     alpha2 = (h - 1.0 / (4 * h)) / 2
     assert near_equal(
@@ -404,11 +403,11 @@ def test_degenerate_small2(h):
     # control volumes
     alpha1 = 0.125 * (3 * h - 1.0 / (4 * h))
     alpha2 = 0.125 * (h + 1.0 / (4 * h))
-    assert near_equal(mesh.get_control_volumes(), [alpha1, alpha1, alpha2, alpha2], tol)
+    assert near_equal(mesh.control_volumes, [alpha1, alpha1, alpha2, alpha2], tol)
 
     # circumcenters
     assert near_equal(
-        mesh.get_cell_circumcenters(), [[0.5, -12.495, 0.0], [0.5, +12.495, 0.0]], tol
+        mesh.cell_circumcenters, [[0.5, -12.495, 0.0], [0.5, +12.495, 0.0]], tol
     )
 
     # cell volumes
@@ -429,11 +428,11 @@ def test_rectanglesmall():
 
     tol = 1.0e-14
 
-    assert near_equal(mesh.get_ce_ratios_per_interior_edge(), [0.0], tol)
+    assert near_equal(mesh.ce_ratios_per_interior_edge, [0.0], tol)
 
     print(mesh.get_ce_ratios())
     assert near_equal(mesh.get_ce_ratios(), [[5.0, 0.05], [0.0, 5.0], [0.05, 0.0]], tol)
-    assert near_equal(mesh.get_control_volumes(), [2.5, 2.5, 2.5, 2.5], tol)
+    assert near_equal(mesh.control_volumes, [2.5, 2.5, 2.5, 2.5], tol)
     assert near_equal(mesh.cell_volumes, [5.0, 5.0], tol)
     assert mesh.num_delaunay_violations() == 0
 
@@ -475,7 +474,7 @@ def test_shell():
     assert near_equal(mesh.get_ce_ratios().T, ce_ratios, tol)
 
     cv = numpy.array([2.0, 1.0, 1.0, 1.0, 1.0]) / numpy.sqrt(3.0)
-    assert near_equal(mesh.get_control_volumes(), cv, tol)
+    assert near_equal(mesh.control_volumes, cv, tol)
 
     cell_vols = numpy.sqrt(3.0) / 2.0 * numpy.ones(4)
     assert near_equal(mesh.cell_volumes, cell_vols, tol)
@@ -508,7 +507,7 @@ def test_signed_area():
 
     mesh = meshplex.MeshTri(X, mesh.cells["triangle"], flat_cell_correction=None)
 
-    vols = mesh.get_signed_tri_areas()
+    vols = mesh.signed_tri_areas
     assert numpy.all(abs(abs(vols) - mesh.cell_volumes) < 1.0e-12 * mesh.cell_volumes)
     return
 
@@ -676,8 +675,7 @@ def test_inradius():
 
     tol = 1.0e-15
 
-    ic = mesh.get_inradius()
-    assert near_equal(ic, [1.0], tol)
+    assert near_equal(mesh.inradius, [1.0], tol)
 
     # 30-60-90 triangle
     a = 1.0
@@ -687,8 +685,7 @@ def test_inradius():
     cells = numpy.array([[0, 1, 2]])
     mesh = meshplex.MeshTri(points, cells)
 
-    ic = mesh.get_inradius()
-    assert near_equal(ic, [a / 4 * (numpy.sqrt(3) - 1)], tol)
+    assert near_equal(mesh.inradius, [a / 4 * (numpy.sqrt(3) - 1)], tol)
     return
 
 
@@ -700,8 +697,7 @@ def test_circumradius():
 
     tol = 1.0e-15
 
-    ic = mesh.get_circumradius()
-    assert near_equal(ic, [2.5], tol)
+    assert near_equal(mesh.circumradius, [2.5], tol)
 
     # 30-60-90 triangle
     a = 1.0
@@ -711,8 +707,7 @@ def test_circumradius():
     cells = numpy.array([[0, 1, 2]])
     mesh = meshplex.MeshTri(points, cells)
 
-    ic = mesh.get_circumradius()
-    assert near_equal(ic, [a / 2], tol)
+    assert near_equal(mesh.circumradius, [a / 2], tol)
     return
 
 
@@ -724,8 +719,8 @@ def test_quality():
 
     tol = 1.0e-15
 
-    ic = mesh.get_quality()
-    assert near_equal(ic, 2 * mesh.get_inradius() / mesh.get_circumradius(), tol)
+    ic = mesh.triangle_quality
+    assert near_equal(ic, 2 * mesh.inradius / mesh.circumradius, tol)
 
     # 30-60-90 triangle
     a = 1.0
@@ -735,8 +730,8 @@ def test_quality():
     cells = numpy.array([[0, 1, 2]])
     mesh = meshplex.MeshTri(points, cells)
 
-    ic = mesh.get_quality()
-    assert near_equal(ic, 2 * mesh.get_inradius() / mesh.get_circumradius(), tol)
+    ic = mesh.triangle_quality
+    assert near_equal(ic, 2 * mesh.inradius / mesh.circumradius, tol)
     return
 
 
@@ -748,9 +743,8 @@ def test_angles():
 
     tol = 1.0e-14
 
-    ic = mesh.get_angles()
     assert near_equal(
-        ic, [[numpy.pi / 2], [numpy.arcsin(4.0 / 5.0)], [numpy.arcsin(3.0 / 5.0)]], tol
+        mesh.angles, [[numpy.pi / 2], [numpy.arcsin(4.0 / 5.0)], [numpy.arcsin(3.0 / 5.0)]], tol
     )
 
     # 30-60-90 triangle
@@ -761,7 +755,7 @@ def test_angles():
     cells = numpy.array([[0, 1, 2]])
     mesh = meshplex.MeshTri(points, cells)
 
-    ic = mesh.get_angles() / numpy.pi * 180
+    ic = mesh.angles / numpy.pi * 180
     assert near_equal(ic, [[90], [60], [30]], tol)
     return
 

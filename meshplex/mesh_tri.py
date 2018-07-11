@@ -166,7 +166,8 @@ class FlatCellCorrector(object):
         self.ghostedge_length_2 = _row_dot(ghost - self.p0, ghost - self.p0)
         return
 
-    def get_ce_ratios(self):
+    @property
+    def ce_ratios(self):
         """Return the covolume-edge length ratios for the flat boundary cells.
         """
         vals = numpy.empty((len(self.cells), 3), dtype=float)
@@ -176,7 +177,8 @@ class FlatCellCorrector(object):
         vals[i, self.p2_local_id] = self.ce_ratios1[1]
         return vals
 
-    def get_control_volumes(self):
+    @property
+    def control_volumes(self):
         """Control volume contributions
 
                                p0
@@ -387,7 +389,7 @@ class MeshTri(_base_mesh):
         self._cv_centroids = None
         self._surface_areas = None
         self.edges = None
-        self.cell_circumcenters = None
+        self._cell_circumcenters = None
         self._signed_tri_areas = None
         self.subdomains = {}
         self.is_interior_node = None
@@ -468,7 +470,7 @@ class MeshTri(_base_mesh):
             self.fcc = FlatCellCorrector(
                 self.cells["nodes"][self.fcc_cells], fcc_local_edge, self.node_coords
             )
-            self.ce_ratios_per_half_edge[:, self.fcc_cells] = self.fcc.get_ce_ratios().T
+            self.ce_ratios_per_half_edge[:, self.fcc_cells] = self.fcc.ce_ratios.T
 
         return
 
@@ -512,7 +514,7 @@ class MeshTri(_base_mesh):
             )
 
         self._interior_edge_lengths = None
-        self.cell_circumcenters = None
+        self._cell_circumcenters = None
         self._interior_ce_ratios = None
         self._control_volumes = None
         self._cell_partitions = None
@@ -522,7 +524,8 @@ class MeshTri(_base_mesh):
         self._centroids = None
         return
 
-    def get_boundary_vertices(self):
+    @property
+    def boundary_vertices(self):
         self.mark_boundary()
         return numpy.where(self.is_boundary_node)[0]
 
@@ -531,7 +534,8 @@ class MeshTri(_base_mesh):
             return self.ce_ratios_per_half_edge[cell_ids]
         return self.ce_ratios_per_half_edge
 
-    def get_ce_ratios_per_interior_edge(self):
+    @property
+    def ce_ratios_per_interior_edge(self):
         if self._interior_ce_ratios is None:
             if "edges" not in self.cells:
                 self.create_edges()
@@ -560,9 +564,10 @@ class MeshTri(_base_mesh):
 
         return self._interior_ce_ratios
 
-    def get_control_volumes(self):
+    @property
+    def control_volumes(self):
         if self._control_volumes is None:
-            v = self.get_cell_partitions()[..., self.regular_cells]
+            v = self.cell_partitions[..., self.regular_cells]
 
             # Summing up the arrays first makes the work for numpy.add.at
             # lighter.
@@ -575,7 +580,7 @@ class MeshTri(_base_mesh):
             )
             control_volume_data = [(ids, vals)]
             if self.fcc is not None:
-                control_volume_data.append(self.fcc.get_control_volumes())
+                control_volume_data.append(self.fcc.control_volumes)
 
             # sum up from self.control_volume_data
             self._control_volumes = numpy.zeros(len(self.node_coords))
@@ -585,7 +590,8 @@ class MeshTri(_base_mesh):
 
         return self._control_volumes
 
-    def get_surface_areas(self):
+    @property
+    def surface_areas(self):
         if self._surface_areas is None:
             self._surface_areas = self._compute_surface_areas(self.regular_cells)
             if self.fcc is not None:
@@ -594,7 +600,8 @@ class MeshTri(_base_mesh):
                 numpy.append(self._surface_areas[1], ffc_vals)
         return self._surface_areas
 
-    def get_control_volume_centroids(self):
+    @property
+    def control_volume_centroids(self):
         # This function is necessary, e.g., for Lloyd's
         # smoothing <https://en.wikipedia.org/wiki/Lloyd%27s_algorithm>.
         #
@@ -624,11 +631,12 @@ class MeshTri(_base_mesh):
                 # TODO fastfunc
                 numpy.add.at(self._cv_centroids, d[0], d[1])
             # Divide by the control volume
-            self._cv_centroids /= self.get_control_volumes()[:, None]
+            self._cv_centroids /= self.control_volumes[:, None]
 
         return self._cv_centroids
 
-    def get_signed_tri_areas(self):
+    @property
+    def signed_tri_areas(self):
         """Signed area of a triangle in 2D.
         """
         # http://mathworld.wolfram.com/TriangleArea.html
@@ -696,7 +704,8 @@ class MeshTri(_base_mesh):
         ]
         return
 
-    def get_edges_cells(self):
+    @property
+    def edges_cells(self):
         if self._edges_cells is None:
             self._compute_edges_cells()
         return self._edges_cells
@@ -746,13 +755,15 @@ class MeshTri(_base_mesh):
 
         return
 
-    def get_face_partitions(self):
+    @property
+    def face_partitions(self):
         # face = edge for triangles.
         # The partition is simply along the center of the edge.
-        edge_lengths = self.get_edge_lengths()
+        edge_lengths = self.edge_lengths
         return numpy.array([0.5 * edge_lengths, 0.5 * edge_lengths])
 
-    def get_cell_partitions(self):
+    @property
+    def cell_partitions(self):
         if self._cell_partitions is None:
             # Compute the control volumes. Note that
             #   0.5 * (0.5 * edge_length) * covolume
@@ -760,15 +771,17 @@ class MeshTri(_base_mesh):
             self._cell_partitions = 0.25 * self.ei_dot_ei * self.ce_ratios_per_half_edge
         return self._cell_partitions
 
-    def get_cell_circumcenters(self):
-        if self.cell_circumcenters is None:
+    @property
+    def cell_circumcenters(self):
+        if self._cell_circumcenters is None:
             node_cells = self.cells["nodes"].T
-            self.cell_circumcenters = compute_triangle_circumcenters(
+            self._cell_circumcenters = compute_triangle_circumcenters(
                 self.node_coords[node_cells], self.ei_dot_ei, self.ei_dot_ej
             )
-        return self.cell_circumcenters
+        return self._cell_circumcenters
 
-    def get_centroids(self):
+    @property
+    def centroids(self):
         """Computes the centroids (barycenters) of all triangles.
         """
         if self._centroids is None:
@@ -777,22 +790,26 @@ class MeshTri(_base_mesh):
             )
         return self._centroids
 
-    def get_cell_barycenters(self):
-        return self.get_centroids()
+    @property
+    def cell_barycenters(self):
+        return self.centroids
 
-    def get_inradius(self):
+    @property
+    def inradius(self):
         # See <http://mathworld.wolfram.com/Incircle.html>.
         abc = numpy.sqrt(self.ei_dot_ei)
         return 2 * self.cell_volumes / numpy.sum(abc, axis=0)
 
-    def get_circumradius(self):
+    @property
+    def circumradius(self):
         # See <http://mathworld.wolfram.com/Incircle.html>.
         a, b, c = numpy.sqrt(self.ei_dot_ei)
         return (a * b * c) / numpy.sqrt(
             (a + b + c) * (-a + b + c) * (a - b + c) * (a + b - c)
         )
 
-    def get_quality(self):
+    @property
+    def triangle_quality(self):
         # q = 2 * r_in / r_out
         #   = (-a+b+c) * (+a-b+c) * (+a+b-c) / (a*b*c),
         #
@@ -801,7 +818,8 @@ class MeshTri(_base_mesh):
         a, b, c = numpy.sqrt(self.ei_dot_ei)
         return (-a + b + c) * (a - b + c) * (a + b - c) / (a * b * c)
 
-    def get_angles(self):
+    @property
+    def angles(self):
         # The cosines of the angles are the negative dot products of the normalized
         # edges adjacent to the angle.
         norms = numpy.sqrt(self.ei_dot_ei)
@@ -825,13 +843,13 @@ class MeshTri(_base_mesh):
         # The integral of any linear function over a triangle is the average of
         # the values of the function in each of the three corners, times the
         # area of the triangle.
-        right_triangle_vols = self.get_cell_partitions()[:, cell_ids]
+        right_triangle_vols = self.cell_partitions[:, cell_ids]
 
         node_edges = self.idx_hierarchy[..., cell_ids]
 
         corner = self.node_coords[node_edges]
         edge_midpoints = 0.5 * (corner[0] + corner[1])
-        cc = self.get_cell_circumcenters()[cell_ids]
+        cc = self.cell_circumcenters[cell_ids]
 
         average = (corner + edge_midpoints[None] + cc[None, None]) / 3.0
 
@@ -851,7 +869,7 @@ class MeshTri(_base_mesh):
         cn = self.cells["nodes"][cell_ids]
         ids = numpy.stack([cn, cn, cn], axis=1)
 
-        half_el = 0.5 * self.get_edge_lengths()[..., cell_ids]
+        half_el = 0.5 * self.edge_lengths[..., cell_ids]
         zero = numpy.zeros([half_el.shape[1]])
         vals = numpy.stack(
             [
@@ -989,7 +1007,7 @@ class MeshTri(_base_mesh):
     def num_delaunay_violations(self):
         # Delaunay violations are present exactly on the interior edges where
         # the ce_ratio is negative. Count those.
-        return numpy.sum(self.get_ce_ratios_per_interior_edge() < 0.0)
+        return numpy.sum(self.ce_ratios_per_interior_edge < 0.0)
 
     def show(self, *args, **kwargs):
         from matplotlib import pyplot as plt
@@ -1057,7 +1075,7 @@ class MeshTri(_base_mesh):
         # Get edges, cut off z-component.
         e = self.node_coords[self.edges["nodes"]][:, :, :2]
         # Plot regular edges, mark those with negative ce-ratio red.
-        ce_ratios = self.get_ce_ratios_per_interior_edge()
+        ce_ratios = self.ce_ratios_per_interior_edge
         pos = ce_ratios >= 0
 
         is_pos = numpy.zeros(len(self.edges["nodes"]), dtype=bool)
@@ -1071,7 +1089,7 @@ class MeshTri(_base_mesh):
 
         if show_coedges:
             # Connect all cell circumcenters with the edge midpoints
-            cc = self.get_cell_circumcenters()
+            cc = self.cell_circumcenters
 
             edge_midpoints = 0.5 * (
                 self.node_coords[self.edges["nodes"][:, 0]]
@@ -1103,7 +1121,7 @@ class MeshTri(_base_mesh):
             ax.add_collection(line_segments1)
 
         if show_centroids:
-            centroids = self.get_control_volume_centroids()
+            centroids = self.control_volume_centroids
             ax.plot(
                 centroids[:, 0],
                 centroids[:, 1],
@@ -1188,11 +1206,11 @@ class MeshTri(_base_mesh):
             return False
 
         num_flip_steps = 0
-        ce_ratios_per_interior_edge = self.get_ce_ratios_per_interior_edge()
+        ce_ratios_per_interior_edge = self.ce_ratios_per_interior_edge
         while numpy.any(ce_ratios_per_interior_edge < 0.0):
             num_flip_steps += 1
             self._flip_edges(ce_ratios_per_interior_edge)
-            ce_ratios_per_interior_edge = self.get_ce_ratios_per_interior_edge()
+            ce_ratios_per_interior_edge = self.ce_ratios_per_interior_edge
 
         return num_flip_steps > 1
 
@@ -1430,7 +1448,7 @@ class MeshTri(_base_mesh):
         self._edge_lengths = None
 
         # TODO update self.cell_circumcenters
-        self.cell_circumcenters = None
+        self._cell_circumcenters = None
 
         # TODO update self._control_volumes
         self._control_volumes = None

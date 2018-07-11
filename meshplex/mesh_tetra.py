@@ -383,12 +383,14 @@ class MeshTetra(_base_mesh):
 
         return ce_ratios
 
-    def get_cell_circumcenters(self):
+    @property
+    def cell_circumcenters(self):
         if self._circumcenters is None:
             self._compute_cell_circumcenters()
         return self._circumcenters
 
-    def get_control_volumes(self):
+    @property
+    def control_volumes(self):
         """Compute the control volumes of all nodes in the mesh.
         """
         if self._control_volumes is None:

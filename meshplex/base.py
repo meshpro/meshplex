@@ -176,7 +176,8 @@ class _base_mesh(object):
             field_data=field_data,
         )
 
-    def get_edge_lengths(self):
+    @property
+    def edge_lengths(self):
         if self._edge_lengths is None:
             self._edge_lengths = numpy.sqrt(self.ei_dot_ei)
         return self._edge_lengths
