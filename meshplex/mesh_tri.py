@@ -393,9 +393,9 @@ class MeshTri(_base_mesh):
         self._signed_tri_areas = None
         self.subdomains = {}
         self.is_interior_node = None
-        self.is_boundary_node = None
+        self._is_boundary_node = None
         self.is_boundary_edge = None
-        self.is_boundary_face = None
+        self._is_boundary_facet = None
         self._interior_edge_lengths = None
         self._ce_ratios = None
         self._edges_cells = None
@@ -525,11 +525,6 @@ class MeshTri(_base_mesh):
         return
 
     @property
-    def boundary_vertices(self):
-        self.mark_boundary()
-        return numpy.where(self.is_boundary_node)[0]
-
-    @property
     def ce_ratios_per_interior_edge(self):
         if self._interior_ce_ratios is None:
             if "edges" not in self.cells:
@@ -655,13 +650,25 @@ class MeshTri(_base_mesh):
 
         assert self.is_boundary_edge is not None
 
-        self.is_boundary_node = numpy.zeros(len(self.node_coords), dtype=bool)
-        self.is_boundary_node[self.idx_hierarchy[..., self.is_boundary_edge]] = True
+        self._is_boundary_node = numpy.zeros(len(self.node_coords), dtype=bool)
+        self._is_boundary_node[self.idx_hierarchy[..., self.is_boundary_edge]] = True
 
         self.is_interior_node = self.node_is_used & ~self.is_boundary_node
 
-        self.is_boundary_face = self.is_boundary_edge
+        self._is_boundary_facet = self.is_boundary_edge
         return
+
+    @property
+    def is_boundary_node(self):
+        if self._is_boundary_node is None:
+            self.mark_boundary()
+        return self._is_boundary_node
+
+    @property
+    def is_boundary_facet(self):
+        if self._is_boundary_facet is None:
+            self.mark_boundary()
+        return self._is_boundary_facet
 
     def create_edges(self):
         """Set up edge-node and edge-cell relations.

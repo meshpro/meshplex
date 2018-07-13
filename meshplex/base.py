@@ -244,7 +244,7 @@ class _base_mesh(object):
 
         if subdomain.is_boundary_only:
             # Filter for boundary
-            is_inside = is_inside & self.is_boundary_face
+            is_inside = is_inside & self.is_boundary_facet
 
         return is_inside
 

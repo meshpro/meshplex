@@ -104,8 +104,8 @@ class MeshTetra(_base_mesh):
         self.is_boundary_node = None
         self._inv_faces = None
         self.edges = None
-        self.is_boundary_face_individual = None
-        self.is_boundary_face = None
+        self.is_boundary_facet_individual = None
+        self.is_boundary_facet = None
         self.faces = None
         return
 
@@ -118,7 +118,7 @@ class MeshTetra(_base_mesh):
 
         self.is_boundary_node = numpy.zeros(len(self.node_coords), dtype=bool)
         self.is_boundary_node[
-            self.faces["nodes"][self.is_boundary_face_individual]
+            self.faces["nodes"][self.is_boundary_facet_individual]
         ] = True
         return
 
@@ -142,8 +142,8 @@ class MeshTetra(_base_mesh):
         # cells are listed twice.
         assert all(cts < 3)
 
-        self.is_boundary_face = (cts[inv] == 1).reshape(s[2:])
-        self.is_boundary_face_individual = cts == 1
+        self.is_boundary_facet = (cts[inv] == 1).reshape(s[2:])
+        self.is_boundary_facet_individual = cts == 1
 
         self.faces = {"nodes": a[idx]}
 
