@@ -392,7 +392,7 @@ class MeshTri(_base_mesh):
         self._cell_circumcenters = None
         self._signed_tri_areas = None
         self.subdomains = {}
-        self.is_interior_node = None
+        self._is_interior_node = None
         self._is_boundary_node = None
         self.is_boundary_edge = None
         self._is_boundary_facet = None
@@ -653,7 +653,7 @@ class MeshTri(_base_mesh):
         self._is_boundary_node = numpy.zeros(len(self.node_coords), dtype=bool)
         self._is_boundary_node[self.idx_hierarchy[..., self.is_boundary_edge]] = True
 
-        self.is_interior_node = self.node_is_used & ~self.is_boundary_node
+        self._is_interior_node = self.node_is_used & ~self.is_boundary_node
 
         self._is_boundary_facet = self.is_boundary_edge
         return
@@ -663,6 +663,12 @@ class MeshTri(_base_mesh):
         if self._is_boundary_node is None:
             self.mark_boundary()
         return self._is_boundary_node
+
+    @property
+    def is_interior_node(self):
+        if self._is_interior_node is None:
+            self.mark_boundary()
+        return self._is_interior_node
 
     @property
     def is_boundary_facet(self):
