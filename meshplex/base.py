@@ -133,14 +133,27 @@ def compute_triangle_circumcenters(X, ei_dot_ei, ei_dot_ej):
     #      + ... P1
     #      + ... P2.
     #
+    # An even nicer formula is given on
+    # <https://en.wikipedia.org/wiki/Circumscribed_circle#Barycentric_coordinates>: The
+    # barycentric coordinates of the circumcenter are
+    #
+    #   a^2 (b^2 + c^2 - a^2) : b^2 (c^2 + a^2 - b^2) : c^2 (a^2 + b^2 - c^2).
+    #
+    # This is only using the squared edge lengths, too!
+    #
     alpha = ei_dot_ei * ei_dot_ej
     alpha_sum = alpha[0] + alpha[1] + alpha[2]
-
     beta = alpha / alpha_sum[None]
-
     a = X * beta[..., None]
     cc = a[0] + a[1] + a[2]
 
+    # alpha = numpy.array([
+    #     ei_dot_ei[0] * (ei_dot_ei[1] + ei_dot_ei[2] - ei_dot_ei[0]),
+    #     ei_dot_ei[1] * (ei_dot_ei[2] + ei_dot_ei[0] - ei_dot_ei[1]),
+    #     ei_dot_ei[2] * (ei_dot_ei[0] + ei_dot_ei[1] - ei_dot_ei[2]),
+    # ])
+    # alpha /= numpy.sum(alpha, axis=0)
+    # cc = (X[0].T * alpha[0] + X[1].T * alpha[1] + X[2].T * alpha[2]).T
     return cc
 
 
