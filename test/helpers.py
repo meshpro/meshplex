@@ -61,17 +61,17 @@ def run(mesh, volume, convol_norms, ce_ratio_norms, cellvol_norms, tol=1.0e-12):
     # ```
     # Check ce_ratio norms.
     # TODO reinstate
-    alpha2 = fsum((mesh.get_ce_ratios() ** 2).flat)
-    alpha_inf = max(abs(mesh.get_ce_ratios()).flat)
+    alpha2 = fsum((mesh.ce_ratios ** 2).flat)
+    alpha_inf = max(abs(mesh.ce_ratios).flat)
     assert near_equal(ce_ratio_norms, [alpha2, alpha_inf], tol)
 
     # Check the volume by summing over the absolute value of the control
     # volumes.
-    vol = fsum(mesh.get_control_volumes())
+    vol = fsum(mesh.control_volumes)
     assert abs(volume - vol) < tol * volume
     # Check control volume norms.
-    norm2 = numpy.linalg.norm(mesh.get_control_volumes(), ord=2)
-    norm_inf = numpy.linalg.norm(mesh.get_control_volumes(), ord=numpy.Inf)
+    norm2 = numpy.linalg.norm(mesh.control_volumes, ord=2)
+    norm_inf = numpy.linalg.norm(mesh.control_volumes, ord=numpy.Inf)
     assert near_equal(convol_norms, [norm2, norm_inf], tol)
 
     return

@@ -51,7 +51,7 @@ def test_regular_tet0(a):
     tol = 1.0e-14
 
     z = a / numpy.sqrt(24.0)
-    assert near_equal(mesh.get_cell_circumcenters(), [0.0, 0.0, z], tol)
+    assert near_equal(mesh.cell_circumcenters, [0.0, 0.0, z], tol)
 
     # pylint: disable=protected-access
     mesh._compute_ce_ratios_geometric()
@@ -80,7 +80,7 @@ def test_regular_tet0(a):
 
     # control volumes
     val = vol / 4.0
-    assert near_equal(mesh.get_control_volumes(), [val, val, val, val], tol)
+    assert near_equal(mesh.control_volumes, [val, val, val, val], tol)
 
     mesh.mark_boundary()
 
@@ -104,14 +104,14 @@ def test_regular_tet0(a):
 #     mesh = meshplex.MeshTetra(points, cells, mode='algebraic')
 #
 #     assert near_equal(
-#         mesh.get_cell_circumcenters(),
+#         mesh.cell_circumcenters,
 #         [[a/2.0, a/2.0, a/2.0]],
 #         tol
 #         )
 #
 #     # covolume/edge length ratios
 #     assert near_equal(
-#         mesh.get_ce_ratios_per_edge(),
+#         mesh.ce_ratios_per_edge,
 #         [a/6.0, a/6.0, a/6.0, 0.0, 0.0, 0.0],
 #         tol
 #         )
@@ -121,7 +121,7 @@ def test_regular_tet0(a):
 #
 #     # control volumes
 #     assert near_equal(
-#         mesh.get_control_volumes(),
+#         mesh.control_volumes,
 #         [a**3/12.0, a**3/36.0, a**3/36.0, a**3/36.0],
 #         tol
 #         )
@@ -139,7 +139,7 @@ def test_regular_tet1_geometric(a):
 
     assert all((mesh.cells["nodes"] == cells).flat)
 
-    assert near_equal(mesh.get_cell_circumcenters(), [a / 2.0, a / 2.0, a / 2.0], tol)
+    assert near_equal(mesh.cell_circumcenters, [a / 2.0, a / 2.0, a / 2.0], tol)
 
     # covolume/edge length ratios
     ref = numpy.array(
@@ -156,7 +156,7 @@ def test_regular_tet1_geometric(a):
 
     # control volumes
     assert near_equal(
-        mesh.get_control_volumes(),
+        mesh.control_volumes,
         [a ** 3 / 8.0, a ** 3 / 72.0, a ** 3 / 72.0, a ** 3 / 72.0],
         tol,
     )
@@ -180,7 +180,7 @@ def test_regular_tet1_geometric_order():
 
     assert all((mesh.cells["nodes"] == [0, 1, 2, 3]).flat)
 
-    assert near_equal(mesh.get_cell_circumcenters(), [a / 2.0, a / 2.0, a / 2.0], tol)
+    assert near_equal(mesh.cell_circumcenters, [a / 2.0, a / 2.0, a / 2.0], tol)
 
     # covolume/edge length ratios
     ref = numpy.array(
@@ -197,7 +197,7 @@ def test_regular_tet1_geometric_order():
 
     # control volumes
     assert near_equal(
-        mesh.get_control_volumes(),
+        mesh.control_volumes,
         [a ** 3 / 72.0, a ** 3 / 8.0, a ** 3 / 72.0, a ** 3 / 72.0],
         tol,
     )
@@ -229,7 +229,7 @@ def test_regular_tet1_geometric_order():
 #
 #     z = 0.5 * h - 1.0 / (4*h)
 #     assert near_equal(
-#         mesh.get_cell_circumcenters(),
+#         mesh.cell_circumcenters,
 #         [[0.5, 0.5, z]],
 #         tol
 #         )
@@ -256,7 +256,7 @@ def test_regular_tet1_geometric_order():
 #         1.0/72.0 * (3*h - 1.0/(2*h)),
 #         1.0/36.0 * (h + 1.0/(2*h))
 #         ]
-#     assert near_equal(mesh.get_control_volumes(), ref, tol)
+#     assert near_equal(mesh.control_volumes, ref, tol)
 #
 #     # cell volumes
 #     assert near_equal(mesh.cell_volumes, [h/6.0], tol)
@@ -317,7 +317,7 @@ def test_cubesmall():
     cv = numpy.ones(8) * 1.25
     cellvols = [5.0 / 3.0, 5.0 / 3.0, 10.0 / 3.0, 5.0 / 3.0, 5.0 / 3.0]
 
-    assert near_equal(mesh.get_control_volumes(), cv, tol)
+    assert near_equal(mesh.control_volumes, cv, tol)
     assert near_equal(mesh.cell_volumes, cellvols, tol)
 
     cv_norms = [numpy.linalg.norm(cv, ord=2), numpy.linalg.norm(cv, ord=numpy.Inf)]
@@ -390,14 +390,14 @@ def test_tetrahedron():
 #         diff_coords = mesh.node_coords - mesh2.node_coords
 #         max_diff_coords = max(diff_coords.flatten())
 #         print('||coords_1 - coords_2||_inf  =  %e' % max_diff_coords)
-#         diff_ce_ratios = mesh.get_ce_ratios_per_edge() - mesh2.ce_ratios
+#         diff_ce_ratios = mesh.ce_ratios_per_edge - mesh2.ce_ratios
 #         print(
 #             '||ce_ratios_1 - ce_ratios_2||_inf  =  %e'
 #             % max(diff_ce_ratios)
 #             )
 #         from matplotlib import pyplot as plt
 #         plt.figure()
-#         n = len(mesh.get_ce_ratios_per_edge())
+#         n = len(mesh.ce_ratios_per_edge)
 #         plt.semilogy(range(n), diff_ce_ratios)
 #         plt.show()
 #         exit(1)
@@ -428,7 +428,7 @@ def test_toy_geometric():
         tol=1.0e-6,
     )
 
-    cc = mesh.get_cell_circumcenters()
+    cc = mesh.cell_circumcenters
     cc_norm_2 = fsum(cc.flat)
     cc_norm_inf = max(cc.flat)
     assert abs(cc_norm_2 - 1103.7038287583791) < 1.0e-12
