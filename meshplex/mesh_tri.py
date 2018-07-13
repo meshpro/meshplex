@@ -720,6 +720,9 @@ class MeshTri(_base_mesh):
         """This creates interior edge->cells relations. While it's not
         necessary for many applications, it sometimes does come in handy.
         """
+        if self.edges is None:
+            self.create_edges()
+
         num_edges = len(self.edges["nodes"])
 
         counts = numpy.zeros(num_edges, dtype=int)
