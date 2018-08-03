@@ -759,5 +759,44 @@ def test_angles():
     return
 
 
+def test_flat_boundary():
+    #
+    #  3___________2
+    #  |\_   2   _/|
+    #  |  \_   _/  |
+    #  | 3  \4/  1 |
+    #  |   _/ \_   |
+    #  | _/     \_ |
+    #  |/    0    \|
+    #  0-----------1
+    #
+    X = numpy.array(
+        [
+            [0.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [0.0, 1.0, 0.0],
+            [0.4, 0.5, 0.0],
+        ]
+    )
+    cells = numpy.array([[0, 1, 4], [1, 2, 4], [2, 3, 4], [3, 0, 4]])
+
+    mesh = meshplex.MeshTri(X, cells, flat_cell_correction="boundary")
+
+    cv = numpy.zeros(X.shape[0])
+    for edges, ce_ratios, ei_outer_ei in zip(
+        mesh.idx_hierarchy.T, mesh.ce_ratios.T, numpy.moveaxis(mesh.ei_outer_ei, 0, 1)
+    ):
+        for i, ce in zip(edges, ce_ratios):
+            ei = mesh.node_coords[i[1]] - mesh.node_coords[i[0]]
+            m = 0.25 * ce * numpy.dot(ei, ei)
+            cv[i] += m
+
+    print(cv)
+    print(mesh.control_volumes)
+    assert numpy.all(numpy.abs(cv - mesh.control_volumes) < 1.0e-12 * cv)
+    return
+
+
 if __name__ == "__main__":
-    test_flip_delaunay_near_boundary_preserve_boundary_count()
+    test_flat_boundary()
