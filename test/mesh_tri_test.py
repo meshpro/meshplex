@@ -783,14 +783,21 @@ def test_flat_boundary():
 
     mesh = meshplex.MeshTri(X, cells, flat_cell_correction="boundary")
 
+    # Inspect the covolumes in left cell.
+    edge_length = numpy.sqrt(0.4 ** 2 + 0.5 ** 2)
+    ref = numpy.array([edge_length, edge_length, 1.0])
+    assert numpy.all(numpy.abs(mesh.edge_lengths[:, 3] - ref) < 1.0e-12)
+
+    alpha = 0.2 / 0.25 * numpy.sqrt(0.2 ** 2 + 0.25 ** 2)
+    ref = [alpha, alpha, 0.0]
+    covolumes = mesh.ce_ratios[:, 3] * mesh.edge_lengths[:, 3]
+    assert numpy.all(numpy.abs(covolumes - ref) < 1.0e-12)
+
     cv = numpy.zeros(X.shape[0])
-    for edges, ce_ratios, ei_outer_ei in zip(
-        mesh.idx_hierarchy.T, mesh.ce_ratios.T, numpy.moveaxis(mesh.ei_outer_ei, 0, 1)
-    ):
+    for edges, ce_ratios in zip(mesh.idx_hierarchy.T, mesh.ce_ratios.T):
         for i, ce in zip(edges, ce_ratios):
             ei = mesh.node_coords[i[1]] - mesh.node_coords[i[0]]
-            m = 0.25 * ce * numpy.dot(ei, ei)
-            cv[i] += m
+            cv[i] += 0.25 * ce * numpy.dot(ei, ei)
 
     print(cv)
     print(mesh.control_volumes)
