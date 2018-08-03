@@ -67,15 +67,15 @@ def _isosceles_ce_ratios(p0, p1, p2):
     e0 = p2 - p1
     e1 = p0 - p2
     e2 = p1 - p0
-    assert all(abs(_row_dot(e2, e2) - _row_dot(e1, e1)) < 1.0e-14)
+    assert all(abs(_row_dot(e2, e2) - _row_dot(e1, e1)) < 1.0e-10)
 
     e_shift1 = numpy.array([e1, e2, e0])
     e_shift2 = numpy.array([e2, e0, e1])
     ei_dot_ej = numpy.einsum("ijk, ijk->ij", e_shift1, e_shift2)
 
     _, ce_ratios = compute_tri_areas_and_ce_ratios(ei_dot_ej)
-    tol = 1.0e-10
-    assert all(abs(ce_ratios[1] - ce_ratios[2]) < tol * ce_ratios[1])
+    # tol = 1.0e-10
+    # assert all(abs(ce_ratios[1] - ce_ratios[2]) < tol * ce_ratios[1])
     return ce_ratios[[0, 1]]
 
 
@@ -437,6 +437,8 @@ class MeshTri(_base_mesh):
             self.half_edge_coords[[2, 0, 1]],
         )
 
+        self._ei_outer_ei = None
+
         e = self.half_edge_coords
         self.ei_dot_ei = numpy.einsum("ijk, ijk->ij", e, e)
 
@@ -482,13 +484,14 @@ class MeshTri(_base_mesh):
         return
 
     def update_interior_node_coordinates(self, X):
-        assert self.fcc is None
         assert X.shape == self.node_coords[self.is_interior_node].shape
         self.node_coords[self.is_interior_node] = X
         self._update_values()
         return
 
     def _update_values(self):
+        assert self.fcc is None
+
         if self.half_edge_coords is not None:
             # Constructing the temporary arrays
             # self.node_coords[self.idx_hierarchy] can take quite a while here.
@@ -522,6 +525,7 @@ class MeshTri(_base_mesh):
         self._surface_areas = None
         self._signed_tri_areas = None
         self._centroids = None
+        self._ei_outer_ei = None
         return
 
     @property
@@ -643,6 +647,16 @@ class MeshTri(_base_mesh):
                 + p[0][1] * (p[1][2] - p[1][0])
             ) / 2
         return self._signed_tri_areas
+
+    @property
+    def ei_outer_ei(self):
+        """Outer products of the edges.
+        """
+        if self._ei_outer_ei is None:
+            self._ei_outer_ei = numpy.einsum(
+                "ijk, ijl->ijkl", self.half_edge_coords, self.half_edge_coords
+            )
+        return self._ei_outer_ei
 
     def mark_boundary(self):
         if self.edges is None:
@@ -1449,28 +1463,14 @@ class MeshTri(_base_mesh):
                 + p[0][1] * (p[1][2] - p[1][0])
             ) / 2
 
-        # TODO update self._centroids
+        # TODO update those values
         self._centroids = None
-
-        # TODO update self._edge_lengths
         self._edge_lengths = None
-
-        # TODO update self.cell_circumcenters
         self._cell_circumcenters = None
-
-        # TODO update self._control_volumes
         self._control_volumes = None
-
-        # TODO update self._cell_partitions
         self._cell_partitions = None
-
-        # TODO update self._cv_centroids
         self._cv_centroids = None
-
-        # TODO update self._surface_areas
+        self._ei_outer_ei = None
         self._surface_areas = None
-
-        # TODO update self.subdomains
         self.subdomains = {}
-
         return
