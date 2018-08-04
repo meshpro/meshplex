@@ -444,6 +444,31 @@ class MeshTri(_base_mesh):
             self.ei_dot_ej
         )
 
+        # Add ghost points and cells for boundary facets
+        ghost_points = []
+        ghost_cells = []
+        ghost_index = self.node_coords.shape[0]
+        for i in [[0, 1, 2], [1, 2, 0], [2, 0, 1]]:
+            bf = self.is_boundary_facet[i[0]]
+            c = self.cells["nodes"][bf]
+            p0 = self.node_coords[c[:, i[0]]]
+            p1 = self.node_coords[c[:, i[1]]]
+            p2 = self.node_coords[c[:, i[2]]]
+            mp, _ = _mirror_point(p0, p1, p2)
+            ghost_points.append(mp)
+            ghost_cells.append(
+                numpy.column_stack(
+                    [ghost_index + numpy.arange(mp.shape[0]), c[:, i[1]], c[:, i[2]]]
+                )
+            )
+            ghost_index += mp.shape[0]
+        ghost_points = numpy.concatenate(ghost_points)
+        ghost_cells = numpy.concatenate(ghost_cells)
+
+        # Add ghost cells and nodes to regular list
+        self.node_coords = numpy.concatenate([self.node_coords, ghost_points])
+        self.cells["nodes"] = numpy.concatenate([self.cells["nodes"], ghost_cells])
+
         self.fcc_type = "boundary"
         # Only cells with a negative c/e ratio on the boundary are redone. Of course,
         # this requires identifying boundary edges first.
