@@ -339,22 +339,20 @@ class FlatCellCorrector(object):
         return ids, vals
 
 
-# pylint: disable=too-many-instance-attributes, too-many-public-methods
 class MeshTri(_base_mesh):
     """Class for handling triangular meshes.
 
     .. inheritance-diagram:: MeshTri
     """
 
-    def __init__(self, nodes, cells, flat_cell_correction=None, sort_cells=False):
+    def __init__(self, nodes, cells, sort_cells=False):
         """Initialization.
         """
         if sort_cells:
-            # Sort cells and nodes, first every row, then the rows themselves.
-            # This helps in many downstream applications, e.g., when
-            # constructing linear systems with the cells/edges. (When
-            # converting to CSR format, the I/J entries must be sorted.)
-            # Don't use cells.sort(axis=1) to avoid
+            # Sort cells and nodes, first every row, then the rows themselves.  This
+            # helps in many downstream applications, e.g., when constructing linear
+            # systems with the cells/edges. (When converting to CSR format, the I/J
+            # entries must be sorted.) Don't use cells.sort(axis=1) to avoid
             # ```
             # ValueError: sort array is read-only
             # ```
@@ -401,7 +399,7 @@ class MeshTri(_base_mesh):
         self._edges_cells = None
         self._edge_gid_to_edge_list = None
         self._edge_to_edge_gid = None
-        self._centroids = None
+        self._cell_centroids = None
 
         # compute data
         # Create the idx_hierarchy (nodes->edges->cells), i.e., the value of
@@ -446,33 +444,20 @@ class MeshTri(_base_mesh):
             self.ei_dot_ej
         )
 
-        self.fcc_type = flat_cell_correction
-        if flat_cell_correction is None:
-            self.fcc = None
-            self.regular_cells = numpy.s_[:]
-        else:
-            if flat_cell_correction == "full":
-                # All cells with a negative c/e ratio are redone.
-                edge_needs_fcc = self.ce_ratios < 0.0
-            else:
-                assert flat_cell_correction == "boundary"
-                # This best imitates the classical notion of control volumes.
-                # Only cells with a negative c/e ratio on the boundary are
-                # redone. Of course, this requires identifying boundary edges
-                # first.
-                if self.edges is None:
-                    self.create_edges()
-                edge_needs_fcc = numpy.logical_and(
-                    self.ce_ratios < 0.0, self.is_boundary_edge
-                )
+        self.fcc_type = "boundary"
+        # Only cells with a negative c/e ratio on the boundary are redone. Of course,
+        # this requires identifying boundary edges first.
+        if self.edges is None:
+            self.create_edges()
+        edge_needs_fcc = numpy.logical_and(self.ce_ratios < 0.0, self.is_boundary_edge)
 
-            fcc_local_edge, self.fcc_cells = numpy.where(edge_needs_fcc)
-            self.regular_cells = numpy.where(~numpy.any(edge_needs_fcc, axis=0))[0]
+        fcc_local_edge, self.fcc_cells = numpy.where(edge_needs_fcc)
+        self.regular_cells = numpy.where(~numpy.any(edge_needs_fcc, axis=0))[0]
 
-            self.fcc = FlatCellCorrector(
-                self.cells["nodes"][self.fcc_cells], fcc_local_edge, self.node_coords
-            )
-            self.ce_ratios[:, self.fcc_cells] = self.fcc.ce_ratios.T
+        self.fcc = FlatCellCorrector(
+            self.cells["nodes"][self.fcc_cells], fcc_local_edge, self.node_coords
+        )
+        self.ce_ratios[:, self.fcc_cells] = self.fcc.ce_ratios.T
 
         return
 
@@ -524,7 +509,7 @@ class MeshTri(_base_mesh):
         self._cv_centroids = None
         self._surface_areas = None
         self._signed_tri_areas = None
-        self._centroids = None
+        self._cell_centroids = None
         self._ei_outer_ei = None
         return
 
@@ -804,18 +789,18 @@ class MeshTri(_base_mesh):
         return self._cell_circumcenters
 
     @property
-    def centroids(self):
+    def cell_centroids(self):
         """Computes the centroids (barycenters) of all triangles.
         """
-        if self._centroids is None:
-            self._centroids = (
+        if self._cell_centroids is None:
+            self._cell_centroids = (
                 numpy.sum(self.node_coords[self.cells["nodes"]], axis=1) / 3.0
             )
-        return self._centroids
+        return self._cell_centroids
 
     @property
     def cell_barycenters(self):
-        return self.centroids
+        return self.cell_centroids
 
     @property
     def inradius(self):
@@ -1464,7 +1449,7 @@ class MeshTri(_base_mesh):
             ) / 2
 
         # TODO update those values
-        self._centroids = None
+        self._cell_centroids = None
         self._edge_lengths = None
         self._cell_circumcenters = None
         self._control_volumes = None

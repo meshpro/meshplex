@@ -438,7 +438,7 @@ def test_toy_geometric():
 
 def test_signed_volume():
     filename = download_mesh("toy.msh", "1d125d3fa9f373823edd91ebae5f7a81")
-    mesh, _, _, _ = meshplex.read(filename, flat_cell_correction=None)
+    mesh, _, _, _ = meshplex.read(filename)
 
     vols = meshplex.get_signed_simplex_volumes(mesh.cells["nodes"], mesh.node_coords)
 

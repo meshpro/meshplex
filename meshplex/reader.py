@@ -23,7 +23,7 @@ def _sanitize(points, cells):
     return points, cells
 
 
-def read(filename, flat_cell_correction=None):
+def read(filename):
     """Reads an unstructured mesh with added data.
 
     :param filenames: The files to read from.
@@ -48,7 +48,7 @@ def read(filename, flat_cell_correction=None):
     elif "triangle" in mesh.cells:
         points, cells = _sanitize(mesh.points, mesh.cells["triangle"])
         return (
-            MeshTri(points, cells, flat_cell_correction=flat_cell_correction),
+            MeshTri(points, cells),
             mesh.point_data,
             mesh.cell_data,
             mesh.field_data,
