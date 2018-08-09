@@ -337,8 +337,9 @@ class MeshTri(_base_mesh):
         a = numpy.sort(self.idx_hierarchy.reshape(s[0], -1).T)
         a_unique, inv, cts = unique_rows(a)
 
-        assert numpy.all(cts < 3), \
-            "No edge has more than 2 cells. Are cells listed twice?"
+        assert numpy.all(
+            cts < 3
+        ), "No edge has more than 2 cells. Are cells listed twice?"
 
         self.is_boundary_edge = (cts[inv] == 1).reshape(s[1:])
 

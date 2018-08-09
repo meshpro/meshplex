@@ -505,9 +505,7 @@ def test_update_node_coordinates():
     mesh = meshio.read(filename)
     assert numpy.all(numpy.abs(mesh.points[:, 2]) < 1.0e-15)
 
-    mesh1 = meshplex.MeshTri(
-        mesh.points, mesh.cells["triangle"]
-    )
+    mesh1 = meshplex.MeshTri(mesh.points, mesh.cells["triangle"])
 
     numpy.random.seed(123)
     X2 = mesh.points + 1.0e-2 * numpy.random.rand(*mesh.points.shape)
