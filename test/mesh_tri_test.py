@@ -6,7 +6,7 @@ import meshio
 
 import meshplex
 
-from helpers import download_mesh, near_equal, run
+from helpers import download_mesh, near_equal, run, compute_polygon_area
 
 
 def test_regular_tri():
@@ -45,11 +45,9 @@ def test_regular_tri():
     mesh.get_vertex_mask()
 
     # dummy subdomain marker test
-    # pylint: disable=too-few-public-methods
     class Subdomain(object):
         is_boundary_only = False
 
-        # pylint: disable=no-self-use
         def is_inside(self, X):
             return numpy.ones(X.shape[1:], dtype=bool)
 
@@ -256,7 +254,7 @@ def test_regular_tri2(a):
 def test_degenerate_small0b(h):
     points = numpy.array([[0, 0, 0], [1, 0, 0], [0.5, h, 0.0]])
     cells = numpy.array([[0, 1, 2]])
-    mesh = meshplex.MeshTri(points, cells, flat_cell_correction=None)
+    mesh = meshplex.MeshTri(points, cells)
 
     tol = 1.0e-14
 
@@ -280,101 +278,94 @@ def test_degenerate_small0b(h):
     # circumcenters
     assert near_equal(mesh.cell_circumcenters, [0.5, 0.375, 0.0], tol)
 
-    # surface areas
-    ids, vals = mesh.surface_areas
-    assert numpy.all(ids == [[0, 1, 2], [0, 1, 2], [0, 1, 2]])
-    assert near_equal(
-        vals,
-        [[0.0, 0.5 * el, 0.5 * el], [0.5 * el, 0.0, 0.5 * el], [0.5, 0.5, 0.0]],
-        tol,
-    )
-
     assert mesh.num_delaunay_violations() == 0
     return
 
 
-# TODO parametrize with flat boundary correction
-def test_degenerate_small0b_fcc():
-    h = 1.0e-3
-    points = numpy.array([[0, 0, 0], [1, 0, 0], [0.5, h, 0.0]])
-    cells = numpy.array([[0, 1, 2]])
-    mesh = meshplex.MeshTri(points, cells, flat_cell_correction="full")
+# # TODO parametrize with flat boundary correction
+# def test_degenerate_small0b_fcc():
+#     h = 1.0e-3
+#     points = numpy.array([[0, 0, 0], [1, 0, 0], [0.5, h, 0.0]])
+#     cells = numpy.array([[0, 1, 2]])
+#     mesh = meshplex.MeshTri(points, cells)
+#
+#     tol = 1.0e-14
+#
+#     # edge lengths
+#     el = numpy.sqrt(0.5 ** 2 + h ** 2)
+#     assert near_equal(mesh.edge_lengths.T, [el, el, 1.0], tol)
+#
+#     # ce_ratios
+#     ce = h
+#     assert near_equal(mesh.ce_ratios.T, [ce, ce, 0.0], tol)
+#
+#     # control volumes
+#     cv = ce * el
+#     alpha = 0.25 * el * cv
+#     beta = 0.5 * h - 2 * alpha
+#     assert near_equal(mesh.control_volumes, [alpha, alpha, beta], tol)
+#
+#     # cell volumes
+#     assert near_equal(mesh.cell_volumes, [0.5 * h], tol)
+#
+#     # surface areas
+#     g = numpy.sqrt((0.5 * el) ** 2 + (ce * el) ** 2)
+#     alpha = 0.5 * el + g
+#     beta = el + (1.0 - 2 * g)
+#     assert near_equal(mesh.surface_areas, [alpha, alpha, beta], tol)
+#
+#     # centroids
+#     centroids = mesh.control_volume_centroids
+#     alpha = 1.0 / 6000.0
+#     gamma = 0.00038888918518558031
+#     assert near_equal(centroids[0], [0.166667, alpha, 0.0], tol)
+#     assert near_equal(centroids[1], [0.833333, alpha, 0.0], tol)
+#     assert near_equal(centroids[2], [0.5, gamma, 0.0], tol)
 
-    tol = 1.0e-14
-
-    # edge lengths
-    el = numpy.sqrt(0.5 ** 2 + h ** 2)
-    assert near_equal(mesh.edge_lengths.T, [el, el, 1.0], tol)
-
-    # ce_ratios
-    ce = h
-    assert near_equal(mesh.ce_ratios.T, [ce, ce, 0.0], tol)
-
-    # control volumes
-    cv = ce * el
-    alpha = 0.25 * el * cv
-    beta = 0.5 * h - 2 * alpha
-    assert near_equal(mesh.control_volumes, [alpha, alpha, beta], tol)
-
-    # cell volumes
-    assert near_equal(mesh.cell_volumes, [0.5 * h], tol)
-
-    # surface areas
-    g = numpy.sqrt((0.5 * el) ** 2 + (ce * el) ** 2)
-    alpha = 0.5 * el + g
-    beta = el + (1.0 - 2 * g)
-    assert near_equal(mesh.surface_areas, [alpha, alpha, beta], tol)
-
-    # centroids
-    centroids = mesh.control_volume_centroids
-    alpha = 1.0 / 6000.0
-    gamma = 0.00038888918518558031
-    assert near_equal(centroids[0], [0.166667, alpha, 0.0], tol)
-    assert near_equal(centroids[1], [0.833333, alpha, 0.0], tol)
-    assert near_equal(centroids[2], [0.5, gamma, 0.0], tol)
-
-    assert mesh.num_delaunay_violations() == 0
-    return
+#     assert mesh.num_delaunay_violations() == 0
+#     return
 
 
 @pytest.mark.parametrize("h, a", [(1.0e-3, 0.3)])
 def test_degenerate_small1(h, a):
     points = numpy.array([[0, 0, 0], [1, 0, 0], [a, h, 0.0]])
     cells = numpy.array([[0, 1, 2]])
-    mesh = meshplex.MeshTri(points, cells, flat_cell_correction="full")
+    mesh = meshplex.MeshTri(points, cells)
 
-    tol = 1.0e-14
+    tol = 1.0e-12
 
     # edge lengths
+    el0 = numpy.sqrt((1.0 - a) ** 2 + h ** 2)
     el1 = numpy.sqrt(a ** 2 + h ** 2)
-    el2 = numpy.sqrt((1.0 - a) ** 2 + h ** 2)
-    assert near_equal(mesh.edge_lengths.T, [[el2, el1, 1.0]], tol)
+    el2 = 1.0
+    assert near_equal(mesh.edge_lengths.T, [[el0, el1, el2]], tol)
 
     # ce_ratios
-    ce1 = 0.5 * h / a
-    ce2 = 0.5 * h / (1.0 - a)
-    assert near_equal(mesh.ce_ratios.T, [ce2, ce1, 0.0], tol)
+    ce0 = 0.5 * a / h
+    ce1 = 0.5 * (1 - a) / h
+    ce2 = 0.5 * (h - (1 - a) * a / h) / el2
+    assert near_equal(mesh.ce_ratios[:, 0], [ce0, ce1, ce2], 1.0e-8)
 
-    # control volumes
-    cv1 = ce1 * el1
-    alpha1 = 0.25 * el1 * cv1
-    cv2 = ce2 * el2
-    alpha2 = 0.25 * el2 * cv2
-    beta = 0.5 * h - (alpha1 + alpha2)
-    assert near_equal(mesh.control_volumes, [alpha1, alpha2, beta], tol)
-    assert abs(sum(mesh.control_volumes) - 0.5 * h) < tol
+    # # control volumes
+    # cv1 = ce1 * el1
+    # alpha1 = 0.25 * el1 * cv1
+    # cv2 = ce2 * el2
+    # alpha2 = 0.25 * el2 * cv2
+    # beta = 0.5 * h - (alpha1 + alpha2)
+    # assert near_equal(mesh.control_volumes, [alpha1, alpha2, beta], tol)
+    # assert abs(sum(mesh.control_volumes) - 0.5 * h) < tol
 
     # cell volumes
     assert near_equal(mesh.cell_volumes, [0.5 * h], tol)
 
-    # surface areas
-    b1 = numpy.sqrt((0.5 * el1) ** 2 + cv1 ** 2)
-    alpha0 = b1 + 0.5 * el1
-    b2 = numpy.sqrt((0.5 * el2) ** 2 + cv2 ** 2)
-    alpha1 = b2 + 0.5 * el2
-    total = 1.0 + el1 + el2
-    alpha2 = total - alpha0 - alpha1
-    assert near_equal(mesh.surface_areas, [alpha0, alpha1, alpha2], tol)
+    # # surface areas
+    # b1 = numpy.sqrt((0.5 * el1) ** 2 + cv1 ** 2)
+    # alpha0 = b1 + 0.5 * el1
+    # b2 = numpy.sqrt((0.5 * el2) ** 2 + cv2 ** 2)
+    # alpha1 = b2 + 0.5 * el2
+    # total = 1.0 + el1 + el2
+    # alpha2 = total - alpha0 - alpha1
+    # assert near_equal(mesh.surface_areas, [alpha0, alpha1, alpha2], tol)
 
     assert mesh.num_delaunay_violations() == 0
     return
@@ -438,13 +429,13 @@ def test_rectanglesmall():
 
 def test_pacman():
     filename = download_mesh("pacman.msh", "2da8ff96537f844a95a83abb48471b6a")
-    mesh, _, _, _ = meshplex.read(filename, flat_cell_correction="boundary")
+    mesh, _, _, _ = meshplex.read(filename)
 
     run(
         mesh,
         73.64573933105898,
-        [3.5908322974649631, 0.26638548094154707],
-        [354.8184824409405, 0.94690319745399243],
+        [3.596101914906618, 0.26638548094154696],
+        [379.275476266239, 1.2976923100235962],
         [2.6213234038171014, 0.13841739494523228],
     )
 
@@ -502,9 +493,9 @@ def test_signed_area():
     assert numpy.all(numpy.abs(mesh.points[:, 2]) < 1.0e-15)
     X = mesh.points[:, :2]
 
-    mesh = meshplex.MeshTri(X, mesh.cells["triangle"], flat_cell_correction=None)
+    mesh = meshplex.MeshTri(X, mesh.cells["triangle"])
 
-    vols = mesh.signed_tri_areas
+    vols = mesh.signed_cell_areas
     assert numpy.all(abs(abs(vols) - mesh.cell_volumes) < 1.0e-12 * mesh.cell_volumes)
     return
 
@@ -514,15 +505,14 @@ def test_update_node_coordinates():
     mesh = meshio.read(filename)
     assert numpy.all(numpy.abs(mesh.points[:, 2]) < 1.0e-15)
 
-    mesh1 = meshplex.MeshTri(
-        mesh.points, mesh.cells["triangle"], flat_cell_correction=None
-    )
+    mesh1 = meshplex.MeshTri(mesh.points, mesh.cells["triangle"])
 
     numpy.random.seed(123)
     X2 = mesh.points + 1.0e-2 * numpy.random.rand(*mesh.points.shape)
-    mesh2 = meshplex.MeshTri(X2, mesh.cells["triangle"], flat_cell_correction=None)
+    mesh2 = meshplex.MeshTri(X2, mesh.cells["triangle"])
 
-    mesh1.update_node_coordinates(X2)
+    mesh1.node_coords = X2
+    mesh1.update_values()
 
     tol = 1.0e-12
     assert near_equal(mesh1.ei_dot_ej, mesh2.ei_dot_ej, tol)
@@ -537,9 +527,7 @@ def test_flip_delaunay():
     numpy.random.seed(123)
     mesh.points[:, :2] += 5.0e-2 * numpy.random.rand(*mesh.points[:, :2].shape)
 
-    mesh = meshplex.MeshTri(
-        mesh.points, mesh.cells["triangle"], flat_cell_correction=None
-    )
+    mesh = meshplex.MeshTri(mesh.points, mesh.cells["triangle"])
 
     assert mesh.num_delaunay_violations() == 16
 
@@ -556,7 +544,7 @@ def test_flip_delaunay():
     new_coords = mesh.node_coords.copy()
 
     # Assert that some key values are updated properly
-    mesh2 = meshplex.MeshTri(new_coords, new_cells, flat_cell_correction=None)
+    mesh2 = meshplex.MeshTri(new_coords, new_cells)
     assert numpy.all(mesh.idx_hierarchy == mesh2.idx_hierarchy)
     tol = 1.0e-15
     assert near_equal(mesh.half_edge_coords, mesh2.half_edge_coords, tol)
@@ -571,7 +559,7 @@ def test_flip_delaunay_near_boundary():
         [[0.0, +0.0, 0.0], [0.5, -0.1, 0.0], [1.0, +0.0, 0.0], [0.5, +0.1, 0.0]]
     )
     cells = numpy.array([[0, 1, 2], [0, 2, 3]])
-    mesh = meshplex.MeshTri(points, cells, flat_cell_correction=None)
+    mesh = meshplex.MeshTri(points, cells)
 
     mesh.create_edges()
     assert mesh.num_delaunay_violations() == 1
@@ -591,7 +579,7 @@ def test_flip_same_edge_twice():
         [[0.0, +0.0, 0.0], [0.5, -0.1, 0.0], [1.0, +0.0, 0.0], [0.5, +0.1, 0.0]]
     )
     cells = numpy.array([[0, 1, 2], [0, 2, 3]])
-    mesh = meshplex.MeshTri(points, cells, flat_cell_correction=None)
+    mesh = meshplex.MeshTri(points, cells)
     assert mesh.num_delaunay_violations() == 1
 
     mesh.flip_until_delaunay()
@@ -606,7 +594,8 @@ def test_flip_same_edge_twice():
     new_points = numpy.array(
         [[0.0, +0.0, 0.0], [0.1, -0.5, 0.0], [0.2, +0.0, 0.0], [0.1, +0.5, 0.0]]
     )
-    mesh.update_node_coordinates(new_points)
+    mesh.node_coords = new_points
+    mesh.update_values()
     assert mesh.num_delaunay_violations() == 1
 
     mesh.flip_until_delaunay()
@@ -623,7 +612,7 @@ def test_flip_two_edges():
         [[r * numpy.cos(a), r * numpy.sin(a), 0.0] for a, r in zip(alpha, R)]
     )
     cells = numpy.array([[1, 3, 5], [0, 1, 5], [1, 2, 3], [3, 4, 5]])
-    mesh = meshplex.MeshTri(points, cells, flat_cell_correction=None)
+    mesh = meshplex.MeshTri(points, cells)
     assert mesh.num_delaunay_violations() == 2
 
     mesh.flip_until_delaunay()
@@ -648,7 +637,7 @@ def test_flip_delaunay_near_boundary_preserve_boundary_count():
         ]
     )
     cells = numpy.array([[0, 1, 2], [0, 2, 4], [0, 4, 5], [0, 5, 1], [2, 3, 4]])
-    mesh = meshplex.MeshTri(points, cells, flat_cell_correction=None)
+    mesh = meshplex.MeshTri(points, cells)
 
     mesh.create_edges()
     assert mesh.num_delaunay_violations() == 1
@@ -759,5 +748,67 @@ def test_angles():
     return
 
 
+# TODO reactivate
+def test_flat_boundary():
+    #
+    #  3___________2
+    #  |\_   2   _/|
+    #  |  \_   _/  |
+    #  | 3  \4/  1 |
+    #  |   _/ \_   |
+    #  | _/     \_ |
+    #  |/    0    \|
+    #  0-----------1
+    #
+    x = 0.4
+    y = 0.5
+    X = numpy.array(
+        [
+            [0.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [0.0, 1.0, 0.0],
+            [x, y, 0.0],
+        ]
+    )
+    cells = numpy.array([[0, 1, 4], [1, 2, 4], [2, 3, 4], [3, 0, 4]])
+
+    mesh = meshplex.MeshTri(X, cells)
+
+    # Inspect the covolumes in left cell.
+    edge_length = numpy.sqrt(x ** 2 + y ** 2)
+    ref = numpy.array([edge_length, edge_length, 1.0])
+    assert numpy.all(numpy.abs(mesh.edge_lengths[:, 3] - ref) < 1.0e-12)
+    #
+    alpha = 0.5 / x * y * numpy.sqrt(y ** 2 + x ** 2)
+    beta = 0.5 / x * (x ** 2 - y ** 2)
+    ref = [alpha, alpha, beta]
+    covolumes = mesh.ce_ratios[:, 3] * mesh.edge_lengths[:, 3]
+    assert numpy.all(numpy.abs(covolumes - ref) < 1.0e-12)
+
+    #
+    beta = numpy.sqrt(alpha ** 2 + 0.2 ** 2 + 0.25 ** 2)
+    control_volume_corners = numpy.array(
+        [
+            mesh.cell_circumcenters[0][:2],
+            mesh.cell_circumcenters[1][:2],
+            mesh.cell_circumcenters[2][:2],
+            mesh.cell_circumcenters[3][:2],
+        ]
+    )
+    ref_area = compute_polygon_area(control_volume_corners.T)
+
+    assert numpy.abs(mesh.control_volumes[4] - ref_area) < 1.0e-12
+
+    cv = numpy.zeros(X.shape[0])
+    for edges, ce_ratios in zip(mesh.idx_hierarchy.T, mesh.ce_ratios.T):
+        for i, ce in zip(edges, ce_ratios):
+            ei = mesh.node_coords[i[1]] - mesh.node_coords[i[0]]
+            cv[i] += 0.25 * ce * numpy.dot(ei, ei)
+
+    assert numpy.all(numpy.abs(cv - mesh.control_volumes) < 1.0e-12 * cv)
+    return
+
+
 if __name__ == "__main__":
-    test_flip_delaunay_near_boundary_preserve_boundary_count()
+    test_flat_boundary()
