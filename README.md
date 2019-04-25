@@ -4,7 +4,7 @@
 [![codecov](https://img.shields.io/codecov/c/github/nschloe/meshplex.svg)](https://codecov.io/gh/nschloe/meshplex)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 [![PyPi Version](https://img.shields.io/pypi/v/meshplex.svg)](https://pypi.org/project/meshplex)
-[![GitHub stars](https://img.shields.io/github/stars/nschloe/meshplex.svg?logo=github&label=Stars)](https://github.com/nschloe/meshplex)
+[![GitHub stars](https://img.shields.io/github/stars/nschloe/meshplex.svg?logo=github&label=Stars&logoColor=white)](https://github.com/nschloe/meshplex)
 
 Compute Voronoi tesselations and everything else you need for finite-volume
 discretizations. Do it fast, too.

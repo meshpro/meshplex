@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 #
 import numpy
-from numpy.core.umath_tests import inner1d
 
 import meshio
 
@@ -10,13 +9,18 @@ __all__ = []
 
 def _row_dot(a, b):
     # https://stackoverflow.com/a/26168677/353337
-    # return numpy.einsum('ij, ij->i', a, b)
-    #
-    # https://stackoverflow.com/a/39657905/353337
-    return inner1d(a, b)
+    return numpy.einsum("ij, ij->i", a, b)
 
 
-def compute_tri_areas_and_ce_ratios(ei_dot_ej):
+def compute_tri_areas(ei_dot_ej):
+    return 0.5 * numpy.sqrt(
+        ei_dot_ej[2] * ei_dot_ej[0]
+        + ei_dot_ej[0] * ei_dot_ej[1]
+        + ei_dot_ej[1] * ei_dot_ej[2]
+    )
+
+
+def compute_ce_ratios(ei_dot_ej, tri_volumes):
     """Given triangles (specified by their edges), this routine will return the
     triangle areas and the signed distances of the triangle circumcenters to
     the edge midpoints.
@@ -81,15 +85,7 @@ def compute_tri_areas_and_ce_ratios(ei_dot_ej):
     #
     #   e1 + e2 + e3 = 0.
     #
-    cell_volumes = 0.5 * numpy.sqrt(
-        ei_dot_ej[2] * ei_dot_ej[0]
-        + ei_dot_ej[0] * ei_dot_ej[1]
-        + ei_dot_ej[1] * ei_dot_ej[2]
-    )
-
-    ce = -ei_dot_ej * 0.25 / cell_volumes[None]
-
-    return cell_volumes, ce
+    return -ei_dot_ej * 0.25 / tri_volumes[None]
 
 
 def compute_triangle_circumcenters(X, ei_dot_ei, ei_dot_ej):

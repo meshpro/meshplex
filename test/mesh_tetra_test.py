@@ -82,6 +82,16 @@ def test_regular_tet0(a):
     val = vol / 4.0
     assert near_equal(mesh.control_volumes, [val, val, val, val], tol)
 
+    # inradius
+    # side_area = numpy.sqrt(3) / 4 * a ** 2
+    # vol = a ** 3 / 6.0 / numpy.sqrt(2)
+    # inradius = 3 * vol / (4 * side_area)
+    inradius = a / 2 / numpy.sqrt(6)
+    assert near_equal(mesh.inradius, [inradius], tol)
+
+    # circumradius
+    assert near_equal(mesh.circumradius, [a], tol)
+
     mesh.mark_boundary()
 
     return
@@ -135,7 +145,7 @@ def test_regular_tet1_geometric(a):
     cells = numpy.array([[0, 1, 2, 3]])
     tol = 1.0e-14
 
-    mesh = meshplex.MeshTetra(points, cells, mode="geometric")
+    mesh = meshplex.MeshTetra(points, cells)
 
     assert all((mesh.cells["nodes"] == cells).flat)
 
@@ -176,7 +186,7 @@ def test_regular_tet1_geometric_order():
     cells = numpy.array([[0, 1, 2, 3]])
     tol = 1.0e-14
 
-    mesh = meshplex.MeshTetra(points, cells, mode="geometric")
+    mesh = meshplex.MeshTetra(points, cells)
 
     assert all((mesh.cells["nodes"] == [0, 1, 2, 3]).flat)
 
@@ -417,7 +427,7 @@ def test_toy_geometric():
     filename = download_mesh("toy.msh", "1d125d3fa9f373823edd91ebae5f7a81")
     mesh, _, _, _ = meshplex.read(filename)
 
-    mesh = meshplex.MeshTetra(mesh.node_coords, mesh.cells["nodes"], mode="geometric")
+    mesh = meshplex.MeshTetra(mesh.node_coords, mesh.cells["nodes"])
 
     run(
         mesh,

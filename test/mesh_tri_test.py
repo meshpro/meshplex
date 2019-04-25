@@ -705,8 +705,8 @@ def test_quality():
 
     tol = 1.0e-15
 
-    ic = mesh.triangle_quality
-    assert near_equal(ic, 2 * mesh.inradius / mesh.circumradius, tol)
+    q = mesh.cell_quality
+    assert near_equal(q, 2 * mesh.inradius / mesh.circumradius, tol)
 
     # 30-60-90 triangle
     a = 1.0
@@ -716,8 +716,8 @@ def test_quality():
     cells = numpy.array([[0, 1, 2]])
     mesh = meshplex.MeshTri(points, cells)
 
-    ic = mesh.triangle_quality
-    assert near_equal(ic, 2 * mesh.inradius / mesh.circumradius, tol)
+    q = mesh.cell_quality
+    assert near_equal(q, 2 * mesh.inradius / mesh.circumradius, tol)
     return
 
 

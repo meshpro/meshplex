@@ -7,7 +7,8 @@ import fastfunc
 
 from .base import (
     _base_mesh,
-    compute_tri_areas_and_ce_ratios,
+    compute_tri_areas,
+    compute_ce_ratios,
     compute_triangle_circumcenters,
 )
 from .helpers import grp_start_len, unique_rows
@@ -120,9 +121,8 @@ class MeshTri(_base_mesh):
         e = self.half_edge_coords
         self.ei_dot_ei = numpy.einsum("ijk, ijk->ij", e, e)
 
-        self.cell_volumes, self.ce_ratios = compute_tri_areas_and_ce_ratios(
-            self.ei_dot_ej
-        )
+        self.cell_volumes = compute_tri_areas(self.ei_dot_ej)
+        self.ce_ratios = compute_ce_ratios(self.ei_dot_ej, self.cell_volumes)
 
         # self.fcc_type = "full"
         # is_flat_halfedge = self.ce_ratios < 0.0
@@ -168,9 +168,8 @@ class MeshTri(_base_mesh):
             self.ei_dot_ei = numpy.einsum("ijk, ijk->ij", e, e)
 
         if self.cell_volumes is not None or self.ce_ratios is not None:
-            self.cell_volumes, self.ce_ratios = compute_tri_areas_and_ce_ratios(
-                self.ei_dot_ej
-            )
+            self.cell_volumes = compute_tri_areas(self.ei_dot_ej)
+            self.ce_ratios = compute_ce_ratios(self.ei_dot_ej, self.cell_volumes)
 
         self._interior_edge_lengths = None
         self._cell_circumcenters = None
@@ -468,14 +467,14 @@ class MeshTri(_base_mesh):
 
     @property
     def circumradius(self):
-        # See <http://mathworld.wolfram.com/Incircle.html>.
+        # See <http://mathworld.wolfram.com/Circumradius.html>.
         a, b, c = numpy.sqrt(self.ei_dot_ei)
         return (a * b * c) / numpy.sqrt(
             (a + b + c) * (-a + b + c) * (a - b + c) * (a + b - c)
         )
 
     @property
-    def triangle_quality(self):
+    def cell_quality(self):
         # q = 2 * r_in / r_out
         #   = (-a+b+c) * (+a-b+c) * (+a+b-c) / (a*b*c),
         #
@@ -501,7 +500,7 @@ class MeshTri(_base_mesh):
     def _compute_integral_x(self):
         """Computes the integral of x,
 
-          \int_V x,
+          \\int_V x,
 
         over all atomic "triangles", i.e., areas cornered by a node, an edge
         midpoint, and a circumcenter.
@@ -643,7 +642,7 @@ class MeshTri(_base_mesh):
         based on
 
         .. math::
-            n\cdot curl(F) = \lim_{A\\to 0} |A|^{-1} <\int_{dGamma}, F> dr;
+            n\\cdot curl(F) = \\lim_{A\\to 0} |A|^{-1} <\\int_{dGamma}, F> dr;
 
         see <https://en.wikipedia.org/wiki/Curl_(mathematics)>. Actually, to
         approximate the integral, one would only need the projection of the
@@ -1056,7 +1055,8 @@ class MeshTri(_base_mesh):
         self.ei_dot_ei[:, cell_ids] = numpy.einsum("ijk, ijk->ij", e, e)
 
         # update cell_volumes, ce_ratios_per_half_edge
-        cv, ce = compute_tri_areas_and_ce_ratios(self.ei_dot_ej[:, cell_ids])
+        cv = compute_tri_areas(self.ei_dot_ej[:, cell_ids])
+        ce = compute_ce_ratios(self.ei_dot_ej[:, cell_ids], cv)
         self.cell_volumes[cell_ids] = cv
         self.ce_ratios[:, cell_ids] = ce
 
