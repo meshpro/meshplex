@@ -46,8 +46,8 @@ class MeshTetra(_base_mesh):
         self._circumcenters = None
         self.subdomains = {}
 
-        # Arrange the node_face_cells such that node k is opposite of face k in
-        # each cell.
+        # Arrange the node_face_cells such that node k is opposite of face k in each
+        # cell.
         nds = self.cells["nodes"].T
         idx = numpy.array([[1, 2, 3], [2, 3, 0], [3, 0, 1], [0, 1, 2]]).T
         self.node_face_cells = nds[idx]
@@ -396,23 +396,23 @@ class MeshTetra(_base_mesh):
 
     @property
     def circumradius(self):
-        raise NotImplementedError()
-        # See <http://mathworld.wolfram.com/Circumradius.html>.
-        a, b, c = numpy.sqrt(self.ei_dot_ei)
-        return (a * b * c) / numpy.sqrt(
-            (a + b + c) * (-a + b + c) * (a - b + c) * (a + b - c)
+        # https://en.wikipedia.org/wiki/Tetrahedron#Circumradius
+        # Compute opposite edge length products
+        edge_lengths = numpy.sqrt(self.ei_dot_ei)
+        aA = edge_lengths[0, 0] * edge_lengths[0, 2]
+        bB = edge_lengths[0, 1] * edge_lengths[1, 1]
+        cC = edge_lengths[0, 2] * edge_lengths[1, 0]
+        return (
+            numpy.sqrt(
+                (aA + bB + cC) * (-aA + bB + cC) * (aA - bB + cC) * (aA + bB - cC)
+            )
+            / 24
+            / self.cell_volumes
         )
 
     @property
     def cell_quality(self):
-        # q = 2 * r_in / r_out
-        #   = (-a+b+c) * (+a-b+c) * (+a+b-c) / (a*b*c),
-        #
-        # where r_in is the incircle radius and r_out the circumcircle radius
-        # and a, b, c are the edge lengths.
-        raise NotImplementedError()
-        a, b, c = numpy.sqrt(self.ei_dot_ei)
-        return (-a + b + c) * (a - b + c) * (a + b - c) / (a * b * c)
+        return 3 * self.inradius / self.circumradius
 
     @property
     def control_volumes(self):

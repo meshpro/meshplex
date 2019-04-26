@@ -86,11 +86,14 @@ def test_regular_tet0(a):
     # side_area = numpy.sqrt(3) / 4 * a ** 2
     # vol = a ** 3 / 6.0 / numpy.sqrt(2)
     # inradius = 3 * vol / (4 * side_area)
-    inradius = a / 2 / numpy.sqrt(6)
+    inradius = a * numpy.sqrt(6) / 12
     assert near_equal(mesh.inradius, [inradius], tol)
 
     # circumradius
-    assert near_equal(mesh.circumradius, [a], tol)
+    circumradius = a * numpy.sqrt(6) / 4
+    assert near_equal(mesh.circumradius, [circumradius], tol)
+
+    assert near_equal(mesh.cell_quality, [1.0], tol)
 
     mesh.mark_boundary()
 
