@@ -1,50 +1,41 @@
-#! /usr/bin/env python
 # -*- coding: utf-8 -*-
 import numpy
-import pygmsh as pg
 import meshplex
+import matplotlib.pyplot as plt
 
 
-def generate():
-    geom = pg.Geometry()
+def _main():
+    points = numpy.array([[0.0, 0.0], [1.0, 0.0], [0.4, 0.8]])
+    cells = numpy.array([[0, 1, 2]])
 
-    lcar = 0.1
-    circle = geom.add_circle(
-            [0.0, 0.0, 0.0],
-            1.0,
-            lcar,
-            num_sections=4,
-            compound=True,
-            make_surface=False
-            )
+    mesh = meshplex.mesh_tri.MeshTri(points, cells)
 
-    coords_v = numpy.array([
-        [+0.2, -0.6, 0.0],
-        [+0.65, +0.5, 0.0],
-        [+0.25, +0.5, 0.0],
-        [+0.0, -0.15, 0.0],
-        [-0.25, +0.5, 0.0],
-        [-0.65, +0.5, 0.0],
-        [-0.2, -0.6, 0.0],
-        ])
-    hole = geom.add_polygon(coords_v, lcar, make_surface=False)
+    plt.plot(
+        [points[0, 0], points[1, 0], points[2, 0], points[0, 0]],
+        [points[0, 1], points[1, 1], points[2, 1], points[0, 1]],
+        color="k",
+    )
+    ax = plt.gca()
 
-    geom.add_plane_surface(circle.line_loop, holes=[hole])
+    circle1 = plt.Circle(
+        mesh.cell_circumcenters[0], mesh.circumradius[0], color="k", fill=False
+    )
+    ax.add_artist(circle1)
 
-    return geom
+    circle2 = plt.Circle(
+        mesh.cell_incenters[0], mesh.inradius[0], color="k", fill=False
+    )
+    ax.add_artist(circle2)
+
+    ax.set_xlim(-0.1, 1.1)
+    ax.set_ylim(-0.4, 0.9)
+    ax.set_aspect("equal")
+    plt.axis('off')
+    plt.savefig("logo.svg")
+    # plt.show()
+
+    return
 
 
-if __name__ == '__main__':
-    X, cells, _, _, _ = pg.generate_mesh(generate())
-    # single out nodes that are actually used
-    uvertices, uidx = numpy.unique(cells['triangle'], return_inverse=True)
-    cells = uidx.reshape(cells['triangle'].shape)
-    X = X[uvertices]
-
-    mesh = meshplex.smoothing.lloyd(X, cells, 1.0e-10)
-    mesh.show(
-            show_centroids=False,
-            mesh_color=[0.8, 0.8, 0.8],
-            comesh_color='k',
-            boundary_edge_color='k'
-            )
+if __name__ == "__main__":
+    _main()

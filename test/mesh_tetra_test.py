@@ -143,11 +143,14 @@ def test_regular_tet0(a):
 #     return
 
 
-@pytest.mark.parametrize("a", [
-    # 0.5,
-    1.0,
-    # 2.0
-    ])  # basis edge length
+@pytest.mark.parametrize(
+    "a",
+    [
+        # 0.5,
+        1.0,
+        # 2.0
+    ],
+)  # basis edge length
 def test_unit_tetrahedron_geometric(a):
     points = numpy.array([[0, 0, 0], [a, 0, 0], [0, a, 0], [0, 0, a]])
     cells = numpy.array([[0, 1, 2, 3]])

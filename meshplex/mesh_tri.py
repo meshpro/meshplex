@@ -135,6 +135,11 @@ class MeshTri(_base_mesh):
 
         return
 
+    def __repr__(self):
+        return "meshplex triangular mesh with {} points and {} cells".format(
+            self.node_coords.shape[0], self.cells["nodes"].shape[0]
+        )
+
     # def update_node_coordinates(self, X):
     #     assert X.shape == self.node_coords.shape
     #     self.node_coords = X
@@ -447,7 +452,7 @@ class MeshTri(_base_mesh):
 
     @property
     def cell_centroids(self):
-        """Computes the centroids (barycenters) of all triangles.
+        """The centroids (barycenters) of all triangles.
         """
         if self._cell_centroids is None:
             self._cell_centroids = (
@@ -458,6 +463,13 @@ class MeshTri(_base_mesh):
     @property
     def cell_barycenters(self):
         return self.cell_centroids
+
+    @property
+    def cell_incenters(self):
+        # https://en.wikipedia.org/wiki/Incenter#Barycentric_coordinates
+        abc = numpy.sqrt(self.ei_dot_ei)
+        abc /= numpy.sum(abc, axis=0)
+        return numpy.einsum("ij,jik->jk", abc, self.node_coords[self.cells["nodes"]])
 
     @property
     def inradius(self):
@@ -712,9 +724,8 @@ class MeshTri(_base_mesh):
 
         # from mpl_toolkits.mplot3d import Axes3D
         fig = plt.figure()
-        # ax = fig.gca(projection='3d')
         ax = fig.gca()
-        plt.axis("equal")
+        # plt.axis("equal")
         if not show_axes:
             ax.set_axis_off()
 
@@ -731,8 +742,8 @@ class MeshTri(_base_mesh):
         ymin -= 0.1 * height
         ymax += 0.1 * height
 
-        ax.set_xlim(xmin, xmax)
-        ax.set_ylim(ymin, ymax)
+        # ax.set_xlim(xmin, xmax)
+        # ax.set_ylim(ymin, ymax)
 
         if self.edges is None:
             self.create_edges()
