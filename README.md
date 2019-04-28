@@ -6,6 +6,10 @@
 [![PyPi Version](https://img.shields.io/pypi/v/meshplex.svg)](https://pypi.org/project/meshplex)
 [![GitHub stars](https://img.shields.io/github/stars/nschloe/meshplex.svg?logo=github&label=Stars&logoColor=white)](https://github.com/nschloe/meshplex)
 
+<p align="center">
+  <img src="https://nschloe.github.io/meshplex/meshplex-logo.svg" width="20%">
+</p>
+
 Compute Voronoi tesselations and everything else you need for finite-volume
 discretizations. Do it fast, too.
 
