@@ -9,7 +9,7 @@ import meshplex
 from helpers import download_mesh, near_equal, run, compute_polygon_area
 
 
-def test_regular_tri():
+def test_unit_triangle():
     points = numpy.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
     cells = numpy.array([[0, 1, 2]])
     mesh = meshplex.MeshTri(points, cells)
@@ -37,6 +37,16 @@ def test_regular_tri():
         [[0.25, 0.25, 0.0], [2.0 / 3.0, 1.0 / 6.0, 0.0], [1.0 / 6.0, 2.0 / 3.0, 0.0]],
         tol,
     )
+
+    # incenter
+    assert near_equal(
+        mesh.cell_incenters,
+        [[(2 - numpy.sqrt(2)) / 2, (2 - numpy.sqrt(2)) / 2, 0.0]],
+        tol,
+    )
+
+    # circumcenter
+    assert near_equal(mesh.cell_circumcenters, [[0.5, 0.5, 0.0]], tol)
 
     assert mesh.num_delaunay_violations() == 0
 
