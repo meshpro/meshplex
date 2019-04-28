@@ -93,6 +93,7 @@ def test_regular_tet0(a):
     circumradius = a * numpy.sqrt(6) / 4
     assert near_equal(mesh.circumradius, [circumradius], tol)
 
+    # cell quality
     assert near_equal(mesh.cell_quality, [1.0], tol)
 
     mesh.mark_boundary()
@@ -142,8 +143,12 @@ def test_regular_tet0(a):
 #     return
 
 
-@pytest.mark.parametrize("a", [0.5, 1.0, 2.0])  # basis edge length
-def test_regular_tet1_geometric(a):
+@pytest.mark.parametrize("a", [
+    # 0.5,
+    1.0,
+    # 2.0
+    ])  # basis edge length
+def test_unit_tetrahedron_geometric(a):
     points = numpy.array([[0, 0, 0], [a, 0, 0], [0, a, 0], [0, 0, a]])
     cells = numpy.array([[0, 1, 2, 3]])
     tol = 1.0e-14
@@ -179,6 +184,18 @@ def test_regular_tet1_geometric(a):
         [-0.5 / numpy.sqrt(3) * a, 0.5 * a, 0.5 * a, 0.5 * a],
         tol,
     )
+
+    # inradius
+    ref = a * 0.2113248654051872
+    assert near_equal(mesh.inradius, [ref], tol)
+
+    # circumradius
+    ref = a * numpy.sqrt(3) / 2
+    assert near_equal(mesh.circumradius, [ref], tol)
+
+    # cell quality
+    ref = 7.320508075688774e-01
+    assert near_equal(mesh.cell_quality, [ref], tol)
 
     return
 

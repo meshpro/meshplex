@@ -396,22 +396,33 @@ class MeshTetra(_base_mesh):
 
     @property
     def circumradius(self):
+        # # Just take the distance of the circumcenter to one of the nodes for now.
+        # dist = self.node_coords[self.idx_hierarchy[0, 0, 0]] - self.cell_circumcenters
+        # circumradius = numpy.sqrt(numpy.einsum("ij,ij->i", dist, dist))
         # https://en.wikipedia.org/wiki/Tetrahedron#Circumradius
         # Compute opposite edge length products
         edge_lengths = numpy.sqrt(self.ei_dot_ei)
         aA = edge_lengths[0, 0] * edge_lengths[0, 2]
-        bB = edge_lengths[0, 1] * edge_lengths[1, 1]
-        cC = edge_lengths[0, 2] * edge_lengths[1, 0]
-        return (
+        bB = edge_lengths[0, 1] * edge_lengths[2, 0]
+        cC = edge_lengths[0, 2] * edge_lengths[2, 1]
+        circumradius = (
             numpy.sqrt(
                 (aA + bB + cC) * (-aA + bB + cC) * (aA - bB + cC) * (aA + bB - cC)
             )
             / 24
             / self.cell_volumes
         )
+        return circumradius
 
     @property
     def cell_quality(self):
+        # There are other sensible possiblities of defining cell quality, e.g.:
+        #   * inradius to longest edge
+        #   * shortest to longest edge
+        #   * minimum dihedral angle
+        #   * ...
+        # See
+        # <http://eidors3d.sourceforge.net/doc/index.html?eidors/meshing/calc_mesh_quality.html>.
         return 3 * self.inradius / self.circumradius
 
     @property
