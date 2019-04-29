@@ -18,7 +18,7 @@ jobs:
     steps:
       - run: apt-get update
       - run: apt-get install -y git python3-pip
-      - run: pip3 install -U pytest pytest-cov
+      - run: pip3 install -U pytest pytest-cov excode
       - checkout
       # install
       - run: pip3 install -r test_requirements.txt
