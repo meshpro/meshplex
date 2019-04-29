@@ -7,11 +7,6 @@ import meshio
 __all__ = []
 
 
-def _row_dot(a, b):
-    # https://stackoverflow.com/a/26168677/353337
-    return numpy.einsum("ij, ij->i", a, b)
-
-
 def compute_tri_areas(ei_dot_ej):
     return 0.5 * numpy.sqrt(
         ei_dot_ej[2] * ei_dot_ej[0]
