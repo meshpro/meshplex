@@ -10,46 +10,67 @@
   <img src="https://nschloe.github.io/meshplex/meshplex-logo.svg" width="20%">
 </p>
 
-Compute Voronoi tesselations and everything else you need for finite-volume
-discretizations. Do it fast, too.
+Compute all sorts of interesting points, areas, and volumes in triangular and
+tetrahedral meshes, with a focus on efficiency. Useful in many contexts, e.g.,
+finite-element and finite-volume computations.
 
-### Usage
+meshplex is used in [optimesh](https://github.com/nschloe/optimesh) and
+[pyfvm](https://github.com/nschloe/pyfvm).
 
-Given a triangular or tetrahedral mesh, meshplex computes
+### Quickstart
 
- * covolumes,
- * control volumes,
- * cell circumcenters,
- * the surface areas,
- * control volume circumcenters,
-
-and much more.
-
-To use meshplex, simple read a mesh (e.g., [this
-pacman](https://sourceforge.net/projects/meshzoo-data/files/pacman.msh/download)):
 ```python
-mesh = meshplex.read('pacman.msh')
+import numpy
+import meshplex
 
-print(mesh.node_coords)
+# create a simple MeshTri instance
+points = numpy.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
+cells = numpy.array([[0, 1, 2]])
+mesh = meshplex.MeshTri(points, cells)
+# or read it from a file
+# mesh = meshplex.read('pacman.msh')
+
+# triangle volumes
+print(mesh.cell_volumes)
+
+# circumcenters, centroids, incenters
+print(mesh.cell_circumcenters)
+print(mesh.cell_centroids)
+print(mesh.cell_incenters)
+
+# circumradius, inradius, cell quality, angles
+print(mesh.circumradius)
+print(mesh.inradius)
+print(mesh.cell_quality)  # d * inradius / circumradius (min 0, max 1)
+print(mesh.angles)
+
+# control volumes, centroids
 print(mesh.control_volumes)
+print(mesh.control_volume_centroids)
 
+# covolume/edge length ratios
+print(mesh.ce_ratios)
+
+# flip edges until the mesh is Delaunay
+mesh.flip_until_delaunay()
+
+# show the mesh
 mesh.show()
 ```
-(For mesh creation, check out [pygmsh](https://github.com/nschloe/pygmsh),
-[mshr](https://bitbucket.org/fenics-project/mshr),
-[pygalmesh](https://github.com/nschloe/pygalmesh),
-[meshzoo](https://github.com/nschloe/meshzoo),
-[optimesh](//github.com/nschloe/optimesh) or any other tool.)
 
+meshplex works much the same way with tetrahedral meshes.
+
+(For mesh creation, check out
+[this list](https://github.com/nschloe/awesome-scientific-computing#meshing)).
 
 ### Installation
 
 meshplex is [available from the Python Package
 Index](https://pypi.org/project/meshplex/), so simply type
 ```
-pip install -U meshplex
+pip3 install --user meshplex
 ```
-to install or upgrade.
+to install.
 
 ### Testing
 

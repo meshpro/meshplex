@@ -11,7 +11,7 @@ def _main():
 
     mesh = meshplex.mesh_tri.MeshTri(points, cells)
 
-    lw = 3.0
+    lw = 5.0
     col = "0.6"
 
     ax = plt.gca()

@@ -18,12 +18,13 @@ jobs:
     steps:
       - run: apt-get update
       - run: apt-get install -y git python3-pip
-      - run: pip3 install -U pytest pytest-cov
+      - run: pip3 install -U pytest pytest-cov excode
       - checkout
       # install
       - run: pip3 install -r test_requirements.txt
       - run: pip3 install .[all]
       # The tests
+      - run: excode README.md test/readme_test.py --filter python
       - run: cd test/ && MPLBACKEND=Agg pytest --cov meshplex
       # submit to codecov
       - run: apt-get install -y curl
