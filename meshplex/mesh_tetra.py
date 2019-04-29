@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 import numpy
-from .base import _base_mesh, compute_triangle_circumcenters
+from .base import _base_mesh, compute_triangle_circumcenters, compute_tri_areas
 
 __all__ = ["MeshTetra"]
 
@@ -13,13 +13,12 @@ class MeshTetra(_base_mesh):
     .. inheritance-diagram:: MeshTetra
     """
 
-    def __init__(self, node_coords, cells, mode="geometric"):
+    def __init__(self, node_coords, cells):
         """Initialization.
         """
-        # Sort cells and nodes, first every row, then the rows themselves. This
-        # helps in many downstream applications, e.g., when constructing linear
-        # systems with the cells/edges. (When converting to CSR format, the
-        # I/J entries must be sorted.)
+        # Sort cells and nodes, first every row, then the rows themselves. This helps in
+        # many downstream applications, e.g., when constructing linear systems with the
+        # cells/edges. (When converting to CSR format, the I/J entries must be sorted.)
         # Don't use cells.sort(axis=1) to avoid
         # ```
         # ValueError: sort array is read-only
@@ -43,13 +42,12 @@ class MeshTetra(_base_mesh):
 
         self.cells = {"nodes": cells}
 
-        self._mode = mode
         self._control_volumes = None
         self._circumcenters = None
         self.subdomains = {}
 
-        # Arrange the node_face_cells such that node k is opposite of face k in
-        # each cell.
+        # Arrange the node_face_cells such that node k is opposite of face k in each
+        # cell.
         nds = self.cells["nodes"].T
         idx = numpy.array([[1, 2, 3], [2, 3, 0], [3, 0, 1], [0, 1, 2]]).T
         self.node_face_cells = nds[idx]
@@ -100,6 +98,7 @@ class MeshTetra(_base_mesh):
         )
 
         self.ce_ratios = self._compute_ce_ratios_geometric()
+        # self.ce_ratios = self._compute_ce_ratios_algebraic()
 
         self.is_boundary_node = None
         self._inv_faces = None
@@ -123,9 +122,9 @@ class MeshTetra(_base_mesh):
         return
 
     def create_cell_face_relationships(self):
-        # Reshape into individual faces, and take the first node per edge. (The
-        # face is fully characterized by it.) Sort the columns to make it
-        # possible for `unique()` to identify individual faces.
+        # Reshape into individual faces, and take the first node per edge. (The face is
+        # fully characterized by it.) Sort the columns to make it possible for
+        # `unique()` to identify individual faces.
         s = self.idx_hierarchy.shape
         a = self.idx_hierarchy.reshape([s[0], s[1], s[2] * s[3]]).T
         a = numpy.sort(a[:, :, 0])
@@ -138,8 +137,8 @@ class MeshTetra(_base_mesh):
             b, return_index=True, return_inverse=True, return_counts=True
         )
 
-        # No face has more than 2 cells. This assertion fails, for example, if
-        # cells are listed twice.
+        # No face has more than 2 cells. This assertion fails, for example, if cells are
+        # listed twice.
         assert all(cts < 3)
 
         self.is_boundary_facet = (cts[inv] == 1).reshape(s[2:])
@@ -188,8 +187,8 @@ class MeshTetra(_base_mesh):
     def _compute_cell_circumcenters(self):
         """Computes the center of the circumsphere of each cell.
         """
-        # Just like for triangular cells, tetrahedron circumcenters are most
-        # easily computed with the quadrilateral coordinates available.
+        # Just like for triangular cells, tetrahedron circumcenters are most easily
+        # computed with the quadrilateral coordinates available.
         # Luckily, we have the circumcenter-face distances (cfd):
         #
         #   CC = (
@@ -217,54 +216,54 @@ class MeshTetra(_base_mesh):
         return
 
     # Question:
-    # We're looking for an explicit expression for the algebraic c/e ratios. Might
-    # it be that, analogous to the triangle dot product, the "triple product" has
-    # something to do with it?
+    # We're looking for an explicit expression for the algebraic c/e ratios. Might it be
+    # that, analogous to the triangle dot product, the "triple product" has something to
+    # do with it?
     # "triple product": Project one edge onto the plane spanned by the two others.
     #
-    #     def _compute_ce_ratios_algebraic(self):
-    #         # Precompute edges.
-    #         edges = \
-    #             self.node_coords[self.edges['nodes'][:, 1]] - \
-    #             self.node_coords[self.edges['nodes'][:, 0]]
-    #
-    #         # create cells -> edges
-    #         num_cells = len(self.cells['nodes'])
-    #         cells_edges = numpy.empty((num_cells, 6), dtype=int)
-    #         for cell_id, face_ids in enumerate(self.cells['faces']):
-    #             edges_set = set(self.faces['edges'][face_ids].flatten())
-    #             cells_edges[cell_id] = list(edges_set)
-    #
-    #         self.cells['edges'] = cells_edges
-    #
-    #         # Build the equation system:
-    #         # The equation
-    #         #
-    #         # |simplex| ||u||^2 = \sum_i \alpha_i <u,e_i> <e_i,u>
-    #         #
-    #         # has to hold for all vectors u in the plane spanned by the edges,
-    #         # particularly by the edges themselves.
-    #         cells_edges = edges[self.cells['edges']]
-    #         # <https://stackoverflow.com/a/38110345/353337>
-    #         A = numpy.einsum('ijk,ilk->ijl', cells_edges, cells_edges)
-    #         A = A**2
-    #
-    #         # Compute the RHS  cell_volume * <edge, edge>.
-    #         # The dot product <edge, edge> is also on the diagonals of A (before
-    #         # squaring), but simply computing it again is cheaper than extracting
-    #         # it from A.
-    #         edge_dot_edge = _row_dot(edges, edges)
-    #         rhs = edge_dot_edge[self.cells['edges']] \
-    #             * self.cell_volumes[..., None]
-    #
-    #         # Solve all k-by-k systems at once ("broadcast"). (`k` is the number
-    #         # of edges per simplex here.)
-    #         # If the matrix A is (close to) singular if and only if the cell is
-    #         # (close to being) degenerate. Hence, it has volume 0, and so all the
-    #         # edge coefficients are 0, too. Hence, do nothing.
-    #         sol = numpy.linalg.solve(A, rhs)
-    #
-    #         return self.cells['edges'], sol
+    def _compute_ce_ratios_algebraic(self):
+        # Precompute edges.
+        half_edges = (
+            self.node_coords[self.idx_hierarchy[1]]
+            - self.node_coords[self.idx_hierarchy[0]]
+        )
+
+        # Build the equation system:
+        # The equation
+        #
+        # |simplex| ||u||^2 = \sum_i \alpha_i <u,e_i> <e_i,u>
+        #
+        # has to hold for all vectors u in the plane spanned by the edges,
+        # particularly by the edges themselves.
+        # A = numpy.empty(3, 4, half_edges.shape[2], 3, 3)
+        print(half_edges.shape)
+        A = numpy.einsum("j...k,l...k->jl...", half_edges, half_edges)
+
+        print(A.shape)
+        print(A[0, 0, 0])
+        print(half_edges[0, 0, 0])
+
+        A = A ** 2
+        exit(1)
+
+        # Compute the RHS  cell_volume * <edge, edge>.
+        # The dot product <edge, edge> is also on the diagonals of A (before squaring),
+        # but simply computing it again is cheaper than extracting it from A.
+        edge_dot_edge = numpy.einsum("...i,...j->...", half_edges, half_edges)
+        print(edge_dot_edge.shape)
+        # TODO cell_volumes
+        self.cell_volumes = numpy.random.rand(2951)
+        rhs = edge_dot_edge * self.cell_volumes
+        exit(1)
+
+        # Solve all k-by-k systems at once ("broadcast"). (`k` is the number of edges
+        # per simplex here.)
+        # If the matrix A is (close to) singular if and only if the cell is (close to
+        # being) degenerate. Hence, it has volume 0, and so all the edge coefficients
+        # are 0, too. Hence, do nothing.
+        ce_ratios = numpy.linalg.solve(A, rhs)
+
+        return ce_ratios
 
     def _compute_ce_ratios_geometric(self):
         # For triangles, the covolume/edgelength ratios are
@@ -390,6 +389,43 @@ class MeshTetra(_base_mesh):
         return self._circumcenters
 
     @property
+    def inradius(self):
+        # https://en.wikipedia.org/wiki/Tetrahedron#Inradius
+        face_areas = compute_tri_areas(self.ei_dot_ej)
+        return 3 * self.cell_volumes / numpy.sum(face_areas, axis=0)
+
+    @property
+    def circumradius(self):
+        # # Just take the distance of the circumcenter to one of the nodes for now.
+        # dist = self.node_coords[self.idx_hierarchy[0, 0, 0]] - self.cell_circumcenters
+        # circumradius = numpy.sqrt(numpy.einsum("ij,ij->i", dist, dist))
+        # https://en.wikipedia.org/wiki/Tetrahedron#Circumradius
+        # Compute opposite edge length products
+        edge_lengths = numpy.sqrt(self.ei_dot_ei)
+        aA = edge_lengths[0, 0] * edge_lengths[0, 2]
+        bB = edge_lengths[0, 1] * edge_lengths[2, 0]
+        cC = edge_lengths[0, 2] * edge_lengths[2, 1]
+        circumradius = (
+            numpy.sqrt(
+                (aA + bB + cC) * (-aA + bB + cC) * (aA - bB + cC) * (aA + bB - cC)
+            )
+            / 24
+            / self.cell_volumes
+        )
+        return circumradius
+
+    @property
+    def cell_quality(self):
+        # There are other sensible possiblities of defining cell quality, e.g.:
+        #   * inradius to longest edge
+        #   * shortest to longest edge
+        #   * minimum dihedral angle
+        #   * ...
+        # See
+        # <http://eidors3d.sourceforge.net/doc/index.html?eidors/meshing/calc_mesh_quality.html>.
+        return 3 * self.inradius / self.circumradius
+
+    @property
     def control_volumes(self):
         """Compute the control volumes of all nodes in the mesh.
         """
@@ -419,6 +455,7 @@ class MeshTetra(_base_mesh):
         # tetrahedron circumcenter is negative.
         if self.circumcenter_face_distances is None:
             self._compute_ce_ratios_geometric()
+            # self._compute_ce_ratios_algebraic()
 
         if "faces" not in self.cells:
             self.create_cell_face_relationships()

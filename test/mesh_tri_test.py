@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 #
+import os
+import tempfile
+
 import numpy
 import pytest
 import meshio
@@ -9,7 +12,7 @@ import meshplex
 from helpers import download_mesh, near_equal, run, compute_polygon_area
 
 
-def test_regular_tri():
+def test_unit_triangle():
     points = numpy.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
     cells = numpy.array([[0, 1, 2]])
     mesh = meshplex.MeshTri(points, cells)
@@ -32,11 +35,25 @@ def test_regular_tri():
     assert near_equal(mesh.cell_circumcenters, [0.5, 0.5, 0.0], tol)
 
     # centroids
+    assert near_equal(mesh.cell_centroids, [1.0 / 3.0, 1.0 / 3.0, 0.0], tol)
+    assert near_equal(mesh.cell_barycenters, [1.0 / 3.0, 1.0 / 3.0, 0.0], tol)
+
+    # control volume centroids
     assert near_equal(
         mesh.control_volume_centroids,
         [[0.25, 0.25, 0.0], [2.0 / 3.0, 1.0 / 6.0, 0.0], [1.0 / 6.0, 2.0 / 3.0, 0.0]],
         tol,
     )
+
+    # incenter
+    assert near_equal(
+        mesh.cell_incenters,
+        [[(2 - numpy.sqrt(2)) / 2, (2 - numpy.sqrt(2)) / 2, 0.0]],
+        tol,
+    )
+
+    # circumcenter
+    assert near_equal(mesh.cell_circumcenters, [[0.5, 0.5, 0.0]], tol)
 
     assert mesh.num_delaunay_violations() == 0
 
@@ -53,6 +70,14 @@ def test_regular_tri():
 
     cell_mask = mesh.get_cell_mask(Subdomain())
     assert sum(cell_mask) == 1
+
+    # save
+    _, filename = tempfile.mkstemp(suffix=".png")
+    mesh.save(filename)
+    os.remove(filename)
+    _, filename = tempfile.mkstemp(suffix=".vtk")
+    mesh.save(filename)
+    os.remove(filename)
 
     return
 
@@ -705,8 +730,8 @@ def test_quality():
 
     tol = 1.0e-15
 
-    ic = mesh.triangle_quality
-    assert near_equal(ic, 2 * mesh.inradius / mesh.circumradius, tol)
+    q = mesh.cell_quality
+    assert near_equal(q, 2 * mesh.inradius / mesh.circumradius, tol)
 
     # 30-60-90 triangle
     a = 1.0
@@ -716,8 +741,8 @@ def test_quality():
     cells = numpy.array([[0, 1, 2]])
     mesh = meshplex.MeshTri(points, cells)
 
-    ic = mesh.triangle_quality
-    assert near_equal(ic, 2 * mesh.inradius / mesh.circumradius, tol)
+    q = mesh.cell_quality
+    assert near_equal(q, 2 * mesh.inradius / mesh.circumradius, tol)
     return
 
 

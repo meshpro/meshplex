@@ -7,7 +7,8 @@ import fastfunc
 
 from .base import (
     _base_mesh,
-    compute_tri_areas_and_ce_ratios,
+    compute_tri_areas,
+    compute_ce_ratios,
     compute_triangle_circumcenters,
 )
 from .helpers import grp_start_len, unique_rows
@@ -120,9 +121,8 @@ class MeshTri(_base_mesh):
         e = self.half_edge_coords
         self.ei_dot_ei = numpy.einsum("ijk, ijk->ij", e, e)
 
-        self.cell_volumes, self.ce_ratios = compute_tri_areas_and_ce_ratios(
-            self.ei_dot_ej
-        )
+        self.cell_volumes = compute_tri_areas(self.ei_dot_ej)
+        self.ce_ratios = compute_ce_ratios(self.ei_dot_ej, self.cell_volumes)
 
         # self.fcc_type = "full"
         # is_flat_halfedge = self.ce_ratios < 0.0
@@ -134,6 +134,11 @@ class MeshTri(_base_mesh):
         # self.ce_ratios[:, self.fcc_cells] = self.fcc.ce_ratios.T
 
         return
+
+    def __repr__(self):
+        return "meshplex triangular mesh with {} points and {} cells".format(
+            self.node_coords.shape[0], self.cells["nodes"].shape[0]
+        )
 
     # def update_node_coordinates(self, X):
     #     assert X.shape == self.node_coords.shape
@@ -168,9 +173,8 @@ class MeshTri(_base_mesh):
             self.ei_dot_ei = numpy.einsum("ijk, ijk->ij", e, e)
 
         if self.cell_volumes is not None or self.ce_ratios is not None:
-            self.cell_volumes, self.ce_ratios = compute_tri_areas_and_ce_ratios(
-                self.ei_dot_ej
-            )
+            self.cell_volumes = compute_tri_areas(self.ei_dot_ej)
+            self.ce_ratios = compute_ce_ratios(self.ei_dot_ej, self.cell_volumes)
 
         self._interior_edge_lengths = None
         self._cell_circumcenters = None
@@ -448,7 +452,7 @@ class MeshTri(_base_mesh):
 
     @property
     def cell_centroids(self):
-        """Computes the centroids (barycenters) of all triangles.
+        """The centroids (barycenters) of all triangles.
         """
         if self._cell_centroids is None:
             self._cell_centroids = (
@@ -461,6 +465,13 @@ class MeshTri(_base_mesh):
         return self.cell_centroids
 
     @property
+    def cell_incenters(self):
+        # https://en.wikipedia.org/wiki/Incenter#Barycentric_coordinates
+        abc = numpy.sqrt(self.ei_dot_ei)
+        abc /= numpy.sum(abc, axis=0)
+        return numpy.einsum("ij,jik->jk", abc, self.node_coords[self.cells["nodes"]])
+
+    @property
     def inradius(self):
         # See <http://mathworld.wolfram.com/Incircle.html>.
         abc = numpy.sqrt(self.ei_dot_ei)
@@ -468,14 +479,14 @@ class MeshTri(_base_mesh):
 
     @property
     def circumradius(self):
-        # See <http://mathworld.wolfram.com/Incircle.html>.
+        # See <http://mathworld.wolfram.com/Circumradius.html>.
         a, b, c = numpy.sqrt(self.ei_dot_ei)
         return (a * b * c) / numpy.sqrt(
             (a + b + c) * (-a + b + c) * (a - b + c) * (a + b - c)
         )
 
     @property
-    def triangle_quality(self):
+    def cell_quality(self):
         # q = 2 * r_in / r_out
         #   = (-a+b+c) * (+a-b+c) * (+a+b-c) / (a*b*c),
         #
@@ -501,7 +512,7 @@ class MeshTri(_base_mesh):
     def _compute_integral_x(self):
         """Computes the integral of x,
 
-          \int_V x,
+          \\int_V x,
 
         over all atomic "triangles", i.e., areas cornered by a node, an edge
         midpoint, and a circumcenter.
@@ -643,7 +654,7 @@ class MeshTri(_base_mesh):
         based on
 
         .. math::
-            n\cdot curl(F) = \lim_{A\\to 0} |A|^{-1} <\int_{dGamma}, F> dr;
+            n\\cdot curl(F) = \\lim_{A\\to 0} |A|^{-1} <\\int_{dGamma}, F> dr;
 
         see <https://en.wikipedia.org/wiki/Curl_(mathematics)>. Actually, to
         approximate the integral, one would only need the projection of the
@@ -685,7 +696,7 @@ class MeshTri(_base_mesh):
 
     def save(self, filename, *args, **kwargs):
         _, file_extension = os.path.splitext(filename)
-        if file_extension == ".png":
+        if file_extension in ".png":
             from matplotlib import pyplot as plt
 
             self.plot(*args, **kwargs)
@@ -713,9 +724,8 @@ class MeshTri(_base_mesh):
 
         # from mpl_toolkits.mplot3d import Axes3D
         fig = plt.figure()
-        # ax = fig.gca(projection='3d')
         ax = fig.gca()
-        plt.axis("equal")
+        # plt.axis("equal")
         if not show_axes:
             ax.set_axis_off()
 
@@ -732,8 +742,8 @@ class MeshTri(_base_mesh):
         ymin -= 0.1 * height
         ymax += 0.1 * height
 
-        ax.set_xlim(xmin, xmax)
-        ax.set_ylim(ymin, ymax)
+        # ax.set_xlim(xmin, xmax)
+        # ax.set_ylim(ymin, ymax)
 
         if self.edges is None:
             self.create_edges()
@@ -1056,7 +1066,8 @@ class MeshTri(_base_mesh):
         self.ei_dot_ei[:, cell_ids] = numpy.einsum("ijk, ijk->ij", e, e)
 
         # update cell_volumes, ce_ratios_per_half_edge
-        cv, ce = compute_tri_areas_and_ce_ratios(self.ei_dot_ej[:, cell_ids])
+        cv = compute_tri_areas(self.ei_dot_ej[:, cell_ids])
+        ce = compute_ce_ratios(self.ei_dot_ej[:, cell_ids], cv)
         self.cell_volumes[cell_ids] = cv
         self.ce_ratios[:, cell_ids] = ce
 

@@ -82,6 +82,20 @@ def test_regular_tet0(a):
     val = vol / 4.0
     assert near_equal(mesh.control_volumes, [val, val, val, val], tol)
 
+    # inradius
+    # side_area = numpy.sqrt(3) / 4 * a ** 2
+    # vol = a ** 3 / 6.0 / numpy.sqrt(2)
+    # inradius = 3 * vol / (4 * side_area)
+    inradius = a * numpy.sqrt(6) / 12
+    assert near_equal(mesh.inradius, [inradius], tol)
+
+    # circumradius
+    circumradius = a * numpy.sqrt(6) / 4
+    assert near_equal(mesh.circumradius, [circumradius], tol)
+
+    # cell quality
+    assert near_equal(mesh.cell_quality, [1.0], tol)
+
     mesh.mark_boundary()
 
     return
@@ -129,13 +143,20 @@ def test_regular_tet0(a):
 #     return
 
 
-@pytest.mark.parametrize("a", [0.5, 1.0, 2.0])  # basis edge length
-def test_regular_tet1_geometric(a):
+@pytest.mark.parametrize(
+    "a",
+    [
+        # 0.5,
+        1.0,
+        # 2.0
+    ],
+)  # basis edge length
+def test_unit_tetrahedron_geometric(a):
     points = numpy.array([[0, 0, 0], [a, 0, 0], [0, a, 0], [0, 0, a]])
     cells = numpy.array([[0, 1, 2, 3]])
     tol = 1.0e-14
 
-    mesh = meshplex.MeshTetra(points, cells, mode="geometric")
+    mesh = meshplex.MeshTetra(points, cells)
 
     assert all((mesh.cells["nodes"] == cells).flat)
 
@@ -167,6 +188,18 @@ def test_regular_tet1_geometric(a):
         tol,
     )
 
+    # inradius
+    ref = a * 0.2113248654051872
+    assert near_equal(mesh.inradius, [ref], tol)
+
+    # circumradius
+    ref = a * numpy.sqrt(3) / 2
+    assert near_equal(mesh.circumradius, [ref], tol)
+
+    # cell quality
+    ref = 7.320508075688774e-01
+    assert near_equal(mesh.cell_quality, [ref], tol)
+
     return
 
 
@@ -176,7 +209,7 @@ def test_regular_tet1_geometric_order():
     cells = numpy.array([[0, 1, 2, 3]])
     tol = 1.0e-14
 
-    mesh = meshplex.MeshTetra(points, cells, mode="geometric")
+    mesh = meshplex.MeshTetra(points, cells)
 
     assert all((mesh.cells["nodes"] == [0, 1, 2, 3]).flat)
 
@@ -417,7 +450,7 @@ def test_toy_geometric():
     filename = download_mesh("toy.msh", "1d125d3fa9f373823edd91ebae5f7a81")
     mesh, _, _, _ = meshplex.read(filename)
 
-    mesh = meshplex.MeshTetra(mesh.node_coords, mesh.cells["nodes"], mode="geometric")
+    mesh = meshplex.MeshTetra(mesh.node_coords, mesh.cells["nodes"])
 
     run(
         mesh,
