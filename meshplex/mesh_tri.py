@@ -472,13 +472,6 @@ class MeshTri(_base_mesh):
         return numpy.einsum("ij,jik->jk", abc, self.node_coords[self.cells["nodes"]])
 
     @property
-    def cell_orthocenters(self):
-        # https://en.wikipedia.org/wiki/Incenter#Barycentric_coordinates
-        abc = numpy.sqrt(self.ei_dot_ei)
-        abc /= numpy.sum(abc, axis=0)
-        return numpy.einsum("ij,jik->jk", abc, self.node_coords[self.cells["nodes"]])
-
-    @property
     def inradius(self):
         # See <http://mathworld.wolfram.com/Incircle.html>.
         abc = numpy.sqrt(self.ei_dot_ei)

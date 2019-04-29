@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 
 
 def _main():
-    # points = numpy.array([[0.0, 0.0], [1.0, 0.0], [0.2, 0.8]])
-    points = numpy.array([[0.0, 0.0], [1.0, 0.0], [0.5, numpy.sqrt(3) / 2]])
+    points = numpy.array([[0.0, 0.0], [1.0, 0.0], [0.3, 0.8]])
+    # points = numpy.array([[0.0, 0.0], [1.0, 0.0], [0.5, numpy.sqrt(3) / 2]])
     cells = numpy.array([[0, 1, 2]])
 
     mesh = meshplex.mesh_tri.MeshTri(points, cells)
@@ -38,29 +38,42 @@ def _main():
             linewidth=lw,
         )
 
-    # incircle
-    circle2 = plt.Circle(
-        mesh.cell_incenters[0], mesh.inradius[0], color=col, fill=False, linewidth=lw
-    )
-    ax.add_artist(circle2)
-
-    # angle bisector
+    # heights
     for i, j, k in [[0, 1, 2], [1, 2, 0], [2, 0, 1]]:
         p = points - points[i]
         v1 = p[j] / numpy.linalg.norm(p[j])
-        v2 = p[k] / numpy.linalg.norm(p[k])
-        alpha = numpy.arccos(numpy.dot(v1, v2))
-        c = numpy.cos(alpha / 2)
-        s = numpy.sin(alpha / 2)
-        beta = numpy.linalg.norm(mesh.cell_incenters[0] - points[i]) + mesh.inradius[0]
-        m1 = points[i] + numpy.dot([[c, -s], [s, c]], v1) * beta
+        m1 = points[i] + numpy.dot(p[k], v1) * v1
         plt.plot(
-            [points[i, 0], m1[0]],
-            [points[i, 1], m1[1]],
+            [points[k, 0], m1[0]],
+            [points[k, 1], m1[1]],
             col,
             linewidth=lw,
             color=col,
         )
+
+    # # incircle
+    # circle2 = plt.Circle(
+    #     mesh.cell_incenters[0], mesh.inradius[0], color=col, fill=False, linewidth=lw
+    # )
+    # ax.add_artist(circle2)
+
+    # # angle bisectors
+    # for i, j, k in [[0, 1, 2], [1, 2, 0], [2, 0, 1]]:
+    #     p = points - points[i]
+    #     v1 = p[j] / numpy.linalg.norm(p[j])
+    #     v2 = p[k] / numpy.linalg.norm(p[k])
+    #     alpha = numpy.arccos(numpy.dot(v1, v2))
+    #     c = numpy.cos(alpha / 2)
+    #     s = numpy.sin(alpha / 2)
+    #     beta = numpy.linalg.norm(mesh.cell_incenters[0] - points[i]) + mesh.inradius[0]
+    #     m1 = points[i] + numpy.dot([[c, -s], [s, c]], v1) * beta
+    #     plt.plot(
+    #         [points[i, 0], m1[0]],
+    #         [points[i, 1], m1[1]],
+    #         col,
+    #         linewidth=lw,
+    #         color=col,
+    #     )
 
     # triangle
     plt.plot(
@@ -74,9 +87,8 @@ def _main():
     ax.set_ylim(-0.4, 0.9)
     ax.set_aspect("equal")
     plt.axis("off")
-    # plt.savefig("logo.svg", transparent=True)
-    plt.show()
-
+    plt.savefig("logo.svg")
+    # plt.show()
     return
 
 
