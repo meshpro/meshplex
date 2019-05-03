@@ -25,7 +25,7 @@ author = "Nico Schlömer"
 # https://packaging.python.org/single_source_version/
 this_dir = os.path.abspath(os.path.dirname(__file__))
 about = {}
-about_file = os.path.join(this_dir, "..", "matplotlib2tikz", "__about__.py")
+about_file = os.path.join(this_dir, "..", "meshplex", "__about__.py")
 with open(about_file) as f:
     exec(f.read(), about)
 # The short X.Y version.
@@ -39,7 +39,13 @@ release = about["__version__"]
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = []
+extensions = [
+    "sphinx.ext.autodoc",
+    # "sphinx.ext.doctest",
+    # "sphinx.ext.todo",
+    # "sphinx.ext.coverage",
+    # "sphinx.ext.pngmath",
+]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]

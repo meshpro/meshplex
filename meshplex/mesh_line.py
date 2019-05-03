@@ -48,6 +48,8 @@ class MeshLine(object):
         return
 
     def show_vertex_function(self, u):
+        """
+        """
         from matplotlib import pyplot as plt
 
         plt.plot(self.node_coords, u)

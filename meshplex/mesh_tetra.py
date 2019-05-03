@@ -9,8 +9,6 @@ __all__ = ["MeshTetra"]
 # pylint: disable=too-many-instance-attributes
 class MeshTetra(_base_mesh):
     """Class for handling tetrahedral meshes.
-
-    .. inheritance-diagram:: MeshTetra
     """
 
     def __init__(self, node_coords, cells):
@@ -109,9 +107,13 @@ class MeshTetra(_base_mesh):
         return
 
     def get_ce_ratios(self):
+        """Covolume-edge length ratios.
+        """
         return self.ce_ratios
 
     def mark_boundary(self):
+        """
+        """
         if "faces" not in self.cells:
             self.create_cell_face_relationships()
 
@@ -122,6 +124,8 @@ class MeshTetra(_base_mesh):
         return
 
     def create_cell_face_relationships(self):
+        """
+        """
         # Reshape into individual faces, and take the first node per edge. (The face is
         # fully characterized by it.) Sort the columns to make it possible for
         # `unique()` to identify individual faces.
@@ -160,6 +164,8 @@ class MeshTetra(_base_mesh):
         return
 
     def create_face_edge_relationships(self):
+        """
+        """
         a = numpy.vstack(
             [
                 self.faces["nodes"][:, [1, 2]],
@@ -270,8 +276,7 @@ class MeshTetra(_base_mesh):
         #
         #   [1]   ce_ratios = -<ei, ej> / cell_volume / 4;
         #
-        # for tetrahedra, is somewhat more tricky. This is the reference
-        # expression:
+        # for tetrahedra, is somewhat more tricky. This is the reference expression:
         #
         # ce_ratios = (
         #     2 * _my_dot(x0_cross_x1, x2)**2 -
@@ -292,8 +297,8 @@ class MeshTetra(_base_mesh):
         #       + self.ei_dot_ej[0] * self.ei_dot_ej[1] * self.ei_dot_ej[2]
         #       ).
         #
-        # for the face [1, 2, 3] (with edges [3, 4, 5]), where nodes and edges
-        # are ordered like
+        # for the face [1, 2, 3] (with edges [3, 4, 5]), where nodes and edges are
+        # ordered like
         #
         #                        3
         #                        ^
@@ -318,11 +323,10 @@ class MeshTetra(_base_mesh):
         #                        0  \______________\\
         #                                            1
         #
-        # This is not a too obvious extension of -<ei, ej> in [1]. However,
-        # consider the fact that this contains all pairwise dot-products of
-        # edges not part of the respective face (<e0, e1>, <e1, e2>, <e2, e0>),
-        # each of them weighted with dot-products of edges in the respective
-        # face.
+        # This is not a too obvious extension of -<ei, ej> in [1]. However, consider the
+        # fact that this contains all pairwise dot-products of edges not part of the
+        # respective face (<e0, e1>, <e1, e2>, <e2, e0>), each of them weighted with
+        # dot-products of edges in the respective face.
         #
         # Note that, to retrieve the covolume-edge ratio, one divides by
         #
@@ -332,9 +336,8 @@ class MeshTetra(_base_mesh):
         #           + ei_dot_ej[3, 4] * ei_dot_ej[4, 5]
         #           )
         #
-        # (which is the square of the face area). It's funny that there should
-        # be no further simplification in zeta/alpha, but nothing has been
-        # found here yet.
+        # (which is the square of the face area). It's funny that there should be no
+        # further simplification in zeta/alpha, but nothing has been found here yet.
         #
         ee = self.ei_dot_ej
         self._zeta = (
@@ -344,14 +347,13 @@ class MeshTetra(_base_mesh):
             + ee[0] * ee[1] * ee[2]
         )
 
-        # From base.py, but spelled out here since we can avoid one sqrt when
-        # computing the c/e ratios for the faces.
+        # From base.py, but spelled out here since we can avoid one sqrt when computing
+        # the c/e ratios for the faces.
         alpha = (
             +self.ei_dot_ej[2] * self.ei_dot_ej[0]
             + self.ei_dot_ej[0] * self.ei_dot_ej[1]
             + self.ei_dot_ej[1] * self.ei_dot_ej[2]
         )
-        # pylint: disable=invalid-unary-operand-type
         # face_ce_ratios = -self.ei_dot_ej * 0.25 / face_areas[None]
         face_ce_ratios_div_face_areas = -self.ei_dot_ej / alpha
 
@@ -384,18 +386,24 @@ class MeshTetra(_base_mesh):
 
     @property
     def cell_circumcenters(self):
+        """
+        """
         if self._circumcenters is None:
             self._compute_cell_circumcenters()
         return self._circumcenters
 
     @property
     def inradius(self):
+        """
+        """
         # https://en.wikipedia.org/wiki/Tetrahedron#Inradius
         face_areas = compute_tri_areas(self.ei_dot_ej)
         return 3 * self.cell_volumes / numpy.sum(face_areas, axis=0)
 
     @property
     def circumradius(self):
+        """
+        """
         # # Just take the distance of the circumcenter to one of the nodes for now.
         # dist = self.node_coords[self.idx_hierarchy[0, 0, 0]] - self.cell_circumcenters
         # circumradius = numpy.sqrt(numpy.einsum("ij,ij->i", dist, dist))
@@ -416,6 +424,8 @@ class MeshTetra(_base_mesh):
 
     @property
     def cell_quality(self):
+        """
+        """
         # There are other sensible possiblities of defining cell quality, e.g.:
         #   * inradius to longest edge
         #   * shortest to longest edge
@@ -450,6 +460,8 @@ class MeshTetra(_base_mesh):
         return self._control_volumes
 
     def num_delaunay_violations(self):
+        """
+        """
         # Delaunay violations are present exactly on the interior faces where
         # the sum of the signed distances between face circumcenter and
         # tetrahedron circumcenter is negative.
@@ -466,7 +478,8 @@ class MeshTetra(_base_mesh):
         return numpy.sum(sums < 0.0)
 
     def show(self):
-        # pylint: disable=unused-variable,relative-import
+        """
+        """
         from mpl_toolkits.mplot3d import Axes3D
         from matplotlib import pyplot as plt
 
