@@ -78,4 +78,5 @@ html_theme_options = {
     "github_repo": "meshplex",
     "github_banner": True,
     "github_button": False,
+    "codecov_button": True,
 }
