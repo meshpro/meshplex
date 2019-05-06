@@ -1,6 +1,16 @@
 version: 2
 
 jobs:
+  doc:
+    working_directory: ~/work
+    docker:
+      - image: ubuntu:18.04
+    steps:
+      - checkout
+      - run: apt update
+      - run: apt install -y python3-pip
+      - run: pip3 install -U sphinx
+      - run: LC_ALL=C.UTF-8 make doc
   lint:
     docker:
       - image: ubuntu:18.04
@@ -32,7 +42,8 @@ jobs:
 
 workflows:
   version: 2
-  lint_and_build:
+  doc_lint_and_build:
     jobs:
+      - doc
       - lint
       - build

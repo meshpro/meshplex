@@ -29,3 +29,8 @@ black:
 lint:
 	black --check setup.py meshplex/ test/*.py
 	flake8 setup.py meshplex/ test/*.py
+
+.PHONY: doc
+
+doc:
+	sphinx-build -M html doc/ build/

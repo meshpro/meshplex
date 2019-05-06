@@ -24,8 +24,6 @@ def _column_stack(a, b):
 
 class MeshTri(_base_mesh):
     """Class for handling triangular meshes.
-
-    .. inheritance-diagram:: MeshTri
     """
 
     def __init__(self, nodes, cells, sort_cells=False):
@@ -86,13 +84,13 @@ class MeshTri(_base_mesh):
 
         # compute data
         # Create the idx_hierarchy (nodes->edges->cells), i.e., the value of
-        # `self.idx_hierarchy[0, 2, 27]` is the index of the node of cell 27,
-        # edge 2, node 0. The shape of `self.idx_hierarchy` is `(2, 3, n)`,
-        # where `n` is the number of cells. Make sure that the k-th edge is
-        # opposite of the k-th point in the triangle.
+        # `self.idx_hierarchy[0, 2, 27]` is the index of the node of cell 27, edge 2,
+        # node 0. The shape of `self.idx_hierarchy` is `(2, 3, n)`, where `n` is the
+        # number of cells. Make sure that the k-th edge is opposite of the k-th point in
+        # the triangle.
         self.local_idx = numpy.array([[1, 2], [2, 0], [0, 1]]).T
-        # Map idx back to the nodes. This is useful if quantities which are in
-        # idx shape need to be added up into nodes (e.g., equation system rhs).
+        # Map idx back to the nodes. This is useful if quantities which are in idx shape
+        # need to be added up into nodes (e.g., equation system rhs).
         nds = self.cells["nodes"].T
         self.idx_hierarchy = nds[self.local_idx]
 
@@ -153,6 +151,8 @@ class MeshTri(_base_mesh):
     #     return
 
     def update_values(self):
+        """
+        """
         if self.half_edge_coords is not None:
             # Constructing the temporary arrays
             # self.node_coords[self.idx_hierarchy] can take quite a while here.
@@ -189,6 +189,8 @@ class MeshTri(_base_mesh):
 
     @property
     def ce_ratios_per_interior_edge(self):
+        """
+        """
         if self._interior_ce_ratios is None:
             if "edges" not in self.cells:
                 self.create_edges()
@@ -217,6 +219,8 @@ class MeshTri(_base_mesh):
 
     @property
     def control_volumes(self):
+        """
+        """
         if self._control_volumes is None:
             v = self.cell_partitions
 
@@ -241,22 +245,27 @@ class MeshTri(_base_mesh):
 
     @property
     def surface_areas(self):
+        """
+        """
         if self._surface_areas is None:
             self._surface_areas = self._compute_surface_areas()
         return self._surface_areas
 
     @property
     def control_volume_centroids(self):
-        # This function is necessary, e.g., for Lloyd's
-        # smoothing <https://en.wikipedia.org/wiki/Lloyd%27s_algorithm>.
-        #
-        # The centroid of any volume V is given by
-        #
-        #   c = \int_V x / \int_V 1.
-        #
-        # The denominator is the control volume. The numerator can be computed
-        # by making use of the fact that the control volume around any vertex
-        # v_0 is composed of right triangles, two for each adjacent cell.
+        """
+        This function is necessary, e.g., for Lloyd's smoothing
+        https://en.wikipedia.org/wiki/Lloyd%27s_algorithm.
+
+        The centroid of any volume V is given by
+
+        .. math::
+          c = \\int_V x / \\int_V 1.
+
+        The denominator is the control volume. The numerator can be computed by making
+        use of the fact that the control volume around any vertex v_0 is composed of
+        right triangles, two for each adjacent cell.
+        """
         if self._cv_centroids is None:
             _, v = self._compute_integral_x()
             # Again, make use of the fact that edge k is opposite of node k in
@@ -300,6 +309,8 @@ class MeshTri(_base_mesh):
         return self._signed_cell_areas
 
     def mark_boundary(self):
+        """
+        """
         if self.edges is None:
             self.create_edges()
 
@@ -315,18 +326,24 @@ class MeshTri(_base_mesh):
 
     @property
     def is_boundary_node(self):
+        """
+        """
         if self._is_boundary_node is None:
             self.mark_boundary()
         return self._is_boundary_node
 
     @property
     def is_interior_node(self):
+        """
+        """
         if self._is_interior_node is None:
             self.mark_boundary()
         return self._is_interior_node
 
     @property
     def is_boundary_facet(self):
+        """
+        """
         if self._is_boundary_facet is None:
             self.mark_boundary()
         return self._is_boundary_facet
@@ -367,6 +384,8 @@ class MeshTri(_base_mesh):
 
     @property
     def edges_cells(self):
+        """
+        """
         if self._edges_cells is None:
             self._compute_edges_cells()
         return self._edges_cells
@@ -421,12 +440,16 @@ class MeshTri(_base_mesh):
 
     @property
     def edge_gid_to_edge_list(self):
+        """
+        """
         if self._edge_gid_to_edge_list is None:
             self._compute_edges_cells()
         return self._edge_gid_to_edge_list
 
     @property
     def face_partitions(self):
+        """
+        """
         # face = edge for triangles.
         # The partition is simply along the center of the edge.
         edge_lengths = self.edge_lengths
@@ -434,6 +457,8 @@ class MeshTri(_base_mesh):
 
     @property
     def cell_partitions(self):
+        """
+        """
         if self._cell_partitions is None:
             # Compute the control volumes. Note that
             #   0.5 * (0.5 * edge_length) * covolume
@@ -443,6 +468,8 @@ class MeshTri(_base_mesh):
 
     @property
     def cell_circumcenters(self):
+        """
+        """
         if self._cell_circumcenters is None:
             node_cells = self.cells["nodes"].T
             self._cell_circumcenters = compute_triangle_circumcenters(
@@ -462,10 +489,14 @@ class MeshTri(_base_mesh):
 
     @property
     def cell_barycenters(self):
+        """See cell_centroids().
+        """
         return self.cell_centroids
 
     @property
     def cell_incenters(self):
+        """
+        """
         # https://en.wikipedia.org/wiki/Incenter#Barycentric_coordinates
         abc = numpy.sqrt(self.ei_dot_ei)
         abc /= numpy.sum(abc, axis=0)
@@ -473,12 +504,16 @@ class MeshTri(_base_mesh):
 
     @property
     def inradius(self):
+        """
+        """
         # See <http://mathworld.wolfram.com/Incircle.html>.
         abc = numpy.sqrt(self.ei_dot_ei)
         return 2 * self.cell_volumes / numpy.sum(abc, axis=0)
 
     @property
     def circumradius(self):
+        """
+        """
         # See <http://mathworld.wolfram.com/Circumradius.html>.
         a, b, c = numpy.sqrt(self.ei_dot_ei)
         return (a * b * c) / numpy.sqrt(
@@ -487,6 +522,8 @@ class MeshTri(_base_mesh):
 
     @property
     def cell_quality(self):
+        """2 * inradius / circumradius (min 0, max 1)
+        """
         # q = 2 * r_in / r_out
         #   = (-a+b+c) * (+a-b+c) * (+a+b-c) / (a*b*c),
         #
@@ -497,6 +534,8 @@ class MeshTri(_base_mesh):
 
     @property
     def angles(self):
+        """All angles in the triangle.
+        """
         # The cosines of the angles are the negative dot products of the normalized
         # edges adjacent to the angle.
         norms = numpy.sqrt(self.ei_dot_ei)
@@ -510,16 +549,16 @@ class MeshTri(_base_mesh):
         return numpy.arccos(-normalized_ei_dot_ej)
 
     def _compute_integral_x(self):
-        """Computes the integral of x,
+        # Computes the integral of x,
+        #
+        #   \\int_V x,
+        #
+        # over all atomic "triangles", i.e., areas cornered by a node, an edge midpoint,
+        # and a circumcenter.
 
-          \\int_V x,
-
-        over all atomic "triangles", i.e., areas cornered by a node, an edge
-        midpoint, and a circumcenter.
-        """
-        # The integral of any linear function over a triangle is the average of
-        # the values of the function in each of the three corners, times the
-        # area of the triangle.
+        # The integral of any linear function over a triangle is the average of the
+        # values of the function in each of the three corners, times the area of the
+        # triangle.
         right_triangle_vols = self.cell_partitions
 
         node_edges = self.idx_hierarchy
@@ -535,14 +574,13 @@ class MeshTri(_base_mesh):
         return node_edges, contribs
 
     def _compute_surface_areas(self, cell_ids):
-        """For each edge, one half of the the edge goes to each of the end
-        points. Used for Neumann boundary conditions if on the boundary of the
-        mesh and transition conditions if in the interior.
-        """
-        # Each of the three edges may contribute to the surface areas of all
-        # three vertices. Here, only the two adjacent nodes receive a
-        # contribution, but other approaches (e.g., the flat cell corrector),
-        # may contribute to all three nodes.
+        # For each edge, one half of the the edge goes to each of the end points. Used
+        # for Neumann boundary conditions if on the boundary of the mesh and transition
+        # conditions if in the interior.
+        #
+        # Each of the three edges may contribute to the surface areas of all three
+        # vertices. Here, only the two adjacent nodes receive a contribution, but other
+        # approaches (e.g., the flat cell corrector), may contribute to all three nodes.
         cn = self.cells["nodes"][cell_ids]
         ids = numpy.stack([cn, cn, cn], axis=1)
 
@@ -649,20 +687,19 @@ class MeshTri(_base_mesh):
     #         return gradient
 
     def compute_curl(self, vector_field):
-        """Computes the curl of a vector field over the mesh. While the vector
-        field is point-based, the curl will be cell-based. The approximation is
-        based on
+        """Computes the curl of a vector field over the mesh. While the vector field is
+        point-based, the curl will be cell-based. The approximation is based on
 
         .. math::
             n\\cdot curl(F) = \\lim_{A\\to 0} |A|^{-1} <\\int_{dGamma}, F> dr;
 
-        see <https://en.wikipedia.org/wiki/Curl_(mathematics)>. Actually, to
-        approximate the integral, one would only need the projection of the
-        vector field onto the edges at the midpoint of the edges.
+        see https://en.wikipedia.org/wiki/Curl_(mathematics). Actually, to approximate
+        the integral, one would only need the projection of the vector field onto the
+        edges at the midpoint of the edges.
         """
-        # Compute the projection of A on the edge at each edge midpoint.
-        # Take the average of `vector_field` at the endpoints to get the
-        # approximate value at the edge midpoint.
+        # Compute the projection of A on the edge at each edge midpoint. Take the
+        # average of `vector_field` at the endpoints to get the approximate value at the
+        # edge midpoint.
         A = 0.5 * numpy.sum(vector_field[self.idx_hierarchy], axis=0)
         # sum of <edge, A> for all three edges
         sum_edge_dot_A = numpy.einsum("ijk, ijk->j", self.half_edge_coords, A)
@@ -682,11 +719,15 @@ class MeshTri(_base_mesh):
         return curl
 
     def num_delaunay_violations(self):
-        # Delaunay violations are present exactly on the interior edges where
-        # the ce_ratio is negative. Count those.
+        """Number of edges where the Delaunay condition is violated.
+        """
+        # Delaunay violations are present exactly on the interior edges where the
+        # ce_ratio is negative. Count those.
         return numpy.sum(self.ce_ratios_per_interior_edge < 0.0)
 
     def show(self, *args, **kwargs):
+        """Show the mesh (see plot()).
+        """
         from matplotlib import pyplot as plt
 
         self.plot(*args, **kwargs)
@@ -695,6 +736,8 @@ class MeshTri(_base_mesh):
         return
 
     def save(self, filename, *args, **kwargs):
+        """Save the mesh to a file.
+        """
         _, file_extension = os.path.splitext(filename)
         if file_extension in ".png":
             from matplotlib import pyplot as plt
@@ -867,6 +910,8 @@ class MeshTri(_base_mesh):
         return
 
     def flip_until_delaunay(self):
+        """Flip edges until the mesh is fully Delaunay.
+        """
         # If all coedge/edge ratios are positive, all cells are Delaunay.
         if numpy.all(self.ce_ratios > 0):
             return False
@@ -911,6 +956,8 @@ class MeshTri(_base_mesh):
         return num_flip_steps > 1
 
     def flip_interior_edges(self, is_flip_interior_edge):
+        """
+        """
         if self._edges_cells is None:
             self._compute_edges_cells()
 
