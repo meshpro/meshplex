@@ -6,7 +6,11 @@
 meshplex --- Simplex meshes for Python
 ======================================
 
-`its meshplex's GitHubPage <//github.com/nschloe/meshplex>`_.
+meshplex computes all sorts of interesting points, areas, and volumes in triangular and
+tetrahedral meshes, with a focus on efficiency. Useful in many contexts, e.g.,
+finite-element and finite-volume computations.
+
+For a quickstart, checkout `meshplex's GitHubPage <//github.com/nschloe/meshplex>`_.
 
 
 Overview of classes and functions

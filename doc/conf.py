@@ -74,9 +74,7 @@ html_static_path = ["_static"]
 
 html_theme_options = {
     "logo": "meshplex-logo.svg",
-    "logo_name": True,
     "github_user": "nschloe",
     "github_repo": "meshplex",
-    "github_button": True,
     "github_banner": True,
 }
