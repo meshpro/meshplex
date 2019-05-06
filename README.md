@@ -3,6 +3,7 @@
 [![CircleCI](https://img.shields.io/circleci/project/github/nschloe/meshplex/master.svg)](https://circleci.com/gh/nschloe/meshplex/tree/master)
 [![codecov](https://img.shields.io/codecov/c/github/nschloe/meshplex.svg)](https://codecov.io/gh/nschloe/meshplex)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
+[![Documentation Status](https://readthedocs.org/projects/meshplex/badge/?version=latest)](https://readthedocs.org/projects/meshplex/?badge=latest)
 [![PyPi Version](https://img.shields.io/pypi/v/meshplex.svg)](https://pypi.org/project/meshplex)
 [![GitHub stars](https://img.shields.io/github/stars/nschloe/meshplex.svg?logo=github&label=Stars&logoColor=white)](https://github.com/nschloe/meshplex)
 
@@ -58,7 +59,8 @@ mesh.flip_until_delaunay()
 mesh.show()
 ```
 
-meshplex works much the same way with tetrahedral meshes.
+meshplex works much the same way with tetrahedral meshes. For a documentation of all
+classes and functions, see [readthedocs](https://readthedocs.org/projects/meshplex/?badge=latest).
 
 (For mesh creation, check out
 [this list](https://github.com/nschloe/awesome-scientific-computing#meshing)).
