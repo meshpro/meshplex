@@ -14,6 +14,9 @@ import os
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
 
+# Sphinx 1.* compat (for readthedocs)
+master_doc = "index"
+
 
 # -- Project information -----------------------------------------------------
 
