@@ -73,7 +73,7 @@ html_theme = "alabaster"
 html_static_path = ["_static"]
 
 html_theme_options = {
-    "logo": "meshplex.svg",
+    "logo": "meshplex-logo.svg",
     "logo_name": True,
     "github_user": "nschloe",
     "github_repo": "meshplex",
