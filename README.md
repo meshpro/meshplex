@@ -60,7 +60,7 @@ mesh.show()
 ```
 
 meshplex works much the same way with tetrahedral meshes. For a documentation of all
-classes and functions, see [readthedocs](https://readthedocs.org/projects/meshplex/?badge=latest).
+classes and functions, see [readthedocs](https://meshplex.readthedocs.io/).
 
 (For mesh creation, check out
 [this list](https://github.com/nschloe/awesome-scientific-computing#meshing)).
