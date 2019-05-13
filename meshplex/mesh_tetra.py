@@ -393,7 +393,7 @@ class MeshTetra(_base_mesh):
         return self._circumcenters
 
     @property
-    def inradius(self):
+    def cell_inradius(self):
         """
         """
         # https://en.wikipedia.org/wiki/Tetrahedron#Inradius
@@ -401,7 +401,7 @@ class MeshTetra(_base_mesh):
         return 3 * self.cell_volumes / numpy.sum(face_areas, axis=0)
 
     @property
-    def circumradius(self):
+    def cell_circumradius(self):
         """
         """
         # # Just take the distance of the circumcenter to one of the nodes for now.
