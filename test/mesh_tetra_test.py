@@ -391,7 +391,7 @@ def test_arrow3d():
 
 def test_tetrahedron():
     filename = download_mesh("tetrahedron.msh", "27a5d7e102e6613a1e58629c252cb293")
-    mesh, _, _, _ = meshplex.read(filename)
+    mesh = meshplex.read(filename)
 
     run(
         mesh,
@@ -448,7 +448,7 @@ def test_tetrahedron():
 
 def test_toy_geometric():
     filename = download_mesh("toy.msh", "1d125d3fa9f373823edd91ebae5f7a81")
-    mesh, _, _, _ = meshplex.read(filename)
+    mesh = meshplex.read(filename)
 
     mesh = meshplex.MeshTetra(mesh.node_coords, mesh.cells["nodes"])
 
@@ -471,7 +471,7 @@ def test_toy_geometric():
 
 def test_signed_volume():
     filename = download_mesh("toy.msh", "1d125d3fa9f373823edd91ebae5f7a81")
-    mesh, _, _, _ = meshplex.read(filename)
+    mesh = meshplex.read(filename)
 
     vols = meshplex.get_signed_simplex_volumes(mesh.cells["nodes"], mesh.node_coords)
 
@@ -479,5 +479,32 @@ def test_signed_volume():
     return
 
 
+def show_tetra():
+    # filename = download_mesh("toy.msh", "1d125d3fa9f373823edd91ebae5f7a81")
+    # mesh = meshplex.read(filename)
+
+    # node_coords = numpy.array(
+    #     [
+    #         [1.0, 0.0, -1.0 / numpy.sqrt(8)],
+    #         [-0.5, +numpy.sqrt(3.0) / 2.0, -1.0 / numpy.sqrt(8)],
+    #         [-0.5, -numpy.sqrt(3.0) / 2.0, -1.0 / numpy.sqrt(8)],
+    #         [0.0, 0.0, numpy.sqrt(2.0) - 1.0 / numpy.sqrt(8)],
+    #     ]
+    # ) / numpy.sqrt(3.0)
+    node_coords = numpy.array(
+        [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
+    )
+    cells = [[0, 1, 2, 3]]
+    mesh = meshplex.MeshTetra(node_coords, cells)
+    mesh.show_cell(
+        0,
+        barycenter_color=[1, 0, 0],
+        circumcenter_color=[0, 1, 0],
+        incenter_color=[1, 0, 1],
+        face_circumcenter_color=[0, 0, 1],
+    )
+    return
+
+
 if __name__ == "__main__":
-    test_signed_volume()
+    show_tetra()

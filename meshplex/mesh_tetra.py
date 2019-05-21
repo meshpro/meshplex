@@ -104,6 +104,8 @@ class MeshTetra(_base_mesh):
         self.is_boundary_facet_individual = None
         self.is_boundary_facet = None
         self.faces = None
+
+        self._cell_centroids = None
         return
 
     def get_ce_ratios(self):
@@ -385,12 +387,38 @@ class MeshTetra(_base_mesh):
         return ce_ratios
 
     @property
+    def cell_centroids(self):
+        """The centroids (barycenters, midpoints of the circumcircles) of all tetrahedra.
+        """
+        if self._cell_centroids is None:
+            self._cell_centroids = (
+                numpy.sum(self.node_coords[self.cells["nodes"]], axis=1) / 4.0
+            )
+        return self._cell_centroids
+
+    @property
+    def cell_barycenters(self):
+        """See cell_centroids().
+        """
+        return self.cell_centroids
+
+    @property
     def cell_circumcenters(self):
         """
         """
         if self._circumcenters is None:
             self._compute_cell_circumcenters()
         return self._circumcenters
+
+    @property
+    def cell_incenters(self):
+        """Get the midpoints of the inspheres.
+        """
+        # https://math.stackexchange.com/a/2864770/36678
+        face_areas = compute_tri_areas(self.ei_dot_ej)
+        # abc = numpy.sqrt(self.ei_dot_ei)
+        face_areas /= numpy.sum(face_areas, axis=0)
+        return numpy.einsum("ij,jik->jk", face_areas, self.node_coords[self.cells["nodes"]])
 
     @property
     def cell_inradius(self):
@@ -589,4 +617,131 @@ class MeshTetra(_base_mesh):
         # draw the cell circumcenters
         cc = self._circumcenters[adj_cell_ids]
         ax.plot(cc[:, 0], cc[:, 1], cc[:, 2], "ro")
+        return
+
+    def show_cell(
+        self,
+        k,
+        show_control_volume_boundaries=True,
+        barycenter_color=None,
+        circumcenter_color=None,
+        incenter_color=None,
+        face_circumcenter_color=None,
+    ):
+        import vtk
+
+        def get_line_actor(x0, x1):
+            source = vtk.vtkLineSource()
+            source.SetPoint1(x0)
+            source.SetPoint2(x1)
+            # mapper
+            mapper = vtk.vtkPolyDataMapper()
+            mapper.SetInputConnection(source.GetOutputPort())
+            # actor
+            actor = vtk.vtkActor()
+            actor.SetMapper(mapper)
+            # color actor
+            actor.GetProperty().SetColor(0, 0, 0)
+            return actor
+
+        def get_sphere_actor(x0, r, color, opacity=1.0):
+            # Generate polygon data for a sphere
+            sphere = vtk.vtkSphereSource()
+
+            sphere.SetCenter(x0)
+            sphere.SetRadius(r)
+
+            sphere.SetPhiResolution(100)
+            sphere.SetThetaResolution(100)
+
+            # Create a mapper for the sphere data
+            sphere_mapper = vtk.vtkPolyDataMapper()
+            # sphere_mapper.SetInput(sphere.GetOutput())
+            sphere_mapper.SetInputConnection(sphere.GetOutputPort())
+
+            # Connect the mapper to an actor
+            sphere_actor = vtk.vtkActor()
+            sphere_actor.SetMapper(sphere_mapper)
+            sphere_actor.GetProperty().SetColor(color)
+            sphere_actor.GetProperty().SetOpacity(opacity)
+            return sphere_actor
+
+        # Visualize
+        renderer = vtk.vtkRenderer()
+        renderWindow = vtk.vtkRenderWindow()
+        renderWindow.AddRenderer(renderer)
+        renderWindowInteractor = vtk.vtkRenderWindowInteractor()
+        renderWindowInteractor.SetRenderWindow(renderWindow)
+
+        for ij in [[0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3]]:
+            x0, x1 = self.node_coords[self.cells["nodes"][k][ij]]
+            renderer.AddActor(get_line_actor(x0, x1))
+        renderer.SetBackground(1.0, 1.0, 1.0)
+
+        r = 0.02
+
+        if circumcenter_color is not None:
+            renderer.AddActor(
+                get_sphere_actor(self.cell_circumcenters[k], r, circumcenter_color)
+            )
+
+        if incenter_color is not None:
+            renderer.AddActor(
+                get_sphere_actor(self.cell_incenters[k], r, incenter_color)
+            )
+
+        if barycenter_color is not None:
+            renderer.AddActor(
+                get_sphere_actor(self.cell_barycenters[k], r, barycenter_color)
+            )
+
+        if face_circumcenter_color is not None:
+            x = self.node_coords[self.node_face_cells[..., [k]]]
+            face_ccs = compute_triangle_circumcenters(
+                x, self.ei_dot_ei, self.ei_dot_ej
+            )[:, 0, :]
+            for f in face_ccs:
+                renderer.AddActor(get_sphere_actor(f, r, face_circumcenter_color))
+
+        # if show_control_volume_boundaries:
+        #     points = vtk.vtkPoints()
+        #     # for idx in self.cells["nodes"][k]:
+        #     #     points.InsertNextPoint(*self.node_coords[idx])
+
+        #     print(self.idx_hierarchy.shape)
+        #     exit(1)
+
+        #     # Create the polygon
+        #     polygon = vtk.vtkPolygon()
+        #     polygon.GetPointIds().SetNumberOfIds(4)
+        #     polygon.GetPointIds().SetId(0, 0)
+        #     polygon.GetPointIds().SetId(1, 1)
+        #     polygon.GetPointIds().SetId(2, 2)
+        #     polygon.GetPointIds().SetId(3, 3)
+
+        #     # # Add the polygon to a list of polygons
+        #     # polygons = vtk.vtkCellArray()
+        #     # polygons.InsertNextCell(polygon)
+
+        #     # # Create a PolyData
+        #     # polygonPolyData = vtk.vtkPolyData()
+        #     # polygonPolyData.SetPoints(points)
+        #     # polygonPolyData.SetPolys(polygons)
+
+        #     # # Create a mapper and actor
+        #     # mapper = vtk.vtkPolyDataMapper()
+        #     # if vtk.VTK_MAJOR_VERSION <= 5:
+        #     #     mapper.SetInput(polygonPolyData)
+        #     # else:
+        #     #     mapper.SetInputData(polygonPolyData)
+
+        #     # actor = vtk.vtkActor()
+        #     # actor.SetMapper(mapper)
+
+        #     # actor.GetProperty().SetColor(0, 0, 0)
+        #     # actor.GetProperty().SetOpacity(0.1)
+        #     # renderer.AddActor(actor)
+
+        renderWindow.Render()
+        renderWindowInteractor.Start()
         return
