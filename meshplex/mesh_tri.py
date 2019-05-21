@@ -725,7 +725,7 @@ class MeshTri(_base_mesh):
     def show(self, *args, **kwargs):
         """Show the mesh (see plot()).
         """
-        from matplotlib import pyplot as plt
+        import matplotlib.pyplot as plt
 
         self.plot(*args, **kwargs)
         plt.show()
@@ -737,7 +737,7 @@ class MeshTri(_base_mesh):
         """
         _, file_extension = os.path.splitext(filename)
         if file_extension in ".png":
-            from matplotlib import pyplot as plt
+            import matplotlib.pyplot as plt
 
             self.plot(*args, **kwargs)
             plt.savefig(filename, transparent=True, bbox_inches="tight")
@@ -759,7 +759,7 @@ class MeshTri(_base_mesh):
         """Show the mesh using matplotlib.
         """
         # Importing matplotlib takes a while, so don't do that at the header.
-        from matplotlib import pyplot as plt
+        import matplotlib.pyplot as plt
         from matplotlib.collections import LineCollection
 
         # from mpl_toolkits.mplot3d import Axes3D
@@ -852,8 +852,18 @@ class MeshTri(_base_mesh):
 
         return fig
 
-    def show_vertex(self, node_id, show_ce_ratio=True):
-        """Plot the vicinity of a node and its ce_ratio.
+    def show_vertex(self, *args, **kwargs):
+        """Show the mesh around a vertex (see plot_vertex()).
+        """
+        import matplotlib.pyplot as plt
+
+        self.plot_vertex(*args, **kwargs)
+        plt.show()
+        plt.close()
+        return
+
+    def plot_vertex(self, node_id, show_ce_ratio=True):
+        """Plot the vicinity of a node and its covolume/edgelength ratio.
 
         :param node_id: Node ID of the node to be shown.
         :type node_id: int
@@ -862,11 +872,14 @@ class MeshTri(_base_mesh):
         :type show_ce_ratio: bool, optional
         """
         # Importing matplotlib takes a while, so don't do that at the header.
-        from matplotlib import pyplot as plt
+        import matplotlib.pyplot as plt
 
         fig = plt.figure()
         ax = fig.gca()
         plt.axis("equal")
+
+        if self.edges is None:
+            self.create_edges()
 
         # Find the edges that contain the vertex
         edge_gids = numpy.where((self.edges["nodes"] == node_id).any(axis=1))[0]

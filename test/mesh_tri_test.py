@@ -836,13 +836,23 @@ def test_flat_boundary():
     return
 
 
-def show_mesh():
+def test_plot_mesh():
     filename = download_mesh("pacman-optimized.vtk", "5036d9ce5307caa0d9de80cba7ba1c4c")
     mesh = meshplex.read(filename)
-    mesh.show(show_axes=False)
+    mesh.plot(show_axes=False)
+    # mesh.show(show_axes=False)
     # mesh.save("pacman.png", show_axes=False)
     return
 
 
+def show_vertex():
+    filename = download_mesh("pacman-optimized.vtk", "5036d9ce5307caa0d9de80cba7ba1c4c")
+    mesh = meshplex.read(filename)
+    mesh.plot_vertex(125)
+    # mesh.show_vertex(125)
+    return
+
+
 if __name__ == "__main__":
-    show_mesh()
+    # show_mesh()
+    show_vertex()
