@@ -27,8 +27,8 @@ def test_regular_tet0(a):
 
     assert all((mesh.cells["nodes"] == cells).flat)
 
-    # mesh.show()
-    # mesh.show_edge(0)
+    mesh.show()
+    mesh.show_edge(0)
     # from matplotlib import pyplot as plt
     # plt.show()
 
@@ -97,6 +97,11 @@ def test_regular_tet0(a):
     assert near_equal(mesh.cell_quality, [1.0], tol)
 
     mesh.mark_boundary()
+
+    assert near_equal(mesh.cell_barycenters, mesh.cell_centroids, tol)
+    assert near_equal(mesh.cell_barycenters, [[0.0, 0.0, a * numpy.sqrt(6) / 12]], tol)
+
+    assert near_equal(mesh.cell_incenters, [[0.0, 0.0, a * numpy.sqrt(6) / 12]], tol)
 
     return
 
@@ -479,7 +484,7 @@ def test_signed_volume():
     return
 
 
-def show_tetra():
+def show_cell():
     # filename = download_mesh("toy.vtk", "f48abda972822bab224b91a74d695573")
     # mesh = meshplex.read(filename)
 
@@ -521,4 +526,4 @@ def show_tetra():
 
 
 if __name__ == "__main__":
-    show_tetra()
+    test_show_cell()

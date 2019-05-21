@@ -231,41 +231,41 @@ class MeshTetra(_base_mesh):
     # do with it?
     # "triple product": Project one edge onto the plane spanned by the two others.
     #
-    def _compute_ce_ratios_algebraic(self):
-        # Precompute edges.
-        half_edges = (
-            self.node_coords[self.idx_hierarchy[1]]
-            - self.node_coords[self.idx_hierarchy[0]]
-        )
+    # def _compute_ce_ratios_algebraic(self):
+    #     # Precompute edges.
+    #     half_edges = (
+    #         self.node_coords[self.idx_hierarchy[1]]
+    #         - self.node_coords[self.idx_hierarchy[0]]
+    #     )
 
-        # Build the equation system:
-        # The equation
-        #
-        # |simplex| ||u||^2 = \sum_i \alpha_i <u,e_i> <e_i,u>
-        #
-        # has to hold for all vectors u in the plane spanned by the edges,
-        # particularly by the edges themselves.
-        # A = numpy.empty(3, 4, half_edges.shape[2], 3, 3)
-        A = numpy.einsum("j...k,l...k->jl...", half_edges, half_edges)
-        A = A ** 2
+    #     # Build the equation system:
+    #     # The equation
+    #     #
+    #     # |simplex| ||u||^2 = \sum_i \alpha_i <u,e_i> <e_i,u>
+    #     #
+    #     # has to hold for all vectors u in the plane spanned by the edges,
+    #     # particularly by the edges themselves.
+    #     # A = numpy.empty(3, 4, half_edges.shape[2], 3, 3)
+    #     A = numpy.einsum("j...k,l...k->jl...", half_edges, half_edges)
+    #     A = A ** 2
 
-        # Compute the RHS  cell_volume * <edge, edge>.
-        # The dot product <edge, edge> is also on the diagonals of A (before squaring),
-        # but simply computing it again is cheaper than extracting it from A.
-        edge_dot_edge = numpy.einsum("...i,...j->...", half_edges, half_edges)
-        # TODO cell_volumes
-        self.cell_volumes = numpy.random.rand(2951)
-        rhs = edge_dot_edge * self.cell_volumes
-        exit(1)
+    #     # Compute the RHS  cell_volume * <edge, edge>.
+    #     # The dot product <edge, edge> is also on the diagonals of A (before squaring),
+    #     # but simply computing it again is cheaper than extracting it from A.
+    #     edge_dot_edge = numpy.einsum("...i,...j->...", half_edges, half_edges)
+    #     # TODO cell_volumes
+    #     self.cell_volumes = numpy.random.rand(2951)
+    #     rhs = edge_dot_edge * self.cell_volumes
+    #     exit(1)
 
-        # Solve all k-by-k systems at once ("broadcast"). (`k` is the number of edges
-        # per simplex here.)
-        # If the matrix A is (close to) singular if and only if the cell is (close to
-        # being) degenerate. Hence, it has volume 0, and so all the edge coefficients
-        # are 0, too. Hence, do nothing.
-        ce_ratios = numpy.linalg.solve(A, rhs)
+    #     # Solve all k-by-k systems at once ("broadcast"). (`k` is the number of edges
+    #     # per simplex here.)
+    #     # If the matrix A is (close to) singular if and only if the cell is (close to
+    #     # being) degenerate. Hence, it has volume 0, and so all the edge coefficients
+    #     # are 0, too. Hence, do nothing.
+    #     ce_ratios = numpy.linalg.solve(A, rhs)
 
-        return ce_ratios
+    #     return ce_ratios
 
     def _compute_ce_ratios_geometric(self):
         # For triangles, the covolume/edgelength ratios are
@@ -509,7 +509,8 @@ class MeshTetra(_base_mesh):
 
         fig = plt.figure()
         ax = fig.gca(projection=Axes3D.name)
-        plt.axis("equal")
+        # "It is not currently possible to manually set the aspect on 3D axes"
+        # plt.axis("equal")
 
         if self._circumcenters is None:
             self._compute_cell_circumcenters()
@@ -555,7 +556,8 @@ class MeshTetra(_base_mesh):
 
         fig = plt.figure()
         ax = fig.gca(projection=Axes3D.name)
-        plt.axis("equal")
+        # "It is not currently possible to manually set the aspect on 3D axes"
+        # plt.axis("equal")
 
         # find all faces with this edge
         adj_face_ids = numpy.where((self.faces["edges"] == edge_id).any(axis=1))[0]
