@@ -390,7 +390,7 @@ def test_arrow3d():
 
 
 def test_tetrahedron():
-    filename = download_mesh("tetrahedron.msh", "27a5d7e102e6613a1e58629c252cb293")
+    filename = download_mesh("tetrahedron.vtk", "10f3ccd1642b634b22741894fe6e7f1f")
     mesh = meshplex.read(filename)
 
     run(

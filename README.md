@@ -20,7 +20,7 @@ meshplex is used in [optimesh](https://github.com/nschloe/optimesh) and
 
 ### Quickstart
 
-```python
+```python,test
 import numpy
 import meshplex
 
