@@ -6,7 +6,7 @@ import meshplex
 
 
 def test_get_edges():
-    filename = download_mesh("pacman.msh", "2da8ff96537f844a95a83abb48471b6a")
+    filename = download_mesh("pacman.vtk", "c621cb22f8b87cecd77724c2c0601c36")
     mesh = meshplex.read(filename)
     mesh.create_edges()
     edge_mask = mesh.get_edge_mask()
@@ -16,7 +16,7 @@ def test_get_edges():
 
 
 def test_mark_subdomain2d():
-    filename = download_mesh("pacman.msh", "2da8ff96537f844a95a83abb48471b6a")
+    filename = download_mesh("pacman.vtk", "c621cb22f8b87cecd77724c2c0601c36")
     mesh = meshplex.read(filename)
 
     class Subdomain1(object):

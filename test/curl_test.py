@@ -30,7 +30,7 @@ def _run(mesh):
 
 
 def test_pacman():
-    filename = download_mesh("pacman.msh", "2da8ff96537f844a95a83abb48471b6a")
+    filename = download_mesh("pacman.vtk", "c621cb22f8b87cecd77724c2c0601c36")
     mesh = meshplex.read(filename)
     _run(mesh)
     return

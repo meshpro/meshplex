@@ -405,8 +405,8 @@ def test_tetrahedron():
 
 # def test_toy_algebraic():
 #     filename = download_mesh(
-#         'toy.msh',
-#         '1d125d3fa9f373823edd91ebae5f7a81'
+#         'toy.vtk',
+#         'f48abda972822bab224b91a74d695573'
 #         )
 #     mesh, _, _, _ = meshplex.read(filename)
 #
@@ -447,7 +447,7 @@ def test_tetrahedron():
 
 
 def test_toy_geometric():
-    filename = download_mesh("toy.msh", "1d125d3fa9f373823edd91ebae5f7a81")
+    filename = download_mesh("toy.vtk", "f48abda972822bab224b91a74d695573")
     mesh = meshplex.read(filename)
 
     mesh = meshplex.MeshTetra(mesh.node_coords, mesh.cells["nodes"])
@@ -470,7 +470,7 @@ def test_toy_geometric():
 
 
 def test_signed_volume():
-    filename = download_mesh("toy.msh", "1d125d3fa9f373823edd91ebae5f7a81")
+    filename = download_mesh("toy.vtk", "f48abda972822bab224b91a74d695573")
     mesh = meshplex.read(filename)
 
     vols = meshplex.get_signed_simplex_volumes(mesh.cells["nodes"], mesh.node_coords)
@@ -480,7 +480,7 @@ def test_signed_volume():
 
 
 def show_tetra():
-    # filename = download_mesh("toy.msh", "1d125d3fa9f373823edd91ebae5f7a81")
+    # filename = download_mesh("toy.vtk", "f48abda972822bab224b91a74d695573")
     # mesh = meshplex.read(filename)
 
     node_coords = numpy.array(

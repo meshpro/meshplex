@@ -498,7 +498,7 @@ def test_shell():
 
 
 def test_sphere():
-    filename = download_mesh("sphere.msh", "70a5dbf79c3b259ed993458ff4aa2e93")
+    filename = download_mesh("sphere.vtk", "06b163871cc0f23344d71c990dffe577")
     mesh = meshplex.read(filename)
     run(
         mesh,
