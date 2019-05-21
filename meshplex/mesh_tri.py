@@ -902,7 +902,9 @@ class MeshTri(_base_mesh):
                     edge_midpoint = 0.5 * (
                         self.node_coords[node_ids[0]] + self.node_coords[node_ids[1]]
                     )
-                    p = numpy.stack([self.cell_circumcenters[cell_id], edge_midpoint], axis=1)
+                    p = numpy.stack(
+                        [self.cell_circumcenters[cell_id], edge_midpoint], axis=1
+                    )
                     q = numpy.column_stack(
                         [
                             self.cell_circumcenters[cell_id],
