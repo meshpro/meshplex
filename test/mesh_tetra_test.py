@@ -526,4 +526,4 @@ def show_cell():
 
 
 if __name__ == "__main__":
-    test_show_cell()
+    show_cell()
