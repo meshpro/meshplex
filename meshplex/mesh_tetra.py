@@ -617,18 +617,19 @@ class MeshTetra(_base_mesh):
 
     def show_cell(
         self,
-        k,
-        show_control_volume_boundaries=True,
-        barycenter_color=None,
-        circumcenter_color=None,
-        incenter_color=None,
-        face_circumcenter_color=None,
-        insphere_color=None,
-        circumsphere_color=None,
+        cell_id,
+        control_volume_boundaries_rgba=None,
+        barycenter_rgba=None,
+        circumcenter_rgba=None,
+        incenter_rgba=None,
+        face_circumcenter_rgba=None,
+        insphere_rgba=None,
+        circumsphere_rgba=None,
+        line_width=1.0,
     ):
         import vtk
 
-        def get_line_actor(x0, x1):
+        def get_line_actor(x0, x1, line_width=1.0):
             source = vtk.vtkLineSource()
             source.SetPoint1(x0)
             source.SetPoint2(x1)
@@ -640,9 +641,10 @@ class MeshTetra(_base_mesh):
             actor.SetMapper(mapper)
             # color actor
             actor.GetProperty().SetColor(0, 0, 0)
+            actor.GetProperty().SetLineWidth(line_width)
             return actor
 
-        def get_sphere_actor(x0, r, color, opacity=1.0):
+        def get_sphere_actor(x0, r, rgba):
             # Generate polygon data for a sphere
             sphere = vtk.vtkSphereSource()
 
@@ -660,8 +662,8 @@ class MeshTetra(_base_mesh):
             # Connect the mapper to an actor
             sphere_actor = vtk.vtkActor()
             sphere_actor.SetMapper(sphere_mapper)
-            sphere_actor.GetProperty().SetColor(color)
-            sphere_actor.GetProperty().SetOpacity(opacity)
+            sphere_actor.GetProperty().SetColor(rgba[:3])
+            sphere_actor.GetProperty().SetOpacity(rgba[3])
             return sphere_actor
 
         # Visualize
@@ -672,93 +674,95 @@ class MeshTetra(_base_mesh):
         renderWindowInteractor.SetRenderWindow(renderWindow)
 
         for ij in [[0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3]]:
-            x0, x1 = self.node_coords[self.cells["nodes"][k][ij]]
-            renderer.AddActor(get_line_actor(x0, x1))
+            x0, x1 = self.node_coords[self.cells["nodes"][cell_id][ij]]
+            renderer.AddActor(get_line_actor(x0, x1, line_width))
         renderer.SetBackground(1.0, 1.0, 1.0)
 
         r = 0.02
 
-        if circumcenter_color is not None:
+        if circumcenter_rgba is not None:
             renderer.AddActor(
-                get_sphere_actor(self.cell_circumcenters[k], r, circumcenter_color)
+                get_sphere_actor(self.cell_circumcenters[cell_id], r, circumcenter_rgba)
             )
 
-        if circumsphere_color is not None:
+        if circumsphere_rgba is not None:
             renderer.AddActor(
                 get_sphere_actor(
-                    self.cell_circumcenters[k],
-                    self.cell_circumradius[k],
-                    circumsphere_color,
-                    opacity=0.5,
+                    self.cell_circumcenters[cell_id],
+                    self.cell_circumradius[cell_id],
+                    circumsphere_rgba,
                 )
             )
 
-        if incenter_color is not None:
+        if incenter_rgba is not None:
             renderer.AddActor(
-                get_sphere_actor(self.cell_incenters[k], r, incenter_color)
+                get_sphere_actor(self.cell_incenters[cell_id], r, incenter_rgba)
             )
 
-        if insphere_color is not None:
+        if insphere_rgba is not None:
             renderer.AddActor(
                 get_sphere_actor(
-                    self.cell_incenters[k],
-                    self.cell_inradius[k],
-                    insphere_color,
-                    opacity=0.5,
+                    self.cell_incenters[cell_id],
+                    self.cell_inradius[cell_id],
+                    insphere_rgba,
                 )
             )
 
-        if barycenter_color is not None:
+        if barycenter_rgba is not None:
             renderer.AddActor(
-                get_sphere_actor(self.cell_barycenters[k], r, barycenter_color)
+                get_sphere_actor(self.cell_barycenters[cell_id], r, barycenter_rgba)
             )
 
-        if face_circumcenter_color is not None:
-            x = self.node_coords[self.node_face_cells[..., [k]]]
+        if face_circumcenter_rgba is not None:
+            x = self.node_coords[self.node_face_cells[..., [cell_id]]]
             face_ccs = compute_triangle_circumcenters(
                 x, self.ei_dot_ei, self.ei_dot_ej
             )[:, 0, :]
             for f in face_ccs:
-                renderer.AddActor(get_sphere_actor(f, r, face_circumcenter_color))
+                renderer.AddActor(get_sphere_actor(f, r, face_circumcenter_rgba))
 
-        # if show_control_volume_boundaries:
-        #     points = vtk.vtkPoints()
-        #     # for idx in self.cells["nodes"][k]:
-        #     #     points.InsertNextPoint(*self.node_coords[idx])
+        if control_volume_boundaries_rgba:
+            cell_cc = self.cell_circumcenters[cell_id]
+            x = self.node_coords[self.node_face_cells[..., [cell_id]]]
+            face_ccs = compute_triangle_circumcenters(
+                x, self.ei_dot_ei, self.ei_dot_ej
+            )[:, 0, :]
+            for face, face_cc in zip(range(4), face_ccs):
+                for edge in range(3):
+                    k0, k1 = self.idx_hierarchy[:, edge, face, cell_id]
+                    edge_midpoint = 0.5 * (self.node_coords[k0] + self.node_coords[k1])
 
-        #     print(self.idx_hierarchy.shape)
-        #     exit(1)
+                    points = vtk.vtkPoints()
+                    points.InsertNextPoint(*edge_midpoint)
+                    points.InsertNextPoint(*cell_cc)
+                    points.InsertNextPoint(*face_cc)
 
-        #     # Create the polygon
-        #     polygon = vtk.vtkPolygon()
-        #     polygon.GetPointIds().SetNumberOfIds(4)
-        #     polygon.GetPointIds().SetId(0, 0)
-        #     polygon.GetPointIds().SetId(1, 1)
-        #     polygon.GetPointIds().SetId(2, 2)
-        #     polygon.GetPointIds().SetId(3, 3)
+                    triangle = vtk.vtkTriangle()
+                    triangle.GetPointIds().SetId(0, 0)
+                    triangle.GetPointIds().SetId(1, 1)
+                    triangle.GetPointIds().SetId(2, 2)
 
-        #     # # Add the polygon to a list of polygons
-        #     # polygons = vtk.vtkCellArray()
-        #     # polygons.InsertNextCell(polygon)
+                    triangles = vtk.vtkCellArray()
+                    triangles.InsertNextCell(triangle)
 
-        #     # # Create a PolyData
-        #     # polygonPolyData = vtk.vtkPolyData()
-        #     # polygonPolyData.SetPoints(points)
-        #     # polygonPolyData.SetPolys(polygons)
+                    trianglePolyData = vtk.vtkPolyData()
+                    trianglePolyData.SetPoints(points)
+                    trianglePolyData.SetPolys(triangles)
 
-        #     # # Create a mapper and actor
-        #     # mapper = vtk.vtkPolyDataMapper()
-        #     # if vtk.VTK_MAJOR_VERSION <= 5:
-        #     #     mapper.SetInput(polygonPolyData)
-        #     # else:
-        #     #     mapper.SetInputData(polygonPolyData)
+                    # mapper
+                    mapper = vtk.vtkPolyDataMapper()
+                    if vtk.VTK_MAJOR_VERSION <= 5:
+                        mapper.SetInput(trianglePolyData)
+                    else:
+                        mapper.SetInputData(trianglePolyData)
 
-        #     # actor = vtk.vtkActor()
-        #     # actor.SetMapper(mapper)
+                    # actor
+                    actor = vtk.vtkActor()
+                    actor.SetMapper(mapper)
 
-        #     # actor.GetProperty().SetColor(0, 0, 0)
-        #     # actor.GetProperty().SetOpacity(0.1)
-        #     # renderer.AddActor(actor)
+                    actor.GetProperty().SetColor(*control_volume_boundaries_rgba[:3])
+                    actor.GetProperty().SetOpacity(control_volume_boundaries_rgba[3])
+                    renderer.AddActor(actor)
 
         renderWindow.Render()
         renderWindowInteractor.Start()

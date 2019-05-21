@@ -483,28 +483,39 @@ def show_tetra():
     # filename = download_mesh("toy.msh", "1d125d3fa9f373823edd91ebae5f7a81")
     # mesh = meshplex.read(filename)
 
+    node_coords = numpy.array(
+        [
+            [1.0, 0.0, -1.0 / numpy.sqrt(8)],
+            [-0.5, +numpy.sqrt(3.0) / 2.0, -1.0 / numpy.sqrt(8)],
+            [-0.5, -numpy.sqrt(3.0) / 2.0, -1.0 / numpy.sqrt(8)],
+            [0.0, 0.0, numpy.sqrt(2.0) - 1.0 / numpy.sqrt(8)],
+        ]
+    ) / numpy.sqrt(3.0)
+
     # node_coords = numpy.array(
     #     [
     #         [1.0, 0.0, -1.0 / numpy.sqrt(8)],
     #         [-0.5, +numpy.sqrt(3.0) / 2.0, -1.0 / numpy.sqrt(8)],
     #         [-0.5, -numpy.sqrt(3.0) / 2.0, -1.0 / numpy.sqrt(8)],
-    #         [0.0, 0.0, numpy.sqrt(2.0) - 1.0 / numpy.sqrt(8)],
+    #         [0.0, 0.5, 1.0],
     #     ]
     # ) / numpy.sqrt(3.0)
-    node_coords = numpy.array(
-        [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
-    )
+    # node_coords = numpy.array(
+    #     [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
+    # )
 
     cells = [[0, 1, 2, 3]]
     mesh = meshplex.MeshTetra(node_coords, cells)
     mesh.show_cell(
         0,
-        barycenter_color=[1, 0, 0],
-        circumcenter_color=[0, 1, 0],
-        # circumsphere_color=[0, 1, 0],
-        incenter_color=[1, 0, 1],
-        # insphere_color=[1, 0, 1],
-        face_circumcenter_color=[0, 0, 1],
+        # barycenter_rgba=(1, 0, 0, 1.0),
+        # circumcenter_rgba=(0, 1, 0, 1.0),
+        # circumsphere_rgba=(0, 1, 0, 1.0),
+        # incenter_rgba=(1, 0, 1, 1.0),
+        # insphere_rgba=(1, 0, 1, 1.0),
+        # face_circumcenter_rgba=(0, 0, 1, 1.0),
+        control_volume_boundaries_rgba=(0.0, 0.0, 0.0, 0.5),
+        line_width=3.0,
     )
     return
 
