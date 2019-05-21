@@ -494,13 +494,16 @@ def show_tetra():
     node_coords = numpy.array(
         [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
     )
+
     cells = [[0, 1, 2, 3]]
     mesh = meshplex.MeshTetra(node_coords, cells)
     mesh.show_cell(
         0,
         barycenter_color=[1, 0, 0],
         circumcenter_color=[0, 1, 0],
+        # circumsphere_color=[0, 1, 0],
         incenter_color=[1, 0, 1],
+        # insphere_color=[1, 0, 1],
         face_circumcenter_color=[0, 0, 1],
     )
     return

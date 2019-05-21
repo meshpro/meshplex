@@ -216,6 +216,8 @@ class MeshTetra(_base_mesh):
         #
         #   CC = sum_k (zeta[k] / sum(zeta) * X[k]).
         #
+        # TODO See <https://math.stackexchange.com/a/2864770/36678> for another
+        #      interesting approach.
         alpha = self._zeta / numpy.sum(self._zeta, axis=0)
 
         self._circumcenters = numpy.sum(
@@ -244,21 +246,13 @@ class MeshTetra(_base_mesh):
         # has to hold for all vectors u in the plane spanned by the edges,
         # particularly by the edges themselves.
         # A = numpy.empty(3, 4, half_edges.shape[2], 3, 3)
-        print(half_edges.shape)
         A = numpy.einsum("j...k,l...k->jl...", half_edges, half_edges)
-
-        print(A.shape)
-        print(A[0, 0, 0])
-        print(half_edges[0, 0, 0])
-
         A = A ** 2
-        exit(1)
 
         # Compute the RHS  cell_volume * <edge, edge>.
         # The dot product <edge, edge> is also on the diagonals of A (before squaring),
         # but simply computing it again is cheaper than extracting it from A.
         edge_dot_edge = numpy.einsum("...i,...j->...", half_edges, half_edges)
-        print(edge_dot_edge.shape)
         # TODO cell_volumes
         self.cell_volumes = numpy.random.rand(2951)
         rhs = edge_dot_edge * self.cell_volumes
@@ -418,7 +412,9 @@ class MeshTetra(_base_mesh):
         face_areas = compute_tri_areas(self.ei_dot_ej)
         # abc = numpy.sqrt(self.ei_dot_ei)
         face_areas /= numpy.sum(face_areas, axis=0)
-        return numpy.einsum("ij,jik->jk", face_areas, self.node_coords[self.cells["nodes"]])
+        return numpy.einsum(
+            "ij,jik->jk", face_areas, self.node_coords[self.cells["nodes"]]
+        )
 
     @property
     def cell_inradius(self):
@@ -627,6 +623,8 @@ class MeshTetra(_base_mesh):
         circumcenter_color=None,
         incenter_color=None,
         face_circumcenter_color=None,
+        insphere_color=None,
+        circumsphere_color=None,
     ):
         import vtk
 
@@ -685,9 +683,29 @@ class MeshTetra(_base_mesh):
                 get_sphere_actor(self.cell_circumcenters[k], r, circumcenter_color)
             )
 
+        if circumsphere_color is not None:
+            renderer.AddActor(
+                get_sphere_actor(
+                    self.cell_circumcenters[k],
+                    self.cell_circumradius[k],
+                    circumsphere_color,
+                    opacity=0.5,
+                )
+            )
+
         if incenter_color is not None:
             renderer.AddActor(
                 get_sphere_actor(self.cell_incenters[k], r, incenter_color)
+            )
+
+        if insphere_color is not None:
+            renderer.AddActor(
+                get_sphere_actor(
+                    self.cell_incenters[k],
+                    self.cell_inradius[k],
+                    insphere_color,
+                    opacity=0.5,
+                )
             )
 
         if barycenter_color is not None:
