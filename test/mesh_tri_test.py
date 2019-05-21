@@ -453,7 +453,7 @@ def test_rectanglesmall():
 
 
 def test_pacman():
-    filename = download_mesh("pacman.msh", "2da8ff96537f844a95a83abb48471b6a")
+    filename = download_mesh("pacman.vtk", "c621cb22f8b87cecd77724c2c0601c36")
     mesh = meshplex.read(filename)
 
     run(
@@ -513,7 +513,7 @@ def test_sphere():
 
 
 def test_signed_area():
-    filename = download_mesh("pacman.msh", "2da8ff96537f844a95a83abb48471b6a")
+    filename = download_mesh("pacman.vtk", "c621cb22f8b87cecd77724c2c0601c36")
     mesh = meshio.read(filename)
     assert numpy.all(numpy.abs(mesh.points[:, 2]) < 1.0e-15)
     X = mesh.points[:, :2]
@@ -526,7 +526,7 @@ def test_signed_area():
 
 
 def test_update_node_coordinates():
-    filename = download_mesh("pacman.msh", "2da8ff96537f844a95a83abb48471b6a")
+    filename = download_mesh("pacman.vtk", "c621cb22f8b87cecd77724c2c0601c36")
     mesh = meshio.read(filename)
     assert numpy.all(numpy.abs(mesh.points[:, 2]) < 1.0e-15)
 
@@ -546,7 +546,7 @@ def test_update_node_coordinates():
 
 
 def test_flip_delaunay():
-    filename = download_mesh("pacman.msh", "2da8ff96537f844a95a83abb48471b6a")
+    filename = download_mesh("pacman.vtk", "c621cb22f8b87cecd77724c2c0601c36")
     mesh = meshio.read(filename)
 
     numpy.random.seed(123)
