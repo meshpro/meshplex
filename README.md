@@ -29,7 +29,7 @@ points = numpy.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
 cells = numpy.array([[0, 1, 2]])
 mesh = meshplex.MeshTri(points, cells)
 # or read it from a file
-# mesh = meshplex.read('pacman.msh')
+# mesh = meshplex.read("pacman.vtk")
 
 # triangle volumes
 print(mesh.cell_volumes)

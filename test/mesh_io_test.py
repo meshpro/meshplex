@@ -16,7 +16,7 @@ def test_io_2d():
     # mesh.show(show_axes=False, boundary_edge_color="g")
     # mesh.show_vertex(0)
 
-    _, fname = tempfile.mkstemp(suffix=".msh")
+    _, fname = tempfile.mkstemp(suffix=".vtk")
     mesh.write(fname)
 
     mesh2 = meshplex.read(fname)
