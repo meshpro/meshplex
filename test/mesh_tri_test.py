@@ -454,7 +454,7 @@ def test_rectanglesmall():
 
 def test_pacman():
     filename = download_mesh("pacman.msh", "2da8ff96537f844a95a83abb48471b6a")
-    mesh, _, _, _ = meshplex.read(filename)
+    mesh = meshplex.read(filename)
 
     run(
         mesh,
@@ -499,7 +499,7 @@ def test_shell():
 
 def test_sphere():
     filename = download_mesh("sphere.msh", "70a5dbf79c3b259ed993458ff4aa2e93")
-    mesh, _, _, _ = meshplex.read(filename)
+    mesh = meshplex.read(filename)
     run(
         mesh,
         12.273645818711595,
@@ -625,7 +625,8 @@ def test_flip_same_edge_twice():
 
     mesh.flip_until_delaunay()
     assert mesh.num_delaunay_violations() == 0
-    mesh.show()
+    # mesh.show()
+    mesh.plot()
 
     return
 
@@ -686,7 +687,7 @@ def test_inradius():
 
     tol = 1.0e-15
 
-    assert near_equal(mesh.inradius, [1.0], tol)
+    assert near_equal(mesh.cell_inradius, [1.0], tol)
 
     # 30-60-90 triangle
     a = 1.0
@@ -696,7 +697,7 @@ def test_inradius():
     cells = numpy.array([[0, 1, 2]])
     mesh = meshplex.MeshTri(points, cells)
 
-    assert near_equal(mesh.inradius, [a / 4 * (numpy.sqrt(3) - 1)], tol)
+    assert near_equal(mesh.cell_inradius, [a / 4 * (numpy.sqrt(3) - 1)], tol)
     return
 
 
@@ -708,7 +709,7 @@ def test_circumradius():
 
     tol = 1.0e-15
 
-    assert near_equal(mesh.circumradius, [2.5], tol)
+    assert near_equal(mesh.cell_circumradius, [2.5], tol)
 
     # 30-60-90 triangle
     a = 1.0
@@ -718,7 +719,7 @@ def test_circumradius():
     cells = numpy.array([[0, 1, 2]])
     mesh = meshplex.MeshTri(points, cells)
 
-    assert near_equal(mesh.circumradius, [a / 2], tol)
+    assert near_equal(mesh.cell_circumradius, [a / 2], tol)
     return
 
 
@@ -731,7 +732,7 @@ def test_quality():
     tol = 1.0e-15
 
     q = mesh.cell_quality
-    assert near_equal(q, 2 * mesh.inradius / mesh.circumradius, tol)
+    assert near_equal(q, 2 * mesh.cell_inradius / mesh.cell_circumradius, tol)
 
     # 30-60-90 triangle
     a = 1.0
@@ -742,7 +743,7 @@ def test_quality():
     mesh = meshplex.MeshTri(points, cells)
 
     q = mesh.cell_quality
-    assert near_equal(q, 2 * mesh.inradius / mesh.circumradius, tol)
+    assert near_equal(q, 2 * mesh.cell_inradius / mesh.cell_circumradius, tol)
     return
 
 

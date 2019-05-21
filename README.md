@@ -40,8 +40,8 @@ print(mesh.cell_centroids)
 print(mesh.cell_incenters)
 
 # circumradius, inradius, cell quality, angles
-print(mesh.circumradius)
-print(mesh.inradius)
+print(mesh.cell_circumradius)
+print(mesh.cell_inradius)
 print(mesh.cell_quality)  # d * inradius / circumradius (min 0, max 1)
 print(mesh.angles)
 

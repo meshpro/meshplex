@@ -27,8 +27,8 @@ def test_regular_tet0(a):
 
     assert all((mesh.cells["nodes"] == cells).flat)
 
-    mesh.show()
-    mesh.show_edge(0)
+    # mesh.show()
+    # mesh.show_edge(0)
     # from matplotlib import pyplot as plt
     # plt.show()
 
@@ -87,11 +87,11 @@ def test_regular_tet0(a):
     # vol = a ** 3 / 6.0 / numpy.sqrt(2)
     # inradius = 3 * vol / (4 * side_area)
     inradius = a * numpy.sqrt(6) / 12
-    assert near_equal(mesh.inradius, [inradius], tol)
+    assert near_equal(mesh.cell_inradius, [inradius], tol)
 
     # circumradius
     circumradius = a * numpy.sqrt(6) / 4
-    assert near_equal(mesh.circumradius, [circumradius], tol)
+    assert near_equal(mesh.cell_circumradius, [circumradius], tol)
 
     # cell quality
     assert near_equal(mesh.cell_quality, [1.0], tol)
@@ -190,11 +190,11 @@ def test_unit_tetrahedron_geometric(a):
 
     # inradius
     ref = a * 0.2113248654051872
-    assert near_equal(mesh.inradius, [ref], tol)
+    assert near_equal(mesh.cell_inradius, [ref], tol)
 
     # circumradius
     ref = a * numpy.sqrt(3) / 2
-    assert near_equal(mesh.circumradius, [ref], tol)
+    assert near_equal(mesh.cell_circumradius, [ref], tol)
 
     # cell quality
     ref = 7.320508075688774e-01

@@ -13,13 +13,13 @@ def test_io_2d():
 
     assert mesh.num_delaunay_violations() == 0
 
-    mesh.show(show_axes=False, boundary_edge_color="g")
-    mesh.show_vertex(0)
+    # mesh.show(show_axes=False, boundary_edge_color="g")
+    # mesh.show_vertex(0)
 
     _, fname = tempfile.mkstemp(suffix=".msh")
     mesh.write(fname)
 
-    mesh2, _, _, _ = meshplex.read(fname)
+    mesh2 = meshplex.read(fname)
 
     for k in range(len(mesh.cells["nodes"])):
         assert tuple(mesh.cells["nodes"][k]) == tuple(mesh2.cells["nodes"][k])

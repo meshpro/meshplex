@@ -457,7 +457,7 @@ class MeshTetra(_base_mesh):
         #   * ...
         # See
         # <http://eidors3d.sourceforge.net/doc/index.html?eidors/meshing/calc_mesh_quality.html>.
-        return 3 * self.inradius / self.circumradius
+        return 3 * self.cell_inradius / self.cell_circumradius
 
     @property
     def control_volumes(self):
