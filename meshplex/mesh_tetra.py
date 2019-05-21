@@ -104,6 +104,8 @@ class MeshTetra(_base_mesh):
         self.is_boundary_facet_individual = None
         self.is_boundary_facet = None
         self.faces = None
+
+        self._cell_centroids = None
         return
 
     def get_ce_ratios(self):
@@ -214,6 +216,8 @@ class MeshTetra(_base_mesh):
         #
         #   CC = sum_k (zeta[k] / sum(zeta) * X[k]).
         #
+        # TODO See <https://math.stackexchange.com/a/2864770/36678> for another
+        #      interesting approach.
         alpha = self._zeta / numpy.sum(self._zeta, axis=0)
 
         self._circumcenters = numpy.sum(
@@ -242,21 +246,13 @@ class MeshTetra(_base_mesh):
         # has to hold for all vectors u in the plane spanned by the edges,
         # particularly by the edges themselves.
         # A = numpy.empty(3, 4, half_edges.shape[2], 3, 3)
-        print(half_edges.shape)
         A = numpy.einsum("j...k,l...k->jl...", half_edges, half_edges)
-
-        print(A.shape)
-        print(A[0, 0, 0])
-        print(half_edges[0, 0, 0])
-
         A = A ** 2
-        exit(1)
 
         # Compute the RHS  cell_volume * <edge, edge>.
         # The dot product <edge, edge> is also on the diagonals of A (before squaring),
         # but simply computing it again is cheaper than extracting it from A.
         edge_dot_edge = numpy.einsum("...i,...j->...", half_edges, half_edges)
-        print(edge_dot_edge.shape)
         # TODO cell_volumes
         self.cell_volumes = numpy.random.rand(2951)
         rhs = edge_dot_edge * self.cell_volumes
@@ -385,6 +381,22 @@ class MeshTetra(_base_mesh):
         return ce_ratios
 
     @property
+    def cell_centroids(self):
+        """The centroids (barycenters, midpoints of the circumcircles) of all tetrahedra.
+        """
+        if self._cell_centroids is None:
+            self._cell_centroids = (
+                numpy.sum(self.node_coords[self.cells["nodes"]], axis=1) / 4.0
+            )
+        return self._cell_centroids
+
+    @property
+    def cell_barycenters(self):
+        """See cell_centroids().
+        """
+        return self.cell_centroids
+
+    @property
     def cell_circumcenters(self):
         """
         """
@@ -393,7 +405,19 @@ class MeshTetra(_base_mesh):
         return self._circumcenters
 
     @property
-    def inradius(self):
+    def cell_incenters(self):
+        """Get the midpoints of the inspheres.
+        """
+        # https://math.stackexchange.com/a/2864770/36678
+        face_areas = compute_tri_areas(self.ei_dot_ej)
+        # abc = numpy.sqrt(self.ei_dot_ei)
+        face_areas /= numpy.sum(face_areas, axis=0)
+        return numpy.einsum(
+            "ij,jik->jk", face_areas, self.node_coords[self.cells["nodes"]]
+        )
+
+    @property
+    def cell_inradius(self):
         """
         """
         # https://en.wikipedia.org/wiki/Tetrahedron#Inradius
@@ -401,7 +425,7 @@ class MeshTetra(_base_mesh):
         return 3 * self.cell_volumes / numpy.sum(face_areas, axis=0)
 
     @property
-    def circumradius(self):
+    def cell_circumradius(self):
         """
         """
         # # Just take the distance of the circumcenter to one of the nodes for now.
@@ -433,7 +457,7 @@ class MeshTetra(_base_mesh):
         #   * ...
         # See
         # <http://eidors3d.sourceforge.net/doc/index.html?eidors/meshing/calc_mesh_quality.html>.
-        return 3 * self.inradius / self.circumradius
+        return 3 * self.cell_inradius / self.cell_circumradius
 
     @property
     def control_volumes(self):
@@ -589,4 +613,157 @@ class MeshTetra(_base_mesh):
         # draw the cell circumcenters
         cc = self._circumcenters[adj_cell_ids]
         ax.plot(cc[:, 0], cc[:, 1], cc[:, 2], "ro")
+        return
+
+    def show_cell(
+        self,
+        cell_id,
+        control_volume_boundaries_rgba=None,
+        barycenter_rgba=None,
+        circumcenter_rgba=None,
+        incenter_rgba=None,
+        face_circumcenter_rgba=None,
+        insphere_rgba=None,
+        circumsphere_rgba=None,
+        line_width=1.0,
+    ):
+        import vtk
+
+        def get_line_actor(x0, x1, line_width=1.0):
+            source = vtk.vtkLineSource()
+            source.SetPoint1(x0)
+            source.SetPoint2(x1)
+            # mapper
+            mapper = vtk.vtkPolyDataMapper()
+            mapper.SetInputConnection(source.GetOutputPort())
+            # actor
+            actor = vtk.vtkActor()
+            actor.SetMapper(mapper)
+            # color actor
+            actor.GetProperty().SetColor(0, 0, 0)
+            actor.GetProperty().SetLineWidth(line_width)
+            return actor
+
+        def get_sphere_actor(x0, r, rgba):
+            # Generate polygon data for a sphere
+            sphere = vtk.vtkSphereSource()
+
+            sphere.SetCenter(x0)
+            sphere.SetRadius(r)
+
+            sphere.SetPhiResolution(100)
+            sphere.SetThetaResolution(100)
+
+            # Create a mapper for the sphere data
+            sphere_mapper = vtk.vtkPolyDataMapper()
+            # sphere_mapper.SetInput(sphere.GetOutput())
+            sphere_mapper.SetInputConnection(sphere.GetOutputPort())
+
+            # Connect the mapper to an actor
+            sphere_actor = vtk.vtkActor()
+            sphere_actor.SetMapper(sphere_mapper)
+            sphere_actor.GetProperty().SetColor(rgba[:3])
+            sphere_actor.GetProperty().SetOpacity(rgba[3])
+            return sphere_actor
+
+        # Visualize
+        renderer = vtk.vtkRenderer()
+        renderWindow = vtk.vtkRenderWindow()
+        renderWindow.AddRenderer(renderer)
+        renderWindowInteractor = vtk.vtkRenderWindowInteractor()
+        renderWindowInteractor.SetRenderWindow(renderWindow)
+
+        for ij in [[0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3]]:
+            x0, x1 = self.node_coords[self.cells["nodes"][cell_id][ij]]
+            renderer.AddActor(get_line_actor(x0, x1, line_width))
+        renderer.SetBackground(1.0, 1.0, 1.0)
+
+        r = 0.02
+
+        if circumcenter_rgba is not None:
+            renderer.AddActor(
+                get_sphere_actor(self.cell_circumcenters[cell_id], r, circumcenter_rgba)
+            )
+
+        if circumsphere_rgba is not None:
+            renderer.AddActor(
+                get_sphere_actor(
+                    self.cell_circumcenters[cell_id],
+                    self.cell_circumradius[cell_id],
+                    circumsphere_rgba,
+                )
+            )
+
+        if incenter_rgba is not None:
+            renderer.AddActor(
+                get_sphere_actor(self.cell_incenters[cell_id], r, incenter_rgba)
+            )
+
+        if insphere_rgba is not None:
+            renderer.AddActor(
+                get_sphere_actor(
+                    self.cell_incenters[cell_id],
+                    self.cell_inradius[cell_id],
+                    insphere_rgba,
+                )
+            )
+
+        if barycenter_rgba is not None:
+            renderer.AddActor(
+                get_sphere_actor(self.cell_barycenters[cell_id], r, barycenter_rgba)
+            )
+
+        if face_circumcenter_rgba is not None:
+            x = self.node_coords[self.node_face_cells[..., [cell_id]]]
+            face_ccs = compute_triangle_circumcenters(
+                x, self.ei_dot_ei, self.ei_dot_ej
+            )[:, 0, :]
+            for f in face_ccs:
+                renderer.AddActor(get_sphere_actor(f, r, face_circumcenter_rgba))
+
+        if control_volume_boundaries_rgba:
+            cell_cc = self.cell_circumcenters[cell_id]
+            x = self.node_coords[self.node_face_cells[..., [cell_id]]]
+            face_ccs = compute_triangle_circumcenters(
+                x, self.ei_dot_ei, self.ei_dot_ej
+            )[:, 0, :]
+            for face, face_cc in zip(range(4), face_ccs):
+                for edge in range(3):
+                    k0, k1 = self.idx_hierarchy[:, edge, face, cell_id]
+                    edge_midpoint = 0.5 * (self.node_coords[k0] + self.node_coords[k1])
+
+                    points = vtk.vtkPoints()
+                    points.InsertNextPoint(*edge_midpoint)
+                    points.InsertNextPoint(*cell_cc)
+                    points.InsertNextPoint(*face_cc)
+
+                    triangle = vtk.vtkTriangle()
+                    triangle.GetPointIds().SetId(0, 0)
+                    triangle.GetPointIds().SetId(1, 1)
+                    triangle.GetPointIds().SetId(2, 2)
+
+                    triangles = vtk.vtkCellArray()
+                    triangles.InsertNextCell(triangle)
+
+                    trianglePolyData = vtk.vtkPolyData()
+                    trianglePolyData.SetPoints(points)
+                    trianglePolyData.SetPolys(triangles)
+
+                    # mapper
+                    mapper = vtk.vtkPolyDataMapper()
+                    if vtk.VTK_MAJOR_VERSION <= 5:
+                        mapper.SetInput(trianglePolyData)
+                    else:
+                        mapper.SetInputData(trianglePolyData)
+
+                    # actor
+                    actor = vtk.vtkActor()
+                    actor.SetMapper(mapper)
+
+                    actor.GetProperty().SetColor(*control_volume_boundaries_rgba[:3])
+                    actor.GetProperty().SetOpacity(control_volume_boundaries_rgba[3])
+                    renderer.AddActor(actor)
+
+        renderWindow.Render()
+        renderWindowInteractor.Start()
         return

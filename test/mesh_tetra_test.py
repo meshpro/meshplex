@@ -27,8 +27,8 @@ def test_regular_tet0(a):
 
     assert all((mesh.cells["nodes"] == cells).flat)
 
-    mesh.show()
-    mesh.show_edge(0)
+    # mesh.show()
+    # mesh.show_edge(0)
     # from matplotlib import pyplot as plt
     # plt.show()
 
@@ -87,11 +87,11 @@ def test_regular_tet0(a):
     # vol = a ** 3 / 6.0 / numpy.sqrt(2)
     # inradius = 3 * vol / (4 * side_area)
     inradius = a * numpy.sqrt(6) / 12
-    assert near_equal(mesh.inradius, [inradius], tol)
+    assert near_equal(mesh.cell_inradius, [inradius], tol)
 
     # circumradius
     circumradius = a * numpy.sqrt(6) / 4
-    assert near_equal(mesh.circumradius, [circumradius], tol)
+    assert near_equal(mesh.cell_circumradius, [circumradius], tol)
 
     # cell quality
     assert near_equal(mesh.cell_quality, [1.0], tol)
@@ -190,11 +190,11 @@ def test_unit_tetrahedron_geometric(a):
 
     # inradius
     ref = a * 0.2113248654051872
-    assert near_equal(mesh.inradius, [ref], tol)
+    assert near_equal(mesh.cell_inradius, [ref], tol)
 
     # circumradius
     ref = a * numpy.sqrt(3) / 2
-    assert near_equal(mesh.circumradius, [ref], tol)
+    assert near_equal(mesh.cell_circumradius, [ref], tol)
 
     # cell quality
     ref = 7.320508075688774e-01
@@ -390,8 +390,8 @@ def test_arrow3d():
 
 
 def test_tetrahedron():
-    filename = download_mesh("tetrahedron.msh", "27a5d7e102e6613a1e58629c252cb293")
-    mesh, _, _, _ = meshplex.read(filename)
+    filename = download_mesh("tetrahedron.vtk", "10f3ccd1642b634b22741894fe6e7f1f")
+    mesh = meshplex.read(filename)
 
     run(
         mesh,
@@ -405,8 +405,8 @@ def test_tetrahedron():
 
 # def test_toy_algebraic():
 #     filename = download_mesh(
-#         'toy.msh',
-#         '1d125d3fa9f373823edd91ebae5f7a81'
+#         'toy.vtk',
+#         'f48abda972822bab224b91a74d695573'
 #         )
 #     mesh, _, _, _ = meshplex.read(filename)
 #
@@ -447,8 +447,8 @@ def test_tetrahedron():
 
 
 def test_toy_geometric():
-    filename = download_mesh("toy.msh", "1d125d3fa9f373823edd91ebae5f7a81")
-    mesh, _, _, _ = meshplex.read(filename)
+    filename = download_mesh("toy.vtk", "f48abda972822bab224b91a74d695573")
+    mesh = meshplex.read(filename)
 
     mesh = meshplex.MeshTetra(mesh.node_coords, mesh.cells["nodes"])
 
@@ -470,8 +470,8 @@ def test_toy_geometric():
 
 
 def test_signed_volume():
-    filename = download_mesh("toy.msh", "1d125d3fa9f373823edd91ebae5f7a81")
-    mesh, _, _, _ = meshplex.read(filename)
+    filename = download_mesh("toy.vtk", "f48abda972822bab224b91a74d695573")
+    mesh = meshplex.read(filename)
 
     vols = meshplex.get_signed_simplex_volumes(mesh.cells["nodes"], mesh.node_coords)
 
@@ -479,5 +479,46 @@ def test_signed_volume():
     return
 
 
+def show_tetra():
+    # filename = download_mesh("toy.vtk", "f48abda972822bab224b91a74d695573")
+    # mesh = meshplex.read(filename)
+
+    node_coords = numpy.array(
+        [
+            [1.0, 0.0, -1.0 / numpy.sqrt(8)],
+            [-0.5, +numpy.sqrt(3.0) / 2.0, -1.0 / numpy.sqrt(8)],
+            [-0.5, -numpy.sqrt(3.0) / 2.0, -1.0 / numpy.sqrt(8)],
+            [0.0, 0.0, numpy.sqrt(2.0) - 1.0 / numpy.sqrt(8)],
+        ]
+    ) / numpy.sqrt(3.0)
+
+    # node_coords = numpy.array(
+    #     [
+    #         [1.0, 0.0, -1.0 / numpy.sqrt(8)],
+    #         [-0.5, +numpy.sqrt(3.0) / 2.0, -1.0 / numpy.sqrt(8)],
+    #         [-0.5, -numpy.sqrt(3.0) / 2.0, -1.0 / numpy.sqrt(8)],
+    #         [0.0, 0.5, 1.0],
+    #     ]
+    # ) / numpy.sqrt(3.0)
+    # node_coords = numpy.array(
+    #     [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
+    # )
+
+    cells = [[0, 1, 2, 3]]
+    mesh = meshplex.MeshTetra(node_coords, cells)
+    mesh.show_cell(
+        0,
+        # barycenter_rgba=(1, 0, 0, 1.0),
+        # circumcenter_rgba=(0.1, 0.1, 0.1, 1.0),
+        # circumsphere_rgba=(0, 1, 0, 1.0),
+        # incenter_rgba=(1, 0, 1, 1.0),
+        # insphere_rgba=(1, 0, 1, 1.0),
+        # face_circumcenter_rgba=(0, 0, 1, 1.0),
+        control_volume_boundaries_rgba=(1.0, 0.0, 0.0, 1.0),
+        line_width=3.0,
+    )
+    return
+
+
 if __name__ == "__main__":
-    test_signed_volume()
+    show_tetra()

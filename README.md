@@ -20,7 +20,7 @@ meshplex is used in [optimesh](https://github.com/nschloe/optimesh) and
 
 ### Quickstart
 
-```python
+```python,test
 import numpy
 import meshplex
 
@@ -29,7 +29,7 @@ points = numpy.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
 cells = numpy.array([[0, 1, 2]])
 mesh = meshplex.MeshTri(points, cells)
 # or read it from a file
-# mesh = meshplex.read('pacman.msh')
+# mesh = meshplex.read("pacman.vtk")
 
 # triangle volumes
 print(mesh.cell_volumes)
@@ -40,8 +40,8 @@ print(mesh.cell_centroids)
 print(mesh.cell_incenters)
 
 # circumradius, inradius, cell quality, angles
-print(mesh.circumradius)
-print(mesh.inradius)
+print(mesh.cell_circumradius)
+print(mesh.cell_inradius)
 print(mesh.cell_quality)  # d * inradius / circumradius (min 0, max 1)
 print(mesh.angles)
 
@@ -65,6 +65,61 @@ classes and functions, see [readthedocs](https://meshplex.readthedocs.io/).
 (For mesh creation, check out
 [this list](https://github.com/nschloe/awesome-scientific-computing#meshing)).
 
+### Plotting
+
+#### Triangles
+<img src="https://nschloe.github.io/meshplex/pacman.png" width="30%">
+
+```python
+import meshplex
+
+mesh = meshplex.read("pacman-optimized.vtk")
+mesh.show(
+    # show_coedges=True,
+    # control_volume_centroid_color=None,
+    # mesh_color="k",
+    # nondelaunay_edge_color=None,
+    # boundary_edge_color=None,
+    # comesh_color=(0.8, 0.8, 0.8),
+    show_axes=False,
+    )
+```
+
+#### Tetrahedra
+<img src="https://nschloe.github.io/meshplex/tetra.png" width="30%">
+
+```python
+import numpy
+import meshplex
+
+# Generate tetrahedron
+node_coords = numpy.array(
+    [
+        [1.0, 0.0, -1.0 / numpy.sqrt(8)],
+        [-0.5, +numpy.sqrt(3.0) / 2.0, -1.0 / numpy.sqrt(8)],
+        [-0.5, -numpy.sqrt(3.0) / 2.0, -1.0 / numpy.sqrt(8)],
+        [0.0, 0.0, numpy.sqrt(2.0) - 1.0 / numpy.sqrt(8)],
+    ]
+) / numpy.sqrt(3.0)
+cells = [[0, 1, 2, 3]]
+
+# Create mesh object
+mesh = meshplex.MeshTetra(node_coords, cells)
+
+# Plot cell 0 with control volume boundaries
+mesh.show_cell(
+    0,
+    # barycenter_rgba=(1, 0, 0, 1.0),
+    # circumcenter_rgba=(0.1, 0.1, 0.1, 1.0),
+    # circumsphere_rgba=(0, 1, 0, 1.0),
+    # incenter_rgba=(1, 0, 1, 1.0),
+    # insphere_rgba=(1, 0, 1, 1.0),
+    # face_circumcenter_rgba=(0, 0, 1, 1.0),
+    control_volume_boundaries_rgba=(1.0, 0.0, 0.0, 1.0),
+   line_width=3.0,
+)
+```
+
 ### Installation
 
 meshplex is [available from the Python Package
@@ -80,17 +135,6 @@ To run the meshplex unit tests, check out this repository and type
 ```
 pytest
 ```
-
-### Distribution
-
-To create a new release
-
-1. bump the `__version__` number,
-
-2. publish to PyPi and GitHub:
-    ```
-    make publish
-    ```
 
 ### License
 

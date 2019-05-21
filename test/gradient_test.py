@@ -36,7 +36,7 @@
 #
 #     def test_pacman(self):
 #         filename = download_mesh(
-#                 'pacman.msh',
+#                 'pacman.vtk',
 #                 '2da8ff96537f844a95a83abb48471b6a'
 #                 )
 #         mesh, _, _, _ = meshplex.read(filename)

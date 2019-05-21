@@ -72,6 +72,8 @@ html_theme = "alabaster"
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ["_static"]
 
+html_favicon = "_static/meshplex-32x32.ico"
+
 html_theme_options = {
     "logo": "meshplex-logo.svg",
     "github_user": "nschloe",

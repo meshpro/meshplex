@@ -151,7 +151,7 @@ class MeshTri(_base_mesh):
     #     return
 
     def update_values(self):
-        """
+        """Update all computes entities around the mesh.
         """
         if self.half_edge_coords is not None:
             # Constructing the temporary arrays
@@ -219,7 +219,7 @@ class MeshTri(_base_mesh):
 
     @property
     def control_volumes(self):
-        """
+        """The control volumes around each vertex.
         """
         if self._control_volumes is None:
             v = self.cell_partitions
@@ -254,17 +254,14 @@ class MeshTri(_base_mesh):
     @property
     def control_volume_centroids(self):
         """
-        This function is necessary, e.g., for Lloyd's smoothing
-        https://en.wikipedia.org/wiki/Lloyd%27s_algorithm.
-
         The centroid of any volume V is given by
 
         .. math::
           c = \\int_V x / \\int_V 1.
 
         The denominator is the control volume. The numerator can be computed by making
-        use of the fact that the control volume around any vertex v_0 is composed of
-        right triangles, two for each adjacent cell.
+        use of the fact that the control volume around any vertex is composed of right
+        triangles, two for each adjacent cell.
         """
         if self._cv_centroids is None:
             _, v = self._compute_integral_x()
@@ -479,7 +476,7 @@ class MeshTri(_base_mesh):
 
     @property
     def cell_centroids(self):
-        """The centroids (barycenters) of all triangles.
+        """The centroids (barycenters, midpoints of the circumcircles) of all triangles.
         """
         if self._cell_centroids is None:
             self._cell_centroids = (
@@ -495,7 +492,7 @@ class MeshTri(_base_mesh):
 
     @property
     def cell_incenters(self):
-        """
+        """Get the midpoints of the incircles.
         """
         # https://en.wikipedia.org/wiki/Incenter#Barycentric_coordinates
         abc = numpy.sqrt(self.ei_dot_ei)
@@ -503,16 +500,16 @@ class MeshTri(_base_mesh):
         return numpy.einsum("ij,jik->jk", abc, self.node_coords[self.cells["nodes"]])
 
     @property
-    def inradius(self):
-        """
+    def cell_inradius(self):
+        """Get the inradii of all cells
         """
         # See <http://mathworld.wolfram.com/Incircle.html>.
         abc = numpy.sqrt(self.ei_dot_ei)
         return 2 * self.cell_volumes / numpy.sum(abc, axis=0)
 
     @property
-    def circumradius(self):
-        """
+    def cell_circumradius(self):
+        """Get the circumradii of all cells
         """
         # See <http://mathworld.wolfram.com/Circumradius.html>.
         a, b, c = numpy.sqrt(self.ei_dot_ei)
@@ -752,9 +749,9 @@ class MeshTri(_base_mesh):
     def plot(
         self,
         show_coedges=True,
-        show_centroids=True,
+        control_volume_centroid_color=None,
         mesh_color="k",
-        nondelaunay_edge_color="#d62728",  # mpl 2.0 default red
+        nondelaunay_edge_color=None,
         boundary_edge_color=None,
         comesh_color=(0.8, 0.8, 0.8),
         show_axes=True,
@@ -768,7 +765,7 @@ class MeshTri(_base_mesh):
         # from mpl_toolkits.mplot3d import Axes3D
         fig = plt.figure()
         ax = fig.gca()
-        # plt.axis("equal")
+        plt.axis("equal")
         if not show_axes:
             ax.set_axis_off()
 
@@ -785,8 +782,8 @@ class MeshTri(_base_mesh):
         ymin -= 0.1 * height
         ymax += 0.1 * height
 
-        # ax.set_xlim(xmin, xmax)
-        # ax.set_ylim(ymin, ymax)
+        ax.set_xlim(xmin, xmax)
+        ax.set_ylim(ymin, ymax)
 
         if self.edges is None:
             self.create_edges()
@@ -843,14 +840,14 @@ class MeshTri(_base_mesh):
             line_segments1 = LineCollection(e, color=boundary_edge_color)
             ax.add_collection(line_segments1)
 
-        if show_centroids:
+        if control_volume_centroid_color is not None:
             centroids = self.control_volume_centroids
             ax.plot(
                 centroids[:, 0],
                 centroids[:, 1],
                 linestyle="",
                 marker=".",
-                color="#d62728",
+                color=control_volume_centroid_color,
             )
 
         return fig

@@ -16,12 +16,13 @@ def download_mesh(name, md5):
 
     filename = os.path.join("/tmp", name)
     if not os.path.exists(filename):
-        print("Downloading %s..." % name)
-        url = "https://sourceforge.net/projects/meshzoo-data/files/"
-        r = requests.get(url + name + "/download", stream=True)
+        print("Downloading {}...".format(name))
+        url = "https://nschloe.github.io/meshplex/"
+        print(url + name)
+        r = requests.get(url + name, stream=True)
         if not r.ok:
             raise RuntimeError(
-                "Download error (%s, return code %s)." % (r.url, r.status_code)
+                "Download error ({}, return code {}).".format(r.url, r.status_code)
             )
 
         # save the mesh in /tmp

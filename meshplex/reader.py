@@ -24,34 +24,21 @@ def _sanitize(points, cells):
 
 
 def read(filename):
-    """Reads an unstructured mesh with added data.
+    """Reads an unstructured mesh into meshplex format.
 
     :param filenames: The files to read from.
     :type filenames: str
     :returns mesh{2,3}d: The mesh data.
-    :returns point_data: Point data read from file.
-    :type point_data: dict
-    :returns field_data: Field data read from file.
-    :type field_data: dict
     """
     mesh = meshio.read(filename)
 
     # make sure to include the used nodes only
     if "tetra" in mesh.cells:
         points, cells = _sanitize(mesh.points, mesh.cells["tetra"])
-        return (
-            MeshTetra(points, cells),
-            mesh.point_data,
-            mesh.cell_data,
-            mesh.field_data,
-        )
+        return MeshTetra(points, cells)
     elif "triangle" in mesh.cells:
         points, cells = _sanitize(mesh.points, mesh.cells["triangle"])
-        return (
-            MeshTri(points, cells),
-            mesh.point_data,
-            mesh.cell_data,
-            mesh.field_data,
-        )
-    else:
-        raise RuntimeError("Unknown mesh type.")
+        return MeshTri(points, cells)
+
+    raise RuntimeError("Illegal mesh type.")
+    return
