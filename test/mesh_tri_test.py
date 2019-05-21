@@ -836,5 +836,13 @@ def test_flat_boundary():
     return
 
 
+def show_mesh():
+    filename = download_mesh("pacman-optimized.vtk", "5036d9ce5307caa0d9de80cba7ba1c4c")
+    mesh = meshplex.read(filename)
+    mesh.show(show_axes=False)
+    # mesh.save("pacman.png", show_axes=False)
+    return
+
+
 if __name__ == "__main__":
-    test_flat_boundary()
+    show_mesh()

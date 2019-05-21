@@ -16,7 +16,7 @@ def download_mesh(name, md5):
 
     filename = os.path.join("/tmp", name)
     if not os.path.exists(filename):
-        print("Downloading %s..." % name)
+        print("Downloading {}...".format(name))
         url = "https://sourceforge.net/projects/meshzoo-data/files/"
         r = requests.get(url + name + "/download", stream=True)
         if not r.ok:

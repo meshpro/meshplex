@@ -749,9 +749,9 @@ class MeshTri(_base_mesh):
     def plot(
         self,
         show_coedges=True,
-        show_centroids=True,
+        control_volume_centroid_color=None,
         mesh_color="k",
-        nondelaunay_edge_color="#d62728",  # mpl 2.0 default red
+        nondelaunay_edge_color=None,
         boundary_edge_color=None,
         comesh_color=(0.8, 0.8, 0.8),
         show_axes=True,
@@ -765,7 +765,7 @@ class MeshTri(_base_mesh):
         # from mpl_toolkits.mplot3d import Axes3D
         fig = plt.figure()
         ax = fig.gca()
-        # plt.axis("equal")
+        plt.axis("equal")
         if not show_axes:
             ax.set_axis_off()
 
@@ -782,8 +782,8 @@ class MeshTri(_base_mesh):
         ymin -= 0.1 * height
         ymax += 0.1 * height
 
-        # ax.set_xlim(xmin, xmax)
-        # ax.set_ylim(ymin, ymax)
+        ax.set_xlim(xmin, xmax)
+        ax.set_ylim(ymin, ymax)
 
         if self.edges is None:
             self.create_edges()
@@ -840,14 +840,14 @@ class MeshTri(_base_mesh):
             line_segments1 = LineCollection(e, color=boundary_edge_color)
             ax.add_collection(line_segments1)
 
-        if show_centroids:
+        if control_volume_centroid_color is not None:
             centroids = self.control_volume_centroids
             ax.plot(
                 centroids[:, 0],
                 centroids[:, 1],
                 linestyle="",
                 marker=".",
-                color="#d62728",
+                color=control_volume_centroid_color,
             )
 
         return fig

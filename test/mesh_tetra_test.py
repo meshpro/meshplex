@@ -509,12 +509,12 @@ def show_tetra():
     mesh.show_cell(
         0,
         # barycenter_rgba=(1, 0, 0, 1.0),
-        # circumcenter_rgba=(0, 1, 0, 1.0),
+        # circumcenter_rgba=(0.1, 0.1, 0.1, 1.0),
         # circumsphere_rgba=(0, 1, 0, 1.0),
         # incenter_rgba=(1, 0, 1, 1.0),
         # insphere_rgba=(1, 0, 1, 1.0),
         # face_circumcenter_rgba=(0, 0, 1, 1.0),
-        control_volume_boundaries_rgba=(0.0, 0.0, 0.0, 0.5),
+        control_volume_boundaries_rgba=(1.0, 0.0, 0.0, 1.0),
         line_width=3.0,
     )
     return
