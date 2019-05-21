@@ -279,7 +279,7 @@ def test_regular_tri2(a):
 def test_degenerate_small0b(h):
     points = numpy.array([[0, 0, 0], [1, 0, 0], [0.5, h, 0.0]])
     cells = numpy.array([[0, 1, 2]])
-    mesh = meshplex.MeshTri(points, cells)
+    mesh = meshplex.MeshTri(points, cells, sort_cells=True)  # test sort_cells, too
 
     tol = 1.0e-14
 
@@ -836,13 +836,24 @@ def test_flat_boundary():
     return
 
 
-def show_mesh():
+def test_plot_mesh():
     filename = download_mesh("pacman-optimized.vtk", "5036d9ce5307caa0d9de80cba7ba1c4c")
     mesh = meshplex.read(filename)
+    print(mesh)  # test __repr__
+    # mesh.plot(show_axes=False)
     mesh.show(show_axes=False)
     # mesh.save("pacman.png", show_axes=False)
     return
 
 
+def show_vertex():
+    filename = download_mesh("pacman-optimized.vtk", "5036d9ce5307caa0d9de80cba7ba1c4c")
+    mesh = meshplex.read(filename)
+    # mesh.plot_vertex(125)
+    mesh.show_vertex(125)
+    return
+
+
 if __name__ == "__main__":
-    show_mesh()
+    # show_mesh()
+    show_vertex()
