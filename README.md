@@ -86,7 +86,7 @@ mesh.show(
 ```
 
 #### Tetrahedra
-<img src="https://nschloe.github.io/meshplex/tetrahedron.png" width="30%">
+<img src="https://nschloe.github.io/meshplex/tetra.png" width="30%">
 
 ```python
 import numpy
