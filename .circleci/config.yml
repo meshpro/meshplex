@@ -27,7 +27,9 @@ jobs:
       - image: ubuntu:18.04
     steps:
       - run: apt-get update
-      - run: apt-get install -y git python3-pip
+      # <https://stackoverflow.com/a/44333806/353337>
+      - run: DEBIAN_FRONTEND=noninteractive apt install tzdata
+      - run: apt-get install -y git python3-pip python3-vtk7
       - run: pip3 install -U pytest pytest-cov excode
       - checkout
       # install

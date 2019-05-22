@@ -521,6 +521,7 @@ def show_cell():
         # face_circumcenter_rgba=(0, 0, 1, 1.0),
         control_volume_boundaries_rgba=(1.0, 0.0, 0.0, 1.0),
         line_width=3.0,
+        close=True,
     )
     return
 

@@ -628,6 +628,7 @@ class MeshTetra(_base_mesh):
         insphere_rgba=None,
         circumsphere_rgba=None,
         line_width=1.0,
+        close=False,
     ):
         import vtk
 
@@ -670,10 +671,11 @@ class MeshTetra(_base_mesh):
 
         # Visualize
         renderer = vtk.vtkRenderer()
-        renderWindow = vtk.vtkRenderWindow()
-        renderWindow.AddRenderer(renderer)
-        renderWindowInteractor = vtk.vtkRenderWindowInteractor()
-        renderWindowInteractor.SetRenderWindow(renderWindow)
+        render_window = vtk.vtkRenderWindow()
+        # render_window.SetOffScreenRendering(1)
+        render_window.AddRenderer(renderer)
+        render_window_interactor = vtk.vtkRenderWindowInteractor()
+        render_window_interactor.SetRenderWindow(render_window)
 
         for ij in [[0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3]]:
             x0, x1 = self.node_coords[self.cells["nodes"][cell_id][ij]]
@@ -766,6 +768,11 @@ class MeshTetra(_base_mesh):
                     actor.GetProperty().SetOpacity(control_volume_boundaries_rgba[3])
                     renderer.AddActor(actor)
 
-        renderWindow.Render()
-        renderWindowInteractor.Start()
+        render_window.Render()
+
+        if close:
+            render_window.Finalize()
+            del render_window, render_window_interactor
+        else:
+            render_window_interactor.Start()
         return

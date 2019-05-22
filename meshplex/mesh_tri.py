@@ -17,11 +17,6 @@ from .helpers import grp_start_len, unique_rows
 __all__ = ["MeshTri"]
 
 
-def _column_stack(a, b):
-    # https://stackoverflow.com/a/39638773/353337
-    return numpy.stack([a, b], axis=1)
-
-
 class MeshTri(_base_mesh):
     """Class for handling triangular meshes.
     """
@@ -907,7 +902,9 @@ class MeshTri(_base_mesh):
                     edge_midpoint = 0.5 * (
                         self.node_coords[node_ids[0]] + self.node_coords[node_ids[1]]
                     )
-                    p = _column_stack(self.cell_circumcenters[cell_id], edge_midpoint)
+                    p = numpy.stack(
+                        [self.cell_circumcenters[cell_id], edge_midpoint], axis=1
+                    )
                     q = numpy.column_stack(
                         [
                             self.cell_circumcenters[cell_id],
