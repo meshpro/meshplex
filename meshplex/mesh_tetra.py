@@ -672,6 +672,7 @@ class MeshTetra(_base_mesh):
         # Visualize
         renderer = vtk.vtkRenderer()
         render_window = vtk.vtkRenderWindow()
+        render_window.SetOffScreenRendering(1)
         render_window.AddRenderer(renderer)
         render_window_interactor = vtk.vtkRenderWindowInteractor()
         render_window_interactor.SetRenderWindow(render_window)
