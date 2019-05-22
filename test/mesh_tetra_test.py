@@ -484,7 +484,7 @@ def test_signed_volume():
     return
 
 
-def test_show_cell():
+def show_cell():
     # filename = download_mesh("toy.vtk", "f48abda972822bab224b91a74d695573")
     # mesh = meshplex.read(filename)
 
@@ -527,4 +527,4 @@ def test_show_cell():
 
 
 if __name__ == "__main__":
-    test_show_cell()
+    show_cell()
