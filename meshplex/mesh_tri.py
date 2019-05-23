@@ -750,6 +750,7 @@ class MeshTri(_base_mesh):
         boundary_edge_color=None,
         comesh_color=(0.8, 0.8, 0.8),
         show_axes=True,
+        cell_quality_coloring=None,
     ):
         """Show the mesh using matplotlib.
         """
@@ -757,7 +758,6 @@ class MeshTri(_base_mesh):
         import matplotlib.pyplot as plt
         from matplotlib.collections import LineCollection
 
-        # from mpl_toolkits.mplot3d import Axes3D
         fig = plt.figure()
         ax = fig.gca()
         plt.axis("equal")
@@ -779,6 +779,22 @@ class MeshTri(_base_mesh):
 
         ax.set_xlim(xmin, xmax)
         ax.set_ylim(ymin, ymax)
+
+        # coloring
+        if cell_quality_coloring:
+            cmap, cmin, cmax, show_colorbar = cell_quality_coloring
+            plt.tripcolor(
+                self.node_coords[:, 0],
+                self.node_coords[:, 1],
+                self.cells["nodes"],
+                self.cell_quality,
+                shading="flat",
+                cmap=cmap,
+                vmin=cmin,
+                vmax=cmax,
+            )
+            if show_colorbar:
+                plt.colorbar()
 
         if self.edges is None:
             self.create_edges()

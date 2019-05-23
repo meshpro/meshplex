@@ -841,7 +841,7 @@ def test_show_mesh():
     mesh = meshplex.read(filename)
     print(mesh)  # test __repr__
     # mesh.plot(show_axes=False)
-    mesh.show(show_axes=False)
+    mesh.show(show_axes=False, cell_quality_coloring=("viridis", 0.0, 1.0, True))
     # mesh.save("pacman.png", show_axes=False)
     return
 
@@ -855,5 +855,5 @@ def test_show_vertex():
 
 
 if __name__ == "__main__":
-    # show_mesh()
-    test_show_vertex()
+    # test_show_vertex()
+    test_show_mesh()
