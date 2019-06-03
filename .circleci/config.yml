@@ -24,7 +24,7 @@ jobs:
   build:
     working_directory: ~/work
     docker:
-      - image: ubuntu:18.04
+      - image: ubuntu:19.04
     steps:
       - run: apt-get update
       # <https://stackoverflow.com/a/44333806/353337>
