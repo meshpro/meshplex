@@ -15,10 +15,10 @@ def compute_tri_areas(ei_dot_ej):
     )
 
 
-def compute_ce_ratios(ei_dot_ej, tri_volumes):
-    """Given triangles (specified by their edges), this routine will return the
-    triangle areas and the signed distances of the triangle circumcenters to
-    the edge midpoints.
+def compute_ce_ratios(ei_dot_ej, tri_areas):
+    """Given triangles (specified by their mutual edge projections and the area), this
+    routine will return ratio of the signed distances of the triangle circumcenters to
+    the edge midpoints and the edge lengths.
     """
     # The input argument are the dot products
     #
@@ -80,7 +80,9 @@ def compute_ce_ratios(ei_dot_ej, tri_volumes):
     #
     #   e1 + e2 + e3 = 0.
     #
-    return -ei_dot_ej * 0.25 / tri_volumes[None]
+    assert numpy.all(tri_areas > 0.0), "Degenerate cell."
+    out = -ei_dot_ej * 0.25 / tri_areas[None]
+    return out
 
 
 def compute_triangle_circumcenters(X, ei_dot_ei, ei_dot_ej):

@@ -629,6 +629,7 @@ class MeshTetra(_base_mesh):
         circumsphere_rgba=None,
         line_width=1.0,
         close=False,
+        offscreen_rendering=False,
     ):
         import vtk
 
@@ -672,7 +673,9 @@ class MeshTetra(_base_mesh):
         # Visualize
         renderer = vtk.vtkRenderer()
         render_window = vtk.vtkRenderWindow()
-        # render_window.SetOffScreenRendering(1)
+        if offscreen_rendering:
+            render_window.SetOffScreenRendering(1)
+            # render_window.ShowWindowOff()
         render_window.AddRenderer(renderer)
         render_window_interactor = vtk.vtkRenderWindowInteractor()
         render_window_interactor.SetRenderWindow(render_window)

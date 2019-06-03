@@ -939,8 +939,7 @@ class MeshTri(_base_mesh):
         if numpy.all(self.ce_ratios > 0):
             return False
 
-        # If all _interior_ coedge/edge ratios are positive, all cells are
-        # Delaunay.
+        # If all _interior_ coedge/edge ratios are positive, all cells are Delaunay.
         if self.is_boundary_edge is None:
             self.create_edges()
         self.mark_boundary()
