@@ -755,10 +755,7 @@ class MeshTetra(_base_mesh):
 
                     # mapper
                     mapper = vtk.vtkPolyDataMapper()
-                    if vtk.VTK_MAJOR_VERSION <= 5:
-                        mapper.SetInput(trianglePolyData)
-                    else:
-                        mapper.SetInputData(trianglePolyData)
+                    mapper.SetInputData(trianglePolyData)
 
                     # actor
                     actor = vtk.vtkActor()
