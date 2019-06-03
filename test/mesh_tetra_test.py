@@ -522,7 +522,7 @@ def test_show_cell():
         control_volume_boundaries_rgba=(1.0, 0.0, 0.0, 1.0),
         line_width=3.0,
         close=True,
-        offscreen_rendering=True,
+        render=False,
     )
     return
 
