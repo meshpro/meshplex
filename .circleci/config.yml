@@ -28,7 +28,7 @@ jobs:
     steps:
       - run: apt-get update
       # install vtk8
-      - run: apt-get install software-properties-common
+      - run: apt-get install -y software-properties-common
       - run: add-apt-repository -y ppa:nschloe/vtk8
       # <https://stackoverflow.com/a/44333806/353337>
       - run: DEBIAN_FRONTEND=noninteractive apt install tzdata
