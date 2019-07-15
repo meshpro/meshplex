@@ -260,11 +260,19 @@ class MeshTri(_base_mesh):
             )
             # add it all up
             n = len(self.node_coords)
-            self._cv_centroids = numpy.array([
-                numpy.bincount(ids.reshape(-1), vals[..., 0].reshape(-1), minlength=n),
-                numpy.bincount(ids.reshape(-1), vals[..., 1].reshape(-1), minlength=n),
-                numpy.bincount(ids.reshape(-1), vals[..., 2].reshape(-1), minlength=n),
-            ]).T
+            self._cv_centroids = numpy.array(
+                [
+                    numpy.bincount(
+                        ids.reshape(-1), vals[..., 0].reshape(-1), minlength=n
+                    ),
+                    numpy.bincount(
+                        ids.reshape(-1), vals[..., 1].reshape(-1), minlength=n
+                    ),
+                    numpy.bincount(
+                        ids.reshape(-1), vals[..., 2].reshape(-1), minlength=n
+                    ),
+                ]
+            ).T
             # Divide by the control volume
             self._cv_centroids /= self.control_volumes[:, None]
 
