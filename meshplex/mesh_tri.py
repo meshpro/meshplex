@@ -1,7 +1,6 @@
 import os
 
 import numpy
-import fastfunc
 
 from .base import (
     _base_mesh,
@@ -188,8 +187,17 @@ class MeshTri(_base_mesh):
             if "edges" not in self.cells:
                 self.create_edges()
 
-            self._ce_ratios = numpy.zeros(len(self.edges["nodes"]))
-            fastfunc.add.at(self._ce_ratios, self.cells["edges"].T, self.ce_ratios)
+            n = self.edges["nodes"].shape[0]
+            self._ce_ratios = numpy.sum(
+                [
+                    numpy.bincount(
+                        self.cells["edges"][k], self.ce_ratios[:, k], minlength=n
+                    )
+                    for k in range(self.ce_ratios.shape[1])
+                ],
+                axis=0,
+            )
+
             self._interior_ce_ratios = self._ce_ratios[
                 ~self.is_boundary_edge_individual
             ]
@@ -389,12 +397,7 @@ class MeshTri(_base_mesh):
 
         num_edges = len(self.edges["nodes"])
 
-        counts = numpy.zeros(num_edges, dtype=int)
-        fastfunc.add.at(
-            counts,
-            self.cells["edges"],
-            numpy.ones(self.cells["edges"].shape, dtype=int),
-        )
+        count = numpy.bincount(self.cells["edges"].reshape(-1), minlength=num_edges)
 
         # <https://stackoverflow.com/a/50395231/353337>
         edges_flat = self.cells["edges"].flat
