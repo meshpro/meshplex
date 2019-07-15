@@ -60,7 +60,7 @@ def test_unit_triangle():
     mesh.get_vertex_mask()
 
     # dummy subdomain marker test
-    class Subdomain(object):
+    class Subdomain:
         is_boundary_only = False
 
         def is_inside(self, X):
