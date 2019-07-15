@@ -218,28 +218,15 @@ class MeshTri(_base_mesh):
         """The control volumes around each vertex.
         """
         if self._control_volumes is None:
+            # Summing up the arrays first makes the work on bincount a bit lighter.
             v = self.cell_partitions
-
-            # Summing up the arrays first makes the work for numpy.add.at
-            # lighter.
-            ids = self.cells["nodes"].T
-            vals = numpy.array(
-                [
-                    sum([v[i] for i in numpy.where(self.local_idx.T == k)[0]])
-                    for k in range(3)
-                ]
+            vals = numpy.array([v[1] + v[2], v[2] + v[0], v[0] + v[1]])
+            # sum all the vals into self._control_volumes at ids
+            self._control_volumes = numpy.bincount(
+                self.cells["nodes"].T.reshape(-1),
+                weights=vals.reshape(-1),
+                minlength=len(self.node_coords),
             )
-            control_volume_data = [(ids, vals)]
-
-            # sum up from self.control_volume_data
-            self._control_volumes = numpy.zeros(len(self.node_coords))
-            for d in control_volume_data:
-                # sum all the d[1] into self._control_volumes at d[0]
-                self._control_volumes += numpy.bincount(
-                    d[0].reshape(-1),
-                    weights=d[1].reshape(-1),
-                    minlength=len(self.node_coords),
-                )
 
         return self._control_volumes
 
@@ -265,9 +252,8 @@ class MeshTri(_base_mesh):
         """
         if self._cv_centroids is None:
             _, v = self._compute_integral_x()
-            # Again, make use of the fact that edge k is opposite of node k in
-            # every cell. Adding the arrays first makes the work for
-            # numpy.add.at lighter.
+            # Again, make use of the fact that edge k is opposite of node k in every
+            # cell. Adding the arrays first makes the work for numpy.add.at lighter.
             ids = self.cells["nodes"].T
             vals = numpy.array(
                 [v[1, 1] + v[0, 2], v[1, 2] + v[0, 0], v[1, 0] + v[0, 1]]
@@ -279,6 +265,13 @@ class MeshTri(_base_mesh):
             for d in centroid_data:
                 # TODO fastfunc
                 numpy.add.at(self._cv_centroids, d[0], d[1])
+                # self._cv_centroids
+                # self._cv_volumes += numpy.bincount(
+                #     d[0].reshape(-1),
+                #     weights=d[1].reshape(-1),
+                #     minlength=len(self.node_coords),
+                # )
+                # exit(1)
             # Divide by the control volume
             self._cv_centroids /= self.control_volumes[:, None]
 
@@ -453,8 +446,10 @@ class MeshTri(_base_mesh):
         """
         if self._cell_partitions is None:
             # Compute the control volumes. Note that
+            #
             #   0.5 * (0.5 * edge_length) * covolume
             # = 0.25 * edge_length**2 * ce_ratio_edge_ratio
+            #
             self._cell_partitions = 0.25 * self.ei_dot_ei * self.ce_ratios
         return self._cell_partitions
 
