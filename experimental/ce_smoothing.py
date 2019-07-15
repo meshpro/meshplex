@@ -6,8 +6,9 @@
 # the iteration trapped in a point away from the minimum.  Lloyd's smoothing is
 # clearly superior.
 #
-import meshio
 import numpy
+
+import meshio
 import meshplex
 
 

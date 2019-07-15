@@ -1,8 +1,8 @@
-import shutil
-
 import hashlib
 import os
+import shutil
 from math import fsum
+
 import numpy
 import requests
 

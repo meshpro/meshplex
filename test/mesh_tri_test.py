@@ -3,11 +3,10 @@ import tempfile
 
 import numpy
 import pytest
+
 import meshio
-
 import meshplex
-
-from helpers import download_mesh, near_equal, run, compute_polygon_area
+from helpers import compute_polygon_area, download_mesh, near_equal, run
 
 
 def test_unit_triangle():

@@ -1,5 +1,6 @@
 import numpy
-from .base import _base_mesh, compute_triangle_circumcenters, compute_tri_areas
+
+from .base import _base_mesh, compute_tri_areas, compute_triangle_circumcenters
 
 __all__ = ["MeshTetra"]
 

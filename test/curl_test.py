@@ -1,6 +1,6 @@
 import numpy
-import meshplex
 
+import meshplex
 from helpers import download_mesh
 
 

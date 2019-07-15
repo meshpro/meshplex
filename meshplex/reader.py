@@ -7,9 +7,9 @@ formats.
 import numpy
 
 import meshio
-from .mesh_tri import MeshTri
-from .mesh_tetra import MeshTetra
 
+from .mesh_tetra import MeshTetra
+from .mesh_tri import MeshTri
 
 __all__ = ["read"]
 

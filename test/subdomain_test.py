@@ -1,6 +1,6 @@
 # pylint: disable=too-few-public-methods
-from helpers import download_mesh
 import meshplex
+from helpers import download_mesh
 
 
 def test_get_edges():
