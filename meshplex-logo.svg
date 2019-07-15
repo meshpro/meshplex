@@ -11,10 +11,10 @@
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    height="237.39767pt"
    version="1.1"
-   viewBox="0 0 237.39768 237.39767"
-   width="237.39767pt"
+   viewBox="0 0 804.28963 237.39767"
+   width="804.28961pt"
    id="svg40"
-   sodipodi:docname="logo.svg"
+   sodipodi:docname="meshplex-logo.svg"
    inkscape:version="0.92.4 (5da689c313, 2019-01-14)">
   <metadata
      id="metadata44">
@@ -45,9 +45,9 @@
      fit-margin-left="0"
      fit-margin-right="0"
      fit-margin-bottom="0"
-     inkscape:zoom="1.4485868"
-     inkscape:cx="212.63948"
-     inkscape:cy="166.78333"
+     inkscape:zoom="0.7242934"
+     inkscape:cx="432.79842"
+     inkscape:cy="146.07306"
      inkscape:window-x="0"
      inkscape:window-y="34"
      inkscape:window-maximized="1"
@@ -148,6 +148,44 @@
            id="path30"
            inkscape:connector-curvature="0" />
       </g>
+    </g>
+    <g
+       aria-label="meshplex"
+       transform="matrix(0.74999998,0,0,0.74999998,117.46116,90.99101)"
+       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:12.75px;line-height:0%;font-family:Baskerville;-inkscape-font-specification:'Baskerville Bold';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       id="flowRoot833">
+      <path
+         d="m 471.11117,90.955078 c 0,-18.72 -12.96,-28.48 -29.6,-28.48 -13.6,0 -19.84,9.44 -22.72,13.6 -5.76,-9.12 -11.36,-13.6 -23.68,-13.6 -15.04,0 -21.28,9.12 -24.16,14.72 h -0.32 v -12.48 h -21.44 v 85.120002 h 22.4 V 97.995078 c 0,-9.28 3.36,-16.64 13.92,-16.64 13.44,0 13.44,10.08 13.44,17.28 v 51.200002 h 22.4 V 98.795078 c 0,-10.08 4,-17.44 15.2,-17.44 6.56,0 12.16,4.16 12.16,16.8 v 51.680002 h 22.4 z"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:160px;font-family:'Helvetica LT Std';-inkscape-font-specification:'Helvetica LT Std Bold';stroke-linecap:butt;stroke-linejoin:round"
+         id="path841" />
+      <path
+         d="m 541.61867,124.87508 c -1.76,6.08 -8.16,9.28 -14.4,9.28 -18.08,0 -19.36,-14.4 -20,-20.8 h 58.4 v -4 c 0,-38.880002 -23.2,-46.880002 -40,-46.880002 -37.28,0 -40.8,32.8 -40.8,43.040002 0,35.04 18.4,46.56 42.4,46.56 14.56,0 31.52,-6.72 37.44,-27.2 z m -33.76,-26.080002 c 1.28,-11.2 6.88,-17.92 17.44,-17.92 7.2,0 16,4.16 17.28,17.92 z"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:160px;font-family:'Helvetica LT Std';-inkscape-font-specification:'Helvetica LT Std Bold';stroke-linecap:butt;stroke-linejoin:round"
+         id="path843" />
+      <path
+         d="m 650.68117,90.635078 c -1.76,-24 -21.6,-28.16 -38.24,-28.16 -26.56,0 -34.4,16 -34.4,28.48 0,31.840002 52.8,21.120002 52.8,35.360002 0,3.2 -2.72,8.8 -14.24,8.8 -14.08,0 -18.56,-5.28 -18.56,-12.48 h -23.04 c 0.64,22.72 21.6,29.44 40.96,29.44 13.28,0 37.28,-4.48 37.28,-29.28 0,-31.360002 -53.28,-21.6 -53.28,-35.040002 0,-3.68 1.6,-8.32 13.76,-8.32 12.16,0 14.08,5.76 15.04,11.2 z"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:160px;font-family:'Helvetica LT Std';-inkscape-font-specification:'Helvetica LT Std Bold';stroke-linecap:butt;stroke-linejoin:round"
+         id="path845" />
+      <path
+         d="m 746.62367,90.955078 c 0,-18.72 -12.96,-28.48 -29.6,-28.48 -12.16,0 -21.76,6.24 -24.64,13.28 h -0.32 v -40.8 h -22.4 V 149.83508 h 22.4 v -48.8 c 0,-12.960002 7.68,-19.680002 17.6,-19.680002 14.24,0 14.56,10.56 14.56,16.8 v 51.680002 h 22.4 z"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:160px;font-family:'Helvetica LT Std';-inkscape-font-specification:'Helvetica LT Std Bold';stroke-linecap:butt;stroke-linejoin:round"
+         id="path847" />
+      <path
+         d="m 788.43617,109.19508 c 0,-13.600002 3.68,-27.360002 19.04,-27.360002 14.24,0 19.04,12.64 19.04,26.080002 0,10.08 -4,25.76 -18.4,25.76 -14.24,0 -19.68,-11.84 -19.68,-24.48 z m 0,-44.480002 h -21.44 V 182.95508 h 22.4 v -44 h 0.32 c 2.72,4.64 8.32,13.12 24,13.12 25.28,0 35.84,-22.4 35.84,-45.76 0,-29.440002 -16.64,-43.840002 -35.36,-43.840002 -15.04,0 -21.28,7.84 -25.44,14.56 h -0.32 z"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:160px;font-family:'Helvetica LT Std';-inkscape-font-specification:'Helvetica LT Std Bold';stroke-linecap:butt;stroke-linejoin:round"
+         id="path849" />
+      <path
+         d="m 888.32867,34.955078 h -22.4 V 149.83508 h 22.4 z"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:160px;font-family:'Helvetica LT Std';-inkscape-font-specification:'Helvetica LT Std Bold';stroke-linecap:butt;stroke-linejoin:round"
+         id="path851" />
+      <path
+         d="m 959.74367,124.87508 c -1.76,6.08 -8.16,9.28 -14.4,9.28 -18.08,0 -19.36,-14.4 -20,-20.8 h 58.4 v -4 c 0,-38.880002 -23.2,-46.880002 -40,-46.880002 -37.28,0 -40.8,32.8 -40.8,43.040002 0,35.04 18.4,46.56 42.4,46.56 14.56,0 31.52,-6.72 37.44,-27.2 z m -33.76,-26.080002 c 1.28,-11.2 6.88,-17.92 17.44,-17.92 7.2,0 16,4.16 17.28,17.92 z"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:160px;font-family:'Helvetica LT Std';-inkscape-font-specification:'Helvetica LT Std Bold';stroke-linecap:butt;stroke-linejoin:round"
+         id="path853" />
+      <path
+         d="m 1043.4262,106.47508 28,-41.760002 h -26.4 l -14.08,24.8 -14.4,-24.8 h -27.20003 l 27.84003,41.760002 -28.96003,43.36 h 27.04003 l 14.72,-25.6 14.72,25.6 h 27.68 z"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:160px;font-family:'Helvetica LT Std';-inkscape-font-specification:'Helvetica LT Std Bold';stroke-linecap:butt;stroke-linejoin:round"
+         id="path855" />
     </g>
   </g>
   <defs
