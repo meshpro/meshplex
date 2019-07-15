@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-#
 from math import fsum
 import numpy
 import pytest

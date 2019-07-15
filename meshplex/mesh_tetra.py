@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-#
 import numpy
 from .base import _base_mesh, compute_triangle_circumcenters, compute_tri_areas
 

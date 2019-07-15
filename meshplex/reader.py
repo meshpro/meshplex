@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-#
 """
 Module for reading unstructured grids (and related data) from various file
 formats.

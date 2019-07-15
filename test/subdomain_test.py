@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-#
 # pylint: disable=too-few-public-methods
 from helpers import download_mesh
 import meshplex
