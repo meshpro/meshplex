@@ -21,7 +21,7 @@ class MeshTri(_base_mesh):
         """Initialization.
         """
         if sort_cells:
-            # Sort cells and nodes, first every row, then the rows themselves.  This
+            # Sort cells and nodes, first every row, then the rows themselves. This
             # helps in many downstream applications, e.g., when constructing linear
             # systems with the cells/edges. (When converting to CSR format, the I/J
             # entries must be sorted.) Don't use cells.sort(axis=1) to avoid
@@ -187,14 +187,10 @@ class MeshTri(_base_mesh):
                 self.create_edges()
 
             n = self.edges["nodes"].shape[0]
-            self._ce_ratios = numpy.sum(
-                [
-                    numpy.bincount(
-                        self.cells["edges"][k], self.ce_ratios[:, k], minlength=n
-                    )
-                    for k in range(self.ce_ratios.shape[1])
-                ],
-                axis=0,
+            self._ce_ratios = numpy.bincount(
+                self.cells["edges"].reshape(-1),
+                self.ce_ratios.T.reshape(-1),
+                minlength=n,
             )
 
             self._interior_ce_ratios = self._ce_ratios[
@@ -238,8 +234,12 @@ class MeshTri(_base_mesh):
             # sum up from self.control_volume_data
             self._control_volumes = numpy.zeros(len(self.node_coords))
             for d in control_volume_data:
-                # TODO fastfunc
-                numpy.add.at(self._control_volumes, d[0], d[1])
+                # sum all the d[1] into self._control_volumes at d[0]
+                self._control_volumes += numpy.bincount(
+                    d[0].reshape(-1),
+                    weights=d[1].reshape(-1),
+                    minlength=len(self.node_coords),
+                )
 
         return self._control_volumes
 
