@@ -1,7 +1,7 @@
-# -*- coding: utf-8 -*-
-import numpy
-import meshplex
 import matplotlib.pyplot as plt
+import numpy
+
+import meshplex
 
 
 def _main():
@@ -30,7 +30,10 @@ def _main():
     for i, j in [[0, 1], [1, 2], [2, 0]]:
         m1 = (points[i] + points[j]) / 2
         v1 = m1 - mesh.cell_circumcenters[0]
-        e1 = mesh.cell_circumcenters[0] + v1 / numpy.linalg.norm(v1) * mesh.circumradius[0]
+        e1 = (
+            mesh.cell_circumcenters[0]
+            + v1 / numpy.linalg.norm(v1) * mesh.circumradius[0]
+        )
         plt.plot(
             [mesh.cell_circumcenters[0, 0], e1[0]],
             [mesh.cell_circumcenters[0, 1], e1[1]],
@@ -44,11 +47,7 @@ def _main():
         v1 = p[j] / numpy.linalg.norm(p[j])
         m1 = points[i] + numpy.dot(p[k], v1) * v1
         plt.plot(
-            [points[k, 0], m1[0]],
-            [points[k, 1], m1[1]],
-            col,
-            linewidth=lw,
-            color=col,
+            [points[k, 0], m1[0]], [points[k, 1], m1[1]], col, linewidth=lw, color=col
         )
 
     # # incircle

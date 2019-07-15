@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
-#
 import numpy
 
 
-class MeshLine(object):
+class MeshLine:
     """Class for handling line segment "meshes".
     """
 

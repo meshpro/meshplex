@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
-#
 import tempfile
 
-import meshzoo
 import meshplex
+import meshzoo
 
 
 def test_io_2d():

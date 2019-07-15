@@ -1,15 +1,12 @@
-# -*- coding: utf-8 -*-
-#
 import os
 import tempfile
 
 import numpy
 import pytest
+
 import meshio
-
 import meshplex
-
-from helpers import download_mesh, near_equal, run, compute_polygon_area
+from helpers import compute_polygon_area, download_mesh, near_equal, run
 
 
 def test_unit_triangle():
@@ -62,7 +59,7 @@ def test_unit_triangle():
     mesh.get_vertex_mask()
 
     # dummy subdomain marker test
-    class Subdomain(object):
+    class Subdomain:
         is_boundary_only = False
 
         def is_inside(self, X):

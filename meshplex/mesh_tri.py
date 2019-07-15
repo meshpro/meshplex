@@ -1,18 +1,14 @@
-# -*- coding: utf-8 -*-
-#
 import os
 
 import numpy
-import fastfunc
 
 from .base import (
     _base_mesh,
-    compute_tri_areas,
     compute_ce_ratios,
+    compute_tri_areas,
     compute_triangle_circumcenters,
 )
 from .helpers import grp_start_len, unique_rows
-
 
 __all__ = ["MeshTri"]
 
@@ -25,7 +21,7 @@ class MeshTri(_base_mesh):
         """Initialization.
         """
         if sort_cells:
-            # Sort cells and nodes, first every row, then the rows themselves.  This
+            # Sort cells and nodes, first every row, then the rows themselves. This
             # helps in many downstream applications, e.g., when constructing linear
             # systems with the cells/edges. (When converting to CSR format, the I/J
             # entries must be sorted.) Don't use cells.sort(axis=1) to avoid
@@ -190,8 +186,13 @@ class MeshTri(_base_mesh):
             if "edges" not in self.cells:
                 self.create_edges()
 
-            self._ce_ratios = numpy.zeros(len(self.edges["nodes"]))
-            fastfunc.add.at(self._ce_ratios, self.cells["edges"].T, self.ce_ratios)
+            n = self.edges["nodes"].shape[0]
+            self._ce_ratios = numpy.bincount(
+                self.cells["edges"].reshape(-1),
+                self.ce_ratios.T.reshape(-1),
+                minlength=n,
+            )
+
             self._interior_ce_ratios = self._ce_ratios[
                 ~self.is_boundary_edge_individual
             ]
@@ -217,24 +218,15 @@ class MeshTri(_base_mesh):
         """The control volumes around each vertex.
         """
         if self._control_volumes is None:
+            # Summing up the arrays first makes the work on bincount a bit lighter.
             v = self.cell_partitions
-
-            # Summing up the arrays first makes the work for numpy.add.at
-            # lighter.
-            ids = self.cells["nodes"].T
-            vals = numpy.array(
-                [
-                    sum([v[i] for i in numpy.where(self.local_idx.T == k)[0]])
-                    for k in range(3)
-                ]
+            vals = numpy.array([v[1] + v[2], v[2] + v[0], v[0] + v[1]])
+            # sum all the vals into self._control_volumes at ids
+            self._control_volumes = numpy.bincount(
+                self.cells["nodes"].T.reshape(-1),
+                weights=vals.reshape(-1),
+                minlength=len(self.node_coords),
             )
-            control_volume_data = [(ids, vals)]
-
-            # sum up from self.control_volume_data
-            self._control_volumes = numpy.zeros(len(self.node_coords))
-            for d in control_volume_data:
-                # TODO fastfunc
-                numpy.add.at(self._control_volumes, d[0], d[1])
 
         return self._control_volumes
 
@@ -260,20 +252,27 @@ class MeshTri(_base_mesh):
         """
         if self._cv_centroids is None:
             _, v = self._compute_integral_x()
-            # Again, make use of the fact that edge k is opposite of node k in
-            # every cell. Adding the arrays first makes the work for
-            # numpy.add.at lighter.
+            # Again, make use of the fact that edge k is opposite of node k in every
+            # cell. Adding the arrays first makes the work for bincount lighter.
             ids = self.cells["nodes"].T
             vals = numpy.array(
                 [v[1, 1] + v[0, 2], v[1, 2] + v[0, 0], v[1, 0] + v[0, 1]]
             )
-            centroid_data = [(ids, vals)]
             # add it all up
-            num_components = centroid_data[0][1].shape[-1]
-            self._cv_centroids = numpy.zeros((len(self.node_coords), num_components))
-            for d in centroid_data:
-                # TODO fastfunc
-                numpy.add.at(self._cv_centroids, d[0], d[1])
+            n = len(self.node_coords)
+            self._cv_centroids = numpy.array(
+                [
+                    numpy.bincount(
+                        ids.reshape(-1), vals[..., 0].reshape(-1), minlength=n
+                    ),
+                    numpy.bincount(
+                        ids.reshape(-1), vals[..., 1].reshape(-1), minlength=n
+                    ),
+                    numpy.bincount(
+                        ids.reshape(-1), vals[..., 2].reshape(-1), minlength=n
+                    ),
+                ]
+            ).T
             # Divide by the control volume
             self._cv_centroids /= self.control_volumes[:, None]
 
@@ -391,12 +390,7 @@ class MeshTri(_base_mesh):
 
         num_edges = len(self.edges["nodes"])
 
-        counts = numpy.zeros(num_edges, dtype=int)
-        fastfunc.add.at(
-            counts,
-            self.cells["edges"],
-            numpy.ones(self.cells["edges"].shape, dtype=int),
-        )
+        count = numpy.bincount(self.cells["edges"].reshape(-1), minlength=num_edges)
 
         # <https://stackoverflow.com/a/50395231/353337>
         edges_flat = self.cells["edges"].flat
@@ -453,8 +447,10 @@ class MeshTri(_base_mesh):
         """
         if self._cell_partitions is None:
             # Compute the control volumes. Note that
+            #
             #   0.5 * (0.5 * edge_length) * covolume
             # = 0.25 * edge_length**2 * ce_ratio_edge_ratio
+            #
             self._cell_partitions = 0.25 * self.ei_dot_ei * self.ce_ratios
         return self._cell_partitions
 

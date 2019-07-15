@@ -1,7 +1,6 @@
-# -*- coding: utf-8 -*-
-#
 import numpy
-from .base import _base_mesh, compute_triangle_circumcenters, compute_tri_areas
+
+from .base import _base_mesh, compute_tri_areas, compute_triangle_circumcenters
 
 __all__ = ["MeshTetra"]
 
@@ -467,10 +466,9 @@ class MeshTetra(_base_mesh):
             #   1/3. * (0.5 * edge_length) * covolume
             # = 1/6 * edge_length**2 * ce_ratio_edge_ratio
             v = self.ei_dot_ei * self.ce_ratios / 6.0
-            # Explicitly sum up contributions per cell first. Makes
-            # numpy.add.at faster.
-            # For every node k (range(4)), check for which edges k appears in
-            # local_idx, and sum() up the v's from there.
+            # Explicitly sum up contributions per cell first. Makes numpy.add.at faster.
+            # For every node k (range(4)), check for which edges k appears in local_idx,
+            # and sum() up the v's from there.
             idx = self.local_idx
             vals = numpy.array(
                 [
@@ -480,6 +478,7 @@ class MeshTetra(_base_mesh):
             ).T
             #
             self._control_volumes = numpy.zeros(len(self.node_coords))
+            # TODO bincount
             numpy.add.at(self._control_volumes, self.cells["nodes"], vals)
         return self._control_volumes
 
@@ -496,6 +495,7 @@ class MeshTetra(_base_mesh):
         if "faces" not in self.cells:
             self.create_cell_face_relationships()
 
+        # TODO bincount
         sums = numpy.zeros(len(self.faces["nodes"]))
         numpy.add.at(sums, self.cells["faces"].T, self.circumcenter_face_distances)
 

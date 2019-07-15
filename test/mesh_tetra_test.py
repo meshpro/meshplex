@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
-#
 from math import fsum
+
 import numpy
 import pytest
-import meshplex
 
+import meshplex
 from helpers import download_mesh, near_equal, run
 
 

@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
-#
 # pylint: disable=too-few-public-methods
-from helpers import download_mesh
 import meshplex
+from helpers import download_mesh
 
 
 def test_get_edges():
@@ -19,14 +17,14 @@ def test_mark_subdomain2d():
     filename = download_mesh("pacman.vtk", "c621cb22f8b87cecd77724c2c0601c36")
     mesh = meshplex.read(filename)
 
-    class Subdomain1(object):
+    class Subdomain1:
         is_boundary_only = True
 
         # pylint: disable=no-self-use
         def is_inside(self, x):
             return x[0] < 0.0
 
-    class Subdomain2(object):
+    class Subdomain2:
         is_boundary_only = False
 
         # pylint: disable=no-self-use
@@ -55,14 +53,14 @@ def test_mark_subdomain3d():
     filename = download_mesh("tetrahedron.vtk", "10f3ccd1642b634b22741894fe6e7f1f")
     mesh = meshplex.read(filename)
 
-    class Subdomain1(object):
+    class Subdomain1:
         is_boundary_only = True
 
         # pylint: disable=no-self-use
         def is_inside(self, x):
             return x[0] < 0.5
 
-    class Subdomain2(object):
+    class Subdomain2:
         is_boundary_only = False
 
         # pylint: disable=no-self-use

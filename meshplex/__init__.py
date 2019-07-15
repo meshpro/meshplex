@@ -1,14 +1,8 @@
-# -*- coding: utf-8 -*-
-#
-from __future__ import print_function
-
-from .__about__ import __version__, __author__, __author_email__
-
-from .mesh_line import MeshLine
-from .mesh_tri import MeshTri
-from .mesh_tetra import MeshTetra
-
+from .__about__ import __author__, __author_email__, __version__
 from .helpers import get_signed_simplex_volumes
+from .mesh_line import MeshLine
+from .mesh_tetra import MeshTetra
+from .mesh_tri import MeshTri
 from .reader import read
 
 __all__ = [
@@ -21,11 +15,3 @@ __all__ = [
     "read",
     "get_signed_simplex_volumes",
 ]
-
-try:
-    import pipdate
-except ImportError:
-    pass
-else:
-    if pipdate.needs_checking(__name__):
-        print(pipdate.check(__name__, __version__), end="")

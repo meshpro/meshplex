@@ -1,12 +1,8 @@
-# -*- coding: utf-8 -*-
-#
-from __future__ import print_function
-
-import shutil
-
 import hashlib
 import os
+import shutil
 from math import fsum
+
 import numpy
 import requests
 
