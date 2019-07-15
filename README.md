@@ -1,4 +1,7 @@
-# meshplex
+<p align="center">
+  <a href="https://github.com/nschloe/meshplex"><img alt="meshplex" src="https://nschloe.github.io/meshplex/meshplex-logo.svg" width="60%"></a>
+  <p align="center">Fast tools for simplex meshes.</p>
+</p>
 
 [![CircleCI](https://img.shields.io/circleci/project/github/nschloe/meshplex/master.svg)](https://circleci.com/gh/nschloe/meshplex/tree/master)
 [![codecov](https://img.shields.io/codecov/c/github/nschloe/meshplex.svg)](https://codecov.io/gh/nschloe/meshplex)
@@ -6,10 +9,6 @@
 [![Documentation Status](https://readthedocs.org/projects/meshplex/badge/?version=latest)](https://readthedocs.org/projects/meshplex/?badge=latest)
 [![PyPi Version](https://img.shields.io/pypi/v/meshplex.svg)](https://pypi.org/project/meshplex)
 [![GitHub stars](https://img.shields.io/github/stars/nschloe/meshplex.svg?logo=github&label=Stars&logoColor=white)](https://github.com/nschloe/meshplex)
-
-<p align="center">
-  <img src="https://nschloe.github.io/meshplex/meshplex-logo.svg" width="20%">
-</p>
 
 Compute all sorts of interesting points, areas, and volumes in triangular and
 tetrahedral meshes, with a focus on efficiency. Useful in many contexts, e.g.,
