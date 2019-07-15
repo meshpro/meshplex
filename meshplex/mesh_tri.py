@@ -253,25 +253,18 @@ class MeshTri(_base_mesh):
         if self._cv_centroids is None:
             _, v = self._compute_integral_x()
             # Again, make use of the fact that edge k is opposite of node k in every
-            # cell. Adding the arrays first makes the work for numpy.add.at lighter.
+            # cell. Adding the arrays first makes the work for bincount lighter.
             ids = self.cells["nodes"].T
             vals = numpy.array(
                 [v[1, 1] + v[0, 2], v[1, 2] + v[0, 0], v[1, 0] + v[0, 1]]
             )
-            centroid_data = [(ids, vals)]
             # add it all up
-            num_components = centroid_data[0][1].shape[-1]
-            self._cv_centroids = numpy.zeros((len(self.node_coords), num_components))
-            for d in centroid_data:
-                # TODO fastfunc
-                numpy.add.at(self._cv_centroids, d[0], d[1])
-                # self._cv_centroids
-                # self._cv_volumes += numpy.bincount(
-                #     d[0].reshape(-1),
-                #     weights=d[1].reshape(-1),
-                #     minlength=len(self.node_coords),
-                # )
-                # exit(1)
+            n = len(self.node_coords)
+            self._cv_centroids = numpy.array([
+                numpy.bincount(ids.reshape(-1), vals[..., 0].reshape(-1), minlength=n),
+                numpy.bincount(ids.reshape(-1), vals[..., 1].reshape(-1), minlength=n),
+                numpy.bincount(ids.reshape(-1), vals[..., 2].reshape(-1), minlength=n),
+            ]).T
             # Divide by the control volume
             self._cv_centroids /= self.control_volumes[:, None]
 
