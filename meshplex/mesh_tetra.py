@@ -469,25 +469,29 @@ class MeshTetra(_base_mesh):
             # Explicitly sum up contributions per cell first. Makes numpy.add.at faster.
             # For every node k (range(4)), check for which edges k appears in local_idx,
             # and sum() up the v's from there.
-            idx = self.local_idx
             vals = numpy.array(
                 [
-                    sum([v[i, j] for i, j in zip(*numpy.where(idx == k)[1:])])
-                    for k in range(4)
+                    v[0, 2] + v[1, 1] + v[2, 3] + v[0, 1] + v[1, 3] + v[2, 2],
+                    v[0, 3] + v[1, 2] + v[2, 0] + v[0, 2] + v[1, 0] + v[2, 3],
+                    v[0, 0] + v[1, 3] + v[2, 1] + v[0, 3] + v[1, 1] + v[2, 0],
+                    v[0, 1] + v[1, 0] + v[2, 2] + v[0, 0] + v[1, 2] + v[2, 1],
                 ]
             ).T
             #
-            self._control_volumes = numpy.zeros(len(self.node_coords))
-            # TODO bincount
-            numpy.add.at(self._control_volumes, self.cells["nodes"], vals)
+            self._control_volumes = numpy.bincount(
+                self.cells["nodes"].reshape(-1),
+                vals.reshape(-1),
+                minlength=len(self.node_coords),
+            )
+
         return self._control_volumes
 
     def num_delaunay_violations(self):
         """
         """
-        # Delaunay violations are present exactly on the interior faces where
-        # the sum of the signed distances between face circumcenter and
-        # tetrahedron circumcenter is negative.
+        # Delaunay violations are present exactly on the interior faces where the sum of
+        # the signed distances between face circumcenter and tetrahedron circumcenter is
+        # negative.
         if self.circumcenter_face_distances is None:
             self._compute_ce_ratios_geometric()
             # self._compute_ce_ratios_algebraic()
@@ -495,9 +499,10 @@ class MeshTetra(_base_mesh):
         if "faces" not in self.cells:
             self.create_cell_face_relationships()
 
-        # TODO bincount
-        sums = numpy.zeros(len(self.faces["nodes"]))
-        numpy.add.at(sums, self.cells["faces"].T, self.circumcenter_face_distances)
+        sums = numpy.bincount(
+            self.cells["faces"].T.reshape(-1),
+            self.circumcenter_face_distances.reshape(-1),
+        )
 
         return numpy.sum(sums < 0.0)
 
