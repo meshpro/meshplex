@@ -101,6 +101,8 @@ class MeshTri(_base_mesh):
             - self.node_coords[self.idx_hierarchy[0]]
         )
 
+        # einsum is faster if the tail survives, e.g., ijk,ijk->jk.
+        # TODO reorganize the data
         self.ei_dot_ej = numpy.einsum(
             "ijk, ijk->ij",
             self.half_edge_coords[[1, 2, 0]],
