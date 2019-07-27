@@ -55,6 +55,7 @@ class MeshTri(_base_mesh):
 
         self._interior_ce_ratios = None
         self._control_volumes = None
+        self._cv_cell_mask = None
         self._cell_partitions = None
         self._cv_centroids = None
         self._surface_areas = None
@@ -175,6 +176,7 @@ class MeshTri(_base_mesh):
         self._control_volumes = None
         self._cell_partitions = None
         self._cv_centroids = None
+        self._cvc_cell_mask = None
         self._surface_areas = None
         self._signed_cell_areas = None
         self._cell_centroids = None
@@ -215,22 +217,33 @@ class MeshTri(_base_mesh):
 
         return self._interior_ce_ratios
 
+    def get_control_volumes(self, cell_mask=None):
+        """The control volumes around each vertex. Optionally disregard the
+        contributions from particular cells. This is useful, for example, for
+        temporarily disregarding flat cells on the boundary when performing Lloyd mesh
+        optimization.
+        """
+        if cell_mask is None:
+            cell_mask = numpy.zeros(self.cell_partitions.shape[1], dtype=bool)
+
+        if self._control_volumes is None or numpy.any(cell_mask != self._cv_cell_mask):
+            # Summing up the arrays first makes the work on bincount a bit lighter.
+            v = self.cell_partitions[:, ~cell_mask]
+            vals = numpy.array([v[1] + v[2], v[2] + v[0], v[0] + v[1]])
+            # sum all the vals into self._control_volumes at ids
+            self._control_volumes = numpy.bincount(
+                self.cells["nodes"][~cell_mask].T.reshape(-1),
+                weights=vals.reshape(-1),
+                minlength=len(self.node_coords),
+            )
+            self._cv_cell_mask = cell_mask
+        return self._control_volumes
+
     @property
     def control_volumes(self):
         """The control volumes around each vertex.
         """
-        if self._control_volumes is None:
-            # Summing up the arrays first makes the work on bincount a bit lighter.
-            v = self.cell_partitions
-            vals = numpy.array([v[1] + v[2], v[2] + v[0], v[0] + v[1]])
-            # sum all the vals into self._control_volumes at ids
-            self._control_volumes = numpy.bincount(
-                self.cells["nodes"].T.reshape(-1),
-                weights=vals.reshape(-1),
-                minlength=len(self.node_coords),
-            )
-
-        return self._control_volumes
+        return self.get_control_volumes()
 
     @property
     def surface_areas(self):
@@ -240,8 +253,7 @@ class MeshTri(_base_mesh):
             self._surface_areas = self._compute_surface_areas()
         return self._surface_areas
 
-    @property
-    def control_volume_centroids(self):
+    def get_control_volume_centroids(self, cell_mask=None):
         """
         The centroid of any volume V is given by
 
@@ -251,12 +263,21 @@ class MeshTri(_base_mesh):
         The denominator is the control volume. The numerator can be computed by making
         use of the fact that the control volume around any vertex is composed of right
         triangles, two for each adjacent cell.
+
+        Optionally disregard the contributions from particular cells. This is useful,
+        for example, for temporarily disregarding flat cells on the boundary when
+        performing Lloyd mesh optimization.
         """
-        if self._cv_centroids is None:
+        if cell_mask is None:
+            cell_mask = numpy.zeros(self.cell_partitions.shape[1], dtype=bool)
+
+        if self._cv_centroids is None or numpy.any(cell_mask != self._cvc_cell_mask):
             _, v = self._compute_integral_x()
+            v = v[:, :, ~cell_mask, :]
+
             # Again, make use of the fact that edge k is opposite of node k in every
             # cell. Adding the arrays first makes the work for bincount lighter.
-            ids = self.cells["nodes"].T
+            ids = self.cells["nodes"][~cell_mask].T
             vals = numpy.array(
                 [v[1, 1] + v[0, 2], v[1, 2] + v[0, 0], v[1, 0] + v[0, 1]]
             )
@@ -265,20 +286,22 @@ class MeshTri(_base_mesh):
             self._cv_centroids = numpy.array(
                 [
                     numpy.bincount(
-                        ids.reshape(-1), vals[..., 0].reshape(-1), minlength=n
-                    ),
-                    numpy.bincount(
-                        ids.reshape(-1), vals[..., 1].reshape(-1), minlength=n
-                    ),
-                    numpy.bincount(
-                        ids.reshape(-1), vals[..., 2].reshape(-1), minlength=n
-                    ),
+                        ids.reshape(-1), vals[..., k].reshape(-1), minlength=n
+                    )
+                    for k in range(vals.shape[-1])
                 ]
             ).T
+
             # Divide by the control volume
-            self._cv_centroids /= self.control_volumes[:, None]
+            self._cv_centroids /= self.get_control_volumes(cell_mask=cell_mask)[:, None]
+            self._cvc_cell_mask = cell_mask
+            assert numpy.all(cell_mask == self._cv_cell_mask)
 
         return self._cv_centroids
+
+    @property
+    def control_volume_centroids(self):
+        return self.get_control_volumes()
 
     @property
     def signed_cell_areas(self):
@@ -749,6 +772,10 @@ class MeshTri(_base_mesh):
         comesh_color=(0.8, 0.8, 0.8),
         show_axes=True,
         cell_quality_coloring=None,
+        show_node_numbers=False,
+        show_cell_numbers=False,
+        cell_mask=None,
+        show_edge_numbers=False
     ):
         """Show the mesh using matplotlib.
         """
@@ -777,6 +804,34 @@ class MeshTri(_base_mesh):
 
         ax.set_xlim(xmin, xmax)
         ax.set_ylim(ymin, ymax)
+
+        for k, x in enumerate(self.node_coords):
+            if self.is_boundary_node[k]:
+                plt.plot(x[0], x[1], "g.")
+            else:
+                plt.plot(x[0], x[1], "r.")
+
+        if show_node_numbers:
+            for i, x in enumerate(self.node_coords):
+                plt.text(
+                    x[0],
+                    x[1],
+                    str(i),
+                    bbox=dict(facecolor="w", alpha=0.7),
+                    horizontalalignment="center",
+                    verticalalignment="center",
+                )
+
+        if show_cell_numbers:
+            for i, x in enumerate(self.cell_centroids):
+                plt.text(
+                    x[0],
+                    x[1],
+                    str(i),
+                    bbox=dict(facecolor="r", alpha=0.5),
+                    horizontalalignment="center",
+                    verticalalignment="center",
+                )
 
         # coloring
         if cell_quality_coloring:
@@ -850,7 +905,7 @@ class MeshTri(_base_mesh):
             ax.add_collection(line_segments1)
 
         if control_volume_centroid_color is not None:
-            centroids = self.control_volume_centroids
+            centroids = self.get_control_volume_centroids(cell_mask=cell_mask)
             ax.plot(
                 centroids[:, 0],
                 centroids[:, 1],
@@ -858,6 +913,16 @@ class MeshTri(_base_mesh):
                 marker=".",
                 color=control_volume_centroid_color,
             )
+            for k, centroid in enumerate(centroids):
+                plt.text(
+                    centroid[0],
+                    centroid[1],
+                    str(k),
+                    bbox=dict(facecolor=control_volume_centroid_color, alpha=0.7),
+                    horizontalalignment="center",
+                    verticalalignment="center",
+                )
+
 
         return fig
 
@@ -939,8 +1004,7 @@ class MeshTri(_base_mesh):
 
         # If all _interior_ coedge/edge ratios are positive, all cells are Delaunay.
         if self.is_boundary_edge is None:
-            self.create_edges()
-        self.mark_boundary()
+            self.mark_boundary()
         if numpy.all(self.ce_ratios[~self.is_boundary_edge] > 0):
             return False
 
@@ -962,13 +1026,18 @@ class MeshTri(_base_mesh):
             # negative) ce_ratio.
             cell_gids, num_flips_per_cell = numpy.unique(adj_cells, return_counts=True)
             critical_cell_gids = cell_gids[num_flips_per_cell > 1]
-            for cell_gid in critical_cell_gids:
-                edge_gids = self.cells["edges"][cell_gid]
-                num_adj_cells, edge_id = self._edge_gid_to_edge_list[edge_gids].T
-                edge_ids = edge_id[num_adj_cells == 2]
-                k = numpy.argmin(ce_ratios_per_interior_edge[edge_ids])
-                is_flip_interior_edge[edge_ids] = False
-                is_flip_interior_edge[edge_ids[k]] = True
+            while numpy.any(num_flips_per_cell > 1):
+                for cell_gid in critical_cell_gids:
+                    edge_gids = self.cells["edges"][cell_gid]
+                    num_adj_cells, edge_id = self._edge_gid_to_edge_list[edge_gids].T
+                    edge_ids = edge_id[num_adj_cells == 2]
+                    k = numpy.argmin(ce_ratios_per_interior_edge[edge_ids])
+                    is_flip_interior_edge[edge_ids] = False
+                    is_flip_interior_edge[edge_ids[k]] = True
+
+                adj_cells = interior_edges_cells[is_flip_interior_edge].T
+                cell_gids, num_flips_per_cell = numpy.unique(adj_cells, return_counts=True)
+                critical_cell_gids = cell_gids[num_flips_per_cell > 1]
 
             self.flip_interior_edges(is_flip_interior_edge)
             ce_ratios_per_interior_edge = self.ce_ratios_per_interior_edge
