@@ -30,7 +30,9 @@ def download_mesh(name, md5):
     file_md5 = hashlib.md5(open(filename, "rb").read()).hexdigest()
 
     if file_md5 != md5:
-        raise RuntimeError("Checksums not matching (%s != %s)." % (file_md5, md5))
+        raise RuntimeError(
+            "Checksums of {} not matching ({} != {}).".format(filename, file_md5, md5)
+        )
 
     return filename
 
