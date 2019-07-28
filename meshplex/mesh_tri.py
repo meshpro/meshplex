@@ -301,7 +301,7 @@ class MeshTri(_base_mesh):
 
     @property
     def control_volume_centroids(self):
-        return self.get_control_volumes()
+        return self.get_control_volume_centroids()
 
     @property
     def signed_cell_areas(self):
@@ -775,7 +775,7 @@ class MeshTri(_base_mesh):
         show_node_numbers=False,
         show_cell_numbers=False,
         cell_mask=None,
-        show_edge_numbers=False
+        show_edge_numbers=False,
     ):
         """Show the mesh using matplotlib.
         """
@@ -923,7 +923,6 @@ class MeshTri(_base_mesh):
                     verticalalignment="center",
                 )
 
-
         return fig
 
     def show_vertex(self, *args, **kwargs):
@@ -1036,7 +1035,9 @@ class MeshTri(_base_mesh):
                     is_flip_interior_edge[edge_ids[k]] = True
 
                 adj_cells = interior_edges_cells[is_flip_interior_edge].T
-                cell_gids, num_flips_per_cell = numpy.unique(adj_cells, return_counts=True)
+                cell_gids, num_flips_per_cell = numpy.unique(
+                    adj_cells, return_counts=True
+                )
                 critical_cell_gids = cell_gids[num_flips_per_cell > 1]
 
             self.flip_interior_edges(is_flip_interior_edge)
