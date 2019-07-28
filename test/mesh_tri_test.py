@@ -44,9 +44,7 @@ def test_unit_triangle():
 
     # incenter
     assert near_equal(
-        mesh.cell_incenters,
-        [[(2 - numpy.sqrt(2)) / 2, (2 - numpy.sqrt(2)) / 2]],
-        tol,
+        mesh.cell_incenters, [[(2 - numpy.sqrt(2)) / 2, (2 - numpy.sqrt(2)) / 2]], tol
     )
 
     # circumcenter
