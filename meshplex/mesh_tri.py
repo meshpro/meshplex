@@ -805,11 +805,11 @@ class MeshTri(_base_mesh):
         ax.set_xlim(xmin, xmax)
         ax.set_ylim(ymin, ymax)
 
-        for k, x in enumerate(self.node_coords):
-            if self.is_boundary_node[k]:
-                plt.plot(x[0], x[1], "g.")
-            else:
-                plt.plot(x[0], x[1], "r.")
+        # for k, x in enumerate(self.node_coords):
+        #     if self.is_boundary_node[k]:
+        #         plt.plot(x[0], x[1], "g.")
+        #     else:
+        #         plt.plot(x[0], x[1], "r.")
 
         if show_node_numbers:
             for i, x in enumerate(self.node_coords):
