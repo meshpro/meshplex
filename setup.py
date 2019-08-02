@@ -27,7 +27,7 @@ setup(
     license=about["__license__"],
     platforms="any",
     install_requires=[
-        "meshio >=2.0.0, <3.0.0",
+        "meshio >=3.0.0, <4.0.0",
         "numpy >= 1.9",  # unique return_counts
         "scipy",
     ],
