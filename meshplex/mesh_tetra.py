@@ -35,7 +35,9 @@ class MeshTetra(_base_mesh):
         # helps.
         is_used = numpy.zeros(len(node_coords), dtype=bool)
         is_used[cells] = True
-        assert all(is_used)
+        assert numpy.all(is_used), (
+            "There are {} dangling nodes in the mesh".format(numpy.sum(~is_used))
+        )
 
         self.cells = {"nodes": cells}
 
@@ -428,21 +430,23 @@ class MeshTetra(_base_mesh):
         """
         """
         # # Just take the distance of the circumcenter to one of the nodes for now.
-        # dist = self.node_coords[self.idx_hierarchy[0, 0, 0]] - self.cell_circumcenters
-        # circumradius = numpy.sqrt(numpy.einsum("ij,ij->i", dist, dist))
+        dist = self.node_coords[self.idx_hierarchy[0, 0, 0]] - self.cell_circumcenters
+        circumradius = numpy.sqrt(numpy.einsum("ij,ij->i", dist, dist))
         # https://en.wikipedia.org/wiki/Tetrahedron#Circumradius
+        #
         # Compute opposite edge length products
-        edge_lengths = numpy.sqrt(self.ei_dot_ei)
-        aA = edge_lengths[0, 0] * edge_lengths[0, 2]
-        bB = edge_lengths[0, 1] * edge_lengths[2, 0]
-        cC = edge_lengths[0, 2] * edge_lengths[2, 1]
-        circumradius = (
-            numpy.sqrt(
-                (aA + bB + cC) * (-aA + bB + cC) * (aA - bB + cC) * (aA + bB - cC)
-            )
-            / 24
-            / self.cell_volumes
-        )
+        # TODO something is wrong here
+        # edge_lengths = numpy.sqrt(self.ei_dot_ei)
+        # aA = edge_lengths[0, 0] * edge_lengths[0, 2]
+        # bB = edge_lengths[0, 1] * edge_lengths[2, 0]
+        # cC = edge_lengths[0, 2] * edge_lengths[2, 1]
+        # circumradius = (
+        #     numpy.sqrt(
+        #         (aA + bB + cC) * (-aA + bB + cC) * (aA - bB + cC) * (aA + bB - cC)
+        #     )
+        #     / 24
+        #     / self.cell_volumes
+        # )
         return circumradius
 
     @property
