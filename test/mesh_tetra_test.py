@@ -102,6 +102,7 @@ def test_regular_tet0(a):
 
     assert near_equal(mesh.cell_incenters, [[0.0, 0.0, a * numpy.sqrt(6) / 12]], tol)
 
+    assert near_equal(mesh.sin_dihedral_angles, [6 * [2 * numpy.sqrt(2) / 3]], tol)
     return
 
 
@@ -204,6 +205,11 @@ def test_unit_tetrahedron_geometric(a):
     ref = 7.320508075688774e-01
     assert near_equal(mesh.cell_quality, [ref], tol)
 
+    assert near_equal(
+        mesh.sin_dihedral_angles,
+        [[numpy.sqrt(6) / 3, numpy.sqrt(6) / 3, numpy.sqrt(6) / 3, 1, 1, 1]],
+        tol,
+    )
     return
 
 
@@ -244,7 +250,6 @@ def test_regular_tet1_geometric_order():
         [0.5 * a, -0.5 / numpy.sqrt(3) * a, 0.5 * a, 0.5 * a],
         tol,
     )
-
     return
 
 

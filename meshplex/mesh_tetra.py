@@ -60,6 +60,10 @@ class MeshTetra(_base_mesh):
         #      - edge 0: face+1, edge 2
         #      - edge 1: face+2, edge 1
         #      - edge 2: face+3, edge 0
+        #   * opposite edges are easy to find, too:
+        #      - edge 0  <-->  (face+2, edge 0)  equals  (face+3, edge 2)
+        #      - edge 1  <-->  (face+1, edge 1)  equals  (face+3, edge 1)
+        #      - edge 2  <-->  (face+1, edge 0)  equals  (face+2, edge 2)
         #
         self.local_idx = numpy.array(
             [
@@ -461,6 +465,51 @@ class MeshTetra(_base_mesh):
         # See
         # <http://eidors3d.sourceforge.net/doc/index.html?eidors/meshing/calc_mesh_quality.html>.
         return 3 * self.cell_inradius / self.cell_circumradius
+
+    @property
+    def sin_dihedral_angles(self):
+        """Get the sine of the 6 angles between the faces of each tetrahedron.
+        """
+        # https://math.stackexchange.com/a/49340/36678
+        fa = compute_tri_areas(self.ei_dot_ej)
+
+        el2 = self.ei_dot_ei
+        a = el2[0][0]
+        b = el2[1][0]
+        c = el2[2][0]
+        d = el2[0][2]
+        e = el2[1][1]
+        f = el2[0][1]
+
+        cos_alpha = []
+
+        H2 = (4 * a * d - ((b + e) - (c + f)) ** 2) / 16
+        J2 = (4 * b * e - ((a + d) - (c + f)) ** 2) / 16
+        K2 = (4 * c * f - ((a + d) - (b + e)) ** 2) / 16
+
+        # Angle between face 0 and face 1.
+        # The faces share (face 0, edge 0), (face 1, edge 2).
+        cos_alpha += [(fa[0] ** 2 + fa[1] ** 2 - H2) / (2 * fa[0] * fa[1])]
+        # Angle between face 0 and face 2.
+        # The faces share (face 0, edge 1), (face 2, edge 1).
+        cos_alpha += [(fa[0] ** 2 + fa[2] ** 2 - J2) / (2 * fa[0] * fa[2])]
+        # Angle between face 0 and face 3.
+        # The faces share (face 0, edge 2), (face 3, edge 0).
+        cos_alpha += [(fa[0] ** 2 + fa[3] ** 2 - K2) / (2 * fa[0] * fa[3])]
+        # Angle between face 1 and face 2.
+        # The faces share (face 1, edge 0), (face 2, edge 2).
+        cos_alpha += [(fa[1] ** 2 + fa[2] ** 2 - K2) / (2 * fa[1] * fa[2])]
+        # Angle between face 1 and face 3.
+        # The faces share (face 1, edge 1), (face 3, edge 1).
+        cos_alpha += [(fa[1] ** 2 + fa[3] ** 2 - J2) / (2 * fa[1] * fa[3])]
+        # Angle between face 2 and face 3.
+        # The faces share (face 2, edge 0), (face 3, edge 2).
+        cos_alpha += [(fa[2] ** 2 + fa[3] ** 2 - H2) / (2 * fa[2] * fa[3])]
+
+        cos_alpha = numpy.array(cos_alpha).T
+        sin_alpha = numpy.sqrt(1 - cos_alpha ** 2)
+
+        return sin_alpha
 
     @property
     def control_volumes(self):
