@@ -60,6 +60,10 @@ class MeshTetra(_base_mesh):
         #      - edge 0: face+1, edge 2
         #      - edge 1: face+2, edge 1
         #      - edge 2: face+3, edge 0
+        #   * opposite edges are easy to find, too:
+        #      - edge 0  <-->  (face+2, edge 0)  equals  (face+3, edge 2)
+        #      - edge 1  <-->  (face+1, edge 1)  equals  (face+3, edge 1)
+        #      - edge 2  <-->  (face+1, edge 0)  equals  (face+2, edge 2)
         #
         self.local_idx = numpy.array(
             [
@@ -450,8 +454,10 @@ class MeshTetra(_base_mesh):
         return circumradius
 
     @property
-    def cell_quality(self):
-        """
+    def q_radius_ratio(self):
+        """Ratio of incircle ratios and circumcircle ratius times 3. ("Normalized shape
+        ratio".) Is 1 for the equalateral triangle, and is often used a quality measure
+        for the cell.
         """
         # There are other sensible possiblities of defining cell quality, e.g.:
         #   * inradius to longest edge
@@ -461,6 +467,67 @@ class MeshTetra(_base_mesh):
         # See
         # <http://eidors3d.sourceforge.net/doc/index.html?eidors/meshing/calc_mesh_quality.html>.
         return 3 * self.cell_inradius / self.cell_circumradius
+
+    @property
+    def q_min_sin_dihedral_angles(self):
+        """Get the smallest of the sines of the 6 angles between the faces of each
+        tetrahedron, times a scaling factor that makes sure the value is 1 for the
+        equilateral tetrahedron.
+        """
+        # https://math.stackexchange.com/a/49340/36678
+        fa = compute_tri_areas(self.ei_dot_ej)
+
+        el2 = self.ei_dot_ei
+        a = el2[0][0]
+        b = el2[1][0]
+        c = el2[2][0]
+        d = el2[0][2]
+        e = el2[1][1]
+        f = el2[0][1]
+
+        cos_alpha = []
+
+        H2 = (4 * a * d - ((b + e) - (c + f)) ** 2) / 16
+        J2 = (4 * b * e - ((a + d) - (c + f)) ** 2) / 16
+        K2 = (4 * c * f - ((a + d) - (b + e)) ** 2) / 16
+
+        # Angle between face 0 and face 1.
+        # The faces share (face 0, edge 0), (face 1, edge 2).
+        cos_alpha += [(fa[0] ** 2 + fa[1] ** 2 - H2) / (2 * fa[0] * fa[1])]
+        # Angle between face 0 and face 2.
+        # The faces share (face 0, edge 1), (face 2, edge 1).
+        cos_alpha += [(fa[0] ** 2 + fa[2] ** 2 - J2) / (2 * fa[0] * fa[2])]
+        # Angle between face 0 and face 3.
+        # The faces share (face 0, edge 2), (face 3, edge 0).
+        cos_alpha += [(fa[0] ** 2 + fa[3] ** 2 - K2) / (2 * fa[0] * fa[3])]
+        # Angle between face 1 and face 2.
+        # The faces share (face 1, edge 0), (face 2, edge 2).
+        cos_alpha += [(fa[1] ** 2 + fa[2] ** 2 - K2) / (2 * fa[1] * fa[2])]
+        # Angle between face 1 and face 3.
+        # The faces share (face 1, edge 1), (face 3, edge 1).
+        cos_alpha += [(fa[1] ** 2 + fa[3] ** 2 - J2) / (2 * fa[1] * fa[3])]
+        # Angle between face 2 and face 3.
+        # The faces share (face 2, edge 0), (face 3, edge 2).
+        cos_alpha += [(fa[2] ** 2 + fa[3] ** 2 - H2) / (2 * fa[2] * fa[3])]
+
+        cos_alpha = numpy.array(cos_alpha).T
+        sin_alpha = numpy.sqrt(1 - cos_alpha ** 2)
+
+        m = numpy.min(sin_alpha, axis=1) / (numpy.sqrt(2) * 2 / 3)
+        return m
+
+    @property
+    def q_vol_rms_edgelength3(self):
+        """For each cell, return the ratio of the volume and the cube of the
+        root-mean-square edge length. (This is cell quality measure used by Stellar
+        <https://people.eecs.berkeley.edu/~jrs/stellar>.)
+        """
+        el2 = self.ei_dot_ei
+        rms = numpy.sqrt(
+            (el2[0][0] + el2[1][0] + el2[2][0] + el2[0][2] + el2[1][1] + el2[0][1]) / 6
+        )
+        alpha = numpy.sqrt(2) / 12  # normalization factor
+        return self.cell_volumes / rms ** 3 / alpha
 
     @property
     def control_volumes(self):

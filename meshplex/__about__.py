@@ -1,4 +1,4 @@
-__version__ = "0.11.5"
+__version__ = "0.11.6"
 __author__ = "Nico Schlömer"
 __author_email__ = "nico.schloemer@gmail.com"
 __status__ = "Development Status :: 4 - Beta"
