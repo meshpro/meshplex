@@ -93,7 +93,7 @@ def test_regular_tet0(a):
     assert near_equal(mesh.cell_circumradius, [circumradius], tol)
 
     # cell quality
-    assert near_equal(mesh.cell_quality, [1.0], tol)
+    assert near_equal(mesh.q_radius_ratio, [1.0], tol)
 
     mesh.mark_boundary()
 
@@ -102,9 +102,9 @@ def test_regular_tet0(a):
 
     assert near_equal(mesh.cell_incenters, [[0.0, 0.0, a * numpy.sqrt(6) / 12]], tol)
 
-    assert near_equal(mesh.sin_dihedral_angles, [6 * [2 * numpy.sqrt(2) / 3]], tol)
+    assert near_equal(mesh.q_min_sin_dihedral_angles, [1.0], tol)
 
-    assert near_equal(mesh.vol_rms_edgelength3, [1.0], tol)
+    assert near_equal(mesh.q_vol_rms_edgelength3, [1.0], tol)
     return
 
 
@@ -205,15 +205,11 @@ def test_unit_tetrahedron_geometric(a):
 
     # cell quality
     ref = 7.320508075688774e-01
-    assert near_equal(mesh.cell_quality, [ref], tol)
+    assert near_equal(mesh.q_radius_ratio, [ref], tol)
 
-    assert near_equal(
-        mesh.sin_dihedral_angles,
-        [[numpy.sqrt(6) / 3, numpy.sqrt(6) / 3, numpy.sqrt(6) / 3, 1, 1, 1]],
-        tol,
-    )
+    assert near_equal(mesh.q_min_sin_dihedral_angles, [numpy.sqrt(3) / 2], tol)
 
-    assert near_equal(mesh.vol_rms_edgelength3, [4 * numpy.sqrt(3) / 9], tol)
+    assert near_equal(mesh.q_vol_rms_edgelength3, [4 * numpy.sqrt(3) / 9], tol)
     return
 
 

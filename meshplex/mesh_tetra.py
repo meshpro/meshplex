@@ -454,8 +454,10 @@ class MeshTetra(_base_mesh):
         return circumradius
 
     @property
-    def cell_quality(self):
-        """
+    def q_radius_ratio(self):
+        """Ratio of incircle ratios and circumcircle ratius times 3. ("Normalized shape
+        ratio".) Is 1 for the equalateral triangle, and is often used a quality measure
+        for the cell.
         """
         # There are other sensible possiblities of defining cell quality, e.g.:
         #   * inradius to longest edge
@@ -467,8 +469,10 @@ class MeshTetra(_base_mesh):
         return 3 * self.cell_inradius / self.cell_circumradius
 
     @property
-    def sin_dihedral_angles(self):
-        """Get the sine of the 6 angles between the faces of each tetrahedron.
+    def q_min_sin_dihedral_angles(self):
+        """Get the smallest of the sines of the 6 angles between the faces of each
+        tetrahedron, times a scaling factor that makes sure the value is 1 for the
+        equilateral tetrahedron.
         """
         # https://math.stackexchange.com/a/49340/36678
         fa = compute_tri_areas(self.ei_dot_ej)
@@ -509,10 +513,11 @@ class MeshTetra(_base_mesh):
         cos_alpha = numpy.array(cos_alpha).T
         sin_alpha = numpy.sqrt(1 - cos_alpha ** 2)
 
-        return sin_alpha
+        m = numpy.min(sin_alpha, axis=1) / (numpy.sqrt(2) * 2 / 3)
+        return m
 
     @property
-    def vol_rms_edgelength3(self):
+    def q_vol_rms_edgelength3(self):
         """For each cell, return the ratio of the volume and the cube of the
         root-mean-square edge length. (This is cell quality measure used by Stellar
         <https://people.eecs.berkeley.edu/~jrs/stellar>.)
