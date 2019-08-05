@@ -512,6 +512,19 @@ class MeshTetra(_base_mesh):
         return sin_alpha
 
     @property
+    def vol_rms_edgelength3(self):
+        """For each cell, return the ratio of the volume and the cube of the
+        root-mean-square edge length. (This is cell quality measure used by Stellar
+        <https://people.eecs.berkeley.edu/~jrs/stellar>.)
+        """
+        el2 = self.ei_dot_ei
+        rms = numpy.sqrt(
+            (el2[0][0] + el2[1][0] + el2[2][0] + el2[0][2] + el2[1][1] + el2[0][1]) / 6
+        )
+        alpha = numpy.sqrt(2) / 12  # normalization factor
+        return self.cell_volumes / rms ** 3 / alpha
+
+    @property
     def control_volumes(self):
         """Compute the control volumes of all nodes in the mesh.
         """
