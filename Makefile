@@ -32,7 +32,7 @@ black:
 
 lint:
 	black --check .
-	flake8 setup.py meshplex/ test/*.py
+	flake8 .
 
 .PHONY: doc
 
