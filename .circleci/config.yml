@@ -35,7 +35,7 @@ jobs:
       - run: excode README.md test/readme_test.py --filter python,test
       - run:
           command: pytest --cov meshplex
-          working_dir: test/
+          working_directory: test/
           env:
             MPLBACKEND: Agg
       # submit to codecov
