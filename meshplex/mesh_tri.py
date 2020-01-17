@@ -36,9 +36,9 @@ class MeshTri(_base_mesh):
         )
         assert (
             len(cells.shape) == 2 and cells.shape[1] == 3
-        ), "Illegal cells shape {}".format(cells.shape)
+        ), f"Illegal cells shape {cells.shape}"
 
-        super(MeshTri, self).__init__(nodes, cells)
+        super().__init__(nodes, cells)
 
         # Assert that all vertices are used.
         # If there are vertices which do not appear in the cells list, this

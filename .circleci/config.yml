@@ -4,27 +4,23 @@ jobs:
   doc:
     working_directory: ~/work
     docker:
-      - image: ubuntu:18.04
+      - image: circleci/python:3
     steps:
       - checkout
-      - run: apt update
-      - run: apt install -y python3-pip
-      - run: pip3 install -U sphinx
-      - run: LC_ALL=C.UTF-8 make doc
+      - run: pip3 install --user sphinx
+      - run: make doc
   lint:
     docker:
-      - image: ubuntu:18.04
+      - image: circleci/python:3
     steps:
       - checkout
-      - run: apt update
-      - run: apt install -y python3-pip
-      - run: pip3 install -U black flake8
-      - run: LC_ALL=C.UTF-8 black --check setup.py meshplex/ test/*.py
-      - run: flake8 setup.py meshplex/ test/*.py
+      - run: pip3 install --user black flake8
+      - run: black --check .
+      - run: flake8 .
   build:
     working_directory: ~/work
     docker:
-      - image: ubuntu:19.04
+      - image: ubuntu:19.10
     steps:
       - run: apt-get update
       # <https://stackoverflow.com/a/44333806/353337>
@@ -37,10 +33,14 @@ jobs:
       - run: pip3 install .[all]
       # The tests
       - run: excode README.md test/readme_test.py --filter python,test
-      - run: cd test/ && MPLBACKEND=Agg pytest --cov meshplex
+      - run:
+          command: pytest --cov meshplex
+          working_dir: test/
+          env:
+            MPLBACKEND: Agg
       # submit to codecov
       - run: apt-get install -y curl
-      - run: bash <(curl -s https://codecov.io/bash) -R ~/work
+      - run: bash <(curl -s https://codecov.io/bash)
 
 workflows:
   version: 2

@@ -5,11 +5,11 @@
 
 [![CircleCI](https://img.shields.io/circleci/project/github/nschloe/meshplex/master.svg?style=flat-square)](https://circleci.com/gh/nschloe/meshplex/tree/master)
 [![codecov](https://img.shields.io/codecov/c/github/nschloe/meshplex.svg?style=flat-square)](https://codecov.io/gh/nschloe/meshplex)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg?style=flat-square)](https://github.com/ambv/black)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg?style=flat-square)](https://github.com/psf/black)
 [![Documentation Status](https://readthedocs.org/projects/meshplex/badge?style=flat-square&version=latest)](https://readthedocs.org/projects/meshplex/?badge=latest)
 [![PyPi Version](https://img.shields.io/pypi/v/meshplex.svg?style=flat-square)](https://pypi.org/project/meshplex)
 [![GitHub stars](https://img.shields.io/github/stars/nschloe/meshplex.svg?style=flat-square&logo=github&label=Stars&logoColor=white)](https://github.com/nschloe/meshplex)
-[![PyPi downloads](https://img.shields.io/pypi/dd/meshplex.svg?style=flat-square)](https://pypistats.org/packages/meshplex)
+[![PyPi downloads](https://img.shields.io/pypi/dm/meshplex.svg?style=flat-square)](https://pypistats.org/packages/meshplex)
 
 Compute all sorts of interesting points, areas, and volumes in triangular and
 tetrahedral meshes, with a focus on efficiency. Useful in many contexts, e.g.,

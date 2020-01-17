@@ -148,7 +148,7 @@ def compute_triangle_circumcenters(X, ei_dot_ei, ei_dot_ej):
     return cc
 
 
-class _base_mesh(object):
+class _base_mesh:
     def __init__(self, nodes, cells_nodes):
         self.node_coords = nodes
         self._edge_lengths = None

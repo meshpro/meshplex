@@ -32,7 +32,7 @@ setup(
         "scipy",
     ],
     extras_require={"all": ["matplotlib"], "plot": ["matplotlib"]},
-    python_requires=">=3",
+    python_requires=">=3.6",
     classifiers=[
         about["__status__"],
         about["__license__"],

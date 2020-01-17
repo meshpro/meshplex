@@ -70,7 +70,7 @@ def smooth(mesh, t=1.0e-3, num_iters=10):
         x = mesh.node_coords.copy()
         x -= t * _grad(mesh)
         x[boundary_verts] = mesh.node_coords[boundary_verts]
-        mesh = MeshTri(x, mesh.cells["nodes"])
+        mesh = meshplex.MeshTri(x, mesh.cells["nodes"])
         mesh.write("smoo%04d.vtu" % k)
         print(_objective(mesh))
     return mesh
