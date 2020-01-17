@@ -23,7 +23,7 @@ class MeshTetra(_base_mesh):
         cells = numpy.sort(cells, axis=1)
         cells = cells[cells[:, 0].argsort()]
 
-        super(MeshTetra, self).__init__(node_coords, cells)
+        super().__init__(node_coords, cells)
 
         # Assert that all vertices are used.
         # If there are vertices which do not appear in the cells list, this
