@@ -513,7 +513,7 @@ def test_signed_area():
     assert numpy.all(numpy.abs(mesh.points[:, 2]) < 1.0e-15)
     X = mesh.points[:, :2]
 
-    mesh = meshplex.MeshTri(X, mesh.cells["triangle"])
+    mesh = meshplex.MeshTri(X, mesh.get_cells_type("triangle"))
 
     vols = mesh.signed_cell_areas
     assert numpy.all(abs(abs(vols) - mesh.cell_volumes) < 1.0e-12 * mesh.cell_volumes)
@@ -525,11 +525,11 @@ def test_update_node_coordinates():
     mesh = meshio.read(filename)
     assert numpy.all(numpy.abs(mesh.points[:, 2]) < 1.0e-15)
 
-    mesh1 = meshplex.MeshTri(mesh.points, mesh.cells["triangle"])
+    mesh1 = meshplex.MeshTri(mesh.points, mesh.get_cells_type("triangle"))
 
     numpy.random.seed(123)
     X2 = mesh.points + 1.0e-2 * numpy.random.rand(*mesh.points.shape)
-    mesh2 = meshplex.MeshTri(X2, mesh.cells["triangle"])
+    mesh2 = meshplex.MeshTri(X2, mesh.get_cells_type("triangle"))
 
     mesh1.node_coords = X2
     mesh1.update_values()
@@ -547,7 +547,7 @@ def test_flip_delaunay():
     numpy.random.seed(123)
     mesh.points[:, :2] += 5.0e-2 * numpy.random.rand(*mesh.points[:, :2].shape)
 
-    mesh = meshplex.MeshTri(mesh.points, mesh.cells["triangle"])
+    mesh = meshplex.MeshTri(mesh.points, mesh.get_cells_type("triangle"))
 
     assert mesh.num_delaunay_violations() == 16
 

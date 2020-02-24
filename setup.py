@@ -1,4 +1,3 @@
-import codecs
 import os
 
 from setuptools import find_packages, setup
@@ -10,10 +9,6 @@ with open(os.path.join(base_dir, "meshplex", "__about__.py"), "rb") as f:
     exec(f.read(), about)
 
 
-def read(fname):
-    return codecs.open(os.path.join(base_dir, fname), encoding="utf-8").read()
-
-
 setup(
     name="meshplex",
     version=about["__version__"],
@@ -21,25 +16,27 @@ setup(
     author_email=about["__author_email__"],
     packages=find_packages(),
     description=("Fast tools for simplex meshes"),
-    long_description=read("README.md"),
+    long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     url="https://github.com/nschloe/meshplex",
     license=about["__license__"],
     platforms="any",
     install_requires=[
-        "meshio >=3.0.0, <4.0.0",
+        "meshio >=4, <5",
         "numpy >= 1.9",  # unique return_counts
         "scipy",
     ],
     extras_require={"all": ["matplotlib"], "plot": ["matplotlib"]},
-    python_requires=">=3.6",
+    python_requires=">=3.5",
     classifiers=[
         about["__status__"],
         about["__license__"],
         "Intended Audience :: Science/Research",
         "Operating System :: OS Independent",
-        "Programming Language :: Python",
-        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
         "Topic :: Scientific/Engineering :: Mathematics",
     ],
 )

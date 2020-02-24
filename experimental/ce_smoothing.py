@@ -77,7 +77,7 @@ def smooth(mesh, t=1.0e-3, num_iters=10):
 
 
 def read(filename):
-    pts, cells, _, _, _ = meshio.read(filename)
+    mesh = meshio.read(filename)
 
     # x = mesh.node_coords.copy()
     # x[:, :2] += 1.0e-1 * (
@@ -86,9 +86,9 @@ def read(filename):
     # x[boundary_verts] = mesh.node_coords[boundary_verts]
 
     # only include nodes which are part of a cell
-    uvertices, uidx = numpy.unique(cells["triangle"], return_inverse=True)
-    cells = uidx.reshape(cells["triangle"].shape)
-    pts = pts[uvertices]
+    uvertices, uidx = numpy.unique(mesh.get_cells_type("triangle"), return_inverse=True)
+    cells = uidx.reshape(mesh.get_cells_type("triangle").shape)
+    pts = mesh.points[uvertices]
 
     return pts, cells
 

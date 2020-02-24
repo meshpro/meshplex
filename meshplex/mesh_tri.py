@@ -36,7 +36,7 @@ class MeshTri(_base_mesh):
         )
         assert (
             len(cells.shape) == 2 and cells.shape[1] == 3
-        ), f"Illegal cells shape {cells.shape}"
+        ), "Illegal cells shape {}".format(cells.shape)
 
         super().__init__(nodes, cells)
 
@@ -124,8 +124,6 @@ class MeshTri(_base_mesh):
         #     self.cells["nodes"][self.fcc_cells], flat_local_edge, self.node_coords
         # )
         # self.ce_ratios[:, self.fcc_cells] = self.fcc.ce_ratios.T
-
-        return
 
     def __repr__(self):
         return "meshplex triangular mesh with {} points and {} cells".format(
