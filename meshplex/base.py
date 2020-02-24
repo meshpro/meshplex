@@ -152,7 +152,6 @@ class _base_mesh:
     def __init__(self, nodes, cells_nodes):
         self.node_coords = nodes
         self._edge_lengths = None
-        return
 
     def write(self, filename, point_data=None, cell_data=None, field_data=None):
         if self.node_coords.shape[1] == 2:

@@ -31,12 +31,12 @@ def read(filename):
     mesh = meshio.read(filename)
 
     # make sure to include the used nodes only
-    if "tetra" in mesh.cells:
-        points, cells = _sanitize(mesh.points, mesh.cells["tetra"])
+    tetra = mesh.get_cells_type("tetra")
+    if len(tetra) > 0:
+        points, cells = _sanitize(mesh.points, tetra)
         return MeshTetra(points, cells)
-    elif "triangle" in mesh.cells:
-        points, cells = _sanitize(mesh.points, mesh.cells["triangle"])
-        return MeshTri(points, cells)
 
-    raise RuntimeError("Illegal mesh type.")
-    return
+    tri = mesh.get_cells_type("triangle")
+    assert len(tri) > 0
+    points, cells = _sanitize(mesh.points, tri)
+    return MeshTri(points, cells)

@@ -125,7 +125,7 @@ mesh.show_cell(
 meshplex is [available from the Python Package
 Index](https://pypi.org/project/meshplex/), so simply type
 ```
-pip3 install --user meshplex
+pip install meshplex
 ```
 to install.
 

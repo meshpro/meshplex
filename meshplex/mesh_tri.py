@@ -125,8 +125,6 @@ class MeshTri(_base_mesh):
         # )
         # self.ce_ratios[:, self.fcc_cells] = self.fcc.ce_ratios.T
 
-        return
-
     def __repr__(self):
         return "meshplex triangular mesh with {} points and {} cells".format(
             self.node_coords.shape[0], self.cells["nodes"].shape[0]
