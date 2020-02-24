@@ -7,6 +7,7 @@
 [![codecov](https://img.shields.io/codecov/c/github/nschloe/meshplex.svg?style=flat-square)](https://codecov.io/gh/nschloe/meshplex)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg?style=flat-square)](https://github.com/psf/black)
 [![Documentation Status](https://readthedocs.org/projects/meshplex/badge?style=flat-square&version=latest)](https://readthedocs.org/projects/meshplex/?badge=latest)
+[![PyPI pyversions](https://img.shields.io/pypi/pyversions/meshplex.svg?style=flat-square)](https://pypi.org/pypi/meshplex/)
 [![PyPi Version](https://img.shields.io/pypi/v/meshplex.svg?style=flat-square)](https://pypi.org/project/meshplex)
 [![GitHub stars](https://img.shields.io/github/stars/nschloe/meshplex.svg?style=flat-square&logo=github&label=Stars&logoColor=white)](https://github.com/nschloe/meshplex)
 [![PyPi downloads](https://img.shields.io/pypi/dm/meshplex.svg?style=flat-square)](https://pypistats.org/packages/meshplex)
