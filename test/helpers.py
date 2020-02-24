@@ -12,13 +12,13 @@ def download_mesh(name, md5):
 
     filename = os.path.join("/tmp", name)
     if not os.path.exists(filename):
-        print(f"Downloading {name}...")
+        print("Downloading {}...".format(name))
         url = "https://nschloe.github.io/meshplex/"
         print(url + name)
         r = requests.get(url + name, stream=True)
         if not r.ok:
             raise RuntimeError(
-                f"Download error ({r.url}, return code {r.status_code})."
+                "Download error ({}, return code {}).".format(r.url, r.status_code)
             )
 
         # save the mesh in /tmp
@@ -31,7 +31,7 @@ def download_mesh(name, md5):
 
     if file_md5 != md5:
         raise RuntimeError(
-            f"Checksums of {filename} not matching ({file_md5} != {md5})."
+            "Checksums of {} not matching ({} != {}).".format(filename, file_md5, md5)
         )
 
     return filename

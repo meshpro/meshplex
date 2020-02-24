@@ -36,7 +36,7 @@ class MeshTri(_base_mesh):
         )
         assert (
             len(cells.shape) == 2 and cells.shape[1] == 3
-        ), f"Illegal cells shape {cells.shape}"
+        ), "Illegal cells shape {}".format(cells.shape)
 
         super().__init__(nodes, cells)
 
