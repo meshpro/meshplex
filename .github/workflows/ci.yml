@@ -41,6 +41,7 @@ jobs:
         lfs: true
     - name: Install test requirements
       run: |
+        sudo apt-get install -y python3-vtk7
         pip install -r test_requirements.txt
     - name: Install package
       run: |
