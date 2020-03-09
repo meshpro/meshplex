@@ -114,7 +114,6 @@ class MeshTri(_base_mesh):
         self.ei_dot_ei = numpy.einsum("ijk, ijk->ij", e, e)
 
         self.cell_volumes = compute_tri_areas(self.ei_dot_ej)
-        self.ce_ratios = compute_ce_ratios(self.ei_dot_ej, self.cell_volumes)
 
         # self.fcc_type = "full"
         # is_flat_halfedge = self.ce_ratios < 0.0
@@ -123,7 +122,7 @@ class MeshTri(_base_mesh):
         # self.fcc = FlatCellCorrector(
         #     self.cells["nodes"][self.fcc_cells], flat_local_edge, self.node_coords
         # )
-        # self.ce_ratios[:, self.fcc_cells] = self.fcc.ce_ratios.T
+        # self._ce_ratios[:, self.fcc_cells] = self.fcc.ce_ratios.T
 
     def __repr__(self):
         return "meshplex triangular mesh with {} points and {} cells".format(
@@ -141,6 +140,12 @@ class MeshTri(_base_mesh):
     #     self.node_coords[self.is_interior_node] = X
     #     self.update_values()
     #     return
+
+    @property
+    def ce_ratios(self):
+        if self._ce_ratios is None:
+            self._ce_ratios = compute_ce_ratios(self.ei_dot_ej, self.cell_volumes)
+        return self._ce_ratios
 
     def update_values(self):
         """Update all computes entities around the mesh.
@@ -166,7 +171,7 @@ class MeshTri(_base_mesh):
 
         if self.cell_volumes is not None or self.ce_ratios is not None:
             self.cell_volumes = compute_tri_areas(self.ei_dot_ej)
-            self.ce_ratios = compute_ce_ratios(self.ei_dot_ej, self.cell_volumes)
+            self._ce_ratios = compute_ce_ratios(self.ei_dot_ej, self.cell_volumes)
 
         self._interior_edge_lengths = None
         self._cell_circumcenters = None
@@ -189,15 +194,13 @@ class MeshTri(_base_mesh):
                 self.create_edges()
 
             n = self.edges["nodes"].shape[0]
-            self._ce_ratios = numpy.bincount(
+            ce_ratios = numpy.bincount(
                 self.cells["edges"].reshape(-1),
                 self.ce_ratios.T.reshape(-1),
                 minlength=n,
             )
 
-            self._interior_ce_ratios = self._ce_ratios[
-                ~self.is_boundary_edge_individual
-            ]
+            self._interior_ce_ratios = ce_ratios[~self.is_boundary_edge_individual]
 
             # # sum up from self.ce_ratios
             # if self._edges_cells is None:
@@ -736,12 +739,16 @@ class MeshTri(_base_mesh):
         # ce_ratio is negative. Count those.
         return numpy.sum(self.ce_ratios_per_interior_edge < 0.0)
 
-    def show(self, *args, **kwargs):
+    def show(self, *args, fullscreen=False, **kwargs):
         """Show the mesh (see plot()).
         """
         import matplotlib.pyplot as plt
 
         self.plot(*args, **kwargs)
+        if fullscreen:
+            mng = plt.get_current_fig_manager()
+            # mng.frame.Maximize(True)
+            mng.window.showMaximized()
         plt.show()
         plt.close()
         return
@@ -852,22 +859,27 @@ class MeshTri(_base_mesh):
 
         # Get edges, cut off z-component.
         e = self.node_coords[self.edges["nodes"]][:, :, :2]
-        # Plot regular edges, mark those with negative ce-ratio red.
-        ce_ratios = self.ce_ratios_per_interior_edge
-        pos = ce_ratios >= 0
 
-        is_pos = numpy.zeros(len(self.edges["nodes"]), dtype=bool)
-        is_pos[self._edge_to_edge_gid[2][pos]] = True
+        if nondelaunay_edge_color is None:
+            line_segments0 = LineCollection(e, color=mesh_color)
+            ax.add_collection(line_segments0)
+        else:
+            # Plot regular edges, mark those with negative ce-ratio red.
+            ce_ratios = self.ce_ratios_per_interior_edge
+            pos = ce_ratios >= 0
 
-        # Mark Delaunay-conforming boundary edges
-        is_pos_boundary = self.ce_ratios[self.is_boundary_edge] >= 0
-        is_pos[self._edge_to_edge_gid[1][is_pos_boundary]] = True
+            is_pos = numpy.zeros(len(self.edges["nodes"]), dtype=bool)
+            is_pos[self._edge_to_edge_gid[2][pos]] = True
 
-        line_segments0 = LineCollection(e[is_pos], color=mesh_color)
-        ax.add_collection(line_segments0)
-        #
-        line_segments1 = LineCollection(e[~is_pos], color=nondelaunay_edge_color)
-        ax.add_collection(line_segments1)
+            # Mark Delaunay-conforming boundary edges
+            is_pos_boundary = self.ce_ratios[self.is_boundary_edge] >= 0
+            is_pos[self._edge_to_edge_gid[1][is_pos_boundary]] = True
+
+            line_segments0 = LineCollection(e[is_pos], color=mesh_color)
+            ax.add_collection(line_segments0)
+            #
+            line_segments1 = LineCollection(e[~is_pos], color=nondelaunay_edge_color)
+            ax.add_collection(line_segments1)
 
         if show_coedges:
             # Connect all cell circumcenters with the edge midpoints
@@ -1204,7 +1216,7 @@ class MeshTri(_base_mesh):
         cv = compute_tri_areas(self.ei_dot_ej[:, cell_ids])
         ce = compute_ce_ratios(self.ei_dot_ej[:, cell_ids], cv)
         self.cell_volumes[cell_ids] = cv
-        self.ce_ratios[:, cell_ids] = ce
+        self._ce_ratios[:, cell_ids] = ce
 
         if self._interior_ce_ratios is not None:
             self._interior_ce_ratios[interior_edge_ids] = 0.0

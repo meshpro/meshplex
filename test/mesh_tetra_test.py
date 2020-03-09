@@ -489,6 +489,7 @@ def test_signed_volume():
 
 
 def test_show_cell():
+    pytest.importorskip("vtk")
     # filename = download_mesh("toy.vtk", "f48abda972822bab224b91a74d695573")
     # mesh = meshplex.read(filename)
 
