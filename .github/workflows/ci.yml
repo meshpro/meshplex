@@ -19,7 +19,6 @@ jobs:
     #     isort -rc --check .
     - name: Lint with flake8
       run: |
-        pip install --upgrade pip
         pip install flake8
         flake8 .
     - name: Lint with black
