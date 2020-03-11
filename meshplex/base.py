@@ -2,6 +2,8 @@ import numpy
 
 import meshio
 
+from .exceptions import MeshplexError
+
 __all__ = []
 
 
@@ -78,9 +80,10 @@ def compute_ce_ratios(ei_dot_ej, tri_areas):
     #
     #   e1 + e2 + e3 = 0.
     #
-    assert numpy.all(tri_areas > 0.0), "Degenerate cell."
-    out = -ei_dot_ej * 0.25 / tri_areas[None]
-    return out
+    if not numpy.all(tri_areas > 0.0):
+        raise MeshplexError("Degenerate cell.")
+
+    return -ei_dot_ej * 0.25 / tri_areas[None]
 
 
 def compute_triangle_circumcenters(X, ei_dot_ei, ei_dot_ej):

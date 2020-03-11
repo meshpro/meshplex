@@ -19,7 +19,6 @@ jobs:
     #     isort -rc --check .
     - name: Lint with flake8
       run: |
-        pip install --upgrade pip
         pip install flake8
         flake8 .
     - name: Lint with black
@@ -41,6 +40,7 @@ jobs:
         lfs: true
     - name: Install test requirements
       run: |
+        sudo apt-get update
         sudo apt-get install -y python3-vtk7
         pip install -r test_requirements.txt
     - name: Install package
