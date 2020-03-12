@@ -171,8 +171,8 @@ class MeshTri(_base_mesh):
 
         if self.cell_volumes is not None or self.ce_ratios is not None:
             self.cell_volumes = compute_tri_areas(self.ei_dot_ej)
-            self._ce_ratios = compute_ce_ratios(self.ei_dot_ej, self.cell_volumes)
 
+        self._ce_ratios = None
         self._interior_edge_lengths = None
         self._cell_circumcenters = None
         self._interior_ce_ratios = None
