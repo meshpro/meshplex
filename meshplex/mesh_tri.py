@@ -142,6 +142,22 @@ class MeshTri(_base_mesh):
     #     return
 
     @property
+    def euler_characteristic(self):
+        # number of vertices - number of edges + number of faces
+        if "edges" not in self.cells:
+            self.create_edges()
+        return (
+            self.node_coords.shape[0]
+            - self.edges["nodes"].shape[0]
+            + self.cells["nodes"].shape[0]
+        )
+
+    @property
+    def genus(self):
+        # https://math.stackexchange.com/a/85164/36678
+        return 1 - self.euler_characteristic / 2
+
+    @property
     def ce_ratios(self):
         if self._ce_ratios is None:
             self._ce_ratios = compute_ce_ratios(self.ei_dot_ej, self.cell_volumes)
