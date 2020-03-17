@@ -185,6 +185,51 @@ class MeshTri(_base_mesh):
         self._cell_centroids = None
         return
 
+    def remove_degenerate_cells(self, threshold):
+        is_okay = self.cell_volumes > threshold
+
+        self.cell_volumes = self.cell_volumes[is_okay]
+        self.cells["nodes"] = self.cells["nodes"][is_okay]
+        self.idx_hierarchy = self.idx_hierarchy[..., is_okay]
+
+        if "edges" in self.cells:
+            self.cells["edges"] = self.cells["edges"][is_okay]
+
+        if self._ce_ratios is not None:
+            self._ce_ratios = self._ce_ratios[is_okay]
+
+        if self.half_edge_coords is not None:
+            self.half_edge_coords = self.half_edge_coords[:, is_okay]
+
+        if self.ei_dot_ej is not None:
+            self.ei_dot_ej = self.ei_dot_ej[:, is_okay]
+
+        if self.ei_dot_ei is not None:
+            self.ei_dot_ei = self.ei_dot_ei[:, is_okay]
+
+        if self._cell_centroids is not None:
+            self._cell_centroids = self._cell_centroids[is_okay]
+
+        if self._cell_circumcenters is not None:
+            self._cell_circumcenters = self._cell_circumcenters[is_okay]
+
+        if self._cell_partitions is not None:
+            self._cell_partitions = self._cell_partitions[is_okay]
+
+        self._interior_edge_lengths = None
+        self._interior_ce_ratios = None
+        self._control_volumes = None
+        self._cv_centroids = None
+        self._cvc_cell_mask = None
+        self._surface_areas = None
+        self._signed_cell_areas = None
+        self._is_boundary_node = None
+        self.is_boundary_edge = None
+
+        self.create_edges()
+
+        return numpy.sum(~is_okay)
+
     @property
     def ce_ratios_per_interior_edge(self):
         """
