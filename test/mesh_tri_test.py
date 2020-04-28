@@ -52,6 +52,8 @@ def test_unit_triangle():
 
     assert mesh.num_delaunay_violations() == 0
 
+    assert mesh.genus == 0.5
+
     mesh.get_cell_mask()
     mesh.get_edge_mask()
     mesh.get_vertex_mask()
@@ -73,8 +75,6 @@ def test_unit_triangle():
     _, filename = tempfile.mkstemp(suffix=".vtk")
     mesh.save(filename)
     os.remove(filename)
-
-    return
 
 
 def test_regular_tri_additional_points():
@@ -127,9 +127,7 @@ def test_regular_tri_additional_points():
         [[0.25, 0.25, 0.0], [2.0 / 3.0, 1.0 / 6.0, 0.0], [1.0 / 6.0, 2.0 / 3.0, 0.0]],
         tol,
     )
-
     assert mesh.num_delaunay_violations() == 0
-    return
 
 
 def test_regular_tri_order():
@@ -161,8 +159,6 @@ def test_regular_tri_order():
     )
 
     assert mesh.num_delaunay_violations() == 0
-
-    return
 
 
 @pytest.mark.parametrize("a", [1.0, 2.0])
@@ -196,8 +192,6 @@ def test_regular_tri2(a):
 
     # circumcenters
     assert near_equal(mesh.cell_circumcenters, [0.0, 0.0, 0.0], tol)
-
-    return
 
 
 # def test_degenerate_small0():
@@ -263,7 +257,6 @@ def test_regular_tri2(a):
 #     self.assertAlmostEqual(mesh.centroids[2][2], 0.0, delta=tol)
 
 #     self.assertEqual(mesh.num_delaunay_violations(), 0)
-#     return
 
 
 @pytest.mark.parametrize(
@@ -299,7 +292,6 @@ def test_degenerate_small0b(h):
     assert near_equal(mesh.cell_circumcenters, [0.5, 0.375, 0.0], tol)
 
     assert mesh.num_delaunay_violations() == 0
-    return
 
 
 # # TODO parametrize with flat boundary correction
@@ -343,7 +335,6 @@ def test_degenerate_small0b(h):
 #     assert near_equal(centroids[2], [0.5, gamma, 0.0], tol)
 
 #     assert mesh.num_delaunay_violations() == 0
-#     return
 
 
 @pytest.mark.parametrize("h, a", [(1.0e-3, 0.3)])
@@ -388,7 +379,6 @@ def test_degenerate_small1(h, a):
     # assert near_equal(mesh.surface_areas, [alpha0, alpha1, alpha2], tol)
 
     assert mesh.num_delaunay_violations() == 0
-    return
 
 
 @pytest.mark.parametrize("h", [1.0e-2])
@@ -424,8 +414,6 @@ def test_degenerate_small2(h):
 
     assert mesh.num_delaunay_violations() == 1
 
-    return
-
 
 def test_rectanglesmall():
     points = numpy.array(
@@ -444,8 +432,6 @@ def test_rectanglesmall():
     assert near_equal(mesh.cell_volumes, [5.0, 5.0], tol)
     assert mesh.num_delaunay_violations() == 0
 
-    return
-
 
 def test_pacman():
     filename = download_mesh("pacman.vtk", "c621cb22f8b87cecd77724c2c0601c36")
@@ -460,8 +446,6 @@ def test_pacman():
     )
 
     assert mesh.num_delaunay_violations() == 0
-
-    return
 
 
 def test_shell():
@@ -489,8 +473,6 @@ def test_shell():
 
     assert mesh.num_delaunay_violations() == 0
 
-    return
-
 
 def test_sphere():
     filename = download_mesh("sphere.vtk", "06b163871cc0f23344d71c990dffe577")
@@ -502,9 +484,7 @@ def test_sphere():
         [366.3982135866799, 1.7062353589387327],
         [0.72653362732751214, 0.05350373815413411],
     )
-
     # assertEqual(mesh.num_delaunay_violations(), 60)
-    return
 
 
 def test_signed_area():
@@ -517,7 +497,6 @@ def test_signed_area():
 
     vols = mesh.signed_cell_areas
     assert numpy.all(abs(abs(vols) - mesh.cell_volumes) < 1.0e-12 * mesh.cell_volumes)
-    return
 
 
 def test_update_node_coordinates():
@@ -537,7 +516,6 @@ def test_update_node_coordinates():
     tol = 1.0e-12
     assert near_equal(mesh1.ei_dot_ej, mesh2.ei_dot_ej, tol)
     assert near_equal(mesh1.cell_volumes, mesh2.cell_volumes, tol)
-    return
 
 
 def test_flip_delaunay():
@@ -571,8 +549,6 @@ def test_flip_delaunay():
     assert near_equal(mesh.cell_volumes, mesh2.cell_volumes, tol)
     assert near_equal(mesh.ei_dot_ej, mesh2.ei_dot_ej, tol)
 
-    return
-
 
 def test_flip_delaunay_near_boundary():
     points = numpy.array(
@@ -591,7 +567,6 @@ def test_flip_delaunay_near_boundary():
     assert mesh.num_delaunay_violations() == 0
     assert numpy.array_equal(mesh.cells["nodes"], [[1, 3, 2], [1, 3, 0]])
     assert numpy.array_equal(mesh.cells["edges"], [[4, 3, 1], [2, 0, 1]])
-    return
 
 
 def test_flip_same_edge_twice():
@@ -623,8 +598,6 @@ def test_flip_same_edge_twice():
     # mesh.show()
     mesh.plot()
 
-    return
-
 
 def test_flip_two_edges():
     alpha = numpy.array([1.0, 3.0, 5.0, 7.0, 9.0, 11.0]) / 6.0 * numpy.pi
@@ -642,7 +615,6 @@ def test_flip_two_edges():
     assert numpy.array_equal(
         mesh.cells["nodes"], [[5, 2, 3], [0, 2, 1], [5, 2, 0], [3, 4, 5]]
     )
-    return
 
 
 def test_flip_delaunay_near_boundary_preserve_boundary_count():
@@ -671,7 +643,6 @@ def test_flip_delaunay_near_boundary_preserve_boundary_count():
 
     mesh.mark_boundary()
     assert numpy.array_equal(mesh.is_boundary_node, is_boundary_node_ref)
-    return
 
 
 def test_inradius():
@@ -693,7 +664,6 @@ def test_inradius():
     mesh = meshplex.MeshTri(points, cells)
 
     assert near_equal(mesh.cell_inradius, [a / 4 * (numpy.sqrt(3) - 1)], tol)
-    return
 
 
 def test_circumradius():
@@ -715,7 +685,6 @@ def test_circumradius():
     mesh = meshplex.MeshTri(points, cells)
 
     assert near_equal(mesh.cell_circumradius, [a / 2], tol)
-    return
 
 
 def test_quality():
@@ -739,7 +708,6 @@ def test_quality():
 
     q = mesh.cell_quality
     assert near_equal(q, 2 * mesh.cell_inradius / mesh.cell_circumradius, tol)
-    return
 
 
 def test_angles():
@@ -766,7 +734,6 @@ def test_angles():
 
     ic = mesh.angles / numpy.pi * 180
     assert near_equal(ic, [[90], [60], [30]], tol)
-    return
 
 
 # TODO reactivate
@@ -828,7 +795,6 @@ def test_flat_boundary():
             cv[i] += 0.25 * ce * numpy.dot(ei, ei)
 
     assert numpy.all(numpy.abs(cv - mesh.control_volumes) < 1.0e-12 * cv)
-    return
 
 
 def test_show_mesh():
@@ -838,7 +804,6 @@ def test_show_mesh():
     # mesh.plot(show_axes=False)
     mesh.show(show_axes=False, cell_quality_coloring=("viridis", 0.0, 1.0, True))
     # mesh.save("pacman.png", show_axes=False)
-    return
 
 
 def test_show_vertex():
@@ -846,7 +811,6 @@ def test_show_vertex():
     mesh = meshplex.read(filename)
     # mesh.plot_vertex(125)
     mesh.show_vertex(125)
-    return
 
 
 if __name__ == "__main__":

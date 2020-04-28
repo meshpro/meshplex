@@ -8,11 +8,16 @@ __all__ = []
 
 
 def compute_tri_areas(ei_dot_ej):
-    return 0.5 * numpy.sqrt(
+    vol2 = 0.25 * (
         ei_dot_ej[2] * ei_dot_ej[0]
         + ei_dot_ej[0] * ei_dot_ej[1]
         + ei_dot_ej[1] * ei_dot_ej[2]
     )
+    # vol2 is the squared volume, but can be slightly negative if it comes to round-off
+    # errors. Corrrect those.
+    assert numpy.all(vol2 > -1.0e-14)
+    vol2[vol2 < 0] = 0.0
+    return numpy.sqrt(vol2)
 
 
 def compute_ce_ratios(ei_dot_ej, tri_areas):

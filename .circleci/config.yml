@@ -28,7 +28,8 @@ jobs:
       - run: apt-get install -y git python3-pip python3-vtk7
       - run: pip3 install -U pytest pytest-cov excode
       - checkout
-      # install
+      # install; need a new pip
+      - run: pip3 install pip -U --force
       - run: pip3 install -r test_requirements.txt
       - run: pip3 install .[all]
       # The tests
