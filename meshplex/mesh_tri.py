@@ -818,7 +818,7 @@ class MeshTri(_base_mesh):
         """Save the mesh to a file.
         """
         _, file_extension = os.path.splitext(filename)
-        if file_extension in ".png":
+        if file_extension in [".png", ".svg"]:
             import matplotlib.pyplot as plt
 
             self.plot(*args, **kwargs)
