@@ -1,7 +1,7 @@
 .cache/
 build/
-doc/_build/
-doc/build/
+docs/_build/
+docs/build/
 README.rst
 *.egg-info/
 dist/
