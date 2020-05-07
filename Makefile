@@ -39,4 +39,4 @@ lint:
 .PHONY: doc
 
 doc:
-	sphinx-build -M html doc/ build/
+	sphinx-build -M html docs/ build/
