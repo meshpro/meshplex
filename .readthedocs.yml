@@ -1,3 +1,9 @@
 version: 2
 sphinx:
   configuration: docs/conf.py
+
+# It appears that the deps have to specified here again. :(
+# <https://github.com/readthedocs/readthedocs.org/issues/7030#issuecomment-625554310>
+python:
+  install:
+    - requirements: docs/requirements.txt
