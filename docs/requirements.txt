@@ -1,4 +1,0 @@
-importlib_metadata
-meshio
-numpy
-scipy
