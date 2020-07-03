@@ -5,14 +5,14 @@ on: [pull_request]
 jobs:
   doc:
     runs-on: ubuntu-latest
+    steps:
     - uses: actions/setup-python@v1
       with:
         python-version: "3.x"
     - uses: actions/checkout@v2
-    steps:
-      - run: |
-          pip install sphinx
-          make doc
+    - run: |
+        pip install sphinx
+        make doc
 
   lint:
     runs-on: ubuntu-latest
