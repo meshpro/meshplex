@@ -1,40 +1,6 @@
-import hashlib
-import os
-import shutil
 from math import fsum
 
 import numpy
-import requests
-
-
-# The tests files are located on sourceforge.
-def download_mesh(name, md5):
-
-    filename = os.path.join("/tmp", name)
-    if not os.path.exists(filename):
-        print("Downloading {}...".format(name))
-        url = "https://nschloe.github.io/meshplex/"
-        print(url + name)
-        r = requests.get(url + name, stream=True)
-        if not r.ok:
-            raise RuntimeError(
-                "Download error ({}, return code {}).".format(r.url, r.status_code)
-            )
-
-        # save the mesh in /tmp
-        with open(filename, "wb") as f:
-            r.raw.decode_content = True
-            shutil.copyfileobj(r.raw, f)
-
-    # check MD5
-    file_md5 = hashlib.md5(open(filename, "rb").read()).hexdigest()
-
-    if file_md5 != md5:
-        raise RuntimeError(
-            "Checksums of {} not matching ({} != {}).".format(filename, file_md5, md5)
-        )
-
-    return filename
 
 
 def near_equal(a, b, tol):

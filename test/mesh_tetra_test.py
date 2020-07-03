@@ -1,10 +1,13 @@
+import pathlib
 from math import fsum
 
 import numpy
 import pytest
 
 import meshplex
-from helpers import download_mesh, near_equal, run
+from helpers import near_equal, run
+
+this_dir = pathlib.Path(__file__).resolve().parent
 
 
 @pytest.mark.parametrize("a", [0.5, 1.0, 1.33])  # edge length
@@ -105,7 +108,6 @@ def test_regular_tet0(a):
     assert near_equal(mesh.q_min_sin_dihedral_angles, [1.0], tol)
 
     assert near_equal(mesh.q_vol_rms_edgelength3, [1.0], tol)
-    return
 
 
 # @pytest.mark.parametrize(
@@ -146,8 +148,6 @@ def test_regular_tet0(a):
 #         [a**3/12.0, a**3/36.0, a**3/36.0, a**3/36.0],
 #         tol
 #         )
-#
-#     return
 
 
 @pytest.mark.parametrize(
@@ -210,7 +210,6 @@ def test_unit_tetrahedron_geometric(a):
     assert near_equal(mesh.q_min_sin_dihedral_angles, [numpy.sqrt(3) / 2], tol)
 
     assert near_equal(mesh.q_vol_rms_edgelength3, [4 * numpy.sqrt(3) / 9], tol)
-    return
 
 
 def test_regular_tet1_geometric_order():
@@ -250,7 +249,6 @@ def test_regular_tet1_geometric_order():
         [0.5 * a, -0.5 / numpy.sqrt(3) * a, 0.5 * a, 0.5 * a],
         tol,
     )
-    return
 
 
 # @pytest.mark.parametrize(
@@ -302,8 +300,6 @@ def test_regular_tet1_geometric_order():
 #
 #     # cell volumes
 #     assert near_equal(mesh.cell_volumes, [h/6.0], tol)
-#
-#     return
 
 
 # @pytest.mark.parametrize(
@@ -333,7 +329,6 @@ def test_regular_tet1_geometric_order():
 #         [2.420625, 5.0/6.0],
 #         [1.0 / numpy.sqrt(2.0) / 30., 1.0/60.0]
 #         )
-#     return
 
 
 def test_cubesmall():
@@ -368,7 +363,6 @@ def test_cubesmall():
         numpy.linalg.norm(cellvols, ord=numpy.Inf),
     ]
     run(mesh, 10.0, cv_norms, [28.095851618771825, 1.25], cellvol_norms)
-    return
 
 
 def test_arrow3d():
@@ -395,12 +389,9 @@ def test_arrow3d():
 
     assert mesh.num_delaunay_violations() == 2
 
-    return
-
 
 def test_tetrahedron():
-    filename = download_mesh("tetrahedron.vtk", "10f3ccd1642b634b22741894fe6e7f1f")
-    mesh = meshplex.read(filename)
+    mesh = meshplex.read(this_dir / "meshes" / "tetrahedron.vtk")
 
     run(
         mesh,
@@ -409,7 +400,6 @@ def test_tetrahedron():
         [6.898476155562041, 0.34400453539215237],
         [11.571692332290635, 2.9699087921277054],
     )
-    return
 
 
 # def test_toy_algebraic():
@@ -452,12 +442,10 @@ def test_tetrahedron():
 #         cellvol_norms=[0.091903119589148916, 0.0019959463063558944],
 #         tol=1.0e-6
 #         )
-#     return
 
 
 def test_toy_geometric():
-    filename = download_mesh("toy.vtk", "f48abda972822bab224b91a74d695573")
-    mesh = meshplex.read(filename)
+    mesh = meshplex.read(this_dir / "meshes" / "toy.vtk")
 
     mesh = meshplex.MeshTetra(mesh.node_coords, mesh.cells["nodes"])
 
@@ -475,17 +463,14 @@ def test_toy_geometric():
     cc_norm_inf = max(cc.flat)
     assert abs(cc_norm_2 - 1103.7038287583791) < 1.0e-12
     assert abs(cc_norm_inf - 3.4234008596539662) < 1.0e-12
-    return
 
 
 def test_signed_volume():
-    filename = download_mesh("toy.vtk", "f48abda972822bab224b91a74d695573")
-    mesh = meshplex.read(filename)
+    mesh = meshplex.read(this_dir / "meshes" / "toy.vtk")
 
     vols = meshplex.get_signed_simplex_volumes(mesh.cells["nodes"], mesh.node_coords)
 
     assert numpy.all(abs(abs(vols) - mesh.cell_volumes) < 1.0e-12 * mesh.cell_volumes)
-    return
 
 
 def test_show_cell():
@@ -529,7 +514,6 @@ def test_show_cell():
         close=True,
         render=False,
     )
-    return
 
 
 if __name__ == "__main__":
