@@ -1,4 +1,5 @@
 import os
+import pathlib
 import tempfile
 
 import numpy
@@ -6,7 +7,9 @@ import pytest
 
 import meshio
 import meshplex
-from helpers import compute_polygon_area, download_mesh, near_equal, run
+from helpers import compute_polygon_area, near_equal, run
+
+this_dir = pathlib.Path(__file__).resolve().parent
 
 
 def test_unit_triangle():
@@ -434,8 +437,7 @@ def test_rectanglesmall():
 
 
 def test_pacman():
-    filename = download_mesh("pacman.vtk", "c621cb22f8b87cecd77724c2c0601c36")
-    mesh = meshplex.read(filename)
+    mesh = meshplex.read(this_dir / "meshes" / "pacman.vtk")
 
     run(
         mesh,
@@ -475,8 +477,7 @@ def test_shell():
 
 
 def test_sphere():
-    filename = download_mesh("sphere.vtk", "06b163871cc0f23344d71c990dffe577")
-    mesh = meshplex.read(filename)
+    mesh = meshplex.read(this_dir / "meshes" / "sphere.vtk")
     run(
         mesh,
         12.273645818711595,
@@ -488,8 +489,7 @@ def test_sphere():
 
 
 def test_signed_area():
-    filename = download_mesh("pacman.vtk", "c621cb22f8b87cecd77724c2c0601c36")
-    mesh = meshio.read(filename)
+    mesh = meshio.read(this_dir / "meshes" / "pacman.vtk")
     assert numpy.all(numpy.abs(mesh.points[:, 2]) < 1.0e-15)
     X = mesh.points[:, :2]
 
@@ -500,8 +500,7 @@ def test_signed_area():
 
 
 def test_update_node_coordinates():
-    filename = download_mesh("pacman.vtk", "c621cb22f8b87cecd77724c2c0601c36")
-    mesh = meshio.read(filename)
+    mesh = meshio.read(this_dir / "meshes" / "pacman.vtk")
     assert numpy.all(numpy.abs(mesh.points[:, 2]) < 1.0e-15)
 
     mesh1 = meshplex.MeshTri(mesh.points, mesh.get_cells_type("triangle"))
@@ -519,8 +518,7 @@ def test_update_node_coordinates():
 
 
 def test_flip_delaunay():
-    filename = download_mesh("pacman.vtk", "c621cb22f8b87cecd77724c2c0601c36")
-    mesh = meshio.read(filename)
+    mesh = meshio.read(this_dir / "meshes" / "pacman.vtk")
 
     numpy.random.seed(123)
     mesh.points[:, :2] += 5.0e-2 * numpy.random.rand(*mesh.points[:, :2].shape)
@@ -798,8 +796,7 @@ def test_flat_boundary():
 
 
 def test_show_mesh():
-    filename = download_mesh("pacman-optimized.vtk", "5036d9ce5307caa0d9de80cba7ba1c4c")
-    mesh = meshplex.read(filename)
+    mesh = meshplex.read(this_dir / "meshes" / "pacman-optimized.vtk")
     print(mesh)  # test __repr__
     # mesh.plot(show_axes=False)
     mesh.show(show_axes=False, cell_quality_coloring=("viridis", 0.0, 1.0, True))
@@ -807,8 +804,7 @@ def test_show_mesh():
 
 
 def test_show_vertex():
-    filename = download_mesh("pacman-optimized.vtk", "5036d9ce5307caa0d9de80cba7ba1c4c")
-    mesh = meshplex.read(filename)
+    mesh = meshplex.read(this_dir / "meshes" / "pacman-optimized.vtk")
     # mesh.plot_vertex(125)
     mesh.show_vertex(125)
 

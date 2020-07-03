@@ -1,7 +1,10 @@
+import pathlib
+
 import numpy
 
 import meshplex
-from helpers import download_mesh
+
+this_dir = pathlib.Path(__file__).resolve().parent
 
 
 def _run(mesh):
@@ -24,14 +27,11 @@ def _run(mesh):
         assert abs(b[0] - 0.0) < tol
         assert abs(b[1] - 0.0) < tol
         assert abs(b[2] - 1.0) < tol
-    return
 
 
 def test_pacman():
-    filename = download_mesh("pacman.vtk", "c621cb22f8b87cecd77724c2c0601c36")
-    mesh = meshplex.read(filename)
+    mesh = meshplex.read(this_dir / "meshes" / "pacman.vtk")
     _run(mesh)
-    return
 
 
 if __name__ == "__main__":

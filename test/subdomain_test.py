@@ -1,21 +1,20 @@
-# pylint: disable=too-few-public-methods
+import pathlib
+
 import meshplex
-from helpers import download_mesh
+
+this_dir = pathlib.Path(__file__).resolve().parent
 
 
 def test_get_edges():
-    filename = download_mesh("pacman.vtk", "c621cb22f8b87cecd77724c2c0601c36")
-    mesh = meshplex.read(filename)
+    mesh = meshplex.read(this_dir / "meshes" / "pacman.vtk")
     mesh.create_edges()
     edge_mask = mesh.get_edge_mask()
     edge_nodes = mesh.edges["nodes"][edge_mask]
     assert len(edge_nodes) == 1276
-    return
 
 
 def test_mark_subdomain2d():
-    filename = download_mesh("pacman.vtk", "c621cb22f8b87cecd77724c2c0601c36")
-    mesh = meshplex.read(filename)
+    mesh = meshplex.read(this_dir / "meshes" / "pacman.vtk")
 
     class Subdomain1:
         is_boundary_only = True
@@ -46,12 +45,10 @@ def test_mark_subdomain2d():
     assert face_mask.sum() == 1137
     cell_mask = mesh.get_cell_mask(sd2)
     assert cell_mask.sum() == 371
-    return
 
 
 def test_mark_subdomain3d():
-    filename = download_mesh("tetrahedron.vtk", "10f3ccd1642b634b22741894fe6e7f1f")
-    mesh = meshplex.read(filename)
+    mesh = meshplex.read(this_dir / "meshes" / "tetrahedron.vtk")
 
     class Subdomain1:
         is_boundary_only = True
@@ -82,4 +79,3 @@ def test_mark_subdomain3d():
     assert face_mask.sum() == 25
     cell_mask = mesh.get_cell_mask(sd2)
     assert cell_mask.sum() == 5
-    return

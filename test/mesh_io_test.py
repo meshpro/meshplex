@@ -5,7 +5,7 @@ import meshzoo
 
 
 def test_io_2d():
-    vertices, cells = meshzoo.rectangle(0.0, 1.0, 0.0, 1.0, 2, 2, zigzag=True)
+    vertices, cells = meshzoo.rectangle(0.0, 1.0, 0.0, 1.0, 2, 2)
     mesh = meshplex.MeshTri(vertices, cells)
     # mesh = meshplex.read('pacman.vtu')
 
@@ -21,7 +21,6 @@ def test_io_2d():
 
     for k in range(len(mesh.cells["nodes"])):
         assert tuple(mesh.cells["nodes"][k]) == tuple(mesh2.cells["nodes"][k])
-    return
 
 
 # def test_io_3d(self):
@@ -47,4 +46,3 @@ def test_io_2d():
 #                 tuple(mesh.cells['nodes'][k]),
 #                 tuple(mesh2.cells['nodes'][k])
 #                 )
-#     return
