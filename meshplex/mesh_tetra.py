@@ -557,6 +557,7 @@ class MeshTetra(_base_mesh):
 
     def show(self):
         from matplotlib import pyplot as plt
+
         self.plot()
         plt.show()
         plt.close()
@@ -598,6 +599,7 @@ class MeshTetra(_base_mesh):
 
     def show_edge(self, edge_id):
         from matplotlib import pyplot as plt
+
         self.plot_edge(edge_id)
         plt.show()
         plt.close()
@@ -669,9 +671,9 @@ class MeshTetra(_base_mesh):
             #   tet circumcenter---face circumcenter
             for face_cc in face_ccs:
                 ax.plot(
-                    [cc[..., 0], face_cc[..., 0]],
-                    [cc[..., 1], face_cc[..., 1]],
-                    [cc[..., 2], face_cc[..., 2]],
+                    [cc[0], face_cc[cell_id, 0]],
+                    [cc[1], face_cc[cell_id, 1]],
+                    [cc[2], face_cc[cell_id, 2]],
                     "b-",
                 )
 
