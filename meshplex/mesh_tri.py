@@ -302,12 +302,12 @@ class MeshTri(_base_mesh):
         """The control volumes around each vertex."""
         return self.get_control_volumes()
 
-    @property
-    def surface_areas(self):
-        """"""
-        if self._surface_areas is None:
-            self._surface_areas = self._compute_surface_areas()
-        return self._surface_areas
+    # @property
+    # def surface_areas(self):
+    #     """"""
+    #     if self._surface_areas is None:
+    #         self._surface_areas = self._compute_surface_areas()
+    #     return self._surface_areas
 
     def get_control_volume_centroids(self, cell_mask=None):
         """
@@ -464,7 +464,7 @@ class MeshTri(_base_mesh):
 
         num_edges = len(self.edges["nodes"])
 
-        count = numpy.bincount(self.cells["edges"].reshape(-1), minlength=num_edges)
+        # count = numpy.bincount(self.cells["edges"].reshape(-1), minlength=num_edges)
 
         # <https://stackoverflow.com/a/50395231/353337>
         edges_flat = self.cells["edges"].flat
@@ -624,29 +624,29 @@ class MeshTri(_base_mesh):
 
         return node_edges, contribs
 
-    def _compute_surface_areas(self, cell_ids):
-        # For each edge, one half of the the edge goes to each of the end points. Used
-        # for Neumann boundary conditions if on the boundary of the mesh and transition
-        # conditions if in the interior.
-        #
-        # Each of the three edges may contribute to the surface areas of all three
-        # vertices. Here, only the two adjacent nodes receive a contribution, but other
-        # approaches (e.g., the flat cell corrector), may contribute to all three nodes.
-        cn = self.cells["nodes"][cell_ids]
-        ids = numpy.stack([cn, cn, cn], axis=1)
+    # def _compute_surface_areas(self, cell_ids):
+    #     # For each edge, one half of the the edge goes to each of the end points. Used
+    #     # for Neumann boundary conditions if on the boundary of the mesh and transition
+    #     # conditions if in the interior.
+    #     #
+    #     # Each of the three edges may contribute to the surface areas of all three
+    #     # vertices. Here, only the two adjacent nodes receive a contribution, but other
+    #     # approaches, may contribute to all three nodes.
+    #     cn = self.cells["nodes"][cell_ids]
+    #     ids = numpy.stack([cn, cn, cn], axis=1)
 
-        half_el = 0.5 * self.edge_lengths[..., cell_ids]
-        zero = numpy.zeros([half_el.shape[1]])
-        vals = numpy.stack(
-            [
-                numpy.column_stack([zero, half_el[0], half_el[0]]),
-                numpy.column_stack([half_el[1], zero, half_el[1]]),
-                numpy.column_stack([half_el[2], half_el[2], zero]),
-            ],
-            axis=1,
-        )
+    #     half_el = 0.5 * self.edge_lengths[..., cell_ids]
+    #     zero = numpy.zeros([half_el.shape[1]])
+    #     vals = numpy.stack(
+    #         [
+    #             numpy.column_stack([zero, half_el[0], half_el[0]]),
+    #             numpy.column_stack([half_el[1], zero, half_el[1]]),
+    #             numpy.column_stack([half_el[2], half_el[2], zero]),
+    #         ],
+    #         axis=1,
+    #     )
 
-        return ids, vals
+    #     return ids, vals
 
     #     def compute_gradient(self, u):
     #         '''Computes an approximation to the gradient :math:`\\nabla u` of a
@@ -1092,7 +1092,7 @@ class MeshTri(_base_mesh):
             self._compute_edges_cells()
 
         interior_edges_cells = self._edges_cells[2]
-        adj_cells = interior_edges_cells[is_flip_interior_edge].T
+        # adj_cells = interior_edges_cells[is_flip_interior_edge].T
 
         edge_gids = self._edge_to_edge_gid[2][is_flip_interior_edge]
         adj_cells = interior_edges_cells[is_flip_interior_edge].T
