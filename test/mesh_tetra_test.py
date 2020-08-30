@@ -27,12 +27,10 @@ def test_regular_tet0(a):
     cells = numpy.array([[0, 1, 2, 3]])
     mesh = meshplex.MeshTetra(points, cells.copy())
 
-    assert all((mesh.cells["nodes"] == cells).flat)
+    assert numpy.all(mesh.cells["nodes"] == cells)
 
     mesh.show()
     mesh.show_edge(0)
-    # from matplotlib import pyplot as plt
-    # plt.show()
 
     ref_local_idx = [
         [[2, 3], [3, 1], [1, 2]],
@@ -520,4 +518,6 @@ def test_show_cell():
 
 
 if __name__ == "__main__":
-    test_show_cell()
+    # test_show_cell()
+    test_regular_tet0(0.5)
+    # test_toy_geometric()

@@ -116,7 +116,6 @@ class MeshTetra(_base_mesh):
         return self.ce_ratios
 
     def mark_boundary(self):
-        """"""
         if "faces" not in self.cells:
             self.create_cell_face_relationships()
 
@@ -127,7 +126,6 @@ class MeshTetra(_base_mesh):
         return
 
     def create_cell_face_relationships(self):
-        """"""
         # Reshape into individual faces, and take the first node per edge. (The face is
         # fully characterized by it.) Sort the columns to make it possible for
         # `unique()` to identify individual faces.
@@ -166,7 +164,6 @@ class MeshTetra(_base_mesh):
         return
 
     def create_face_edge_relationships(self):
-        """"""
         a = numpy.vstack(
             [
                 self.faces["nodes"][:, [1, 2]],
@@ -394,7 +391,6 @@ class MeshTetra(_base_mesh):
 
     @property
     def cell_circumcenters(self):
-        """"""
         if self._circumcenters is None:
             self._compute_cell_circumcenters()
         return self._circumcenters
@@ -412,14 +408,12 @@ class MeshTetra(_base_mesh):
 
     @property
     def cell_inradius(self):
-        """"""
         # https://en.wikipedia.org/wiki/Tetrahedron#Inradius
         face_areas = compute_tri_areas(self.ei_dot_ej)
         return 3 * self.cell_volumes / numpy.sum(face_areas, axis=0)
 
     @property
     def cell_circumradius(self):
-        """"""
         # # Just take the distance of the circumcenter to one of the nodes for now.
         dist = self.node_coords[self.idx_hierarchy[0, 0, 0]] - self.cell_circumcenters
         circumradius = numpy.sqrt(numpy.einsum("ij,ij->i", dist, dist))
@@ -544,7 +538,6 @@ class MeshTetra(_base_mesh):
         return self._control_volumes
 
     def num_delaunay_violations(self):
-        """"""
         # Delaunay violations are present exactly on the interior faces where the sum of
         # the signed distances between face circumcenter and tetrahedron circumcenter is
         # negative.
@@ -563,7 +556,12 @@ class MeshTetra(_base_mesh):
         return numpy.sum(sums < 0.0)
 
     def show(self):
-        """"""
+        from matplotlib import pyplot as plt
+        self.plot()
+        plt.show()
+        plt.close()
+
+    def plot(self):
         from matplotlib import pyplot as plt
         from mpl_toolkits.mplot3d import Axes3D
 
@@ -592,14 +590,19 @@ class MeshTetra(_base_mesh):
             #   tet circumcenter---face circumcenter
             for face_cc in face_ccs:
                 ax.plot(
-                    [cc[..., 0], face_cc[..., 0]],
-                    [cc[..., 1], face_cc[..., 1]],
-                    [cc[..., 2], face_cc[..., 2]],
+                    [cc[0], face_cc[cell_id, 0]],
+                    [cc[1], face_cc[cell_id, 1]],
+                    [cc[2], face_cc[cell_id, 2]],
                     "b-",
                 )
-        return
 
     def show_edge(self, edge_id):
+        from matplotlib import pyplot as plt
+        self.plot_edge(edge_id)
+        plt.show()
+        plt.close()
+
+    def plot_edge(self, edge_id):
         """Displays edge with ce_ratio.
 
         :param edge_id: Edge ID for which to show the ce_ratio.
