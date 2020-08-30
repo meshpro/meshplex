@@ -7,12 +7,10 @@ __all__ = ["MeshTetra"]
 
 # pylint: disable=too-many-instance-attributes
 class MeshTetra(_base_mesh):
-    """Class for handling tetrahedral meshes.
-    """
+    """Class for handling tetrahedral meshes."""
 
     def __init__(self, node_coords, cells):
-        """Initialization.
-        """
+        """Initialization."""
         # Sort cells and nodes, first every row, then the rows themselves. This helps in
         # many downstream applications, e.g., when constructing linear systems with the
         # cells/edges. (When converting to CSR format, the I/J entries must be sorted.)
@@ -114,13 +112,11 @@ class MeshTetra(_base_mesh):
         return
 
     def get_ce_ratios(self):
-        """Covolume-edge length ratios.
-        """
+        """Covolume-edge length ratios."""
         return self.ce_ratios
 
     def mark_boundary(self):
-        """
-        """
+        """"""
         if "faces" not in self.cells:
             self.create_cell_face_relationships()
 
@@ -131,8 +127,7 @@ class MeshTetra(_base_mesh):
         return
 
     def create_cell_face_relationships(self):
-        """
-        """
+        """"""
         # Reshape into individual faces, and take the first node per edge. (The face is
         # fully characterized by it.) Sort the columns to make it possible for
         # `unique()` to identify individual faces.
@@ -171,8 +166,7 @@ class MeshTetra(_base_mesh):
         return
 
     def create_face_edge_relationships(self):
-        """
-        """
+        """"""
         a = numpy.vstack(
             [
                 self.faces["nodes"][:, [1, 2]],
@@ -198,8 +192,7 @@ class MeshTetra(_base_mesh):
         return
 
     def _compute_cell_circumcenters(self):
-        """Computes the center of the circumsphere of each cell.
-        """
+        """Computes the center of the circumsphere of each cell."""
         # Just like for triangular cells, tetrahedron circumcenters are most easily
         # computed with the quadrilateral coordinates available.
         # Luckily, we have the circumcenter-face distances (cfd):
@@ -387,8 +380,7 @@ class MeshTetra(_base_mesh):
 
     @property
     def cell_centroids(self):
-        """The centroids (barycenters, midpoints of the circumcircles) of all tetrahedra.
-        """
+        """The centroids (barycenters, midpoints of the circumcircles) of all tetrahedra."""
         if self._cell_centroids is None:
             self._cell_centroids = (
                 numpy.sum(self.node_coords[self.cells["nodes"]], axis=1) / 4.0
@@ -397,22 +389,19 @@ class MeshTetra(_base_mesh):
 
     @property
     def cell_barycenters(self):
-        """See cell_centroids().
-        """
+        """See cell_centroids()."""
         return self.cell_centroids
 
     @property
     def cell_circumcenters(self):
-        """
-        """
+        """"""
         if self._circumcenters is None:
             self._compute_cell_circumcenters()
         return self._circumcenters
 
     @property
     def cell_incenters(self):
-        """Get the midpoints of the inspheres.
-        """
+        """Get the midpoints of the inspheres."""
         # https://math.stackexchange.com/a/2864770/36678
         face_areas = compute_tri_areas(self.ei_dot_ej)
         # abc = numpy.sqrt(self.ei_dot_ei)
@@ -423,16 +412,14 @@ class MeshTetra(_base_mesh):
 
     @property
     def cell_inradius(self):
-        """
-        """
+        """"""
         # https://en.wikipedia.org/wiki/Tetrahedron#Inradius
         face_areas = compute_tri_areas(self.ei_dot_ej)
         return 3 * self.cell_volumes / numpy.sum(face_areas, axis=0)
 
     @property
     def cell_circumradius(self):
-        """
-        """
+        """"""
         # # Just take the distance of the circumcenter to one of the nodes for now.
         dist = self.node_coords[self.idx_hierarchy[0, 0, 0]] - self.cell_circumcenters
         circumradius = numpy.sqrt(numpy.einsum("ij,ij->i", dist, dist))
@@ -531,8 +518,7 @@ class MeshTetra(_base_mesh):
 
     @property
     def control_volumes(self):
-        """Compute the control volumes of all nodes in the mesh.
-        """
+        """Compute the control volumes of all nodes in the mesh."""
         if self._control_volumes is None:
             #   1/3. * (0.5 * edge_length) * covolume
             # = 1/6 * edge_length**2 * ce_ratio_edge_ratio
@@ -558,8 +544,7 @@ class MeshTetra(_base_mesh):
         return self._control_volumes
 
     def num_delaunay_violations(self):
-        """
-        """
+        """"""
         # Delaunay violations are present exactly on the interior faces where the sum of
         # the signed distances between face circumcenter and tetrahedron circumcenter is
         # negative.
@@ -578,10 +563,9 @@ class MeshTetra(_base_mesh):
         return numpy.sum(sums < 0.0)
 
     def show(self):
-        """
-        """
-        from mpl_toolkits.mplot3d import Axes3D
+        """"""
         from matplotlib import pyplot as plt
+        from mpl_toolkits.mplot3d import Axes3D
 
         fig = plt.figure()
         ax = fig.gca(projection=Axes3D.name)
@@ -622,8 +606,8 @@ class MeshTetra(_base_mesh):
         :type edge_id: int
         """
         # pylint: disable=unused-variable,relative-import
-        from mpl_toolkits.mplot3d import Axes3D
         from matplotlib import pyplot as plt
+        from mpl_toolkits.mplot3d import Axes3D
 
         if "faces" not in self.cells:
             self.create_cell_face_relationships()

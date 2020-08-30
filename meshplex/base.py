@@ -1,6 +1,5 @@
-import numpy
-
 import meshio
+import numpy
 
 from .exceptions import MeshplexError
 
@@ -92,8 +91,7 @@ def compute_ce_ratios(ei_dot_ej, tri_areas):
 
 
 def compute_triangle_circumcenters(X, ei_dot_ei, ei_dot_ej):
-    """Computes the circumcenters of all given triangles.
-    """
+    """Computes the circumcenters of all given triangles."""
     # The input argument are the dot products
     #
     #   <e1, e2>
@@ -202,8 +200,7 @@ class _base_mesh:
         return self.subdomains[subdomain]["vertices"]
 
     def get_edge_mask(self, subdomain=None):
-        """Get faces which are fully in subdomain.
-        """
+        """Get faces which are fully in subdomain."""
         if subdomain is None:
             # https://stackoverflow.com/a/42392791/353337
             return numpy.s_[:]
@@ -224,8 +221,7 @@ class _base_mesh:
         return is_inside
 
     def get_face_mask(self, subdomain):
-        """Get faces which are fully in subdomain.
-        """
+        """Get faces which are fully in subdomain."""
         if subdomain is None:
             # https://stackoverflow.com/a/42392791/353337
             return numpy.s_[:]
@@ -264,8 +260,7 @@ class _base_mesh:
         return numpy.all(is_in, axis=tuple(range(n - 1)))
 
     def _mark_vertices(self, subdomain):
-        """Mark faces/edges which are fully in subdomain.
-        """
+        """Mark faces/edges which are fully in subdomain."""
         if subdomain is None:
             is_inside = numpy.ones(len(self.node_coords), dtype=bool)
         else:

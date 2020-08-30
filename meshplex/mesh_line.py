@@ -2,8 +2,7 @@ import numpy
 
 
 class MeshLine:
-    """Class for handling line segment "meshes".
-    """
+    """Class for handling line segment "meshes"."""
 
     def __init__(self, node_coords, cells):
         self.node_coords = node_coords
@@ -17,8 +16,7 @@ class MeshLine:
         return
 
     def create_cell_volumes(self):
-        """Computes the volumes of the "cells" in the mesh.
-        """
+        """Computes the volumes of the "cells" in the mesh."""
         self.cell_volumes = numpy.array(
             [
                 abs(
@@ -31,8 +29,7 @@ class MeshLine:
         return
 
     def create_control_volumes(self):
-        """Compute the control volumes of all nodes in the mesh.
-        """
+        """Compute the control volumes of all nodes in the mesh."""
         self.control_volumes = numpy.zeros(len(self.node_coords), dtype=float)
         for k, cell in enumerate(self.cells):
             node_ids = cell["nodes"]
@@ -46,8 +43,7 @@ class MeshLine:
         return
 
     def show_vertex_function(self, u):
-        """
-        """
+        """"""
         from matplotlib import pyplot as plt
 
         plt.plot(self.node_coords, u)
