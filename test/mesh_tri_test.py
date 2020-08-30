@@ -2,12 +2,12 @@ import os
 import pathlib
 import tempfile
 
+import meshio
 import numpy
 import pytest
-
-import meshio
-import meshplex
 from helpers import compute_polygon_area, near_equal, run
+
+import meshplex
 
 this_dir = pathlib.Path(__file__).resolve().parent
 

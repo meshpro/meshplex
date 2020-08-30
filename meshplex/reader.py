@@ -4,9 +4,8 @@ formats.
 
 .. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
 """
-import numpy
-
 import meshio
+import numpy
 
 from .mesh_tetra import MeshTetra
 from .mesh_tri import MeshTri

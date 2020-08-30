@@ -14,12 +14,10 @@ __all__ = ["MeshTri"]
 
 
 class MeshTri(_base_mesh):
-    """Class for handling triangular meshes.
-    """
+    """Class for handling triangular meshes."""
 
     def __init__(self, nodes, cells, sort_cells=False):
-        """Initialization.
-        """
+        """Initialization."""
         if sort_cells:
             # Sort cells and nodes, first every row, then the rows themselves. This
             # helps in many downstream applications, e.g., when constructing linear
@@ -36,7 +34,7 @@ class MeshTri(_base_mesh):
         )
         assert (
             len(cells.shape) == 2 and cells.shape[1] == 3
-        ), "Illegal cells shape {}".format(cells.shape)
+        ), f"Illegal cells shape {cells.shape}"
 
         super().__init__(nodes, cells)
 
@@ -164,8 +162,7 @@ class MeshTri(_base_mesh):
         return self._ce_ratios
 
     def update_values(self):
-        """Update all computes entities around the mesh.
-        """
+        """Update all computes entities around the mesh."""
         if self.half_edge_coords is not None:
             # Constructing the temporary arrays
             # self.node_coords[self.idx_hierarchy] can take quite a while here.
@@ -248,8 +245,7 @@ class MeshTri(_base_mesh):
 
     @property
     def ce_ratios_per_interior_edge(self):
-        """
-        """
+        """"""
         if self._interior_ce_ratios is None:
             if "edges" not in self.cells:
                 self.create_edges()
@@ -303,17 +299,15 @@ class MeshTri(_base_mesh):
 
     @property
     def control_volumes(self):
-        """The control volumes around each vertex.
-        """
+        """The control volumes around each vertex."""
         return self.get_control_volumes()
 
-    @property
-    def surface_areas(self):
-        """
-        """
-        if self._surface_areas is None:
-            self._surface_areas = self._compute_surface_areas()
-        return self._surface_areas
+    # @property
+    # def surface_areas(self):
+    #     """"""
+    #     if self._surface_areas is None:
+    #         self._surface_areas = self._compute_surface_areas()
+    #     return self._surface_areas
 
     def get_control_volume_centroids(self, cell_mask=None):
         """
@@ -355,7 +349,9 @@ class MeshTri(_base_mesh):
             ).T
 
             # Divide by the control volume
-            self._cv_centroids /= self.get_control_volumes(cell_mask=cell_mask)[:, None]
+            cv = self.get_control_volumes(cell_mask=cell_mask)[:, None]
+            # self._cv_centroids /= numpy.where(cv > 0.0, cv, 1.0)
+            self._cv_centroids /= cv
             self._cvc_cell_mask = cell_mask
             assert numpy.all(cell_mask == self._cv_cell_mask)
 
@@ -367,8 +363,7 @@ class MeshTri(_base_mesh):
 
     @property
     def signed_cell_areas(self):
-        """Signed area of a triangle in 2D.
-        """
+        """Signed area of a triangle in 2D."""
         # http://mathworld.wolfram.com/TriangleArea.html
         assert (
             self.node_coords.shape[1] == 2
@@ -387,8 +382,7 @@ class MeshTri(_base_mesh):
         return self._signed_cell_areas
 
     def mark_boundary(self):
-        """
-        """
+        """"""
         if self.edges is None:
             self.create_edges()
 
@@ -404,31 +398,27 @@ class MeshTri(_base_mesh):
 
     @property
     def is_boundary_node(self):
-        """
-        """
+        """"""
         if self._is_boundary_node is None:
             self.mark_boundary()
         return self._is_boundary_node
 
     @property
     def is_interior_node(self):
-        """
-        """
+        """"""
         if self._is_interior_node is None:
             self.mark_boundary()
         return self._is_interior_node
 
     @property
     def is_boundary_facet(self):
-        """
-        """
+        """"""
         if self._is_boundary_facet is None:
             self.mark_boundary()
         return self._is_boundary_facet
 
     def create_edges(self):
-        """Set up edge-node and edge-cell relations.
-        """
+        """Set up edge-node and edge-cell relations."""
         # Reshape into individual edges.
         # Sort the columns to make it possible for `unique()` to identify
         # individual edges.
@@ -462,8 +452,7 @@ class MeshTri(_base_mesh):
 
     @property
     def edges_cells(self):
-        """
-        """
+        """"""
         if self._edges_cells is None:
             self._compute_edges_cells()
         return self._edges_cells
@@ -477,7 +466,7 @@ class MeshTri(_base_mesh):
 
         num_edges = len(self.edges["nodes"])
 
-        count = numpy.bincount(self.cells["edges"].reshape(-1), minlength=num_edges)
+        # count = numpy.bincount(self.cells["edges"].reshape(-1), minlength=num_edges)
 
         # <https://stackoverflow.com/a/50395231/353337>
         edges_flat = self.cells["edges"].flat
@@ -513,16 +502,14 @@ class MeshTri(_base_mesh):
 
     @property
     def edge_gid_to_edge_list(self):
-        """
-        """
+        """"""
         if self._edge_gid_to_edge_list is None:
             self._compute_edges_cells()
         return self._edge_gid_to_edge_list
 
     @property
     def face_partitions(self):
-        """
-        """
+        """"""
         # face = edge for triangles.
         # The partition is simply along the center of the edge.
         edge_lengths = self.edge_lengths
@@ -530,8 +517,7 @@ class MeshTri(_base_mesh):
 
     @property
     def cell_partitions(self):
-        """
-        """
+        """"""
         if self._cell_partitions is None:
             # Compute the control volumes. Note that
             #
@@ -543,8 +529,7 @@ class MeshTri(_base_mesh):
 
     @property
     def cell_circumcenters(self):
-        """
-        """
+        """"""
         if self._cell_circumcenters is None:
             node_cells = self.cells["nodes"].T
             self._cell_circumcenters = compute_triangle_circumcenters(
@@ -554,8 +539,7 @@ class MeshTri(_base_mesh):
 
     @property
     def cell_centroids(self):
-        """The centroids (barycenters, midpoints of the circumcircles) of all triangles.
-        """
+        """The centroids (barycenters, midpoints of the circumcircles) of all triangles."""
         if self._cell_centroids is None:
             self._cell_centroids = (
                 numpy.sum(self.node_coords[self.cells["nodes"]], axis=1) / 3.0
@@ -564,14 +548,12 @@ class MeshTri(_base_mesh):
 
     @property
     def cell_barycenters(self):
-        """See cell_centroids().
-        """
+        """See cell_centroids()."""
         return self.cell_centroids
 
     @property
     def cell_incenters(self):
-        """Get the midpoints of the incircles.
-        """
+        """Get the midpoints of the incircles."""
         # https://en.wikipedia.org/wiki/Incenter#Barycentric_coordinates
         abc = numpy.sqrt(self.ei_dot_ei)
         abc /= numpy.sum(abc, axis=0)
@@ -579,16 +561,14 @@ class MeshTri(_base_mesh):
 
     @property
     def cell_inradius(self):
-        """Get the inradii of all cells
-        """
+        """Get the inradii of all cells"""
         # See <http://mathworld.wolfram.com/Incircle.html>.
         abc = numpy.sqrt(self.ei_dot_ei)
         return 2 * self.cell_volumes / numpy.sum(abc, axis=0)
 
     @property
     def cell_circumradius(self):
-        """Get the circumradii of all cells
-        """
+        """Get the circumradii of all cells"""
         # See <http://mathworld.wolfram.com/Circumradius.html>.
         a, b, c = numpy.sqrt(self.ei_dot_ei)
         return (a * b * c) / numpy.sqrt(
@@ -597,8 +577,7 @@ class MeshTri(_base_mesh):
 
     @property
     def cell_quality(self):
-        """2 * inradius / circumradius (min 0, max 1)
-        """
+        """2 * inradius / circumradius (min 0, max 1)"""
         # q = 2 * r_in / r_out
         #   = (-a+b+c) * (+a-b+c) * (+a+b-c) / (a*b*c),
         #
@@ -609,8 +588,7 @@ class MeshTri(_base_mesh):
 
     @property
     def angles(self):
-        """All angles in the triangle.
-        """
+        """All angles in the triangle."""
         # The cosines of the angles are the negative dot products of the normalized
         # edges adjacent to the angle.
         norms = numpy.sqrt(self.ei_dot_ei)
@@ -648,29 +626,29 @@ class MeshTri(_base_mesh):
 
         return node_edges, contribs
 
-    def _compute_surface_areas(self, cell_ids):
-        # For each edge, one half of the the edge goes to each of the end points. Used
-        # for Neumann boundary conditions if on the boundary of the mesh and transition
-        # conditions if in the interior.
-        #
-        # Each of the three edges may contribute to the surface areas of all three
-        # vertices. Here, only the two adjacent nodes receive a contribution, but other
-        # approaches (e.g., the flat cell corrector), may contribute to all three nodes.
-        cn = self.cells["nodes"][cell_ids]
-        ids = numpy.stack([cn, cn, cn], axis=1)
+    # def _compute_surface_areas(self, cell_ids):
+    #     # For each edge, one half of the the edge goes to each of the end points. Used
+    #     # for Neumann boundary conditions if on the boundary of the mesh and transition
+    #     # conditions if in the interior.
+    #     #
+    #     # Each of the three edges may contribute to the surface areas of all three
+    #     # vertices. Here, only the two adjacent nodes receive a contribution, but other
+    #     # approaches, may contribute to all three nodes.
+    #     cn = self.cells["nodes"][cell_ids]
+    #     ids = numpy.stack([cn, cn, cn], axis=1)
 
-        half_el = 0.5 * self.edge_lengths[..., cell_ids]
-        zero = numpy.zeros([half_el.shape[1]])
-        vals = numpy.stack(
-            [
-                numpy.column_stack([zero, half_el[0], half_el[0]]),
-                numpy.column_stack([half_el[1], zero, half_el[1]]),
-                numpy.column_stack([half_el[2], half_el[2], zero]),
-            ],
-            axis=1,
-        )
+    #     half_el = 0.5 * self.edge_lengths[..., cell_ids]
+    #     zero = numpy.zeros([half_el.shape[1]])
+    #     vals = numpy.stack(
+    #         [
+    #             numpy.column_stack([zero, half_el[0], half_el[0]]),
+    #             numpy.column_stack([half_el[1], zero, half_el[1]]),
+    #             numpy.column_stack([half_el[2], half_el[2], zero]),
+    #         ],
+    #         axis=1,
+    #     )
 
-        return ids, vals
+    #     return ids, vals
 
     #     def compute_gradient(self, u):
     #         '''Computes an approximation to the gradient :math:`\\nabla u` of a
@@ -794,15 +772,13 @@ class MeshTri(_base_mesh):
         return curl
 
     def num_delaunay_violations(self):
-        """Number of edges where the Delaunay condition is violated.
-        """
+        """Number of edges where the Delaunay condition is violated."""
         # Delaunay violations are present exactly on the interior edges where the
         # ce_ratio is negative. Count those.
         return numpy.sum(self.ce_ratios_per_interior_edge < 0.0)
 
     def show(self, *args, fullscreen=False, **kwargs):
-        """Show the mesh (see plot()).
-        """
+        """Show the mesh (see plot())."""
         import matplotlib.pyplot as plt
 
         self.plot(*args, **kwargs)
@@ -815,8 +791,7 @@ class MeshTri(_base_mesh):
         return
 
     def save(self, filename, *args, **kwargs):
-        """Save the mesh to a file.
-        """
+        """Save the mesh to a file."""
         _, file_extension = os.path.splitext(filename)
         if file_extension in [".png", ".svg"]:
             import matplotlib.pyplot as plt
@@ -843,8 +818,7 @@ class MeshTri(_base_mesh):
         cell_mask=None,
         show_edge_numbers=False,
     ):
-        """Show the mesh using matplotlib.
-        """
+        """Show the mesh using matplotlib."""
         # Importing matplotlib takes a while, so don't do that at the header.
         import matplotlib.pyplot as plt
         from matplotlib.collections import LineCollection
@@ -997,8 +971,7 @@ class MeshTri(_base_mesh):
         return fig
 
     def show_vertex(self, *args, **kwargs):
-        """Show the mesh around a vertex (see plot_vertex()).
-        """
+        """Show the mesh around a vertex (see plot_vertex())."""
         import matplotlib.pyplot as plt
 
         self.plot_vertex(*args, **kwargs)
@@ -1066,8 +1039,7 @@ class MeshTri(_base_mesh):
         return
 
     def flip_until_delaunay(self):
-        """Flip edges until the mesh is fully Delaunay.
-        """
+        """Flip edges until the mesh is fully Delaunay."""
         # If all coedge/edge ratios are positive, all cells are Delaunay.
         if numpy.all(self.ce_ratios > 0):
             return False
@@ -1117,13 +1089,12 @@ class MeshTri(_base_mesh):
         return num_flip_steps > 1
 
     def flip_interior_edges(self, is_flip_interior_edge):
-        """
-        """
+        """"""
         if self._edges_cells is None:
             self._compute_edges_cells()
 
         interior_edges_cells = self._edges_cells[2]
-        adj_cells = interior_edges_cells[is_flip_interior_edge].T
+        # adj_cells = interior_edges_cells[is_flip_interior_edge].T
 
         edge_gids = self._edge_to_edge_gid[2][is_flip_interior_edge]
         adj_cells = interior_edges_cells[is_flip_interior_edge].T
@@ -1248,8 +1219,7 @@ class MeshTri(_base_mesh):
         return
 
     def _update_cell_values(self, cell_ids, interior_edge_ids):
-        """Updates all sorts of cell information for the given cell IDs.
-        """
+        """Updates all sorts of cell information for the given cell IDs."""
         # update idx_hierarchy
         nds = self.cells["nodes"][cell_ids].T
         self.idx_hierarchy[..., cell_ids] = nds[self.local_idx]

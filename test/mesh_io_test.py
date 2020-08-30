@@ -1,7 +1,8 @@
 import tempfile
 
-import meshplex
 import meshzoo
+
+import meshplex
 
 
 def test_io_2d():

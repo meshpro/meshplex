@@ -3,9 +3,9 @@ from math import fsum
 
 import numpy
 import pytest
+from helpers import near_equal, run
 
 import meshplex
-from helpers import near_equal, run
 
 this_dir = pathlib.Path(__file__).resolve().parent
 
@@ -27,12 +27,10 @@ def test_regular_tet0(a):
     cells = numpy.array([[0, 1, 2, 3]])
     mesh = meshplex.MeshTetra(points, cells.copy())
 
-    assert all((mesh.cells["nodes"] == cells).flat)
+    assert numpy.all(mesh.cells["nodes"] == cells)
 
     mesh.show()
     mesh.show_edge(0)
-    # from matplotlib import pyplot as plt
-    # plt.show()
 
     ref_local_idx = [
         [[2, 3], [3, 1], [1, 2]],
@@ -478,14 +476,17 @@ def test_show_cell():
     # filename = download_mesh("toy.vtk", "f48abda972822bab224b91a74d695573")
     # mesh = meshplex.read(filename)
 
-    node_coords = numpy.array(
-        [
-            [1.0, 0.0, -1.0 / numpy.sqrt(8)],
-            [-0.5, +numpy.sqrt(3.0) / 2.0, -1.0 / numpy.sqrt(8)],
-            [-0.5, -numpy.sqrt(3.0) / 2.0, -1.0 / numpy.sqrt(8)],
-            [0.0, 0.0, numpy.sqrt(2.0) - 1.0 / numpy.sqrt(8)],
-        ]
-    ) / numpy.sqrt(3.0)
+    node_coords = (
+        numpy.array(
+            [
+                [1.0, 0.0, -1.0 / numpy.sqrt(8)],
+                [-0.5, +numpy.sqrt(3.0) / 2.0, -1.0 / numpy.sqrt(8)],
+                [-0.5, -numpy.sqrt(3.0) / 2.0, -1.0 / numpy.sqrt(8)],
+                [0.0, 0.0, numpy.sqrt(2.0) - 1.0 / numpy.sqrt(8)],
+            ]
+        )
+        / numpy.sqrt(3.0)
+    )
 
     # node_coords = numpy.array(
     #     [
@@ -517,4 +518,6 @@ def test_show_cell():
 
 
 if __name__ == "__main__":
-    test_show_cell()
+    # test_show_cell()
+    test_regular_tet0(0.5)
+    # test_toy_geometric()
