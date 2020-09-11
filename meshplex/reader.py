@@ -20,15 +20,13 @@ def _sanitize(points, cells):
     return points, cells
 
 
-def read(filename):
-    """Reads an unstructured mesh into meshplex format.
+def from_meshio(mesh):
+    """Transform from meshio to meshplex format.
 
-    :param filenames: The files to read from.
-    :type filenames: str
+    :param mesh: The meshio mesh object.
+    :type mesh: meshio.Mesh
     :returns mesh{2,3}d: The mesh data.
     """
-    mesh = meshio.read(filename)
-
     # make sure to include the used nodes only
     tetra = mesh.get_cells_type("tetra")
     if len(tetra) > 0:
@@ -39,3 +37,13 @@ def read(filename):
     assert len(tri) > 0
     points, cells = _sanitize(mesh.points, tri)
     return MeshTri(points, cells)
+
+
+def read(filename):
+    """Reads an unstructured mesh into meshplex format.
+
+    :param filenames: The files to read from.
+    :type filenames: str
+    :returns mesh{2,3}d: The mesh data.
+    """
+    return from_meshio(meshio.read(filename))
