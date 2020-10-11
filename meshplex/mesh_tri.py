@@ -1,4 +1,5 @@
 import os
+import warnings
 
 import numpy
 
@@ -577,6 +578,11 @@ class MeshTri(_base_mesh):
 
     @property
     def cell_quality(self):
+        warnings.warn("Use `q_radius_ratio`. This method will be removed in a future release.")
+        return self.q_radius_ratio
+
+    @property
+    def q_radius_ratio(self):
         """2 * inradius / circumradius (min 0, max 1)"""
         # q = 2 * r_in / r_out
         #   = (-a+b+c) * (+a-b+c) * (+a+b-c) / (a*b*c),

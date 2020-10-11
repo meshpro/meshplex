@@ -436,9 +436,9 @@ class MeshTetra(_base_mesh):
 
     @property
     def q_radius_ratio(self):
-        """Ratio of incircle ratios and circumcircle ratius times 3. ("Normalized shape
-        ratio".) Is 1 for the equalateral triangle, and is often used a quality measure
-        for the cell.
+        """Ratio of incircle and circumcircle ratios times 3. ("Normalized shape
+        ratio".) Is 1 for the equilateral tetrahedron, and is often used a quality
+        measure for the cell.
         """
         # There are other sensible possiblities of defining cell quality, e.g.:
         #   * inradius to longest edge
