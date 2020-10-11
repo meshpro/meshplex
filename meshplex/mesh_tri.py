@@ -578,7 +578,9 @@ class MeshTri(_base_mesh):
 
     @property
     def cell_quality(self):
-        warnings.warn("Use `q_radius_ratio`. This method will be removed in a future release.")
+        warnings.warn(
+            "Use `q_radius_ratio`. This method will be removed in a future release."
+        )
         return self.q_radius_ratio
 
     @property
