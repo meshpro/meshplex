@@ -111,6 +111,12 @@ class MeshTetra(_base_mesh):
         self._cell_centroids = None
         return
 
+    def __repr__(self):
+        num_nodes = len(self.node_coords)
+        num_cells = len(self.cells["nodes"])
+        string = f"<meshplex tetra mesh, {num_nodes} cells, {num_cells} nodes>"
+        return string
+
     def get_ce_ratios(self):
         """Covolume-edge length ratios."""
         return self.ce_ratios
