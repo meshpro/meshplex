@@ -3,7 +3,7 @@ from .helpers import get_signed_simplex_volumes
 from .mesh_line import MeshLine
 from .mesh_tetra import MeshTetra
 from .mesh_tri import MeshTri
-from .reader import read, from_meshio
+from .reader import from_meshio, read
 
 __all__ = [
     "__version__",

@@ -889,7 +889,7 @@ class MeshTri(_base_mesh):
                 self.node_coords[:, 0],
                 self.node_coords[:, 1],
                 self.cells["nodes"],
-                self.cell_quality,
+                self.q_radius_ratio,
                 shading="flat",
                 cmap=cmap,
                 vmin=cmin,
