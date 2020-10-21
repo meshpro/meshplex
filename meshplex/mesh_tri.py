@@ -124,9 +124,10 @@ class MeshTri(_base_mesh):
         # self._ce_ratios[:, self.fcc_cells] = self.fcc.ce_ratios.T
 
     def __repr__(self):
-        return "meshplex triangular mesh with {} points and {} cells".format(
-            self.node_coords.shape[0], self.cells["nodes"].shape[0]
-        )
+        num_nodes = len(self.node_coords)
+        num_cells = len(self.cells["nodes"])
+        string = f"<meshplex triangle mesh, {num_nodes} cells, {num_cells} nodes>"
+        return string
 
     # def update_node_coordinates(self, X):
     #     assert X.shape == self.node_coords.shape
@@ -888,7 +889,7 @@ class MeshTri(_base_mesh):
                 self.node_coords[:, 0],
                 self.node_coords[:, 1],
                 self.cells["nodes"],
-                self.cell_quality,
+                self.q_radius_ratio,
                 shading="flat",
                 cmap=cmap,
                 vmin=cmin,
