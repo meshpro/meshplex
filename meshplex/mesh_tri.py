@@ -102,6 +102,7 @@ class MeshTri(_base_mesh):
         )
 
         # einsum is faster if the tail survives, e.g., ijk,ijk->jk.
+        # <https://gist.github.com/nschloe/8bc015cc1a9e5c56374945ddd711df7b>
         # TODO reorganize the data
         self.ei_dot_ej = numpy.einsum(
             "ijk, ijk->ij",
@@ -1297,17 +1298,6 @@ class MeshTri(_base_mesh):
                 2, adj_cells[is2, 1]
             ]
 
-        if self._signed_cell_areas is not None:
-            # One could make p contiguous by adding a copy(), but that's not
-            # really worth it here.
-            p = self.node_coords[self.cells["nodes"][cell_ids]].T
-            # <https://stackoverflow.com/q/50411583/353337>
-            self._signed_cell_areas[cell_ids] = (
-                +p[0][2] * (p[1][0] - p[1][1])
-                + p[0][0] * (p[1][1] - p[1][2])
-                + p[0][1] * (p[1][2] - p[1][0])
-            ) / 2
-
         # TODO update those values
         self._cell_centroids = None
         self._edge_lengths = None
@@ -1316,5 +1306,6 @@ class MeshTri(_base_mesh):
         self._cell_partitions = None
         self._cv_centroids = None
         self._surface_areas = None
+        self._signed_cell_areas = None
         self.subdomains = {}
         return

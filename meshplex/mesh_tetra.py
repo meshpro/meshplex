@@ -426,7 +426,7 @@ class MeshTetra(_base_mesh):
         # https://en.wikipedia.org/wiki/Tetrahedron#Circumradius
         #
         # Compute opposite edge length products
-        # TODO something is wrong here, the expresion under the sqrt can be negative
+        # TODO something is wrong here, the expression under the sqrt can be negative
         # edge_lengths = numpy.sqrt(self.ei_dot_ei)
         # aA = edge_lengths[0, 0] * edge_lengths[0, 2]
         # bB = edge_lengths[0, 1] * edge_lengths[2, 0]
