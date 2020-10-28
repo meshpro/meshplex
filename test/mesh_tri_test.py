@@ -499,6 +499,19 @@ def test_signed_area():
     assert numpy.all(abs(abs(vols) - mesh.cell_volumes) < 1.0e-12 * mesh.cell_volumes)
 
 
+def test_signed_area2():
+    points = numpy.array([[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]])
+    cells = numpy.array([[0, 1, 2]])
+    mesh = meshplex.MeshTri(points, cells)
+    ref = 0.5
+    assert abs(mesh.signed_cell_areas[0] - ref) < 1.0e-10 * abs(ref)
+
+    mesh.node_coords = numpy.array([[0.0, 0.0], [0.0, 1.0], [1.0, 0.0]])
+    mesh.update_values()
+    ref = -0.5
+    assert abs(mesh.signed_cell_areas[0] - ref) < 1.0e-10 * abs(ref)
+
+
 def test_update_node_coordinates():
     mesh = meshio.read(this_dir / "meshes" / "pacman.vtk")
     assert numpy.all(numpy.abs(mesh.points[:, 2]) < 1.0e-15)
