@@ -201,8 +201,8 @@ class MeshTri(_base_mesh):
         self._cell_centroids = None
         return
 
-    def remove_degenerate_cells(self, threshold):
-        is_okay = self.cell_volumes > threshold
+    def remove_cells(self, not_okay):
+        is_okay = ~not_okay
 
         self.cell_volumes = self.cell_volumes[is_okay]
         self.cells["nodes"] = self.cells["nodes"][is_okay]
