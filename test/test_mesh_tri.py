@@ -823,24 +823,28 @@ def test_show_vertex():
 
 
 def test_remove_cells():
-    points = numpy.array([
-        [0.0, 0.0],
-        [1.0, 0.0],
-        [1.0, 1.0],
-        [0.0, 1.0],
-        [0.0, 0.5],
-        [0.5, 0.0],
-        [1.0, 0.5],
-        [0.5, 1.0],
-    ])
-    cells = numpy.array([
-        [0, 5, 4],
-        [5, 1, 6],
-        [6, 2, 7],
-        [7, 3, 4],
-        [5, 6, 4],
-        [6, 7, 4],
-    ])
+    points = numpy.array(
+        [
+            [0.0, 0.0],
+            [1.0, 0.0],
+            [1.0, 1.0],
+            [0.0, 1.0],
+            [0.0, 0.5],
+            [0.5, 0.0],
+            [1.0, 0.5],
+            [0.5, 1.0],
+        ]
+    )
+    cells = numpy.array(
+        [
+            [0, 5, 4],
+            [5, 1, 6],
+            [6, 2, 7],
+            [7, 3, 4],
+            [5, 6, 4],
+            [6, 7, 4],
+        ]
+    )
     mesh = meshplex.MeshTri(points, cells)
     mesh.create_edges()
 
@@ -852,7 +856,7 @@ def test_remove_cells():
     print()
 
     # remove a corner cell
-    mesh.remove_cells([True, False, False, False, False, False])
+    mesh.remove_cells([0])
     assert len(mesh.cells["nodes"]) == 5
     assert len(mesh.edges["nodes"]) == 11
     print(mesh.edges)

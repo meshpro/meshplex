@@ -201,17 +201,19 @@ class MeshTri(_base_mesh):
         self._cell_centroids = None
         return
 
-    def _remove_edges(self, edge_ids):
-        """Remove edges with given IDs. The is a helper function called after a bunch of
-        cells have been removed.
+    def remove_cells(self, remove_array):
+        """Remove cells and take care of all the dependent data structures. The input
+        argument `remove_array` can be a boolean array or a list of indices.
         """
-        return
+        remove_array = numpy.asarray(remove_array)
+        if remove_array.dtype == int:
+            keep = numpy.ones(len(self.cells["nodes"]), dtype=bool)
+            keep[remove_array] = False
+        else:
+            assert remove_array.dtype == bool
+            keep = ~remove_array
 
-    def remove_cells(self, remove_boolean_array):
-        assert len(remove_boolean_array) == len(
-            self.cells["nodes"]
-        ), "Wrong length of index array."
-        keep = ~numpy.asarray(remove_boolean_array)
+        assert len(keep) == len(self.cells["nodes"]), "Wrong length of index array."
 
         self.cell_volumes = self.cell_volumes[keep]
         self.cells["nodes"] = self.cells["nodes"][keep]
