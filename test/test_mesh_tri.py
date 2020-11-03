@@ -822,7 +822,7 @@ def test_show_vertex():
     mesh.show_vertex(125)
 
 
-def test_remove_cells():
+def _get_test_mesh():
     points = numpy.array(
         [
             [0.0, 0.0],
@@ -847,23 +847,29 @@ def test_remove_cells():
     )
     mesh = meshplex.MeshTri(points, cells)
     mesh.create_edges()
+    return mesh
 
+
+def test_remove_corner_cell():
+    mesh = _get_test_mesh()
     assert len(mesh.cells["nodes"]) == 6
     assert len(mesh.edges["nodes"]) == 13
-    print(mesh.edges)
-    # print(mesh.edges["nodes"])
-    # mesh.show()
-    print()
-
     # remove a corner cell
     mesh.remove_cells([0])
     assert len(mesh.cells["nodes"]) == 5
     assert len(mesh.edges["nodes"]) == 11
-    print(mesh.edges)
-    # mesh.show()
-    exit(1)
+
+
+def test_remove_interior_cells():
+    mesh = _get_test_mesh()
+    assert len(mesh.cells["nodes"]) == 6
+    assert len(mesh.edges["nodes"]) == 13
+    # interior cells
+    mesh.remove_cells([4, 5])
+    assert len(mesh.cells["nodes"]) == 4
+    assert len(mesh.edges["nodes"]) == 12
 
 
 if __name__ == "__main__":
     # test_show_vertex()
-    test_remove_cells()
+    test_remove_interior_cells()
