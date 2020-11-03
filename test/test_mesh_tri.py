@@ -822,6 +822,54 @@ def test_show_vertex():
     mesh.show_vertex(125)
 
 
+def _get_test_mesh():
+    points = numpy.array(
+        [
+            [0.0, 0.0],
+            [1.0, 0.0],
+            [1.0, 1.0],
+            [0.0, 1.0],
+            [0.0, 0.5],
+            [0.5, 0.0],
+            [1.0, 0.5],
+            [0.5, 1.0],
+        ]
+    )
+    cells = numpy.array(
+        [
+            [0, 5, 4],
+            [5, 1, 6],
+            [6, 2, 7],
+            [7, 3, 4],
+            [5, 6, 4],
+            [6, 7, 4],
+        ]
+    )
+    mesh = meshplex.MeshTri(points, cells)
+    mesh.create_edges()
+    return mesh
+
+
+@pytest.mark.parametrize(
+    "remove_idx,expected_num_cells,expected_num_edges",
+    [
+        # remove corner cell
+        [[0], 5, 11],
+        # remove interior cells
+        [[4, 5], 4, 12],
+        # remove no cells at all
+        [[], 6, 13],
+    ],
+)
+def test_remove_cells(remove_idx, expected_num_cells, expected_num_edges):
+    mesh = _get_test_mesh()
+    assert len(mesh.cells["nodes"]) == 6
+    assert len(mesh.edges["nodes"]) == 13
+    # remove a corner cell
+    mesh.remove_cells(remove_idx)
+    assert len(mesh.cells["nodes"]) == expected_num_cells
+    assert len(mesh.edges["nodes"]) == expected_num_edges
+
+
 if __name__ == "__main__":
-    # test_show_vertex()
-    test_show_mesh()
+    test_show_vertex()

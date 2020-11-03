@@ -27,7 +27,7 @@ def grp_start_len(a):
 
 
 def unique_rows(a):
-    # The cleaner alternative `numpy.unique(a, axis=0)` is slow; cf.
+    # The numpy alternative `numpy.unique(a, axis=0)` is slow; cf.
     # <https://github.com/numpy/numpy/issues/11136>.
     b = numpy.ascontiguousarray(a).view(
         numpy.dtype((numpy.void, a.dtype.itemsize * a.shape[1]))
