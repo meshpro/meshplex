@@ -206,6 +206,9 @@ class MeshTri(_base_mesh):
         argument `remove_array` can be a boolean array or a list of indices.
         """
         remove_array = numpy.asarray(remove_array)
+        if len(remove_array) == 0:
+            return
+
         if remove_array.dtype == int:
             keep = numpy.ones(len(self.cells["nodes"]), dtype=bool)
             keep[remove_array] = False
@@ -214,6 +217,9 @@ class MeshTri(_base_mesh):
             keep = ~remove_array
 
         assert len(keep) == len(self.cells["nodes"]), "Wrong length of index array."
+
+        if numpy.all(keep):
+            return
 
         self.cell_volumes = self.cell_volumes[keep]
         self.cells["nodes"] = self.cells["nodes"][keep]

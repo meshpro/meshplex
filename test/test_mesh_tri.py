@@ -850,26 +850,26 @@ def _get_test_mesh():
     return mesh
 
 
-def test_remove_corner_cell():
+@pytest.mark.parametrize(
+    "remove_idx,expected_num_cells,expected_num_edges",
+    [
+        # remove corner cell
+        [[0], 5, 11],
+        # remove interior cells
+        [[4, 5], 4, 12],
+        # remove no cells at all
+        [[], 6, 13],
+    ],
+)
+def test_remove_cells(remove_idx, expected_num_cells, expected_num_edges):
     mesh = _get_test_mesh()
     assert len(mesh.cells["nodes"]) == 6
     assert len(mesh.edges["nodes"]) == 13
     # remove a corner cell
-    mesh.remove_cells([0])
-    assert len(mesh.cells["nodes"]) == 5
-    assert len(mesh.edges["nodes"]) == 11
-
-
-def test_remove_interior_cells():
-    mesh = _get_test_mesh()
-    assert len(mesh.cells["nodes"]) == 6
-    assert len(mesh.edges["nodes"]) == 13
-    # interior cells
-    mesh.remove_cells([4, 5])
-    assert len(mesh.cells["nodes"]) == 4
-    assert len(mesh.edges["nodes"]) == 12
+    mesh.remove_cells(remove_idx)
+    assert len(mesh.cells["nodes"]) == expected_num_cells
+    assert len(mesh.edges["nodes"]) == expected_num_edges
 
 
 if __name__ == "__main__":
-    # test_show_vertex()
-    test_remove_interior_cells()
+    test_show_vertex()
