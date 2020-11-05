@@ -73,6 +73,7 @@ classes and functions, see [readthedocs](https://meshplex.readthedocs.io/).
 
 #### Triangles
 <img src="https://nschloe.github.io/meshplex/pacman.png" width="30%">
+
 <!--exdown-skip-->
 ```python
 import meshplex
@@ -91,6 +92,7 @@ mesh.show(
 
 #### Tetrahedra
 <img src="https://nschloe.github.io/meshplex/tetra.png" width="30%">
+
 <!--exdown-skip-->
 ```python
 import numpy
