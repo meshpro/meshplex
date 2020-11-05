@@ -1,6 +1,7 @@
 import numpy
 
-from .base import _BaseMesh, compute_tri_areas, compute_triangle_circumcenters
+from .base import _BaseMesh
+from .helpers import compute_tri_areas, compute_triangle_circumcenters
 
 __all__ = ["MeshTetra"]
 
@@ -11,7 +12,7 @@ class MeshTetra(_BaseMesh):
 
     def __init__(self, points, cells):
         """Initialization."""
-        # Sort cells and nodes, first every row, then the rows themselves. This helps in
+        # Sort cells and points, first every row, then the rows themselves. This helps in
         # many downstream applications, e.g., when constructing linear systems with the
         # cells/edges. (When converting to CSR format, the I/J entries must be sorted.)
         # Don't use cells.sort(axis=1) to avoid
@@ -21,6 +22,7 @@ class MeshTetra(_BaseMesh):
         cells = numpy.sort(cells, axis=1)
         cells = cells[cells[:, 0].argsort()]
 
+        self._points = points
         super().__init__(points, cells)
 
         # Assert that all vertices are used.
@@ -28,32 +30,32 @@ class MeshTetra(_BaseMesh):
         # ```
         # uvertices, uidx = numpy.unique(cells, return_inverse=True)
         # cells = uidx.reshape(cells.shape)
-        # nodes = nodes[uvertices]
+        # points = points[uvertices]
         # ```
         # helps.
         is_used = numpy.zeros(len(points), dtype=bool)
         is_used[cells] = True
-        assert numpy.all(is_used), "There are {} dangling nodes in the mesh".format(
+        assert numpy.all(is_used), "There are {} dangling points in the mesh".format(
             numpy.sum(~is_used)
         )
 
-        self.cells = {"nodes": cells}
+        self.cells = {"points": cells}
 
         self._control_volumes = None
         self._circumcenters = None
         self.subdomains = {}
 
-        # Arrange the node_face_cells such that node k is opposite of face k in each
+        # Arrange the point_face_cells such that point k is opposite of face k in each
         # cell.
-        nds = self.cells["nodes"].T
+        nds = self.cells["points"].T
         idx = numpy.array([[1, 2, 3], [2, 3, 0], [3, 0, 1], [0, 1, 2]]).T
-        self.node_face_cells = nds[idx]
+        self.point_face_cells = nds[idx]
 
-        # Arrange the idx_hierarchy (node->edge->face->cells) such that
+        # Arrange the idx_hierarchy (point->edge->face->cells) such that
         #
-        #   * node k is opposite of edge k in each face,
+        #   * point k is opposite of edge k in each face,
         #   * duplicate edges are in the same spot of the each of the faces,
-        #   * all nodes are in domino order ([1, 2], [2, 3], [3, 1]),
+        #   * all points are in domino order ([1, 2], [2, 3], [3, 1]),
         #   * the same edges are easy to find:
         #      - edge 0: face+1, edge 2
         #      - edge 1: face+2, edge 1
@@ -74,11 +76,11 @@ class MeshTetra(_BaseMesh):
         self.idx_hierarchy = nds[self.local_idx]
 
         # The inverted local index.
-        # This array specifies for each of the three nodes which edge endpoints
+        # This array specifies for each of the three points which edge endpoints
         # correspond to it.
         self.local_idx_inv = [
-            [tuple(i) for i in zip(*numpy.where(self.local_idx == node_idx))]
-            for node_idx in range(4)
+            [tuple(i) for i in zip(*numpy.where(self.local_idx == point_idx))]
+            for point_idx in range(4)
         ]
 
         # create ei_dot_ei, ei_dot_ej
@@ -100,7 +102,7 @@ class MeshTetra(_BaseMesh):
         self.ce_ratios = self._compute_ce_ratios_geometric()
         # self.ce_ratios = self._compute_ce_ratios_algebraic()
 
-        self.is_boundary_node = None
+        self.is_boundary_point = None
         self._inv_faces = None
         self.edges = None
         self.is_boundary_facet_individual = None
@@ -111,10 +113,20 @@ class MeshTetra(_BaseMesh):
         return
 
     def __repr__(self):
-        num_nodes = len(self.points)
-        num_cells = len(self.cells["nodes"])
-        string = f"<meshplex tetra mesh, {num_nodes} cells, {num_cells} nodes>"
+        num_points = len(self.points)
+        num_cells = len(self.cells["points"])
+        string = f"<meshplex tetra mesh, {num_points} cells, {num_cells} points>"
         return string
+
+    @property
+    def points(self):
+        return self._points
+
+    @points.setter
+    def set_points(self, new_points):
+        assert new_points.shape == self._points.shape
+        # reset all computed values
+        self.ei_do_ei = None
 
     def get_ce_ratios(self):
         """Covolume-edge length ratios."""
@@ -124,14 +136,14 @@ class MeshTetra(_BaseMesh):
         if "faces" not in self.cells:
             self.create_cell_face_relationships()
 
-        self.is_boundary_node = numpy.zeros(len(self.points), dtype=bool)
-        self.is_boundary_node[
-            self.faces["nodes"][self.is_boundary_facet_individual]
+        self.is_boundary_point = numpy.zeros(len(self.points), dtype=bool)
+        self.is_boundary_point[
+            self.faces["points"][self.is_boundary_facet_individual]
         ] = True
         return
 
     def create_cell_face_relationships(self):
-        # Reshape into individual faces, and take the first node per edge. (The face is
+        # Reshape into individual faces, and take the first point per edge. (The face is
         # fully characterized by it.) Sort the columns to make it possible for
         # `unique()` to identify individual faces.
         s = self.idx_hierarchy.shape
@@ -153,15 +165,15 @@ class MeshTetra(_BaseMesh):
         self.is_boundary_facet = (cts[inv] == 1).reshape(s[2:])
         self.is_boundary_facet_individual = cts == 1
 
-        self.faces = {"nodes": a[idx]}
+        self.faces = {"points": a[idx]}
 
         # cell->faces relationship
-        num_cells = len(self.cells["nodes"])
+        num_cells = len(self.cells["points"])
         cells_faces = inv.reshape([4, num_cells]).T
         self.cells["faces"] = cells_faces
 
-        # Store the opposing nodes too
-        self.cells["opposing vertex"] = self.cells["nodes"]
+        # Store the opposing points too
+        self.cells["opposing vertex"] = self.cells["points"]
 
         # save for create_edge_cells
         self._inv_faces = inv
@@ -171,9 +183,9 @@ class MeshTetra(_BaseMesh):
     def create_face_edge_relationships(self):
         a = numpy.vstack(
             [
-                self.faces["nodes"][:, [1, 2]],
-                self.faces["nodes"][:, [2, 0]],
-                self.faces["nodes"][:, [0, 1]],
+                self.faces["points"][:, [1, 2]],
+                self.faces["points"][:, [2, 0]],
+                self.faces["points"][:, [0, 1]],
             ]
         )
 
@@ -182,12 +194,12 @@ class MeshTetra(_BaseMesh):
             numpy.dtype((numpy.void, a.dtype.itemsize * a.shape[1]))
         )
         _, idx, inv = numpy.unique(b, return_index=True, return_inverse=True)
-        edge_nodes = a[idx]
+        edge_points = a[idx]
 
-        self.edges = {"nodes": edge_nodes}
+        self.edges = {"points": edge_points}
 
         # face->edge relationship
-        num_faces = len(self.faces["nodes"])
+        num_faces = len(self.faces["points"])
         face_edges = inv.reshape([3, num_faces]).T
         self.faces["edges"] = face_edges
 
@@ -221,7 +233,7 @@ class MeshTetra(_BaseMesh):
         alpha = self._zeta / numpy.sum(self._zeta, axis=0)
 
         self._circumcenters = numpy.sum(
-            alpha[None].T * self.points[self.cells["nodes"]], axis=1
+            alpha[None].T * self.points[self.cells["points"]], axis=1
         )
         return
 
@@ -293,7 +305,7 @@ class MeshTetra(_BaseMesh):
         #       + self.ei_dot_ej[0] * self.ei_dot_ej[1] * self.ei_dot_ej[2]
         #       ).
         #
-        # for the face [1, 2, 3] (with edges [3, 4, 5]), where nodes and edges are
+        # for the face [1, 2, 3] (with edges [3, 4, 5]), where points and edges are
         # ordered like
         #
         #                        3
@@ -385,7 +397,7 @@ class MeshTetra(_BaseMesh):
         """The centroids (barycenters, midpoints of the circumcircles) of all tetrahedra."""
         if self._cell_centroids is None:
             self._cell_centroids = (
-                numpy.sum(self.points[self.cells["nodes"]], axis=1) / 4.0
+                numpy.sum(self.points[self.cells["points"]], axis=1) / 4.0
             )
         return self._cell_centroids
 
@@ -407,7 +419,7 @@ class MeshTetra(_BaseMesh):
         face_areas = compute_tri_areas(self.ei_dot_ej)
         # abc = numpy.sqrt(self.ei_dot_ei)
         face_areas /= numpy.sum(face_areas, axis=0)
-        return numpy.einsum("ij,jik->jk", face_areas, self.points[self.cells["nodes"]])
+        return numpy.einsum("ij,jik->jk", face_areas, self.points[self.cells["points"]])
 
     @property
     def cell_inradius(self):
@@ -417,7 +429,7 @@ class MeshTetra(_BaseMesh):
 
     @property
     def cell_circumradius(self):
-        # # Just take the distance of the circumcenter to one of the nodes for now.
+        # # Just take the distance of the circumcenter to one of the points for now.
         dist = self.points[self.idx_hierarchy[0, 0, 0]] - self.cell_circumcenters
         circumradius = numpy.sqrt(numpy.einsum("ij,ij->i", dist, dist))
         # https://en.wikipedia.org/wiki/Tetrahedron#Circumradius
@@ -515,13 +527,13 @@ class MeshTetra(_BaseMesh):
 
     @property
     def control_volumes(self):
-        """Compute the control volumes of all nodes in the mesh."""
+        """Compute the control volumes of all points in the mesh."""
         if self._control_volumes is None:
             #   1/3. * (0.5 * edge_length) * covolume
             # = 1/6 * edge_length**2 * ce_ratio_edge_ratio
             v = self.ei_dot_ei * self.ce_ratios / 6.0
             # Explicitly sum up contributions per cell first. Makes numpy.add.at faster.
-            # For every node k (range(4)), check for which edges k appears in local_idx,
+            # For every point k (range(4)), check for which edges k appears in local_idx,
             # and sum() up the v's from there.
             vals = numpy.array(
                 [
@@ -533,7 +545,7 @@ class MeshTetra(_BaseMesh):
             ).T
             #
             self._control_volumes = numpy.bincount(
-                self.cells["nodes"].reshape(-1),
+                self.cells["points"].reshape(-1),
                 vals.reshape(-1),
                 minlength=len(self.points),
             )
@@ -578,10 +590,10 @@ class MeshTetra(_BaseMesh):
             self._compute_cell_circumcenters()
 
         X = self.points
-        for cell_id in range(len(self.cells["nodes"])):
+        for cell_id in range(len(self.cells["points"])):
             cc = self._circumcenters[cell_id]
             #
-            x = X[self.node_face_cells[..., [cell_id]]]
+            x = X[self.point_face_cells[..., [cell_id]]]
             face_ccs = compute_triangle_circumcenters(x, self.ei_dot_ei, self.ei_dot_ej)
             # draw the face circumcenters
             ax.plot(
@@ -648,11 +660,11 @@ class MeshTetra(_BaseMesh):
         )
         col = "k"
         for adj_edge_id in adj_edge_ids:
-            x = self.points[self.edges["nodes"][adj_edge_id]]
+            x = self.points[self.edges["points"][adj_edge_id]]
             ax.plot(x[:, 0], x[:, 1], x[:, 2], col)
 
         # make clear which is edge_id
-        x = self.points[self.edges["nodes"][edge_id]]
+        x = self.points[self.edges["points"][edge_id]]
         ax.plot(x[:, 0], x[:, 1], x[:, 2], color=col, linewidth=3.0)
 
         # connect the face circumcenters with the corresponding cell
@@ -661,7 +673,7 @@ class MeshTetra(_BaseMesh):
         for cell_id in adj_cell_ids:
             cc = self._circumcenters[cell_id]
             #
-            x = X[self.node_face_cells[..., [cell_id]]]
+            x = X[self.point_face_cells[..., [cell_id]]]
             face_ccs = compute_triangle_circumcenters(x, self.ei_dot_ei, self.ei_dot_ej)
             # draw the face circumcenters
             ax.plot(
@@ -746,7 +758,7 @@ class MeshTetra(_BaseMesh):
         render_window_interactor.SetRenderWindow(render_window)
 
         for ij in [[0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3]]:
-            x0, x1 = self.points[self.cells["nodes"][cell_id][ij]]
+            x0, x1 = self.points[self.cells["points"][cell_id][ij]]
             renderer.AddActor(get_line_actor(x0, x1, line_width))
         renderer.SetBackground(1.0, 1.0, 1.0)
 
@@ -786,7 +798,7 @@ class MeshTetra(_BaseMesh):
             )
 
         if face_circumcenter_rgba is not None:
-            x = self.points[self.node_face_cells[..., [cell_id]]]
+            x = self.points[self.point_face_cells[..., [cell_id]]]
             face_ccs = compute_triangle_circumcenters(
                 x, self.ei_dot_ei, self.ei_dot_ej
             )[:, 0, :]
@@ -795,7 +807,7 @@ class MeshTetra(_BaseMesh):
 
         if control_volume_boundaries_rgba:
             cell_cc = self.cell_circumcenters[cell_id]
-            x = self.points[self.node_face_cells[..., [cell_id]]]
+            x = self.points[self.point_face_cells[..., [cell_id]]]
             face_ccs = compute_triangle_circumcenters(
                 x, self.ei_dot_ei, self.ei_dot_ej
             )[:, 0, :]

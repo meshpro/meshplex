@@ -5,8 +5,7 @@ __all__ = []
 
 
 class _BaseMesh:
-    def __init__(self, points, cells_nodes):
-        self.points = points
+    def __init__(self, points, cells_points):
         self._edge_lengths = None
 
     def write(self, filename, point_data=None, cell_data=None, field_data=None):
@@ -18,18 +17,18 @@ class _BaseMesh:
         else:
             a = self.points
 
-        if self.cells["nodes"].shape[1] == 3:
+        if self.cells["points"].shape[1] == 3:
             cell_type = "triangle"
         else:
             assert (
-                self.cells["nodes"].shape[1] == 4
+                self.cells["points"].shape[1] == 4
             ), "Only triangles/tetrahedra supported"
             cell_type = "tetra"
 
         meshio.write_points_cells(
             filename,
             a,
-            {cell_type: self.cells["nodes"]},
+            {cell_type: self.cells["points"]},
             point_data=point_data,
             cell_data=cell_data,
             field_data=field_data,
@@ -59,7 +58,7 @@ class _BaseMesh:
             self._mark_vertices(subdomain)
 
         # A face is inside if all its edges are in.
-        # An edge is inside if all its nodes are in.
+        # An edge is inside if all its points are in.
         is_in = self.subdomains[subdomain]["vertices"][self.idx_hierarchy]
         # Take `all()` over the first index
         is_inside = numpy.all(is_in, axis=tuple(range(1)))
@@ -80,7 +79,7 @@ class _BaseMesh:
             self._mark_vertices(subdomain)
 
         # A face is inside if all its edges are in.
-        # An edge is inside if all its nodes are in.
+        # An edge is inside if all its points are in.
         is_in = self.subdomains[subdomain]["vertices"][self.idx_hierarchy]
         # Take `all()` over all axes except the last two (face_ids, cell_ids).
         n = len(is_in.shape)
@@ -119,7 +118,7 @@ class _BaseMesh:
             if subdomain.is_boundary_only:
                 # Filter boundary
                 self.mark_boundary()
-                is_inside = is_inside & self.is_boundary_node
+                is_inside = is_inside & self.is_boundary_point
 
         self.subdomains[subdomain] = {"vertices": is_inside}
         return

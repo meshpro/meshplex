@@ -9,8 +9,8 @@ def test_get_edges():
     mesh = meshplex.read(this_dir / "meshes" / "pacman.vtk")
     mesh.create_edges()
     edge_mask = mesh.get_edge_mask()
-    edge_nodes = mesh.edges["nodes"][edge_mask]
-    assert len(edge_nodes) == 1276
+    edge_points = mesh.edges["points"][edge_mask]
+    assert len(edge_points) == 1276
 
 
 def test_mark_subdomain2d():

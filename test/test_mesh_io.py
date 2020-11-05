@@ -20,8 +20,8 @@ def test_io_2d():
 
     mesh2 = meshplex.read(fname)
 
-    for k in range(len(mesh.cells["nodes"])):
-        assert tuple(mesh.cells["nodes"][k]) == tuple(mesh2.cells["nodes"][k])
+    for k in range(len(mesh.cells["points"])):
+        assert tuple(mesh.cells["points"][k]) == tuple(mesh2.cells["points"][k])
 
 
 # def test_io_3d(self):
@@ -42,8 +42,8 @@ def test_io_2d():
 
 #     mesh2, _, _, _ = meshplex.read('test.vtu')
 
-#     for k in range(len(mesh.cells['nodes'])):
+#     for k in range(len(mesh.cells['points'])):
 #         self.assertEqual(
-#                 tuple(mesh.cells['nodes'][k]),
-#                 tuple(mesh2.cells['nodes'][k])
+#                 tuple(mesh.cells['points'][k]),
+#                 tuple(mesh2.cells['points'][k])
 #                 )

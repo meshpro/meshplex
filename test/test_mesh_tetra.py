@@ -27,7 +27,7 @@ def test_regular_tet0(a):
     cells = numpy.array([[0, 1, 2, 3]])
     mesh = meshplex.MeshTetra(points, cells.copy())
 
-    assert numpy.all(mesh.cells["nodes"] == cells)
+    assert numpy.all(mesh.cells["points"] == cells)
 
     mesh.show()
     mesh.show_edge(0)
@@ -163,7 +163,7 @@ def test_unit_tetrahedron_geometric(a):
 
     mesh = meshplex.MeshTetra(points, cells)
 
-    assert all((mesh.cells["nodes"] == cells).flat)
+    assert all((mesh.cells["points"] == cells).flat)
 
     assert near_equal(mesh.cell_circumcenters, [a / 2.0, a / 2.0, a / 2.0], tol)
 
@@ -218,7 +218,7 @@ def test_regular_tet1_geometric_order():
 
     mesh = meshplex.MeshTetra(points, cells)
 
-    assert all((mesh.cells["nodes"] == [0, 1, 2, 3]).flat)
+    assert all((mesh.cells["points"] == [0, 1, 2, 3]).flat)
 
     assert near_equal(mesh.cell_circumcenters, [a / 2.0, a / 2.0, a / 2.0], tol)
 
@@ -364,7 +364,7 @@ def test_cubesmall():
 
 
 def test_arrow3d():
-    nodes = numpy.array(
+    points = numpy.array(
         [
             [+0.0, +0.0, +0.0],
             [+2.0, -1.0, +0.0],
@@ -375,7 +375,7 @@ def test_arrow3d():
         ]
     )
     cellsNodes = numpy.array([[1, 2, 4, 5], [2, 3, 4, 5], [0, 1, 4, 5], [0, 3, 4, 5]])
-    mesh = meshplex.MeshTetra(nodes, cellsNodes)
+    mesh = meshplex.MeshTetra(points, cellsNodes)
 
     run(
         mesh,
@@ -415,7 +415,7 @@ def test_tetrahedron():
 #         print(mesh.cells.keys())
 #         pts = mesh.points.copy()
 #         pts += 1.0e-16 * numpy.random.rand(pts.shape[0], pts.shape[1])
-#         mesh2 = meshplex.MeshTetra(pts, mesh.cells['nodes'])
+#         mesh2 = meshplex.MeshTetra(pts, mesh.cells['points'])
 #         #
 #         diff_coords = mesh.points - mesh2.points
 #         max_diff_coords = max(diff_coords.flatten())
@@ -445,7 +445,7 @@ def test_tetrahedron():
 def test_toy_geometric():
     mesh = meshplex.read(this_dir / "meshes" / "toy.vtk")
 
-    mesh = meshplex.MeshTetra(mesh.points, mesh.cells["nodes"])
+    mesh = meshplex.MeshTetra(mesh.points, mesh.cells["points"])
 
     run(
         mesh,
@@ -466,7 +466,7 @@ def test_toy_geometric():
 def test_signed_volume():
     mesh = meshplex.read(this_dir / "meshes" / "toy.vtk")
 
-    vols = meshplex.get_signed_simplex_volumes(mesh.cells["nodes"], mesh.points)
+    vols = meshplex.get_signed_simplex_volumes(mesh.cells["points"], mesh.points)
 
     assert numpy.all(abs(abs(vols) - mesh.cell_volumes) < 1.0e-12 * mesh.cell_volumes)
 
