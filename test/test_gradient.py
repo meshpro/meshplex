@@ -11,13 +11,13 @@
 #         return
 #
 #     def _run_test(self, mesh):
-#         num_nodes = len(mesh.node_coords)
+#         num_nodes = len(mesh.points)
 #         # Create function  2*x + 3*y.
 #         a_x = 7.0
 #         a_y = 3.0
 #         a0 = 1.0
-#         u = a_x * mesh.node_coords[:, 0] + \
-#             a_y * mesh.node_coords[:, 1] + \
+#         u = a_x * mesh.points[:, 0] + \
+#             a_y * mesh.points[:, 1] + \
 #             a0 * numpy.ones(num_nodes)
 #         # Get the gradient analytically.
 #         sol = numpy.empty((num_nodes, 2))

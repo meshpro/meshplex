@@ -95,17 +95,19 @@ def test_regular_tri_additional_points():
 
     mesh.mark_boundary()
 
-    assert numpy.array_equal(mesh.node_is_used, [False, True, True, True, False])
-    assert numpy.array_equal(mesh.is_boundary_node, [False, True, True, True, False])
-    assert numpy.array_equal(mesh.is_interior_node, [False, False, False, False, False])
+    assert numpy.array_equal(mesh.point_is_used, [False, True, True, True, False])
+    assert numpy.array_equal(mesh.is_boundary_point, [False, True, True, True, False])
+    assert numpy.array_equal(
+        mesh.is_interior_point, [False, False, False, False, False]
+    )
 
     tol = 1.0e-14
 
-    assert numpy.array_equal(mesh.cells["nodes"], [[1, 2, 3]])
+    assert numpy.array_equal(mesh.cells["points"], [[1, 2, 3]])
 
     mesh.create_edges()
     assert numpy.array_equal(mesh.cells["edges"], [[2, 1, 0]])
-    assert numpy.array_equal(mesh.edges["nodes"], [[1, 2], [1, 3], [2, 3]])
+    assert numpy.array_equal(mesh.edges["points"], [[1, 2], [1, 3], [2, 3]])
 
     # ce_ratios
     assert near_equal(mesh.ce_ratios.T, [0.0, 0.5, 0.5], tol)
@@ -138,7 +140,7 @@ def test_regular_tri_order():
     cells = numpy.array([[0, 1, 2]])
 
     mesh = meshplex.MeshTri(points, cells)
-    assert all((mesh.cells["nodes"] == [0, 1, 2]).flat)
+    assert all((mesh.cells["points"] == [0, 1, 2]).flat)
 
     tol = 1.0e-14
 
@@ -506,13 +508,13 @@ def test_signed_area2():
     ref = 0.5
     assert abs(mesh.signed_cell_areas[0] - ref) < 1.0e-10 * abs(ref)
 
-    mesh.node_coords = numpy.array([[0.0, 0.0], [0.0, 1.0], [1.0, 0.0]])
+    mesh.points = numpy.array([[0.0, 0.0], [0.0, 1.0], [1.0, 0.0]])
     mesh.update_values()
     ref = -0.5
     assert abs(mesh.signed_cell_areas[0] - ref) < 1.0e-10 * abs(ref)
 
 
-def test_update_node_coordinates():
+def test_update_point_coordinates():
     mesh = meshio.read(this_dir / "meshes" / "pacman.vtk")
     assert numpy.all(numpy.abs(mesh.points[:, 2]) < 1.0e-15)
 
@@ -522,7 +524,7 @@ def test_update_node_coordinates():
     X2 = mesh.points + 1.0e-2 * numpy.random.rand(*mesh.points.shape)
     mesh2 = meshplex.MeshTri(X2, mesh.get_cells_type("triangle"))
 
-    mesh1.node_coords = X2
+    mesh1.points = X2
     mesh1.update_values()
 
     tol = 1.0e-12
@@ -549,8 +551,8 @@ def test_flip_delaunay():
             num_adj_cells, edge_id = mesh._edge_gid_to_edge_list[edge_gid]
             assert cell_gid in mesh._edges_cells[num_adj_cells][edge_id]
 
-    new_cells = mesh.cells["nodes"].copy()
-    new_coords = mesh.node_coords.copy()
+    new_cells = mesh.cells["points"].copy()
+    new_coords = mesh.points.copy()
 
     # Assert that some key values are updated properly
     mesh2 = meshplex.MeshTri(new_coords, new_cells)
@@ -570,13 +572,13 @@ def test_flip_delaunay_near_boundary():
 
     mesh.create_edges()
     assert mesh.num_delaunay_violations() == 1
-    assert numpy.array_equal(mesh.cells["nodes"], [[0, 1, 2], [0, 2, 3]])
+    assert numpy.array_equal(mesh.cells["points"], [[0, 1, 2], [0, 2, 3]])
     assert numpy.array_equal(mesh.cells["edges"], [[3, 1, 0], [4, 2, 1]])
 
     mesh.flip_until_delaunay()
 
     assert mesh.num_delaunay_violations() == 0
-    assert numpy.array_equal(mesh.cells["nodes"], [[1, 3, 2], [1, 3, 0]])
+    assert numpy.array_equal(mesh.cells["points"], [[1, 3, 2], [1, 3, 0]])
     assert numpy.array_equal(mesh.cells["edges"], [[4, 3, 1], [2, 0, 1]])
 
 
@@ -600,7 +602,7 @@ def test_flip_same_edge_twice():
     new_points = numpy.array(
         [[0.0, +0.0, 0.0], [0.1, -0.5, 0.0], [0.2, +0.0, 0.0], [0.1, +0.5, 0.0]]
     )
-    mesh.node_coords = new_points
+    mesh.points = new_points
     mesh.update_values()
     assert mesh.num_delaunay_violations() == 1
 
@@ -624,12 +626,12 @@ def test_flip_two_edges():
     assert mesh.num_delaunay_violations() == 0
 
     assert numpy.array_equal(
-        mesh.cells["nodes"], [[5, 2, 3], [0, 2, 1], [5, 2, 0], [3, 4, 5]]
+        mesh.cells["points"], [[5, 2, 3], [0, 2, 1], [5, 2, 0], [3, 4, 5]]
     )
 
 
 def test_flip_delaunay_near_boundary_preserve_boundary_count():
-    # This test is to make sure meshplex preserves the boundary node count.
+    # This test is to make sure meshplex preserves the boundary point count.
     points = numpy.array(
         [
             [+0.0, +0.0, 0.0],
@@ -647,13 +649,13 @@ def test_flip_delaunay_near_boundary_preserve_boundary_count():
     assert mesh.num_delaunay_violations() == 1
 
     mesh.mark_boundary()
-    is_boundary_node_ref = [False, True, True, True, True, True]
-    assert numpy.array_equal(mesh.is_boundary_node, is_boundary_node_ref)
+    is_boundary_point_ref = [False, True, True, True, True, True]
+    assert numpy.array_equal(mesh.is_boundary_point, is_boundary_point_ref)
 
     mesh.flip_until_delaunay()
 
     mesh.mark_boundary()
-    assert numpy.array_equal(mesh.is_boundary_node, is_boundary_node_ref)
+    assert numpy.array_equal(mesh.is_boundary_point, is_boundary_point_ref)
 
 
 def test_inradius():
@@ -802,7 +804,7 @@ def test_flat_boundary():
     cv = numpy.zeros(X.shape[0])
     for edges, ce_ratios in zip(mesh.idx_hierarchy.T, mesh.ce_ratios.T):
         for i, ce in zip(edges, ce_ratios):
-            ei = mesh.node_coords[i[1]] - mesh.node_coords[i[0]]
+            ei = mesh.points[i[1]] - mesh.points[i[0]]
             cv[i] += 0.25 * ce * numpy.dot(ei, ei)
 
     assert numpy.all(numpy.abs(cv - mesh.control_volumes) < 1.0e-12 * cv)
@@ -863,12 +865,12 @@ def _get_test_mesh():
 )
 def test_remove_cells(remove_idx, expected_num_cells, expected_num_edges):
     mesh = _get_test_mesh()
-    assert len(mesh.cells["nodes"]) == 6
-    assert len(mesh.edges["nodes"]) == 13
+    assert len(mesh.cells["points"]) == 6
+    assert len(mesh.edges["points"]) == 13
     # remove a corner cell
     mesh.remove_cells(remove_idx)
-    assert len(mesh.cells["nodes"]) == expected_num_cells
-    assert len(mesh.edges["nodes"]) == expected_num_edges
+    assert len(mesh.cells["points"]) == expected_num_cells
+    assert len(mesh.edges["points"]) == expected_num_edges
 
 
 if __name__ == "__main__":

@@ -24,7 +24,7 @@ meshplex is used in [optimesh](https://github.com/nschloe/optimesh) and
 
 ### Quickstart
 
-```python,test
+```python
 import numpy
 import meshplex
 
@@ -46,7 +46,7 @@ print(mesh.cell_incenters)
 # circumradius, inradius, cell quality, angles
 print(mesh.cell_circumradius)
 print(mesh.cell_inradius)
-print(mesh.cell_quality)  # d * inradius / circumradius (min 0, max 1)
+print(mesh.q_radius_ratio)  # d * inradius / circumradius (min 0, max 1)
 print(mesh.angles)
 
 # control volumes, centroids
@@ -73,7 +73,7 @@ classes and functions, see [readthedocs](https://meshplex.readthedocs.io/).
 
 #### Triangles
 <img src="https://nschloe.github.io/meshplex/pacman.png" width="30%">
-
+<!--exdown-skip-->
 ```python
 import meshplex
 
@@ -86,29 +86,32 @@ mesh.show(
     # boundary_edge_color=None,
     # comesh_color=(0.8, 0.8, 0.8),
     show_axes=False,
-    )
+)
 ```
 
 #### Tetrahedra
 <img src="https://nschloe.github.io/meshplex/tetra.png" width="30%">
-
+<!--exdown-skip-->
 ```python
 import numpy
 import meshplex
 
 # Generate tetrahedron
-node_coords = numpy.array(
-    [
-        [1.0, 0.0, -1.0 / numpy.sqrt(8)],
-        [-0.5, +numpy.sqrt(3.0) / 2.0, -1.0 / numpy.sqrt(8)],
-        [-0.5, -numpy.sqrt(3.0) / 2.0, -1.0 / numpy.sqrt(8)],
-        [0.0, 0.0, numpy.sqrt(2.0) - 1.0 / numpy.sqrt(8)],
-    ]
-) / numpy.sqrt(3.0)
+points = (
+    numpy.array(
+        [
+            [1.0, 0.0, -1.0 / numpy.sqrt(8)],
+            [-0.5, +numpy.sqrt(3.0) / 2.0, -1.0 / numpy.sqrt(8)],
+            [-0.5, -numpy.sqrt(3.0) / 2.0, -1.0 / numpy.sqrt(8)],
+            [0.0, 0.0, numpy.sqrt(2.0) - 1.0 / numpy.sqrt(8)],
+        ]
+    )
+    / numpy.sqrt(3.0)
+)
 cells = [[0, 1, 2, 3]]
 
 # Create mesh object
-mesh = meshplex.MeshTetra(node_coords, cells)
+mesh = meshplex.MeshTetra(points, cells)
 
 # Plot cell 0 with control volume boundaries
 mesh.show_cell(
@@ -120,7 +123,7 @@ mesh.show_cell(
     # insphere_rgba=(1, 0, 1, 1.0),
     # face_circumcenter_rgba=(0, 0, 1, 1.0),
     control_volume_boundaries_rgba=(1.0, 0.0, 0.0, 1.0),
-   line_width=3.0,
+    line_width=3.0,
 )
 ```
 

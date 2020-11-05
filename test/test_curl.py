@@ -10,9 +10,7 @@ this_dir = pathlib.Path(__file__).resolve().parent
 def _run(mesh):
     # Create circular vector field 0.5 * (y, -x, 0)
     # which has curl (0, 0, 1).
-    A = numpy.array(
-        [[-0.5 * coord[1], 0.5 * coord[0], 0.0] for coord in mesh.node_coords]
-    )
+    A = numpy.array([[-0.5 * coord[1], 0.5 * coord[0], 0.0] for coord in mesh.points])
     # Compute the curl numerically.
     B = mesh.compute_curl(A)
 

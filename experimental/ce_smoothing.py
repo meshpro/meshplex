@@ -56,7 +56,7 @@ def _grad(mesh):
     grad_stack = numpy.array([grad_x0, grad_x1, grad_x2])
 
     # add up all the contributions
-    grad = numpy.zeros(mesh.node_coords.shape)
+    grad = numpy.zeros(mesh.points.shape)
     numpy.add.at(grad, mesh.cells["nodes"].T, grad_stack)
 
     return grad
@@ -67,9 +67,9 @@ def smooth(mesh, t=1.0e-3, num_iters=10):
 
     for k in range(num_iters):
         # mesh = mesh_tri.flip_until_delaunay(mesh)
-        x = mesh.node_coords.copy()
+        x = mesh.points.copy()
         x -= t * _grad(mesh)
-        x[boundary_verts] = mesh.node_coords[boundary_verts]
+        x[boundary_verts] = mesh.points[boundary_verts]
         mesh = meshplex.MeshTri(x, mesh.cells["nodes"])
         mesh.write("smoo%04d.vtu" % k)
         print(_objective(mesh))
@@ -79,11 +79,11 @@ def smooth(mesh, t=1.0e-3, num_iters=10):
 def read(filename):
     mesh = meshio.read(filename)
 
-    # x = mesh.node_coords.copy()
+    # x = mesh.points.copy()
     # x[:, :2] += 1.0e-1 * (
-    #     numpy.random.rand(len(mesh.node_coords), 2) - 0.5
+    #     numpy.random.rand(len(mesh.points), 2) - 0.5
     #     )
-    # x[boundary_verts] = mesh.node_coords[boundary_verts]
+    # x[boundary_verts] = mesh.points[boundary_verts]
 
     # only include nodes which are part of a cell
     uvertices, uidx = numpy.unique(mesh.get_cells_type("triangle"), return_inverse=True)
