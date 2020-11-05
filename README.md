@@ -97,7 +97,7 @@ import numpy
 import meshplex
 
 # Generate tetrahedron
-node_coords = numpy.array(
+points = numpy.array(
     [
         [1.0, 0.0, -1.0 / numpy.sqrt(8)],
         [-0.5, +numpy.sqrt(3.0) / 2.0, -1.0 / numpy.sqrt(8)],
@@ -108,7 +108,7 @@ node_coords = numpy.array(
 cells = [[0, 1, 2, 3]]
 
 # Create mesh object
-mesh = meshplex.MeshTetra(node_coords, cells)
+mesh = meshplex.MeshTetra(points, cells)
 
 # Plot cell 0 with control volume boundaries
 mesh.show_cell(

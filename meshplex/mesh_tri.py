@@ -97,8 +97,7 @@ class MeshTri(_base_mesh):
 
         # Create the corresponding edge coordinates.
         self.half_edge_coords = (
-            self.node_coords[self.idx_hierarchy[1]]
-            - self.node_coords[self.idx_hierarchy[0]]
+            self.points[self.idx_hierarchy[1]] - self.points[self.idx_hierarchy[0]]
         )
 
         # einsum is faster if the tail survives, e.g., ijk,ijk->jk.
@@ -120,25 +119,25 @@ class MeshTri(_base_mesh):
         # flat_local_edge, self.flat_cells = numpy.where(is_flat_halfedge)
         # self.is_flat_cell = numpy.any(is_flat_halfedge, axis=0)
         # self.fcc = FlatCellCorrector(
-        #     self.cells["nodes"][self.fcc_cells], flat_local_edge, self.node_coords
+        #     self.cells["nodes"][self.fcc_cells], flat_local_edge, self.points
         # )
         # self._ce_ratios[:, self.fcc_cells] = self.fcc.ce_ratios.T
 
     def __repr__(self):
-        num_nodes = len(self.node_coords)
+        num_nodes = len(self.points)
         num_cells = len(self.cells["nodes"])
         string = f"<meshplex triangle mesh, {num_nodes} cells, {num_cells} nodes>"
         return string
 
     # def update_node_coordinates(self, X):
-    #     assert X.shape == self.node_coords.shape
-    #     self.node_coords = X
+    #     assert X.shape == self.points.shape
+    #     self.points = X
     #     self._update_values()
     #     return
 
     # def update_interior_node_coordinates(self, X):
-    #     assert X.shape == self.node_coords[self.is_interior_node].shape
-    #     self.node_coords[self.is_interior_node] = X
+    #     assert X.shape == self.points[self.is_interior_node].shape
+    #     self.points[self.is_interior_node] = X
     #     self.update_values()
     #     return
 
@@ -148,7 +147,7 @@ class MeshTri(_base_mesh):
         if "edges" not in self.cells:
             self.create_edges()
         return (
-            self.node_coords.shape[0]
+            self.points.shape[0]
             - self.edges["nodes"].shape[0]
             + self.cells["nodes"].shape[0]
         )
@@ -168,10 +167,9 @@ class MeshTri(_base_mesh):
         """Update all computes entities around the mesh."""
         if self.half_edge_coords is not None:
             # Constructing the temporary arrays
-            # self.node_coords[self.idx_hierarchy] can take quite a while here.
+            # self.points[self.idx_hierarchy] can take quite a while here.
             self.half_edge_coords = (
-                self.node_coords[self.idx_hierarchy[1]]
-                - self.node_coords[self.idx_hierarchy[0]]
+                self.points[self.idx_hierarchy[1]] - self.points[self.idx_hierarchy[0]]
             )
 
         if self.ei_dot_ej is not None:
@@ -207,7 +205,7 @@ class MeshTri(_base_mesh):
         """
         remove_array = numpy.asarray(remove_array)
         if len(remove_array) == 0:
-            return
+            return 0
 
         if remove_array.dtype == int:
             keep = numpy.ones(len(self.cells["nodes"]), dtype=bool)
@@ -219,7 +217,7 @@ class MeshTri(_base_mesh):
         assert len(keep) == len(self.cells["nodes"]), "Wrong length of index array."
 
         if numpy.all(keep):
-            return
+            return 0
 
         self.cell_volumes = self.cell_volumes[keep]
         self.cells["nodes"] = self.cells["nodes"][keep]
@@ -338,7 +336,7 @@ class MeshTri(_base_mesh):
             self._control_volumes = numpy.bincount(
                 self.cells["nodes"][~cell_mask].T.reshape(-1),
                 weights=vals.reshape(-1),
-                minlength=len(self.node_coords),
+                minlength=len(self.points),
             )
             self._cv_cell_mask = cell_mask
         return self._control_volumes
@@ -384,7 +382,7 @@ class MeshTri(_base_mesh):
                 [v[1, 1] + v[0, 2], v[1, 2] + v[0, 0], v[1, 0] + v[0, 1]]
             )
             # add it all up
-            n = len(self.node_coords)
+            n = len(self.points)
             self._cv_centroids = numpy.array(
                 [
                     numpy.bincount(
@@ -412,13 +410,13 @@ class MeshTri(_base_mesh):
         """Signed area of a triangle in 2D."""
         # http://mathworld.wolfram.com/TriangleArea.html
         assert (
-            self.node_coords.shape[1] == 2
+            self.points.shape[1] == 2
         ), "Signed areas only make sense for triangles in 2D."
 
         if self._signed_cell_areas is None:
             # One could make p contiguous by adding a copy(), but that's not
             # really worth it here.
-            p = self.node_coords[self.cells["nodes"]].T
+            p = self.points[self.cells["nodes"]].T
             # <https://stackoverflow.com/q/50411583/353337>
             self._signed_cell_areas = (
                 +p[0][2] * (p[1][0] - p[1][1])
@@ -435,7 +433,7 @@ class MeshTri(_base_mesh):
 
         assert self.is_boundary_edge is not None
 
-        self._is_boundary_node = numpy.zeros(len(self.node_coords), dtype=bool)
+        self._is_boundary_node = numpy.zeros(len(self.points), dtype=bool)
         self._is_boundary_node[self.idx_hierarchy[..., self.is_boundary_edge]] = True
 
         self._is_interior_node = self.node_is_used & ~self.is_boundary_node
@@ -578,7 +576,7 @@ class MeshTri(_base_mesh):
         if self._cell_circumcenters is None:
             node_cells = self.cells["nodes"].T
             self._cell_circumcenters = compute_triangle_circumcenters(
-                self.node_coords[node_cells], self.ei_dot_ei, self.ei_dot_ej
+                self.points[node_cells], self.ei_dot_ei, self.ei_dot_ej
             )
         return self._cell_circumcenters
 
@@ -587,7 +585,7 @@ class MeshTri(_base_mesh):
         """The centroids (barycenters, midpoints of the circumcircles) of all triangles."""
         if self._cell_centroids is None:
             self._cell_centroids = (
-                numpy.sum(self.node_coords[self.cells["nodes"]], axis=1) / 3.0
+                numpy.sum(self.points[self.cells["nodes"]], axis=1) / 3.0
             )
         return self._cell_centroids
 
@@ -602,7 +600,7 @@ class MeshTri(_base_mesh):
         # https://en.wikipedia.org/wiki/Incenter#Barycentric_coordinates
         abc = numpy.sqrt(self.ei_dot_ei)
         abc /= numpy.sum(abc, axis=0)
-        return numpy.einsum("ij,jik->jk", abc, self.node_coords[self.cells["nodes"]])
+        return numpy.einsum("ij,jik->jk", abc, self.points[self.cells["nodes"]])
 
     @property
     def cell_inradius(self):
@@ -668,7 +666,7 @@ class MeshTri(_base_mesh):
 
         node_edges = self.idx_hierarchy
 
-        corner = self.node_coords[node_edges]
+        corner = self.points[node_edges]
         edge_midpoints = 0.5 * (corner[0] + corner[1])
         cc = self.cell_circumcenters
 
@@ -713,18 +711,18 @@ class MeshTri(_base_mesh):
     #            https://doi.org/10.1002/nme.2187.
     #         '''
     #         if self.cell_circumcenters is None:
-    #             X = self.node_coords[self.cells['nodes']]
+    #             X = self.points[self.cells['nodes']]
     #             self.cell_circumcenters = self.compute_triangle_circumcenters(X)
     #
     #         if 'cells' not in self.edges:
     #             self.edges['cells'] = self.compute_edge_cells()
     #
     #         # This only works for flat meshes.
-    #         assert (abs(self.node_coords[:, 2]) < 1.0e-10).all()
-    #         node_coords2d = self.node_coords[:, :2]
+    #         assert (abs(self.points[:, 2]) < 1.0e-10).all()
+    #         points2d = self.points[:, :2]
     #         cell_circumcenters2d = self.cell_circumcenters[:, :2]
     #
-    #         num_nodes = len(node_coords2d)
+    #         num_nodes = len(points2d)
     #         assert len(u) == num_nodes
     #
     #         gradient = numpy.zeros((num_nodes, 2), dtype=u.dtype)
@@ -744,8 +742,8 @@ class MeshTri(_base_mesh):
     #             if len(self.edges['cells'][edge_gid]) == 1:
     #                 # Boundary edge.
     #                 edge_midpoint = 0.5 * (
-    #                         node_coords2d[node0] +
-    #                         node_coords2d[node1]
+    #                         points2d[node0] +
+    #                         points2d[node1]
     #                         )
     #                 cell0 = self.edges['cells'][edge_gid][0]
     #                 coedge_midpoint = 0.5 * (
@@ -770,8 +768,8 @@ class MeshTri(_base_mesh):
     #                 self.control_volumes[self.edges['nodes'][edge_gid]]
     #
     #             # Compute R*_{IJ} ((11) in [1]).
-    #             r0 = (coedge_midpoint - node_coords2d[node0]) * coeffs[0]
-    #             r1 = (coedge_midpoint - node_coords2d[node1]) * coeffs[1]
+    #             r0 = (coedge_midpoint - points2d[node0]) * coeffs[0]
+    #             r1 = (coedge_midpoint - points2d[node1]) * coeffs[1]
     #
     #             diff = u[node1] - u[node0]
     #
@@ -779,7 +777,7 @@ class MeshTri(_base_mesh):
     #             gradient[node1] -= r1 * diff
     #
     #             # Store the boundary correction matrices.
-    #             edge_coords = node_coords2d[node1] - node_coords2d[node0]
+    #             edge_coords = points2d[node1] - points2d[node0]
     #             if node0 in boundary_matrices:
     #                 boundary_matrices[node0] += numpy.outer(r0, edge_coords)
     #             if node1 in boundary_matrices:
@@ -881,10 +879,10 @@ class MeshTri(_base_mesh):
         if not show_axes:
             ax.set_axis_off()
 
-        xmin = numpy.amin(self.node_coords[:, 0])
-        xmax = numpy.amax(self.node_coords[:, 0])
-        ymin = numpy.amin(self.node_coords[:, 1])
-        ymax = numpy.amax(self.node_coords[:, 1])
+        xmin = numpy.amin(self.points[:, 0])
+        xmax = numpy.amax(self.points[:, 0])
+        ymin = numpy.amin(self.points[:, 1])
+        ymax = numpy.amax(self.points[:, 1])
 
         width = xmax - xmin
         xmin -= 0.1 * width
@@ -897,14 +895,14 @@ class MeshTri(_base_mesh):
         ax.set_xlim(xmin, xmax)
         ax.set_ylim(ymin, ymax)
 
-        # for k, x in enumerate(self.node_coords):
+        # for k, x in enumerate(self.points):
         #     if self.is_boundary_node[k]:
         #         plt.plot(x[0], x[1], "g.")
         #     else:
         #         plt.plot(x[0], x[1], "r.")
 
         if show_node_numbers:
-            for i, x in enumerate(self.node_coords):
+            for i, x in enumerate(self.points):
                 plt.text(
                     x[0],
                     x[1],
@@ -929,8 +927,8 @@ class MeshTri(_base_mesh):
         if cell_quality_coloring:
             cmap, cmin, cmax, show_colorbar = cell_quality_coloring
             plt.tripcolor(
-                self.node_coords[:, 0],
-                self.node_coords[:, 1],
+                self.points[:, 0],
+                self.points[:, 1],
                 self.cells["nodes"],
                 self.q_radius_ratio,
                 shading="flat",
@@ -945,7 +943,7 @@ class MeshTri(_base_mesh):
             self.create_edges()
 
         # Get edges, cut off z-component.
-        e = self.node_coords[self.edges["nodes"]][:, :, :2]
+        e = self.points[self.edges["nodes"]][:, :, :2]
 
         if nondelaunay_edge_color is None:
             line_segments0 = LineCollection(e, color=mesh_color)
@@ -973,8 +971,8 @@ class MeshTri(_base_mesh):
             cc = self.cell_circumcenters
 
             edge_midpoints = 0.5 * (
-                self.node_coords[self.edges["nodes"][:, 0]]
-                + self.node_coords[self.edges["nodes"][:, 1]]
+                self.points[self.edges["nodes"][:, 0]]
+                + self.points[self.edges["nodes"][:, 1]]
             )
 
             # Plot connection of the circumcenter to the midpoint of all three
@@ -995,9 +993,7 @@ class MeshTri(_base_mesh):
             ax.add_collection(line_segments)
 
         if boundary_edge_color:
-            e = self.node_coords[self.edges["nodes"][self.is_boundary_edge_gid]][
-                :, :, :2
-            ]
+            e = self.points[self.edges["nodes"][self.is_boundary_edge_gid]][:, :, :2]
             line_segments1 = LineCollection(e, color=boundary_edge_color)
             ax.add_collection(line_segments1)
 
@@ -1054,13 +1050,13 @@ class MeshTri(_base_mesh):
         edge_gids = numpy.where((self.edges["nodes"] == node_id).any(axis=1))[0]
         # ... and plot them
         for node_ids in self.edges["nodes"][edge_gids]:
-            x = self.node_coords[node_ids]
+            x = self.points[node_ids]
             ax.plot(x[:, 0], x[:, 1], "k")
 
         # Highlight ce_ratios.
         if show_ce_ratio:
             if self.cell_circumcenters is None:
-                X = self.node_coords[self.cells["nodes"]]
+                X = self.points[self.cells["nodes"]]
                 self.cell_circumcenters = self.compute_triangle_circumcenters(
                     X, self.ei_dot_ei, self.ei_dot_ej
                 )
@@ -1074,7 +1070,7 @@ class MeshTri(_base_mesh):
                         continue
                     node_ids = self.edges["nodes"][edge_gid]
                     edge_midpoint = 0.5 * (
-                        self.node_coords[node_ids[0]] + self.node_coords[node_ids[1]]
+                        self.points[node_ids[0]] + self.points[node_ids[1]]
                     )
                     p = numpy.stack(
                         [self.cell_circumcenters[cell_id], edge_midpoint], axis=1
@@ -1083,7 +1079,7 @@ class MeshTri(_base_mesh):
                         [
                             self.cell_circumcenters[cell_id],
                             edge_midpoint,
-                            self.node_coords[node_id],
+                            self.points[node_id],
                         ]
                     )
                     ax.fill(q[0], q[1], color="0.5")
@@ -1278,8 +1274,8 @@ class MeshTri(_base_mesh):
 
         # update self.half_edge_coords
         self.half_edge_coords[:, cell_ids, :] = numpy.moveaxis(
-            self.node_coords[self.idx_hierarchy[1, ..., cell_ids]]
-            - self.node_coords[self.idx_hierarchy[0, ..., cell_ids]],
+            self.points[self.idx_hierarchy[1, ..., cell_ids]]
+            - self.points[self.idx_hierarchy[0, ..., cell_ids]],
             0,
             1,
         )

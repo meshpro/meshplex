@@ -156,17 +156,17 @@ def compute_triangle_circumcenters(X, ei_dot_ei, ei_dot_ej):
 
 class _base_mesh:
     def __init__(self, nodes, cells_nodes):
-        self.node_coords = nodes
+        self.points = nodes
         self._edge_lengths = None
 
     def write(self, filename, point_data=None, cell_data=None, field_data=None):
-        if self.node_coords.shape[1] == 2:
-            n = len(self.node_coords)
+        if self.points.shape[1] == 2:
+            n = len(self.points)
             a = numpy.ascontiguousarray(
-                numpy.column_stack([self.node_coords, numpy.zeros(n)])
+                numpy.column_stack([self.points, numpy.zeros(n)])
             )
         else:
-            a = self.node_coords
+            a = self.points
 
         if self.cells["nodes"].shape[1] == 3:
             cell_type = "triangle"
@@ -262,9 +262,9 @@ class _base_mesh:
     def _mark_vertices(self, subdomain):
         """Mark faces/edges which are fully in subdomain."""
         if subdomain is None:
-            is_inside = numpy.ones(len(self.node_coords), dtype=bool)
+            is_inside = numpy.ones(len(self.points), dtype=bool)
         else:
-            is_inside = subdomain.is_inside(self.node_coords.T).T
+            is_inside = subdomain.is_inside(self.points.T).T
 
             if subdomain.is_boundary_only:
                 # Filter boundary

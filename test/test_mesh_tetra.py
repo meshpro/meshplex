@@ -413,11 +413,11 @@ def test_tetrahedron():
 #     # the order of 1e-16. The ce_ratios differ by up to 1e-7.
 #     if False:
 #         print(mesh.cells.keys())
-#         pts = mesh.node_coords.copy()
+#         pts = mesh.points.copy()
 #         pts += 1.0e-16 * numpy.random.rand(pts.shape[0], pts.shape[1])
 #         mesh2 = meshplex.MeshTetra(pts, mesh.cells['nodes'])
 #         #
-#         diff_coords = mesh.node_coords - mesh2.node_coords
+#         diff_coords = mesh.points - mesh2.points
 #         max_diff_coords = max(diff_coords.flatten())
 #         print('||coords_1 - coords_2||_inf  =  %e' % max_diff_coords)
 #         diff_ce_ratios = mesh.ce_ratios_per_edge - mesh2.ce_ratios
@@ -445,7 +445,7 @@ def test_tetrahedron():
 def test_toy_geometric():
     mesh = meshplex.read(this_dir / "meshes" / "toy.vtk")
 
-    mesh = meshplex.MeshTetra(mesh.node_coords, mesh.cells["nodes"])
+    mesh = meshplex.MeshTetra(mesh.points, mesh.cells["nodes"])
 
     run(
         mesh,
@@ -466,7 +466,7 @@ def test_toy_geometric():
 def test_signed_volume():
     mesh = meshplex.read(this_dir / "meshes" / "toy.vtk")
 
-    vols = meshplex.get_signed_simplex_volumes(mesh.cells["nodes"], mesh.node_coords)
+    vols = meshplex.get_signed_simplex_volumes(mesh.cells["nodes"], mesh.points)
 
     assert numpy.all(abs(abs(vols) - mesh.cell_volumes) < 1.0e-12 * mesh.cell_volumes)
 
@@ -476,7 +476,7 @@ def test_show_cell():
     # filename = download_mesh("toy.vtk", "f48abda972822bab224b91a74d695573")
     # mesh = meshplex.read(filename)
 
-    node_coords = (
+    points = (
         numpy.array(
             [
                 [1.0, 0.0, -1.0 / numpy.sqrt(8)],
@@ -488,7 +488,7 @@ def test_show_cell():
         / numpy.sqrt(3.0)
     )
 
-    # node_coords = numpy.array(
+    # points = numpy.array(
     #     [
     #         [1.0, 0.0, -1.0 / numpy.sqrt(8)],
     #         [-0.5, +numpy.sqrt(3.0) / 2.0, -1.0 / numpy.sqrt(8)],
@@ -496,12 +496,12 @@ def test_show_cell():
     #         [0.0, 0.5, 1.0],
     #     ]
     # ) / numpy.sqrt(3.0)
-    # node_coords = numpy.array(
+    # points = numpy.array(
     #     [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
     # )
 
     cells = [[0, 1, 2, 3]]
-    mesh = meshplex.MeshTetra(node_coords, cells)
+    mesh = meshplex.MeshTetra(points, cells)
     mesh.show_cell(
         0,
         barycenter_rgba=(1, 0, 0, 1.0),

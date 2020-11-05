@@ -506,7 +506,7 @@ def test_signed_area2():
     ref = 0.5
     assert abs(mesh.signed_cell_areas[0] - ref) < 1.0e-10 * abs(ref)
 
-    mesh.node_coords = numpy.array([[0.0, 0.0], [0.0, 1.0], [1.0, 0.0]])
+    mesh.points = numpy.array([[0.0, 0.0], [0.0, 1.0], [1.0, 0.0]])
     mesh.update_values()
     ref = -0.5
     assert abs(mesh.signed_cell_areas[0] - ref) < 1.0e-10 * abs(ref)
@@ -522,7 +522,7 @@ def test_update_node_coordinates():
     X2 = mesh.points + 1.0e-2 * numpy.random.rand(*mesh.points.shape)
     mesh2 = meshplex.MeshTri(X2, mesh.get_cells_type("triangle"))
 
-    mesh1.node_coords = X2
+    mesh1.points = X2
     mesh1.update_values()
 
     tol = 1.0e-12
@@ -550,7 +550,7 @@ def test_flip_delaunay():
             assert cell_gid in mesh._edges_cells[num_adj_cells][edge_id]
 
     new_cells = mesh.cells["nodes"].copy()
-    new_coords = mesh.node_coords.copy()
+    new_coords = mesh.points.copy()
 
     # Assert that some key values are updated properly
     mesh2 = meshplex.MeshTri(new_coords, new_cells)
@@ -600,7 +600,7 @@ def test_flip_same_edge_twice():
     new_points = numpy.array(
         [[0.0, +0.0, 0.0], [0.1, -0.5, 0.0], [0.2, +0.0, 0.0], [0.1, +0.5, 0.0]]
     )
-    mesh.node_coords = new_points
+    mesh.points = new_points
     mesh.update_values()
     assert mesh.num_delaunay_violations() == 1
 
@@ -802,7 +802,7 @@ def test_flat_boundary():
     cv = numpy.zeros(X.shape[0])
     for edges, ce_ratios in zip(mesh.idx_hierarchy.T, mesh.ce_ratios.T):
         for i, ce in zip(edges, ce_ratios):
-            ei = mesh.node_coords[i[1]] - mesh.node_coords[i[0]]
+            ei = mesh.points[i[1]] - mesh.points[i[0]]
             cv[i] += 0.25 * ce * numpy.dot(ei, ei)
 
     assert numpy.all(numpy.abs(cv - mesh.control_volumes) < 1.0e-12 * cv)

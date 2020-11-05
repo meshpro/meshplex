@@ -4,8 +4,8 @@ import numpy
 class MeshLine:
     """Class for handling line segment "meshes"."""
 
-    def __init__(self, node_coords, cells):
-        self.node_coords = node_coords
+    def __init__(self, points, cells):
+        self.points = points
 
         num_cells = len(cells)
         self.cells = numpy.empty(num_cells, dtype=numpy.dtype([("nodes", (int, 2))]))
@@ -19,10 +19,7 @@ class MeshLine:
         """Computes the volumes of the "cells" in the mesh."""
         self.cell_volumes = numpy.array(
             [
-                abs(
-                    self.node_coords[cell["nodes"]][1]
-                    - self.node_coords[cell["nodes"]][0]
-                )
+                abs(self.points[cell["nodes"]][1] - self.points[cell["nodes"]][0])
                 for cell in self.cells
             ]
         )
@@ -30,7 +27,7 @@ class MeshLine:
 
     def create_control_volumes(self):
         """Compute the control volumes of all nodes in the mesh."""
-        self.control_volumes = numpy.zeros(len(self.node_coords), dtype=float)
+        self.control_volumes = numpy.zeros(len(self.points), dtype=float)
         for k, cell in enumerate(self.cells):
             node_ids = cell["nodes"]
             self.control_volumes[node_ids] += 0.5 * self.cell_volumes[k]
@@ -46,5 +43,5 @@ class MeshLine:
         """"""
         from matplotlib import pyplot as plt
 
-        plt.plot(self.node_coords, u)
+        plt.plot(self.points, u)
         return

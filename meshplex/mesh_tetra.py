@@ -9,7 +9,7 @@ __all__ = ["MeshTetra"]
 class MeshTetra(_base_mesh):
     """Class for handling tetrahedral meshes."""
 
-    def __init__(self, node_coords, cells):
+    def __init__(self, points, cells):
         """Initialization."""
         # Sort cells and nodes, first every row, then the rows themselves. This helps in
         # many downstream applications, e.g., when constructing linear systems with the
@@ -21,7 +21,7 @@ class MeshTetra(_base_mesh):
         cells = numpy.sort(cells, axis=1)
         cells = cells[cells[:, 0].argsort()]
 
-        super().__init__(node_coords, cells)
+        super().__init__(points, cells)
 
         # Assert that all vertices are used.
         # If there are vertices which do not appear in the cells list, this
@@ -31,7 +31,7 @@ class MeshTetra(_base_mesh):
         # nodes = nodes[uvertices]
         # ```
         # helps.
-        is_used = numpy.zeros(len(node_coords), dtype=bool)
+        is_used = numpy.zeros(len(points), dtype=bool)
         is_used[cells] = True
         assert numpy.all(is_used), "There are {} dangling nodes in the mesh".format(
             numpy.sum(~is_used)
@@ -83,8 +83,7 @@ class MeshTetra(_base_mesh):
 
         # create ei_dot_ei, ei_dot_ej
         self.edge_coords = (
-            self.node_coords[self.idx_hierarchy[1]]
-            - self.node_coords[self.idx_hierarchy[0]]
+            self.points[self.idx_hierarchy[1]] - self.points[self.idx_hierarchy[0]]
         )
         self.ei_dot_ei = numpy.einsum(
             "ijkl, ijkl->ijk", self.edge_coords, self.edge_coords
@@ -112,7 +111,7 @@ class MeshTetra(_base_mesh):
         return
 
     def __repr__(self):
-        num_nodes = len(self.node_coords)
+        num_nodes = len(self.points)
         num_cells = len(self.cells["nodes"])
         string = f"<meshplex tetra mesh, {num_nodes} cells, {num_cells} nodes>"
         return string
@@ -125,7 +124,7 @@ class MeshTetra(_base_mesh):
         if "faces" not in self.cells:
             self.create_cell_face_relationships()
 
-        self.is_boundary_node = numpy.zeros(len(self.node_coords), dtype=bool)
+        self.is_boundary_node = numpy.zeros(len(self.points), dtype=bool)
         self.is_boundary_node[
             self.faces["nodes"][self.is_boundary_facet_individual]
         ] = True
@@ -222,7 +221,7 @@ class MeshTetra(_base_mesh):
         alpha = self._zeta / numpy.sum(self._zeta, axis=0)
 
         self._circumcenters = numpy.sum(
-            alpha[None].T * self.node_coords[self.cells["nodes"]], axis=1
+            alpha[None].T * self.points[self.cells["nodes"]], axis=1
         )
         return
 
@@ -235,8 +234,8 @@ class MeshTetra(_base_mesh):
     # def _compute_ce_ratios_algebraic(self):
     #     # Precompute edges.
     #     half_edges = (
-    #         self.node_coords[self.idx_hierarchy[1]]
-    #         - self.node_coords[self.idx_hierarchy[0]]
+    #         self.points[self.idx_hierarchy[1]]
+    #         - self.points[self.idx_hierarchy[0]]
     #     )
 
     #     # Build the equation system:
@@ -386,7 +385,7 @@ class MeshTetra(_base_mesh):
         """The centroids (barycenters, midpoints of the circumcircles) of all tetrahedra."""
         if self._cell_centroids is None:
             self._cell_centroids = (
-                numpy.sum(self.node_coords[self.cells["nodes"]], axis=1) / 4.0
+                numpy.sum(self.points[self.cells["nodes"]], axis=1) / 4.0
             )
         return self._cell_centroids
 
@@ -408,9 +407,7 @@ class MeshTetra(_base_mesh):
         face_areas = compute_tri_areas(self.ei_dot_ej)
         # abc = numpy.sqrt(self.ei_dot_ei)
         face_areas /= numpy.sum(face_areas, axis=0)
-        return numpy.einsum(
-            "ij,jik->jk", face_areas, self.node_coords[self.cells["nodes"]]
-        )
+        return numpy.einsum("ij,jik->jk", face_areas, self.points[self.cells["nodes"]])
 
     @property
     def cell_inradius(self):
@@ -421,7 +418,7 @@ class MeshTetra(_base_mesh):
     @property
     def cell_circumradius(self):
         # # Just take the distance of the circumcenter to one of the nodes for now.
-        dist = self.node_coords[self.idx_hierarchy[0, 0, 0]] - self.cell_circumcenters
+        dist = self.points[self.idx_hierarchy[0, 0, 0]] - self.cell_circumcenters
         circumradius = numpy.sqrt(numpy.einsum("ij,ij->i", dist, dist))
         # https://en.wikipedia.org/wiki/Tetrahedron#Circumradius
         #
@@ -538,7 +535,7 @@ class MeshTetra(_base_mesh):
             self._control_volumes = numpy.bincount(
                 self.cells["nodes"].reshape(-1),
                 vals.reshape(-1),
-                minlength=len(self.node_coords),
+                minlength=len(self.points),
             )
 
         return self._control_volumes
@@ -580,7 +577,7 @@ class MeshTetra(_base_mesh):
         if self._circumcenters is None:
             self._compute_cell_circumcenters()
 
-        X = self.node_coords
+        X = self.points
         for cell_id in range(len(self.cells["nodes"])):
             cc = self._circumcenters[cell_id]
             #
@@ -651,16 +648,16 @@ class MeshTetra(_base_mesh):
         )
         col = "k"
         for adj_edge_id in adj_edge_ids:
-            x = self.node_coords[self.edges["nodes"][adj_edge_id]]
+            x = self.points[self.edges["nodes"][adj_edge_id]]
             ax.plot(x[:, 0], x[:, 1], x[:, 2], col)
 
         # make clear which is edge_id
-        x = self.node_coords[self.edges["nodes"][edge_id]]
+        x = self.points[self.edges["nodes"][edge_id]]
         ax.plot(x[:, 0], x[:, 1], x[:, 2], color=col, linewidth=3.0)
 
         # connect the face circumcenters with the corresponding cell
         # circumcenters
-        X = self.node_coords
+        X = self.points
         for cell_id in adj_cell_ids:
             cc = self._circumcenters[cell_id]
             #
@@ -749,7 +746,7 @@ class MeshTetra(_base_mesh):
         render_window_interactor.SetRenderWindow(render_window)
 
         for ij in [[0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3]]:
-            x0, x1 = self.node_coords[self.cells["nodes"][cell_id][ij]]
+            x0, x1 = self.points[self.cells["nodes"][cell_id][ij]]
             renderer.AddActor(get_line_actor(x0, x1, line_width))
         renderer.SetBackground(1.0, 1.0, 1.0)
 
@@ -789,7 +786,7 @@ class MeshTetra(_base_mesh):
             )
 
         if face_circumcenter_rgba is not None:
-            x = self.node_coords[self.node_face_cells[..., [cell_id]]]
+            x = self.points[self.node_face_cells[..., [cell_id]]]
             face_ccs = compute_triangle_circumcenters(
                 x, self.ei_dot_ei, self.ei_dot_ej
             )[:, 0, :]
@@ -798,14 +795,14 @@ class MeshTetra(_base_mesh):
 
         if control_volume_boundaries_rgba:
             cell_cc = self.cell_circumcenters[cell_id]
-            x = self.node_coords[self.node_face_cells[..., [cell_id]]]
+            x = self.points[self.node_face_cells[..., [cell_id]]]
             face_ccs = compute_triangle_circumcenters(
                 x, self.ei_dot_ei, self.ei_dot_ej
             )[:, 0, :]
             for face, face_cc in zip(range(4), face_ccs):
                 for edge in range(3):
                     k0, k1 = self.idx_hierarchy[:, edge, face, cell_id]
-                    edge_midpoint = 0.5 * (self.node_coords[k0] + self.node_coords[k1])
+                    edge_midpoint = 0.5 * (self.points[k0] + self.points[k1])
 
                     points = vtk.vtkPoints()
                     points.InsertNextPoint(*edge_midpoint)
