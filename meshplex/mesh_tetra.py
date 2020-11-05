@@ -1,12 +1,12 @@
 import numpy
 
-from .base import _base_mesh, compute_tri_areas, compute_triangle_circumcenters
+from .base import _BaseMesh, compute_tri_areas, compute_triangle_circumcenters
 
 __all__ = ["MeshTetra"]
 
 
 # pylint: disable=too-many-instance-attributes
-class MeshTetra(_base_mesh):
+class MeshTetra(_BaseMesh):
     """Class for handling tetrahedral meshes."""
 
     def __init__(self, points, cells):

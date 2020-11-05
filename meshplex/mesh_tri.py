@@ -4,7 +4,7 @@ import warnings
 import numpy
 
 from .base import (
-    _base_mesh,
+    _BaseMesh,
     compute_ce_ratios,
     compute_tri_areas,
     compute_triangle_circumcenters,
@@ -14,7 +14,7 @@ from .helpers import grp_start_len, unique_rows
 __all__ = ["MeshTri"]
 
 
-class MeshTri(_base_mesh):
+class MeshTri(_BaseMesh):
     """Class for handling triangular meshes."""
 
     def __init__(self, nodes, cells, sort_cells=False):
