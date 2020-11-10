@@ -62,7 +62,8 @@ class MeshTri(_BaseMesh):
         self.subdomains = {}
         self._is_interior_point = None
         self._is_boundary_point = None
-        self.is_boundary_edge = None
+        self._is_boundary_edge = None
+        self._is_boundary_edge_gid = None
         self._is_boundary_facet = None
         self._edges_cells = None
         self._edge_gid_to_edge_list = None
@@ -258,25 +259,25 @@ class MeshTri(_BaseMesh):
             # remove edge entirely either if 2 adjacent cells are removed or if it
             # is a boundary edge and 1 adjacent cells is removed
             is_edge_removed = (counts == 2) | (
-                (counts == 1) & self.is_boundary_edge_gid[adjacent_edges]
+                (counts == 1) & self._is_boundary_edge_gid[adjacent_edges]
             )
 
             # set the new boundary edges
-            self.is_boundary_edge_gid[adjacent_edges[~is_edge_removed]] = True
+            self._is_boundary_edge_gid[adjacent_edges[~is_edge_removed]] = True
             # Now actually remove the edges. This includes a reindexing.
-            remaining_edges = numpy.ones(len(self.is_boundary_edge_gid), dtype=bool)
+            remaining_edges = numpy.ones(len(self._is_boundary_edge_gid), dtype=bool)
             remaining_edges[adjacent_edges[is_edge_removed]] = False
             # make sure there is only edges["points"], not edges["cells"] etc.
             assert len(self.edges) == 1
             self.edges["points"] = self.edges["points"][remaining_edges]
-            self.is_boundary_edge_gid = self.is_boundary_edge_gid[remaining_edges]
+            self._is_boundary_edge_gid = self._is_boundary_edge_gid[remaining_edges]
 
             self.cells["edges"] = self.cells["edges"][keep]
             new_index = numpy.arange(num_edges_old) - numpy.cumsum(~remaining_edges)
             self.cells["edges"] = new_index[self.cells["edges"]]
 
             # These could also be updated, but let's implement it when needed
-            self.is_boundary_edge = None
+            self._is_boundary_edge = None
             self._edges_cells = None
             self._edge_gid_to_edge_list = None
             self._edge_to_edge_gid = None
@@ -297,7 +298,7 @@ class MeshTri(_BaseMesh):
                 minlength=n,
             )
 
-            self._interior_ce_ratios = ce_ratios[~self.is_boundary_edge_gid]
+            self._interior_ce_ratios = ce_ratios[~self._is_boundary_edge_gid]
 
             # # sum up from self.ce_ratios
             # if self._edges_cells is None:
@@ -423,11 +424,10 @@ class MeshTri(_BaseMesh):
         return self._signed_cell_areas
 
     def mark_boundary(self):
-        """"""
         if self.edges is None:
             self.create_edges()
 
-        assert self.is_boundary_edge is not None
+        assert self._is_boundary_edge is not None
 
         self._is_boundary_point = numpy.zeros(len(self.points), dtype=bool)
         self._is_boundary_point[self.idx_hierarchy[..., self.is_boundary_edge]] = True
@@ -437,22 +437,31 @@ class MeshTri(_BaseMesh):
         self._is_boundary_facet = self.is_boundary_edge
 
     @property
+    def is_boundary_edge(self):
+        if self._is_boundary_edge is None:
+            self.create_edges()
+        return self._is_boundary_edge
+
+    @property
+    def is_boundary_edge_gid(self):
+        if self._is_boundary_edge_gid is None:
+            self.create_edges()
+        return self._is_boundary_edge_gid
+
+    @property
     def is_boundary_point(self):
-        """"""
         if self._is_boundary_point is None:
             self.mark_boundary()
         return self._is_boundary_point
 
     @property
     def is_interior_point(self):
-        """"""
         if self._is_interior_point is None:
             self.mark_boundary()
         return self._is_interior_point
 
     @property
     def is_boundary_facet(self):
-        """"""
         if self._is_boundary_facet is None:
             self.mark_boundary()
         return self._is_boundary_facet
@@ -470,9 +479,9 @@ class MeshTri(_BaseMesh):
             cts < 3
         ), "No edge has more than 2 cells. Are cells listed twice?"
 
-        self.is_boundary_edge = (cts[inv] == 1).reshape(s[1:])
+        self._is_boundary_edge = (cts[inv] == 1).reshape(s[1:])
 
-        self.is_boundary_edge_gid = cts == 1
+        self._is_boundary_edge_gid = cts == 1
 
         self.edges = {"points": a_unique}
 
@@ -485,8 +494,8 @@ class MeshTri(_BaseMesh):
         # Store an index {boundary,interior}_edge -> edge_gid
         self._edge_to_edge_gid = [
             [],
-            numpy.where(self.is_boundary_edge_gid)[0],
-            numpy.where(~self.is_boundary_edge_gid)[0],
+            numpy.where(self._is_boundary_edge_gid)[0],
+            numpy.where(~self._is_boundary_edge_gid)[0],
         ]
         return
 
