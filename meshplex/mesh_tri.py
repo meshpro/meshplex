@@ -36,7 +36,9 @@ class MeshTri(_BaseMesh):
             len(cells.shape) == 2 and cells.shape[1] == 3
         ), f"Illegal cells shape {cells.shape}"
 
-        self._points = points
+        self._points = numpy.asarray(points)
+        # prevent accidental override of parts of the array
+        self._points.setflags(write=False)
         super().__init__(points, cells)
 
         # Assert that all vertices are used.
@@ -80,8 +82,8 @@ class MeshTri(_BaseMesh):
         # number of cells. Make sure that the k-th edge is opposite of the k-th point in
         # the triangle.
         self.local_idx = numpy.array([[1, 2], [2, 0], [0, 1]]).T
-        # Map idx back to the points. This is useful if quantities which are in idx shape
-        # need to be added up into points (e.g., equation system rhs).
+        # Map idx back to the points. This is useful if quantities which are in idx
+        # shape need to be added up into points (e.g., equation system rhs).
         nds = self.cells["points"].T
         self.idx_hierarchy = nds[self.local_idx]
 
@@ -95,25 +97,10 @@ class MeshTri(_BaseMesh):
             [tuple(i) for i in zip(*numpy.where(self.local_idx == k))] for k in range(3)
         ]
 
-        # Create the corresponding edge coordinates.
-        self.half_edge_coords = (
-            self.points[self.idx_hierarchy[1]] - self.points[self.idx_hierarchy[0]]
-        )
-
-        # einsum is faster if the tail survives, e.g., ijk,ijk->jk.
-        # <https://gist.github.com/nschloe/8bc015cc1a9e5c56374945ddd711df7b>
-        # TODO reorganize the data
-        self.ei_dot_ej = numpy.einsum(
-            "ijk, ijk->ij",
-            self.half_edge_coords[[1, 2, 0]],
-            self.half_edge_coords[[2, 0, 1]],
-        )
-
-        self.ei_dot_ei = numpy.einsum(
-            "ijk, ijk->ij", self.half_edge_coords, self.half_edge_coords
-        )
-
-        self.cell_volumes = compute_tri_areas(self.ei_dot_ej)
+        self._half_edge_coords = None
+        self._ei_dot_ej = None
+        self._ei_dot_ei = None
+        self._cell_volumes = None
 
         # self.fcc_type = "full"
         # is_flat_halfedge = self.ce_ratios < 0.0
@@ -130,33 +117,17 @@ class MeshTri(_BaseMesh):
         string = f"<meshplex triangle mesh, {num_points} cells, {num_cells} points>"
         return string
 
-    # def update_point_coordinates(self, X):
-    #     assert X.shape == self.points.shape
-    #     self.points = X
-    #     self._update_values()
-    #     return
-
-    # def update_interior_point_coordinates(self, X):
-    #     assert X.shape == self.points[self.is_interior_point].shape
-    #     self.points[self.is_interior_point] = X
-    #     self.update_values()
-    #     return
-
+    # prevent overriding points without adapting the other mesh data
     @property
     def points(self):
         return self._points
 
-    @points.setter
-    def points(self, new_points):
-        new_points = numpy.asarray(new_points)
-        assert new_points.shape == self._points.shape
-        self._points = new_points
-        # reset all computed values
-        self.ei_dot_ei = None
-        self.half_edge_coords = None
-        self.ei_dot_ej = None
-        self.ei_dot_ei = None
-        self.cell_volumes = None
+    def _reset_point_data(self):
+        """Reset all data that changes when point coordinates changes."""
+        self._half_edge_coords = None
+        self._ei_dot_ei = None
+        self._ei_dot_ej = None
+        self._cell_volumes = None
         self._ce_ratios = None
         self._interior_edge_lengths = None
         self._cell_circumcenters = None
@@ -168,6 +139,21 @@ class MeshTri(_BaseMesh):
         self._surface_areas = None
         self._signed_cell_areas = None
         self._cell_centroids = None
+
+    @points.setter
+    def points(self, new_points):
+        new_points = numpy.asarray(new_points)
+        assert new_points.shape == self._points.shape
+        self._points = new_points
+        # reset all computed values
+        self._reset_point_data()
+
+    def set_interior_points(self, new_interior_points):
+        assert self._is_interior_point is not None
+        self.points.setflags(write=True)
+        self.points[self._is_interior_point] = new_interior_points
+        self.points.setflags(write=False)
+        self._reset_point_data()
 
     @property
     def euler_characteristic(self):
@@ -186,6 +172,44 @@ class MeshTri(_BaseMesh):
         return 1 - self.euler_characteristic / 2
 
     @property
+    def half_edge_coords(self):
+        if self._half_edge_coords is None:
+            self._half_edge_coords = (
+                self.points[self.idx_hierarchy[1]] - self.points[self.idx_hierarchy[0]]
+            )
+        return self._half_edge_coords
+
+    @property
+    def ei_dot_ei(self):
+        if self._ei_dot_ei is None:
+            # einsum is faster if the tail survives, e.g., ijk,ijk->jk.
+            # <https://gist.github.com/nschloe/8bc015cc1a9e5c56374945ddd711df7b>
+            # TODO reorganize the data
+            self._ei_dot_ei = numpy.einsum(
+                "ijk, ijk->ij", self.half_edge_coords, self.half_edge_coords
+            )
+        return self._ei_dot_ei
+
+    @property
+    def ei_dot_ej(self):
+        if self._ei_dot_ej is None:
+            # einsum is faster if the tail survives, e.g., ijk,ijk->jk.
+            # <https://gist.github.com/nschloe/8bc015cc1a9e5c56374945ddd711df7b>
+            # TODO reorganize the data
+            self._ei_dot_ej = numpy.einsum(
+                "ijk, ijk->ij",
+                self.half_edge_coords[[1, 2, 0]],
+                self.half_edge_coords[[2, 0, 1]],
+            )
+        return self._ei_dot_ej
+
+    @property
+    def cell_volumes(self):
+        if self._cell_volumes is None:
+            self._cell_volumes = compute_tri_areas(self.ei_dot_ej)
+        return self._cell_volumes
+
+    @property
     def ce_ratios(self):
         if self._ce_ratios is None:
             self._ce_ratios = compute_ce_ratios(self.ei_dot_ej, self.cell_volumes)
@@ -195,21 +219,10 @@ class MeshTri(_BaseMesh):
         """Update all computed values of the mesh (edge lengths etc.)."""
         # Constructing the temporary arrays
         # self.points[self.idx_hierarchy] can take quite a while here.
-        self.half_edge_coords = (
-            self.points[self.idx_hierarchy[1]] - self.points[self.idx_hierarchy[0]]
-        )
-
-        self.ei_dot_ej = numpy.einsum(
-            "ijk, ijk->ij",
-            self.half_edge_coords[[1, 2, 0]],
-            self.half_edge_coords[[2, 0, 1]],
-        )
-
-        self.ei_dot_ei = numpy.einsum(
-            "ijk, ijk->ij", self.half_edge_coords, self.half_edge_coords
-        )
-
-        self.cell_volumes = compute_tri_areas(self.ei_dot_ej)
+        self.half_edge_coords
+        self.ei_dot_ej
+        self.ei_dot_ei
+        self.cell_volumes
 
         self._ce_ratios = None
         self._interior_edge_lengths = None
@@ -243,21 +256,23 @@ class MeshTri(_BaseMesh):
         if numpy.all(keep):
             return 0
 
-        self.cell_volumes = self.cell_volumes[keep]
         self.cells["points"] = self.cells["points"][keep]
         self.idx_hierarchy = self.idx_hierarchy[..., keep]
+
+        if self._cell_volumes is not None:
+            self._cell_volumes = self._cell_volumes[keep]
 
         if self._ce_ratios is not None:
             self._ce_ratios = self._ce_ratios[keep]
 
-        if self.half_edge_coords is not None:
-            self.half_edge_coords = self.half_edge_coords[:, keep]
+        if self._half_edge_coords is not None:
+            self._half_edge_coords = self._half_edge_coords[:, keep]
 
-        if self.ei_dot_ej is not None:
-            self.ei_dot_ej = self.ei_dot_ej[:, keep]
+        if self._ei_dot_ej is not None:
+            self._ei_dot_ej = self._ei_dot_ej[:, keep]
 
-        if self.ei_dot_ei is not None:
-            self.ei_dot_ei = self.ei_dot_ei[:, keep]
+        if self._ei_dot_ei is not None:
+            self._ei_dot_ei = self._ei_dot_ei[:, keep]
 
         if self._cell_centroids is not None:
             self._cell_centroids = self._cell_centroids[keep]
@@ -463,7 +478,6 @@ class MeshTri(_BaseMesh):
         self._is_interior_point = self.point_is_used & ~self.is_boundary_point
 
         self._is_boundary_facet = self.is_boundary_edge
-        return
 
     @property
     def is_boundary_point(self):
