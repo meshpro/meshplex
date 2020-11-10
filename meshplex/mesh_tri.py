@@ -215,27 +215,6 @@ class MeshTri(_BaseMesh):
             self._ce_ratios = compute_ce_ratios(self.ei_dot_ej, self.cell_volumes)
         return self._ce_ratios
 
-    def update_values(self):
-        """Update all computed values of the mesh (edge lengths etc.)."""
-        # Constructing the temporary arrays
-        # self.points[self.idx_hierarchy] can take quite a while here.
-        self.half_edge_coords
-        self.ei_dot_ej
-        self.ei_dot_ei
-        self.cell_volumes
-
-        self._ce_ratios = None
-        self._interior_edge_lengths = None
-        self._cell_circumcenters = None
-        self._interior_ce_ratios = None
-        self._control_volumes = None
-        self._cell_partitions = None
-        self._cv_centroids = None
-        self._cvc_cell_mask = None
-        self._surface_areas = None
-        self._signed_cell_areas = None
-        self._cell_centroids = None
-
     def remove_cells(self, remove_array):
         """Remove cells and take care of all the dependent data structures. The input
         argument `remove_array` can be a boolean array or a list of indices.
