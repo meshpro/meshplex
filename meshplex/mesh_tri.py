@@ -127,9 +127,9 @@ class MeshTri(_BaseMesh):
         # reset all computed values
         self._reset_point_data()
 
-    def set_interior_points(self, new_interior_points):
+    def set_points(self, new_points, idx=slice(None)):
         self.points.setflags(write=True)
-        self.points[self.is_interior_point] = new_interior_points
+        self.points[idx] = new_points
         self.points.setflags(write=False)
         self._reset_point_data()
 
