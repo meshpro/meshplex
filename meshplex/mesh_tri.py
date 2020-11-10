@@ -41,7 +41,7 @@ class MeshTri(_BaseMesh):
         self._points.setflags(write=False)
         super().__init__(points, cells)
 
-        # Assert that all vertices are used.
+        # Check which vertices are used.
         # If there are vertices which do not appear in the cells list, this
         # ```
         # uvertices, uidx = numpy.unique(cells, return_inverse=True)
@@ -52,28 +52,21 @@ class MeshTri(_BaseMesh):
         self.point_is_used = numpy.zeros(len(points), dtype=bool)
         self.point_is_used[cells] = True
 
+        # reset all data that changes when point coordinates change
+        self._reset_point_data()
+
         self.cells = {"points": cells}
 
-        self._interior_ce_ratios = None
-        self._control_volumes = None
         self._cv_cell_mask = None
-        self._cell_partitions = None
-        self._cv_centroids = None
-        self._surface_areas = None
         self.edges = None
-        self._cell_circumcenters = None
-        self._signed_cell_areas = None
         self.subdomains = {}
         self._is_interior_point = None
         self._is_boundary_point = None
         self.is_boundary_edge = None
         self._is_boundary_facet = None
-        self._interior_edge_lengths = None
-        self._ce_ratios = None
         self._edges_cells = None
         self._edge_gid_to_edge_list = None
         self._edge_to_edge_gid = None
-        self._cell_centroids = None
 
         # compute data
         # Create the idx_hierarchy (points->edges->cells), i.e., the value of
@@ -96,20 +89,6 @@ class MeshTri(_BaseMesh):
         self.local_idx_inv = [
             [tuple(i) for i in zip(*numpy.where(self.local_idx == k))] for k in range(3)
         ]
-
-        self._half_edge_coords = None
-        self._ei_dot_ej = None
-        self._ei_dot_ei = None
-        self._cell_volumes = None
-
-        # self.fcc_type = "full"
-        # is_flat_halfedge = self.ce_ratios < 0.0
-        # flat_local_edge, self.flat_cells = numpy.where(is_flat_halfedge)
-        # self.is_flat_cell = numpy.any(is_flat_halfedge, axis=0)
-        # self.fcc = FlatCellCorrector(
-        #     self.cells["points"][self.fcc_cells], flat_local_edge, self.points
-        # )
-        # self._ce_ratios[:, self.fcc_cells] = self.fcc.ce_ratios.T
 
     def __repr__(self):
         num_points = len(self.points)
@@ -148,10 +127,9 @@ class MeshTri(_BaseMesh):
         # reset all computed values
         self._reset_point_data()
 
-    def set_interior_points(self, new_interior_points):
-        assert self._is_interior_point is not None
+    def set_points(self, new_points, idx=slice(None)):
         self.points.setflags(write=True)
-        self.points[self._is_interior_point] = new_interior_points
+        self.points[idx] = new_points
         self.points.setflags(write=False)
         self._reset_point_data()
 
