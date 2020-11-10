@@ -509,7 +509,6 @@ def test_signed_area2():
     assert abs(mesh.signed_cell_areas[0] - ref) < 1.0e-10 * abs(ref)
 
     mesh.points = numpy.array([[0.0, 0.0], [0.0, 1.0], [1.0, 0.0]])
-    mesh.update_values()
     ref = -0.5
     assert abs(mesh.signed_cell_areas[0] - ref) < 1.0e-10 * abs(ref)
 
@@ -525,7 +524,6 @@ def test_update_point_coordinates():
     mesh2 = meshplex.MeshTri(X2, mesh.get_cells_type("triangle"))
 
     mesh1.points = X2
-    mesh1.update_values()
 
     tol = 1.0e-12
     assert near_equal(mesh1.ei_dot_ej, mesh2.ei_dot_ej, tol)
@@ -603,7 +601,6 @@ def test_flip_same_edge_twice():
         [[0.0, +0.0, 0.0], [0.1, -0.5, 0.0], [0.2, +0.0, 0.0], [0.1, +0.5, 0.0]]
     )
     mesh.points = new_points
-    mesh.update_values()
     assert mesh.num_delaunay_violations() == 1
 
     mesh.flip_until_delaunay()
