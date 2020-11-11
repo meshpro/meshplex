@@ -1188,10 +1188,6 @@ class MeshTri(_BaseMesh):
             ]
         )
 
-        self.edges["points"][edge_gids] = numpy.sort(verts[[0, 1]].T, axis=1)
-        # No need to touch self.is_boundary_edge,
-        # self.is_boundary_edge_gid; we're only flipping interior edges.
-
         # Do the neighboring cells have equal orientation (both point sets
         # clockwise/counterclockwise)?
         equal_orientation = (
@@ -1199,9 +1195,15 @@ class MeshTri(_BaseMesh):
             == self.cells["points"][adj_cells[1], (lids[1] + 2) % 3]
         )
 
-        # Set new cells
-        self.cells["points"][adj_cells[0]] = verts[[0, 1, 2]].T
+        # Set new cells.
+        # Make sure that positive/negative area orientation is preserved.
+        self.cells["points"][adj_cells[0]] = verts[[0, 2, 1]].T
         self.cells["points"][adj_cells[1]] = verts[[0, 1, 3]].T
+
+        # Reset flipped edges
+        self.edges["points"][edge_gids] = numpy.sort(verts[[0, 1]].T, axis=1)
+        # No need to touch self.is_boundary_edge or self.is_boundary_edge_gid;
+        # we're only flipping interior edges.
 
         # Set up new cells->edges relationships.
         previous_edges = self.cells["edges"][adj_cells].copy()
@@ -1214,8 +1216,8 @@ class MeshTri(_BaseMesh):
         self.cells["edges"][adj_cells[0]] = numpy.column_stack(
             [
                 numpy.choose((lids[1] + i0) % 3, previous_edges[1].T),
-                numpy.choose((lids[0] + 2) % 3, previous_edges[0].T),
                 edge_gids,
+                numpy.choose((lids[0] + 2) % 3, previous_edges[0].T),
             ]
         )
         self.cells["edges"][adj_cells[1]] = numpy.column_stack(

@@ -576,8 +576,8 @@ def test_flip_delaunay_near_boundary():
     mesh.flip_until_delaunay()
 
     assert mesh.num_delaunay_violations() == 0
-    assert numpy.array_equal(mesh.cells["points"], [[1, 3, 2], [1, 3, 0]])
-    assert numpy.array_equal(mesh.cells["edges"], [[4, 3, 1], [2, 0, 1]])
+    assert numpy.array_equal(mesh.cells["points"], [[1, 2, 3], [1, 3, 0]])
+    assert numpy.array_equal(mesh.cells["edges"], [[4, 1, 3], [2, 0, 1]])
 
 
 def test_flip_same_edge_twice():
@@ -622,8 +622,9 @@ def test_flip_two_edges():
     mesh.flip_until_delaunay()
     assert mesh.num_delaunay_violations() == 0
 
+    mesh.show(show_point_numbers=True)
     assert numpy.array_equal(
-        mesh.cells["points"], [[5, 2, 3], [0, 2, 1], [5, 2, 0], [3, 4, 5]]
+        mesh.cells["points"], [[5, 0, 2], [0, 1, 2], [5, 2, 3], [3, 4, 5]]
     )
 
 
@@ -655,7 +656,6 @@ def test_flip_delaunay_near_boundary_preserve_boundary_count():
     assert numpy.array_equal(mesh.is_boundary_point, is_boundary_point_ref)
 
 
-@pytest.mark.skip
 def test_flip_orientation():
     points = numpy.array([[0.0, +0.0], [0.5, -0.1], [1.0, +0.0], [0.5, +0.1]])
 
@@ -890,4 +890,4 @@ def test_remove_cells(remove_idx, expected_num_cells, expected_num_edges):
 
 
 if __name__ == "__main__":
-    test_show_vertex()
+    test_flip_orientation()
