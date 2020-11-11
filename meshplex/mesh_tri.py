@@ -221,7 +221,7 @@ class MeshTri(_BaseMesh):
             self._cell_volumes = self._cell_volumes[keep]
 
         if self._ce_ratios is not None:
-            self._ce_ratios = self._ce_ratios[keep]
+            self._ce_ratios = self._ce_ratios[:, keep]
 
         if self._half_edge_coords is not None:
             self._half_edge_coords = self._half_edge_coords[:, keep]
@@ -286,7 +286,6 @@ class MeshTri(_BaseMesh):
 
     @property
     def ce_ratios_per_interior_edge(self):
-        """"""
         if self._interior_ce_ratios is None:
             if "edges" not in self.cells:
                 self.create_edges()
@@ -405,23 +404,25 @@ class MeshTri(_BaseMesh):
     @property
     def signed_cell_areas(self):
         """Signed area of a triangle in 2D."""
+        if self._signed_cell_areas is None:
+            self._signed_cell_areas = self._compute_signed_cell_areas()
+        return self._signed_cell_areas
+
+    def _compute_signed_cell_areas(self, idx=slice(None)):
         # http://mathworld.wolfram.com/TriangleArea.html
         assert (
             self.points.shape[1] == 2
         ), "Signed areas only make sense for triangles in 2D."
 
-        if self._signed_cell_areas is None:
-            # One could make p contiguous by adding a copy(), but that's not
-            # really worth it here.
-            p = self.points[self.cells["points"]].T
-            # <https://stackoverflow.com/q/50411583/353337>
-            self._signed_cell_areas = (
-                +p[0][2] * (p[1][0] - p[1][1])
-                + p[0][0] * (p[1][1] - p[1][2])
-                + p[0][1] * (p[1][2] - p[1][0])
-            ) / 2
-
-        return self._signed_cell_areas
+        # One could make p contiguous by adding a copy(), but that's not
+        # really worth it here.
+        p = self.points[self.cells["points"][idx]].T
+        # <https://stackoverflow.com/q/50411583/353337>
+        return (
+            +p[0][2] * (p[1][0] - p[1][1])
+            + p[0][0] * (p[1][1] - p[1][2])
+            + p[0][1] * (p[1][2] - p[1][0])
+        ) / 2
 
     def mark_boundary(self):
         if self.edges is None:
@@ -1265,7 +1266,22 @@ class MeshTri(_BaseMesh):
         update_interior_edge_ids = numpy.unique(edge_gids[k == 2])
 
         self._update_cell_values(update_cell_ids, update_interior_edge_ids)
-        return
+
+    def remove_inverted_boundary_cells(self):
+        """When points are moving around, flip_until_delaunay() makes sure the mesh
+        remains a Delaunay mesh. This does not work on boundaries where very flat cells
+        can still occur or cells may even 'invert'. (The interior point moves outside.)
+        In this case, the boundary cell can be removed, and the newly outward node is
+        made a boundary node."""
+        # find out the signed area of all boundary cells
+        is_boundary_cell = numpy.any(self.is_boundary_edge, axis=0)
+        signed_boundary_cell_areas = self._compute_signed_cell_areas(is_boundary_cell)
+        if numpy.all(signed_boundary_cell_areas > 0.0):
+            return 0
+
+        idx = is_boundary_cell.copy()
+        idx[idx] = signed_boundary_cell_areas <= 0.0
+        return self.remove_cells(idx)
 
     def _update_cell_values(self, cell_ids, interior_edge_ids):
         """Updates all sorts of cell information for the given cell IDs."""
