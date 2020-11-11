@@ -1322,39 +1322,29 @@ class MeshTri(_BaseMesh):
             edge_gids = self._edge_to_edge_gid[2][interior_edge_ids]
             adj_cells = self.edges_cells[2][interior_edge_ids]
 
-            is0 = self.cells["edges"][adj_cells[:, 0]][:, 0] == edge_gids
-            is1 = self.cells["edges"][adj_cells[:, 0]][:, 1] == edge_gids
-            is2 = self.cells["edges"][adj_cells[:, 0]][:, 2] == edge_gids
-            assert numpy.all(
-                numpy.sum(numpy.column_stack([is0, is1, is2]), axis=1) == 1
+            is_edge = numpy.array(
+                [
+                    self.cells["edges"][adj_cells[:, 0]][:, k] == edge_gids
+                    for k in range(3)
+                ]
             )
-            #
-            self._interior_ce_ratios[interior_edge_ids[is0]] += self.ce_ratios[
-                0, adj_cells[is0, 0]
-            ]
-            self._interior_ce_ratios[interior_edge_ids[is1]] += self.ce_ratios[
-                1, adj_cells[is1, 0]
-            ]
-            self._interior_ce_ratios[interior_edge_ids[is2]] += self.ce_ratios[
-                2, adj_cells[is2, 0]
-            ]
+            assert numpy.all(numpy.sum(is_edge, axis=0) == 1)
+            for k in range(3):
+                self._interior_ce_ratios[
+                    interior_edge_ids[is_edge[k]]
+                ] += self.ce_ratios[k, adj_cells[is_edge[k], 0]]
 
-            is0 = self.cells["edges"][adj_cells[:, 1]][:, 0] == edge_gids
-            is1 = self.cells["edges"][adj_cells[:, 1]][:, 1] == edge_gids
-            is2 = self.cells["edges"][adj_cells[:, 1]][:, 2] == edge_gids
-            assert numpy.all(
-                numpy.sum(numpy.column_stack([is0, is1, is2]), axis=1) == 1
+            is_edge = numpy.array(
+                [
+                    self.cells["edges"][adj_cells[:, 1]][:, k] == edge_gids
+                    for k in range(3)
+                ]
             )
-            #
-            self._interior_ce_ratios[interior_edge_ids[is0]] += self.ce_ratios[
-                0, adj_cells[is0, 1]
-            ]
-            self._interior_ce_ratios[interior_edge_ids[is1]] += self.ce_ratios[
-                1, adj_cells[is1, 1]
-            ]
-            self._interior_ce_ratios[interior_edge_ids[is2]] += self.ce_ratios[
-                2, adj_cells[is2, 1]
-            ]
+            assert numpy.all(numpy.sum(is_edge, axis=0) == 1)
+            for k in range(3):
+                self._interior_ce_ratios[
+                    interior_edge_ids[is_edge[k]]
+                ] += self.ce_ratios[k, adj_cells[is_edge[k], 1]]
 
         # TODO update those values
         self._cell_centroids = None
