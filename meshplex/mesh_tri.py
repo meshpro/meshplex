@@ -840,7 +840,6 @@ class MeshTri(_BaseMesh):
             mng.window.showMaximized()
         plt.show()
         plt.close()
-        return
 
     def save(self, filename, *args, **kwargs):
         """Save the mesh to a file."""
@@ -869,11 +868,13 @@ class MeshTri(_BaseMesh):
         show_cell_numbers=False,
         cell_mask=None,
         show_edge_numbers=False,
+        mark_cells=None,
     ):
         """Show the mesh using matplotlib."""
         # Importing matplotlib takes a while, so don't do that at the header.
         import matplotlib.pyplot as plt
-        from matplotlib.collections import LineCollection
+        from matplotlib.collections import LineCollection, PatchCollection
+        from matplotlib.patches import Polygon
 
         fig = plt.figure()
         ax = fig.gca()
@@ -940,6 +941,13 @@ class MeshTri(_BaseMesh):
             )
             if show_colorbar:
                 plt.colorbar()
+
+        if mark_cells is not None:
+            patches = []
+            for idx in mark_cells:
+                patches.append(Polygon(self.points[self.cells["points"][idx]]))
+            p = PatchCollection(patches, facecolor="C1")
+            ax.add_collection(p)
 
         if self.edges is None:
             self.create_edges()
