@@ -1098,24 +1098,22 @@ class MeshTri(_BaseMesh):
 
     def flip_until_delaunay(self):
         """Flip edges until the mesh is fully Delaunay."""
+        num_flips = 0
         # If all coedge/edge ratios are positive, all cells are Delaunay.
         if numpy.all(self.ce_ratios > 0):
-            return False
+            return num_flips
 
         # If all _interior_ coedge/edge ratios are positive, all cells are Delaunay.
         if self.is_boundary_edge is None:
             self.mark_boundary()
         if numpy.all(self.ce_ratios[~self.is_boundary_edge] > 0):
-            return False
+            return num_flips
 
         if self._edges_cells is None:
             self._compute_edges_cells()
 
-        num_flip_steps = 0
         ce_ratios_per_interior_edge = self.ce_ratios_per_interior_edge
         while numpy.any(ce_ratios_per_interior_edge < 0.0):
-            num_flip_steps += 1
-
             is_flip_interior_edge = ce_ratios_per_interior_edge < 0.0
 
             interior_edges_cells = self._edges_cells[2]
@@ -1142,16 +1140,13 @@ class MeshTri(_BaseMesh):
                 critical_cell_gids = cell_gids[num_flips_per_cell > 1]
 
             self.flip_interior_edges(is_flip_interior_edge)
+            num_flips += numpy.sum(is_flip_interior_edge)
             ce_ratios_per_interior_edge = self.ce_ratios_per_interior_edge
 
-        return num_flip_steps > 1
+        return num_flips
 
     def flip_interior_edges(self, is_flip_interior_edge):
-        """"""
-        if self._edges_cells is None:
-            self._compute_edges_cells()
-
-        interior_edges_cells = self._edges_cells[2]
+        interior_edges_cells = self.edges_cells[2]
         # adj_cells = interior_edges_cells[is_flip_interior_edge].T
 
         edge_gids = self._edge_to_edge_gid[2][is_flip_interior_edge]
@@ -1198,7 +1193,7 @@ class MeshTri(_BaseMesh):
         # self.is_boundary_edge_gid; we're only flipping interior edges.
 
         # Do the neighboring cells have equal orientation (both point sets
-        # clockwise/counterclockwise?
+        # clockwise/counterclockwise)?
         equal_orientation = (
             self.cells["points"][adj_cells[0], (lids[0] + 1) % 3]
             == self.cells["points"][adj_cells[1], (lids[1] + 2) % 3]
@@ -1253,19 +1248,19 @@ class MeshTri(_BaseMesh):
 
             # outer boundary edges
             edge_id1 = edge_id[k1]
-            assert numpy.all(self._edges_cells[1][edge_id1][:, 0] == adj_cells[c, k1])
-            self._edges_cells[1][edge_id1, 0] = adj_cells[d, k1]
+            assert numpy.all(self.edges_cells[1][edge_id1][:, 0] == adj_cells[c, k1])
+            self.edges_cells[1][edge_id1, 0] = adj_cells[d, k1]
 
             # interior edges
             edge_id2 = edge_id[k2]
-            is_column0 = self._edges_cells[2][edge_id2][:, 0] == adj_cells[c, k2]
-            is_column1 = self._edges_cells[2][edge_id2][:, 1] == adj_cells[c, k2]
+            is_column0 = self.edges_cells[2][edge_id2][:, 0] == adj_cells[c, k2]
+            is_column1 = self.edges_cells[2][edge_id2][:, 1] == adj_cells[c, k2]
             assert numpy.all(numpy.logical_xor(is_column0, is_column1))
             #
-            self._edges_cells[2][edge_id2[is_column0], 0] = adj_cells[d, k2][is_column0]
-            self._edges_cells[2][edge_id2[is_column1], 1] = adj_cells[d, k2][is_column1]
+            self.edges_cells[2][edge_id2[is_column0], 0] = adj_cells[d, k2][is_column0]
+            self.edges_cells[2][edge_id2[is_column1], 1] = adj_cells[d, k2][is_column1]
 
-        # Schedule the cell ids for updates.
+        # Schedule the cell ids for data updates
         update_cell_ids = numpy.unique(adj_cells.T.flat)
         # Same for edge ids
         k, edge_gids = self._edge_gid_to_edge_list[
@@ -1325,7 +1320,7 @@ class MeshTri(_BaseMesh):
         if self._interior_ce_ratios is not None:
             self._interior_ce_ratios[interior_edge_ids] = 0.0
             edge_gids = self._edge_to_edge_gid[2][interior_edge_ids]
-            adj_cells = self._edges_cells[2][interior_edge_ids]
+            adj_cells = self.edges_cells[2][interior_edge_ids]
 
             is0 = self.cells["edges"][adj_cells[:, 0]][:, 0] == edge_gids
             is1 = self.cells["edges"][adj_cells[:, 0]][:, 1] == edge_gids
@@ -1371,4 +1366,3 @@ class MeshTri(_BaseMesh):
         self._surface_areas = None
         self._signed_cell_areas = None
         self.subdomains = {}
-        return

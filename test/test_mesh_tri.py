@@ -655,6 +655,25 @@ def test_flip_delaunay_near_boundary_preserve_boundary_count():
     assert numpy.array_equal(mesh.is_boundary_point, is_boundary_point_ref)
 
 
+@pytest.mark.skip
+def test_flip_orientation():
+    points = numpy.array([[0.0, +0.0], [0.5, -0.1], [1.0, +0.0], [0.5, +0.1]])
+
+    # preserve positive orientation
+    cells = numpy.array([[0, 1, 2], [0, 2, 3]])
+    mesh = meshplex.MeshTri(points, cells)
+    assert numpy.all(mesh.signed_cell_areas > 0.0)
+    mesh.flip_until_delaunay()
+    assert numpy.all(mesh.signed_cell_areas > 0.0)
+
+    # also preserve negative orientation
+    cells = numpy.array([[0, 2, 1], [0, 3, 2]])
+    mesh = meshplex.MeshTri(points, cells)
+    assert numpy.all(mesh.signed_cell_areas < 0.0)
+    mesh.flip_until_delaunay()
+    assert numpy.all(mesh.signed_cell_areas < 0.0)
+
+
 def test_inradius():
     # 3-4-5 triangle
     points = numpy.array([[0.0, 0.0, 0.0], [3.0, 0.0, 0.0], [0.0, 4.0, 0.0]])
