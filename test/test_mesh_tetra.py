@@ -26,6 +26,8 @@ def test_regular_tet0(a):
     )
     cells = numpy.array([[0, 1, 2, 3]])
     mesh = meshplex.MeshTetra(points, cells.copy())
+    # test __repr__
+    print(mesh)
 
     assert numpy.all(mesh.cells["points"] == cells)
 

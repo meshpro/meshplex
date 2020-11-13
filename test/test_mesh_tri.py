@@ -12,9 +12,17 @@ import meshplex
 this_dir = pathlib.Path(__file__).resolve().parent
 
 
-def test_unit_triangle():
+@pytest.mark.parametrize(
+    "cells_dtype",
+    [
+        numpy.int64
+        # depends on <https://github.com/numpy/numpy/issues/17760>
+        # numpy.uint64
+    ],
+)
+def test_unit_triangle(cells_dtype):
     points = numpy.array([[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]])
-    cells = numpy.array([[0, 1, 2]])
+    cells = numpy.array([[0, 1, 2]], dtype=cells_dtype)
     mesh = meshplex.MeshTri(points, cells)
 
     tol = 1.0e-14
@@ -828,9 +836,18 @@ def test_flat_boundary():
 
 def test_show_mesh():
     mesh = meshplex.read(this_dir / "meshes" / "pacman-optimized.vtk")
+    mesh = meshplex.MeshTri(mesh.points[:, :2], mesh.cells["points"])
     print(mesh)  # test __repr__
     # mesh.plot(show_axes=False)
-    mesh.show(show_axes=False, cell_quality_coloring=("viridis", 0.0, 1.0, True))
+    mesh.show(
+        show_axes=False,
+        cell_quality_coloring=("viridis", 0.0, 1.0, True),
+        show_cell_numbers=True,
+        mark_cells=[0, 3, 7],
+        nondelaunay_edge_color="r",
+        boundary_edge_color="b",
+        control_volume_centroid_color="g",
+    )
     # mesh.save("pacman.png", show_axes=False)
 
 
@@ -887,6 +904,18 @@ def test_remove_cells(remove_idx, expected_num_cells, expected_num_edges):
     mesh.remove_cells(remove_idx)
     assert len(mesh.cells["points"]) == expected_num_cells
     assert len(mesh.edges["points"]) == expected_num_edges
+
+
+def test_set_points():
+    points = numpy.array([[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]])
+    cells = numpy.array([[0, 1, 2]])
+    mesh = meshplex.MeshTri(points, cells)
+
+    mesh.set_points([0.1, 0.1], [0])
+    ref = mesh.cell_volumes.copy()
+
+    mesh2 = meshplex.MeshTri(mesh.points, mesh.cells["points"])
+    assert numpy.all(numpy.abs(ref - mesh2.cell_volumes)) < 1.0e-10
 
 
 if __name__ == "__main__":
