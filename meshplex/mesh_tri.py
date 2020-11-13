@@ -408,10 +408,10 @@ class MeshTri(_BaseMesh):
     def signed_cell_areas(self):
         """Signed area of a triangle in 2D."""
         if self._signed_cell_areas is None:
-            self._signed_cell_areas = self._compute_signed_cell_areas()
+            self._signed_cell_areas = self.compute_signed_cell_areas()
         return self._signed_cell_areas
 
-    def _compute_signed_cell_areas(self, idx=slice(None)):
+    def compute_signed_cell_areas(self, idx=slice(None)):
         # http://mathworld.wolfram.com/TriangleArea.html
         assert (
             self.points.shape[1] == 2
@@ -1278,25 +1278,23 @@ class MeshTri(_BaseMesh):
 
         self._update_cell_values(update_cell_ids, update_interior_edge_ids)
 
-    def remove_degenerate_boundary_cells(self, threshold_area=0.0):
-        """When points are moving around, flip_until_delaunay() makes sure the mesh
-        remains a Delaunay mesh. This does not work on boundaries where very flat cells
-        can still occur or cells may even 'invert'. (The interior point moves outside.)
-        In this case, the boundary cell can be removed, and the newly outward node is
-        made a boundary node.
-        The `threshold` parameter can be used to control which cells are removed."""
+    def remove_boundary_cells(self, criterion):
+        """Helper method for removing cells along the boundary.
+        The input criterion is a boolean array of length `sum(mesh.is_boundary_cell)`.
+
+        This helps, for example, in the following scenario.
+        When points are moving around, flip_until_delaunay() makes sure the mesh remains
+        a Delaunay mesh. This does not work on boundaries where very flat cells can
+        still occur or cells may even 'invert'. (The interior point moves outside.) In
+        this case, the boundary cell can be removed, and the newly outward node is made
+        a boundary node."""
         num_removed = 0
         while True:
-            # find out the signed area of all boundary cells
-            is_boundary_cell = numpy.any(self.is_boundary_edge, axis=0)
-            signed_boundary_cell_areas = self._compute_signed_cell_areas(
-                is_boundary_cell
-            )
-            if numpy.all(signed_boundary_cell_areas > threshold_area):
+            crit = criterion(self.is_boundary_cell)
+            if numpy.all(~crit):
                 break
-
-            idx = is_boundary_cell.copy()
-            idx[idx] = signed_boundary_cell_areas <= threshold_area
+            idx = self.is_boundary_cell.copy()
+            idx[idx] = crit
             n = self.remove_cells(idx)
             num_removed += n
             if n == 0:
