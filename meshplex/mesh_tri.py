@@ -65,6 +65,7 @@ class MeshTri(_BaseMesh):
         self._is_boundary_edge = None
         self._is_boundary_edge_gid = None
         self._is_boundary_facet = None
+        self._is_boundary_cell = None
         self._edges_cells = None
         self._edge_gid_to_edge_list = None
         self._edge_to_edge_gid = None
@@ -163,7 +164,7 @@ class MeshTri(_BaseMesh):
         if self._ei_dot_ei is None:
             # einsum is faster if the tail survives, e.g., ijk,ijk->jk.
             # <https://gist.github.com/nschloe/8bc015cc1a9e5c56374945ddd711df7b>
-            # TODO reorganize the data
+            # TODO reorganize the data?
             self._ei_dot_ei = numpy.einsum(
                 "ijk, ijk->ij", self.half_edge_coords, self.half_edge_coords
             )
@@ -174,7 +175,7 @@ class MeshTri(_BaseMesh):
         if self._ei_dot_ej is None:
             # einsum is faster if the tail survives, e.g., ijk,ijk->jk.
             # <https://gist.github.com/nschloe/8bc015cc1a9e5c56374945ddd711df7b>
-            # TODO reorganize the data
+            # TODO reorganize the data?
             self._ei_dot_ej = numpy.einsum(
                 "ijk, ijk->ij",
                 self.half_edge_coords[[1, 2, 0]],
@@ -278,6 +279,7 @@ class MeshTri(_BaseMesh):
 
             # These could also be updated, but let's implement it when needed
             self._is_boundary_edge = None
+            self._is_boundary_cell = None
             self._edges_cells = None
             self._edge_gid_to_edge_list = None
             self._edge_to_edge_gid = None
@@ -329,6 +331,7 @@ class MeshTri(_BaseMesh):
             v = self.cell_partitions[:, ~cell_mask]
             vals = numpy.array([v[1] + v[2], v[2] + v[0], v[0] + v[1]])
             # sum all the vals into self._control_volumes at ids
+            self.cells["points"][~cell_mask].T.reshape(-1)
             self._control_volumes = numpy.bincount(
                 self.cells["points"][~cell_mask].T.reshape(-1),
                 weights=vals.reshape(-1),
@@ -428,14 +431,18 @@ class MeshTri(_BaseMesh):
         if self.edges is None:
             self.create_edges()
 
-        assert self._is_boundary_edge is not None
-
         self._is_boundary_point = numpy.zeros(len(self.points), dtype=bool)
         self._is_boundary_point[self.idx_hierarchy[..., self.is_boundary_edge]] = True
 
         self._is_interior_point = self.point_is_used & ~self.is_boundary_point
 
         self._is_boundary_facet = self.is_boundary_edge
+
+    @property
+    def is_boundary_cell(self):
+        if self._is_boundary_cell is None:
+            self._is_boundary_cell = numpy.any(self.is_boundary_edge, axis=0)
+        return self._is_boundary_cell
 
     @property
     def is_boundary_edge(self):
@@ -481,7 +488,6 @@ class MeshTri(_BaseMesh):
         ), "No edge has more than 2 cells. Are cells listed twice?"
 
         self._is_boundary_edge = (cts[inv] == 1).reshape(s[1:])
-
         self._is_boundary_edge_gid = cts == 1
 
         self.edges = {"points": a_unique}
@@ -498,7 +504,6 @@ class MeshTri(_BaseMesh):
             numpy.where(self._is_boundary_edge_gid)[0],
             numpy.where(~self._is_boundary_edge_gid)[0],
         ]
-        return
 
     @property
     def edges_cells(self):
@@ -582,13 +587,14 @@ class MeshTri(_BaseMesh):
             )
         return self._cell_circumcenters
 
+    def compute_centroids(self, idx=slice(None)):
+        return numpy.sum(self.points[self.cells["points"][idx]], axis=1) / 3.0
+
     @property
     def cell_centroids(self):
         """The centroids (barycenters, midpoints of the circumcircles) of all triangles."""
         if self._cell_centroids is None:
-            self._cell_centroids = (
-                numpy.sum(self.points[self.cells["points"]], axis=1) / 3.0
-            )
+            self._cell_centroids = self.compute_centroids()
         return self._cell_centroids
 
     @property
@@ -1272,21 +1278,30 @@ class MeshTri(_BaseMesh):
 
         self._update_cell_values(update_cell_ids, update_interior_edge_ids)
 
-    def remove_inverted_boundary_cells(self):
+    def remove_degenerate_boundary_cells(self, threshold_area=0.0):
         """When points are moving around, flip_until_delaunay() makes sure the mesh
         remains a Delaunay mesh. This does not work on boundaries where very flat cells
         can still occur or cells may even 'invert'. (The interior point moves outside.)
         In this case, the boundary cell can be removed, and the newly outward node is
-        made a boundary node."""
-        # find out the signed area of all boundary cells
-        is_boundary_cell = numpy.any(self.is_boundary_edge, axis=0)
-        signed_boundary_cell_areas = self._compute_signed_cell_areas(is_boundary_cell)
-        if numpy.all(signed_boundary_cell_areas > 0.0):
-            return 0
+        made a boundary node.
+        The `threshold` parameter can be used to control which cells are removed."""
+        num_removed = 0
+        while True:
+            # find out the signed area of all boundary cells
+            is_boundary_cell = numpy.any(self.is_boundary_edge, axis=0)
+            signed_boundary_cell_areas = self._compute_signed_cell_areas(
+                is_boundary_cell
+            )
+            if numpy.all(signed_boundary_cell_areas > threshold_area):
+                break
 
-        idx = is_boundary_cell.copy()
-        idx[idx] = signed_boundary_cell_areas <= 0.0
-        return self.remove_cells(idx)
+            idx = is_boundary_cell.copy()
+            idx[idx] = signed_boundary_cell_areas <= threshold_area
+            n = self.remove_cells(idx)
+            num_removed += n
+            if n == 0:
+                break
+        return num_removed
 
     def _update_cell_values(self, cell_ids, interior_edge_ids):
         """Updates all sorts of cell information for the given cell IDs."""

@@ -12,9 +12,10 @@ import meshplex
 this_dir = pathlib.Path(__file__).resolve().parent
 
 
-def test_unit_triangle():
+@pytest.mark.parametrize("cells_dtype", [numpy.int64, numpy.uint64])
+def test_unit_triangle(cells_dtype):
     points = numpy.array([[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]])
-    cells = numpy.array([[0, 1, 2]])
+    cells = numpy.array([[0, 1, 2]], dtype=cells_dtype)
     mesh = meshplex.MeshTri(points, cells)
 
     tol = 1.0e-14
