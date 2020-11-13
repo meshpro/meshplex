@@ -12,11 +12,14 @@ import meshplex
 this_dir = pathlib.Path(__file__).resolve().parent
 
 
-@pytest.mark.parametrize("cells_dtype", [
-    numpy.int64
-    # depends on <https://github.com/numpy/numpy/issues/17760>
-    # numpy.uint64
-])
+@pytest.mark.parametrize(
+    "cells_dtype",
+    [
+        numpy.int64
+        # depends on <https://github.com/numpy/numpy/issues/17760>
+        # numpy.uint64
+    ],
+)
 def test_unit_triangle(cells_dtype):
     points = numpy.array([[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]])
     cells = numpy.array([[0, 1, 2]], dtype=cells_dtype)
@@ -833,9 +836,18 @@ def test_flat_boundary():
 
 def test_show_mesh():
     mesh = meshplex.read(this_dir / "meshes" / "pacman-optimized.vtk")
+    mesh = meshplex.MeshTri(mesh.points[:, :2], mesh.cells["points"])
     print(mesh)  # test __repr__
     # mesh.plot(show_axes=False)
-    mesh.show(show_axes=False, cell_quality_coloring=("viridis", 0.0, 1.0, True))
+    mesh.show(
+        show_axes=False,
+        cell_quality_coloring=("viridis", 0.0, 1.0, True),
+        show_cell_numbers=True,
+        mark_cells=[0, 3, 7],
+        nondelaunay_edge_color="r",
+        boundary_edge_color="b",
+        control_volume_centroid_color="g",
+    )
     # mesh.save("pacman.png", show_axes=False)
 
 
