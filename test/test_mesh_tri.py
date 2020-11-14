@@ -844,6 +844,7 @@ def test_show_mesh():
         cell_quality_coloring=("viridis", 0.0, 1.0, True),
         show_cell_numbers=True,
         mark_cells=[0, 3, 7],
+        mark_points=[1],
         nondelaunay_edge_color="r",
         boundary_edge_color="b",
         control_volume_centroid_color="g",

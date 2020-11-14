@@ -877,6 +877,7 @@ class MeshTri(_BaseMesh):
         cell_mask=None,
         show_edge_numbers=False,
         mark_cells=None,
+        mark_points=None,
     ):
         """Show the mesh using matplotlib."""
         # Importing matplotlib takes a while, so don't do that at the header.
@@ -951,11 +952,15 @@ class MeshTri(_BaseMesh):
                 plt.colorbar()
 
         if mark_cells is not None:
-            patches = []
-            for idx in mark_cells:
-                patches.append(Polygon(self.points[self.cells["points"][idx]]))
+            patches = [
+                Polygon(self.points[self.cells["points"][idx]]) for idx in mark_cells
+            ]
             p = PatchCollection(patches, facecolor="C1")
             ax.add_collection(p)
+
+        if mark_points is not None:
+            idx = mark_points
+            plt.plot(self.points[idx, 0], self.points[idx, 1], "x", color="r")
 
         if self.edges is None:
             self.create_edges()
