@@ -906,6 +906,16 @@ def test_remove_cells(remove_idx, expected_num_cells, expected_num_edges):
     assert len(mesh.edges["points"]) == expected_num_edges
 
 
+def test_remove_cells_boundary():
+    points = [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0], [0.5, 0.5]]
+    cells = [[0, 1, 4], [1, 2, 4], [2, 3, 4], [0, 4, 3]]
+    mesh = meshplex.MeshTri(points, cells)
+    assert numpy.all(mesh.is_boundary_point == [True, True, True, True, False])
+
+    mesh.remove_cells([0])
+    assert numpy.all(mesh.is_boundary_point == [True, True, True, True, True])
+
+
 def test_set_points():
     points = numpy.array([[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]])
     cells = numpy.array([[0, 1, 2]])
@@ -919,4 +929,4 @@ def test_set_points():
 
 
 if __name__ == "__main__":
-    test_flip_orientation()
+    test_remove_cells_boundary()

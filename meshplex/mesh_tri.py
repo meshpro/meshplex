@@ -31,6 +31,8 @@ class MeshTri(_BaseMesh):
             cells = numpy.sort(cells, axis=1)
             cells = cells[cells[:, 0].argsort()]
 
+        points = numpy.asarray(points)
+        cells = numpy.asarray(cells)
         assert len(points.shape) == 2, f"Illegal point coordinates shape {points.shape}"
         assert (
             len(cells.shape) == 2 and cells.shape[1] == 3
