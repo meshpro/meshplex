@@ -682,6 +682,20 @@ def test_flip_orientation():
     assert numpy.all(mesh.signed_cell_areas < 0.0)
 
 
+def test_flip_infinite():
+    """In rare cases, it can happen that the ce-ratio of an edge is negative (up to
+    machine precision, -2.13e-15 or something like that), an edge flip is done, and the
+    ce-ratio of the resulting edge is again negative. The flip_until_delaunay() method
+    would continue indefinitely. This test replicates such an edge case."""
+    a = 3.9375644347017862e02
+    points = numpy.array([[205.0, a], [185.0, a], [330.0, 380.0], [60.0, 380.0]])
+    cells = [[0, 1, 2], [1, 2, 3]]
+
+    mesh = meshplex.MeshTri(points, cells)
+    num_flips = mesh.flip_until_delaunay(tol=1.0e-13)
+    assert num_flips == 0
+
+
 def test_inradius():
     # 3-4-5 triangle
     points = numpy.array([[0.0, 0.0, 0.0], [3.0, 0.0, 0.0], [0.0, 4.0, 0.0]])
@@ -930,4 +944,4 @@ def test_set_points():
 
 
 if __name__ == "__main__":
-    test_remove_cells_boundary()
+    test_flip_infinite()
