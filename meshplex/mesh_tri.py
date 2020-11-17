@@ -31,6 +31,8 @@ class MeshTri(_BaseMesh):
             cells = numpy.sort(cells, axis=1)
             cells = cells[cells[:, 0].argsort()]
 
+        points = numpy.asarray(points)
+        cells = numpy.asarray(cells)
         assert len(points.shape) == 2, f"Illegal point coordinates shape {points.shape}"
         assert (
             len(cells.shape) == 2 and cells.shape[1] == 3
@@ -875,6 +877,7 @@ class MeshTri(_BaseMesh):
         cell_mask=None,
         show_edge_numbers=False,
         mark_cells=None,
+        mark_points=None,
     ):
         """Show the mesh using matplotlib."""
         # Importing matplotlib takes a while, so don't do that at the header.
@@ -949,11 +952,15 @@ class MeshTri(_BaseMesh):
                 plt.colorbar()
 
         if mark_cells is not None:
-            patches = []
-            for idx in mark_cells:
-                patches.append(Polygon(self.points[self.cells["points"][idx]]))
+            patches = [
+                Polygon(self.points[self.cells["points"][idx]]) for idx in mark_cells
+            ]
             p = PatchCollection(patches, facecolor="C1")
             ax.add_collection(p)
+
+        if mark_points is not None:
+            idx = mark_points
+            plt.plot(self.points[idx, 0], self.points[idx, 1], "x", color="r")
 
         if self.edges is None:
             self.create_edges()
@@ -1102,11 +1109,12 @@ class MeshTri(_BaseMesh):
                     ax.plot(p[0], p[1], color="0.7")
         return
 
-    def flip_until_delaunay(self):
-        """Flip edges until the mesh is fully Delaunay."""
+    def flip_until_delaunay(self, tol=0.0, max_steps=100):
+        """Flip edges until the mesh is fully Delaunay (up to `tol`)."""
         num_flips = 0
+        assert tol >= 0.0
         # If all coedge/edge ratios are positive, all cells are Delaunay.
-        if numpy.all(self.ce_ratios > 0):
+        if numpy.all(self.ce_ratios > -0.5 * tol):
             return num_flips
 
         # If all _interior_ coedge/edge ratios are positive, all cells are Delaunay.
@@ -1118,9 +1126,18 @@ class MeshTri(_BaseMesh):
         if self._edges_cells is None:
             self._compute_edges_cells()
 
+        step = 0
+
         ce_ratios_per_interior_edge = self.ce_ratios_per_interior_edge
-        while numpy.any(ce_ratios_per_interior_edge < 0.0):
-            is_flip_interior_edge = ce_ratios_per_interior_edge < 0.0
+        while numpy.any(ce_ratios_per_interior_edge < -tol):
+            step += 1
+            if step > max_steps:
+                m = numpy.min(ce_ratios_per_interior_edge)
+                warnings.warn(
+                    f"Maximum number of edge flips reached. Smallest ce-ratio: {m:.3e}."
+                )
+                break
+            is_flip_interior_edge = ce_ratios_per_interior_edge < -tol
 
             interior_edges_cells = self._edges_cells[2]
             adj_cells = interior_edges_cells[is_flip_interior_edge].T

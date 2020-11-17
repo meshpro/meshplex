@@ -682,6 +682,20 @@ def test_flip_orientation():
     assert numpy.all(mesh.signed_cell_areas < 0.0)
 
 
+def test_flip_infinite():
+    """In rare cases, it can happen that the ce-ratio of an edge is negative (up to
+    machine precision, -2.13e-15 or something like that), an edge flip is done, and the
+    ce-ratio of the resulting edge is again negative. The flip_until_delaunay() method
+    would continue indefinitely. This test replicates such an edge case."""
+    a = 3.9375644347017862e02
+    points = numpy.array([[205.0, a], [185.0, a], [330.0, 380.0], [60.0, 380.0]])
+    cells = [[0, 1, 2], [1, 2, 3]]
+
+    mesh = meshplex.MeshTri(points, cells)
+    num_flips = mesh.flip_until_delaunay(tol=1.0e-13)
+    assert num_flips == 0
+
+
 def test_inradius():
     # 3-4-5 triangle
     points = numpy.array([[0.0, 0.0, 0.0], [3.0, 0.0, 0.0], [0.0, 4.0, 0.0]])
@@ -844,6 +858,7 @@ def test_show_mesh():
         cell_quality_coloring=("viridis", 0.0, 1.0, True),
         show_cell_numbers=True,
         mark_cells=[0, 3, 7],
+        mark_points=[1],
         nondelaunay_edge_color="r",
         boundary_edge_color="b",
         control_volume_centroid_color="g",
@@ -906,6 +921,16 @@ def test_remove_cells(remove_idx, expected_num_cells, expected_num_edges):
     assert len(mesh.edges["points"]) == expected_num_edges
 
 
+def test_remove_cells_boundary():
+    points = [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0], [0.5, 0.5]]
+    cells = [[0, 1, 4], [1, 2, 4], [2, 3, 4], [0, 4, 3]]
+    mesh = meshplex.MeshTri(points, cells)
+    assert numpy.all(mesh.is_boundary_point == [True, True, True, True, False])
+
+    mesh.remove_cells([0])
+    assert numpy.all(mesh.is_boundary_point == [True, True, True, True, True])
+
+
 def test_set_points():
     points = numpy.array([[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]])
     cells = numpy.array([[0, 1, 2]])
@@ -919,4 +944,4 @@ def test_set_points():
 
 
 if __name__ == "__main__":
-    test_flip_orientation()
+    test_flip_infinite()
