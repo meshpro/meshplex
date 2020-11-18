@@ -43,17 +43,6 @@ class MeshTri(_BaseMesh):
         self._points.setflags(write=False)
         super().__init__(points, cells)
 
-        # Check which vertices are used.
-        # If there are vertices which do not appear in the cells list, this
-        # ```
-        # uvertices, uidx = numpy.unique(cells, return_inverse=True)
-        # cells = uidx.reshape(cells.shape)
-        # points = points[uvertices]
-        # ```
-        # helps.
-        self.point_is_used = numpy.zeros(len(points), dtype=bool)
-        self.point_is_used[cells] = True
-
         # reset all data that changes when point coordinates change
         self._reset_point_data()
 
@@ -71,6 +60,7 @@ class MeshTri(_BaseMesh):
         self._edges_cells = None
         self._edge_gid_to_edge_list = None
         self._edge_to_edge_gid = None
+        self._is_point_used = None
 
         # compute data
         # Create the idx_hierarchy (points->edges->cells), i.e., the value of
@@ -252,6 +242,7 @@ class MeshTri(_BaseMesh):
         self._cv_centroids = None
         self._cvc_cell_mask = None
         self._is_boundary_point = None
+        self._is_point_used = None
 
         # handle edges; this is a bit messy
         if "edges" in self.cells:
@@ -423,15 +414,25 @@ class MeshTri(_BaseMesh):
         ) / 2
 
     def mark_boundary(self):
-        if self.edges is None:
-            self.create_edges()
-
         self._is_boundary_point = numpy.zeros(len(self.points), dtype=bool)
         self._is_boundary_point[self.idx_hierarchy[..., self.is_boundary_edge]] = True
-
-        self._is_interior_point = self.point_is_used & ~self.is_boundary_point
-
+        self._is_interior_point = self.is_point_used & ~self.is_boundary_point
         self._is_boundary_facet = self.is_boundary_edge
+
+    @property
+    def is_point_used(self):
+        # Check which vertices are used.
+        # If there are vertices which do not appear in the cells list, this
+        # ```
+        # uvertices, uidx = numpy.unique(cells, return_inverse=True)
+        # cells = uidx.reshape(cells.shape)
+        # points = points[uvertices]
+        # ```
+        # helps.
+        if self._is_point_used is None:
+            self._is_point_used = numpy.zeros(len(self.points), dtype=bool)
+            self._is_point_used[self.cells["points"]] = True
+        return self._is_point_used
 
     @property
     def is_boundary_cell(self):

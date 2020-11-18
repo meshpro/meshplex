@@ -83,6 +83,16 @@ def test_remove_cells_boundary():
     assert numpy.all(mesh.is_boundary_cell)
 
 
+def test_remove_all():
+    points = numpy.array([[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]])
+    cells = [[0, 1, 2]]
+    mesh = meshplex.MeshTri(points, cells)
+    assert numpy.all(mesh.is_point_used)
+
+    mesh.remove_cells([0])
+    assert not numpy.any(mesh.is_point_used)
+
+
 def test_reference():
     mesh0 = meshplex.read(this_dir / ".." / "meshes" / "pacman.vtk")
     mesh0 = meshplex.MeshTri(mesh0.points[:, :2], mesh0.cells["points"])
