@@ -58,6 +58,21 @@ def test_remove_cells_boundary():
     cells = [[0, 1, 4], [1, 2, 4], [2, 3, 4], [0, 4, 3]]
     mesh = meshplex.MeshTri(points, cells)
     assert numpy.all(mesh.is_boundary_point == [True, True, True, True, False])
+    assert numpy.all(mesh.is_boundary_edge[0] == [False, False, False, False])
+    assert numpy.all(mesh.is_boundary_edge[1] == [False, False, False, True])
+    assert numpy.all(mesh.is_boundary_edge[2] == [True, True, True, False])
+    assert numpy.all(
+        mesh.is_boundary_edge_gid
+        == [True, True, False, True, False, True, False, False]
+    )
+    assert numpy.all(mesh.is_boundary_cell)
 
     mesh.remove_cells([0])
     assert numpy.all(mesh.is_boundary_point == [True, True, True, True, True])
+    assert numpy.all(mesh.is_boundary_edge[0] == [False, False, False])
+    assert numpy.all(mesh.is_boundary_edge[1] == [True, False, True])
+    assert numpy.all(mesh.is_boundary_edge[2] == [True, True, True])
+    assert numpy.all(
+        mesh.is_boundary_edge_gid == [True, True, True, True, True, False, False]
+    )
+    assert numpy.all(mesh.is_boundary_cell)

@@ -1,7 +1,7 @@
-import numpy
 import tempfile
 
 import meshzoo
+import numpy
 
 import meshplex
 
