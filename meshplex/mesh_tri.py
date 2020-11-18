@@ -244,6 +244,7 @@ class MeshTri(_BaseMesh):
         if self._cell_partitions is not None:
             self._cell_partitions = self._cell_partitions[keep]
 
+        # TODO These could also be updated, but let's implement it when needed
         self._interior_edge_lengths = None
         self._interior_ce_ratios = None
         self._control_volumes = None
@@ -279,7 +280,7 @@ class MeshTri(_BaseMesh):
             new_index = numpy.arange(num_edges_old) - numpy.cumsum(~remaining_edges)
             self.cells["edges"] = new_index[self.cells["edges"]]
 
-            # These could also be updated, but let's implement it when needed
+            # TODO These could also be updated, but let's implement it when needed
             self._is_boundary_edge = None
             self._is_boundary_cell = None
             self._edges_cells = None
