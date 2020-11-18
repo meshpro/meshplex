@@ -118,7 +118,6 @@ class MeshTri(_BaseMesh):
         self._cell_partitions = None
         self._cv_centroids = None
         self._cvc_cell_mask = None
-        self._surface_areas = None
         self._signed_cell_areas = None
         self._cell_centroids = None
 
@@ -249,9 +248,9 @@ class MeshTri(_BaseMesh):
         # TODO These could also be updated, but let's implement it when needed
         self._interior_ce_ratios = None
         self._control_volumes = None
+        self._cv_cell_mask = None
         self._cv_centroids = None
         self._cvc_cell_mask = None
-        self._surface_areas = None
         self._is_boundary_point = None
 
         # handle edges; this is a bit messy
@@ -347,12 +346,6 @@ class MeshTri(_BaseMesh):
     def control_volumes(self):
         """The control volumes around each vertex."""
         return self.get_control_volumes()
-
-    # @property
-    # def surface_areas(self):
-    #     if self._surface_areas is None:
-    #         self._surface_areas = self._compute_surface_areas()
-    #     return self._surface_areas
 
     def get_control_volume_centroids(self, cell_mask=None):
         """
@@ -1384,6 +1377,5 @@ class MeshTri(_BaseMesh):
         self._control_volumes = None
         self._cell_partitions = None
         self._cv_centroids = None
-        self._surface_areas = None
         self._signed_cell_areas = None
         self.subdomains = {}
