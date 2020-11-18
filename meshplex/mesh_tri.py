@@ -112,7 +112,6 @@ class MeshTri(_BaseMesh):
         self._ei_dot_ej = None
         self._cell_volumes = None
         self._ce_ratios = None
-        self._interior_edge_lengths = None
         self._cell_circumcenters = None
         self._interior_ce_ratios = None
         self._control_volumes = None
@@ -245,16 +244,14 @@ class MeshTri(_BaseMesh):
             self._cell_partitions = self._cell_partitions[keep]
 
         if self._signed_cell_areas is not None:
-            exit(1)
+            self._signed_cell_areas = self._signed_cell_areas[keep]
 
         # TODO These could also be updated, but let's implement it when needed
-        self._interior_edge_lengths = None
         self._interior_ce_ratios = None
         self._control_volumes = None
         self._cv_centroids = None
         self._cvc_cell_mask = None
         self._surface_areas = None
-        self._signed_cell_areas = None
         self._is_boundary_point = None
 
         # handle edges; this is a bit messy

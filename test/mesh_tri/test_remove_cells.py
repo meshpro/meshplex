@@ -1,4 +1,5 @@
 import pathlib
+
 import numpy
 import pytest
 
@@ -85,8 +86,8 @@ def test_remove_cells_boundary():
 def test_reference():
     mesh0 = meshplex.read(this_dir / ".." / "meshes" / "pacman.vtk")
     mesh0 = meshplex.MeshTri(mesh0.points[:, :2], mesh0.cells["points"])
-    mesh0.remove_cells([0, 3, 57, 59, 60, 61, 100])
     mesh0.signed_cell_areas
+    mesh0.remove_cells([0, 3, 57, 59, 60, 61, 100])
 
     # recreate the reduced mesh from scratch
     mesh1 = meshplex.MeshTri(mesh0.points, mesh0.cells["points"])
@@ -101,5 +102,7 @@ def test_reference():
 
     assert numpy.all(numpy.abs(mesh0.cell_volumes - mesh1.cell_volumes) < 1.0e-14)
     assert numpy.all(numpy.abs(mesh0.ce_ratios - mesh1.ce_ratios) < 1.0e-14)
-    assert numpy.all(numpy.abs(mesh0.signed_cell_areas - mesh1.signed_cell_areas) < 1.0e-14)
+    assert numpy.all(
+        numpy.abs(mesh0.signed_cell_areas - mesh1.signed_cell_areas) < 1.0e-14
+    )
     assert numpy.all(numpy.abs(mesh0.cell_centroids - mesh1.cell_centroids) < 1.0e-14)
