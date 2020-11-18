@@ -1,7 +1,10 @@
+import pathlib
 import numpy
 import pytest
 
 import meshplex
+
+this_dir = pathlib.Path(__file__).resolve().parent
 
 
 def _get_test_mesh():
@@ -57,6 +60,7 @@ def test_remove_cells_boundary():
     points = [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0], [0.5, 0.5]]
     cells = [[0, 1, 4], [1, 2, 4], [2, 3, 4], [0, 4, 3]]
     mesh = meshplex.MeshTri(points, cells)
+
     assert numpy.all(mesh.is_boundary_point == [True, True, True, True, False])
     assert numpy.all(mesh.is_boundary_edge[0] == [False, False, False, False])
     assert numpy.all(mesh.is_boundary_edge[1] == [False, False, False, True])
@@ -76,3 +80,26 @@ def test_remove_cells_boundary():
         mesh.is_boundary_edge_gid == [True, True, True, True, True, False, False]
     )
     assert numpy.all(mesh.is_boundary_cell)
+
+
+def test_reference():
+    mesh0 = meshplex.read(this_dir / ".." / "meshes" / "pacman.vtk")
+    mesh0 = meshplex.MeshTri(mesh0.points[:, :2], mesh0.cells["points"])
+    mesh0.remove_cells([0, 3, 57, 59, 60, 61, 100])
+    mesh0.signed_cell_areas
+
+    # recreate the reduced mesh from scratch
+    mesh1 = meshplex.MeshTri(mesh0.points, mesh0.cells["points"])
+
+    assert numpy.all(mesh0.cells["points"] == mesh1.cells["points"])
+    assert numpy.all(numpy.abs(mesh0.points - mesh1.points) < 1.0e-14)
+
+    assert numpy.all(mesh0.is_boundary_point == mesh1.is_boundary_point)
+    assert numpy.all(mesh0.is_boundary_edge == mesh1.is_boundary_edge)
+    assert numpy.all(mesh0.is_boundary_edge_gid == mesh1.is_boundary_edge_gid)
+    assert numpy.all(mesh0.is_boundary_cell == mesh1.is_boundary_cell)
+
+    assert numpy.all(numpy.abs(mesh0.cell_volumes - mesh1.cell_volumes) < 1.0e-14)
+    assert numpy.all(numpy.abs(mesh0.ce_ratios - mesh1.ce_ratios) < 1.0e-14)
+    assert numpy.all(numpy.abs(mesh0.signed_cell_areas - mesh1.signed_cell_areas) < 1.0e-14)
+    assert numpy.all(numpy.abs(mesh0.cell_centroids - mesh1.cell_centroids) < 1.0e-14)

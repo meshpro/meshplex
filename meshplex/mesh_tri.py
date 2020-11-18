@@ -244,6 +244,9 @@ class MeshTri(_BaseMesh):
         if self._cell_partitions is not None:
             self._cell_partitions = self._cell_partitions[keep]
 
+        if self._signed_cell_areas is not None:
+            exit(1)
+
         # TODO These could also be updated, but let's implement it when needed
         self._interior_edge_lengths = None
         self._interior_ce_ratios = None
