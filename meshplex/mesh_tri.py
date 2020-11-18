@@ -350,7 +350,6 @@ class MeshTri(_BaseMesh):
 
     # @property
     # def surface_areas(self):
-    #     """"""
     #     if self._surface_areas is None:
     #         self._surface_areas = self._compute_surface_areas()
     #     return self._surface_areas
@@ -558,7 +557,6 @@ class MeshTri(_BaseMesh):
 
     @property
     def edge_gid_to_edge_list(self):
-        """"""
         if self._edge_gid_to_edge_list is None:
             self._compute_edges_cells()
         return self._edge_gid_to_edge_list
