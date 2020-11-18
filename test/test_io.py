@@ -1,3 +1,4 @@
+import numpy
 import tempfile
 
 import meshzoo
@@ -9,19 +10,16 @@ def test_io_2d():
     vertices, cells = meshzoo.rectangle(0.0, 1.0, 0.0, 1.0, 2, 2)
     mesh = meshplex.MeshTri(vertices, cells)
     # mesh = meshplex.read('pacman.vtu')
-
     assert mesh.num_delaunay_violations() == 0
 
     # mesh.show(show_axes=False, boundary_edge_color="g")
     # mesh.show_vertex(0)
 
-    _, fname = tempfile.mkstemp(suffix=".vtk")
-    mesh.write(fname)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        mesh.write(tmpdir + "test.vtk")
+        mesh2 = meshplex.read(tmpdir + "test.vtk")
 
-    mesh2 = meshplex.read(fname)
-
-    for k in range(len(mesh.cells["points"])):
-        assert tuple(mesh.cells["points"][k]) == tuple(mesh2.cells["points"][k])
+    assert numpy.all(mesh.cells["points"] == mesh2.cells["points"])
 
 
 # def test_io_3d(self):
