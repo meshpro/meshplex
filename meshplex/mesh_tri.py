@@ -517,8 +517,9 @@ class MeshTri(_BaseMesh):
         return self._edges_cells
 
     def _compute_edges_cells(self):
-        """This creates interior edge->cells relations. While it's not necessary for
-        many applications, it sometimes does come in handy.
+        """This creates edge->cells relations. While it's not necessary for many
+        applications, it sometimes does come in handy, for example for mesh
+        manipulation.
         """
         if self.edges is None:
             self.create_edges()
@@ -536,14 +537,11 @@ class MeshTri(_BaseMesh):
         res2 = numpy.column_stack([idx_sort[idx], idx_sort[idx + 1]])
         self._edges_cells = [
             [],  # there are no edges with zero adjacent cells
-            res1 // 3,
-            res2 // 3,
+            # The first entry gives the cell ID, the second the local edge ID in the
+            # cell (0, 1, or 2).
+            {"cell": res1 // 3, "local edge": res1 % 3},
+            {"cell": res2 // 3, "local edge": res2 % 3},
         ]
-        # self._edges_local = [
-        #     [],  # no edges with zero adjacent cells
-        #     res1 % 3,
-        #     res2 % 3,
-        #     ]
 
         # For each edge, store the number of adjacent cells plus the index into
         # the respective edge array.
@@ -1136,7 +1134,7 @@ class MeshTri(_BaseMesh):
                 break
             is_flip_interior_edge = ce_ratios_per_interior_edge < -tol
 
-            interior_edges_cells = self._edges_cells[2]
+            interior_edges_cells = self._edges_cells[2]["cell"]
             adj_cells = interior_edges_cells[is_flip_interior_edge].T
 
             # Check if there are cells for which more than one edge needs to be flipped.
@@ -1170,7 +1168,7 @@ class MeshTri(_BaseMesh):
         # adj_cells = interior_edges_cells[is_flip_interior_edge].T
 
         edge_gids = self._edge_to_edge_gid[2][is_flip_interior_edge]
-        adj_cells = interior_edges_cells[is_flip_interior_edge].T
+        adj_cells = interior_edges_cells["cell"][is_flip_interior_edge].T
 
         # Get the local ids of the edge in the two adjacent cells.
         # Get all edges of the adjacent cells
@@ -1270,17 +1268,23 @@ class MeshTri(_BaseMesh):
 
             # outer boundary edges
             edge_id1 = edge_id[k1]
-            assert numpy.all(self.edges_cells[1][edge_id1][:, 0] == adj_cells[c, k1])
-            self.edges_cells[1][edge_id1, 0] = adj_cells[d, k1]
+            assert numpy.all(
+                self.edges_cells[1]["cell"][edge_id1][:, 0] == adj_cells[c, k1]
+            )
+            self.edges_cells[1]["cell"][edge_id1, 0] = adj_cells[d, k1]
 
             # interior edges
             edge_id2 = edge_id[k2]
-            is_column0 = self.edges_cells[2][edge_id2][:, 0] == adj_cells[c, k2]
-            is_column1 = self.edges_cells[2][edge_id2][:, 1] == adj_cells[c, k2]
+            is_column0 = self.edges_cells[2]["cell"][edge_id2][:, 0] == adj_cells[c, k2]
+            is_column1 = self.edges_cells[2]["cell"][edge_id2][:, 1] == adj_cells[c, k2]
             assert numpy.all(numpy.logical_xor(is_column0, is_column1))
             #
-            self.edges_cells[2][edge_id2[is_column0], 0] = adj_cells[d, k2][is_column0]
-            self.edges_cells[2][edge_id2[is_column1], 1] = adj_cells[d, k2][is_column1]
+            self.edges_cells[2]["cell"][edge_id2[is_column0], 0] = adj_cells[d, k2][
+                is_column0
+            ]
+            self.edges_cells[2]["cell"][edge_id2[is_column1], 1] = adj_cells[d, k2][
+                is_column1
+            ]
 
         # Schedule the cell ids for data updates
         update_cell_ids = numpy.unique(adj_cells.T.flat)
@@ -1349,7 +1353,7 @@ class MeshTri(_BaseMesh):
         if self._interior_ce_ratios is not None:
             self._interior_ce_ratios[interior_edge_ids] = 0.0
             edge_gids = self._edge_to_edge_gid[2][interior_edge_ids]
-            adj_cells = self.edges_cells[2][interior_edge_ids]
+            adj_cells = self.edges_cells[2]["cell"][interior_edge_ids]
 
             is_edge = numpy.array(
                 [

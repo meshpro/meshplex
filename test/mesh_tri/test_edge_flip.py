@@ -26,7 +26,7 @@ def test_flip_delaunay():
     for cell_gid, edge_gids in enumerate(mesh.cells["edges"]):
         for edge_gid in edge_gids:
             num_adj_cells, edge_id = mesh._edge_gid_to_edge_list[edge_gid]
-            assert cell_gid in mesh._edges_cells[num_adj_cells][edge_id]
+            assert cell_gid in mesh._edges_cells[num_adj_cells]["cell"][edge_id]
 
     new_cells = mesh.cells["points"].copy()
     new_coords = mesh.points.copy()
@@ -74,7 +74,7 @@ def test_flip_same_edge_twice():
     for cell_gid, edge_gids in enumerate(mesh.cells["edges"]):
         for edge_gid in edge_gids:
             num_adj_cells, edge_id = mesh._edge_gid_to_edge_list[edge_gid]
-            assert cell_gid in mesh._edges_cells[num_adj_cells][edge_id]
+            assert cell_gid in mesh._edges_cells[num_adj_cells]["cell"][edge_id]
 
     new_points = numpy.array(
         [[0.0, +0.0, 0.0], [0.1, -0.5, 0.0], [0.2, +0.0, 0.0], [0.1, +0.5, 0.0]]
