@@ -405,7 +405,7 @@ class MeshTri(_BaseMesh):
         # possibilities computing the oriented area, but it's fastest with the half
         # edges.
         x = self.half_edge_coords
-        return (x[0, :, 1] * x[2, :, 0] - x[0, :, 0] * x[2, :, 1]) / 2
+        return (x[0, idx, 1] * x[2, idx, 0] - x[0, idx, 0] * x[2, idx, 1]) / 2
 
     def mark_boundary(self):
         self._is_boundary_point = numpy.zeros(len(self.points), dtype=bool)
