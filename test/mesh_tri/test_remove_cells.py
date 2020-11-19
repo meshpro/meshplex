@@ -95,13 +95,23 @@ def test_remove_all():
 def test_reference():
     mesh0 = meshplex.read(this_dir / ".." / "meshes" / "pacman.vtk")
     mesh0 = meshplex.MeshTri(mesh0.points[:, :2], mesh0.cells["points"])
-    mesh0.signed_cell_areas
+    # some dummy calls to make sure the respective value are computed before the cell
+    # removal and then updated
+    mesh0.is_boundary_point
+    mesh0.is_boundary_edge_local
+    mesh0.is_boundary_edge
     mesh0.is_boundary_cell
+    mesh0.cell_volumes
+    mesh0.ce_ratios
+    mesh0.signed_cell_areas
+    mesh0.cell_centroids
+    # now remove some cells
     mesh0.remove_cells([0, 3, 57, 59, 60, 61, 100])
 
     # recreate the reduced mesh from scratch
     mesh1 = meshplex.MeshTri(mesh0.points, mesh0.cells["points"])
 
+    # check against the original
     assert numpy.all(mesh0.cells["points"] == mesh1.cells["points"])
     assert numpy.all(numpy.abs(mesh0.points - mesh1.points) < 1.0e-14)
 
