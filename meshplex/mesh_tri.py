@@ -53,8 +53,8 @@ class MeshTri(_BaseMesh):
         self.subdomains = {}
         self._is_interior_point = None
         self._is_boundary_point = None
+        self._is_boundary_edge_local = None
         self._is_boundary_edge = None
-        self._is_boundary_edge_gid = None
         self._is_boundary_facet = None
         self._is_boundary_cell = None
         self._edges_cells = None
@@ -211,17 +211,17 @@ class MeshTri(_BaseMesh):
             if self._edges_cells is None:
                 self._compute_edges_cells()
 
-            # # Set edge to is_boundary_edge=True if it was adjacent to a remvoed cell.
+            # # Set edge to is_boundary_edge_local=True if it was adjacent to a remvoed cell.
             # edge_list_idx = self.edge_gid_to_edge_list[self.cells["edges"].flat]
             # # only consider interior edges, i.e., **2** adjacent cells
             # idx = edge_list_idx[edge_list_idx[:, 0] == 2, 1]
             # cell_id = self.edges_cells[2]["cell"][idx]
             # local_edge_id = self.edges_cells[2]["local edge"][idx]
-            # self._is_boundary_edge[local_edge_id, cell_id] = True
+            # self._is_boundary_edge_local[local_edge_id, cell_id] = True
             # # now remove the cell
-            # self._is_boundary_edge = self._is_boundary_edge[:, keep]
+            # self._is_boundary_edge_local = self._is_boundary_edge_local[:, keep]
 
-            self._is_boundary_edge = None
+            self._is_boundary_edge_local = None
 
             self._edges_cells = None
             self._is_boundary_cell = None
@@ -231,16 +231,16 @@ class MeshTri(_BaseMesh):
 
             # print(self._is_boundary_point)
             # exit(1)
-            # print(self._is_boundary_edge)
-            # print(self._is_boundary_edge.shape)
+            # print(self._is_boundary_edge_local)
+            # print(self._is_boundary_edge_local.shape)
             # print(~keep)
             # print(self.cells["edges"])
             # print()
             # print(self.cells["edges"][~keep].flatten())
             # print()
             # print(self.edges_cells)
-            # # self._is_boundary_edge[:, ~keep] = True
-            # # print(self._is_boundary_edge)
+            # # self._is_boundary_edge_local[:, ~keep] = True
+            # # print(self._is_boundary_edge_local)
             # exit(1)
 
             num_edges_old = len(self.edges["points"])
@@ -250,18 +250,18 @@ class MeshTri(_BaseMesh):
             # remove edge entirely either if 2 adjacent cells are removed or if it
             # is a boundary edge and 1 adjacent cells is removed
             is_edge_removed = (counts == 2) | (
-                (counts == 1) & self._is_boundary_edge_gid[adjacent_edges]
+                (counts == 1) & self._is_boundary_edge[adjacent_edges]
             )
 
             # set the new boundary edges
-            self._is_boundary_edge_gid[adjacent_edges[~is_edge_removed]] = True
+            self._is_boundary_edge[adjacent_edges[~is_edge_removed]] = True
             # Now actually remove the edges. This includes a reindexing.
-            remaining_edges = numpy.ones(len(self._is_boundary_edge_gid), dtype=bool)
+            remaining_edges = numpy.ones(len(self._is_boundary_edge), dtype=bool)
             remaining_edges[adjacent_edges[is_edge_removed]] = False
             # make sure there is only edges["points"], not edges["cells"] etc.
             assert len(self.edges) == 1
             self.edges["points"] = self.edges["points"][remaining_edges]
-            self._is_boundary_edge_gid = self._is_boundary_edge_gid[remaining_edges]
+            self._is_boundary_edge = self._is_boundary_edge[remaining_edges]
 
             self.cells["edges"] = self.cells["edges"][keep]
             new_index = numpy.arange(num_edges_old) - numpy.cumsum(~remaining_edges)
@@ -323,7 +323,7 @@ class MeshTri(_BaseMesh):
                 minlength=n,
             )
 
-            self._interior_ce_ratios = ce_ratios[~self._is_boundary_edge_gid]
+            self._interior_ce_ratios = ce_ratios[~self._is_boundary_edge]
 
             # # sum up from self.ce_ratios
             # if self._edges_cells is None:
@@ -462,8 +462,16 @@ class MeshTri(_BaseMesh):
     @property
     def is_boundary_cell(self):
         if self._is_boundary_cell is None:
-            self._is_boundary_cell = numpy.any(self.is_boundary_edge, axis=0)
+            self._is_boundary_cell = numpy.any(self.is_boundary_edge_local, axis=0)
         return self._is_boundary_cell
+
+    @property
+    def is_boundary_edge_local(self):
+        if self._is_boundary_edge_local is None:
+            self.create_edges()
+        return self._is_boundary_edge_local
+
+    is_boundary_facet = is_boundary_edge_local
 
     @property
     def is_boundary_edge(self):
@@ -471,20 +479,12 @@ class MeshTri(_BaseMesh):
             self.create_edges()
         return self._is_boundary_edge
 
-    is_boundary_facet = is_boundary_edge
-
-    @property
-    def is_boundary_edge_gid(self):
-        if self._is_boundary_edge_gid is None:
-            self.create_edges()
-        return self._is_boundary_edge_gid
-
     @property
     def is_boundary_point(self):
         if self._is_boundary_point is None:
             self._is_boundary_point = numpy.zeros(len(self.points), dtype=bool)
             self._is_boundary_point[
-                self.idx_hierarchy[..., self.is_boundary_edge]
+                self.idx_hierarchy[..., self.is_boundary_edge_local]
             ] = True
         return self._is_boundary_point
 
@@ -507,8 +507,8 @@ class MeshTri(_BaseMesh):
             cts < 3
         ), "No edge has more than 2 cells. Are cells listed twice?"
 
-        self._is_boundary_edge = (cts[inv] == 1).reshape(s[1:])
-        self._is_boundary_edge_gid = cts == 1
+        self._is_boundary_edge_local = (cts[inv] == 1).reshape(s[1:])
+        self._is_boundary_edge = cts == 1
 
         self.edges = {"points": a_unique}
 
@@ -521,8 +521,8 @@ class MeshTri(_BaseMesh):
         # Store an index {boundary,interior}_edge -> edge_gid
         self._edge_to_edge_gid = [
             [],
-            numpy.where(self._is_boundary_edge_gid)[0],
-            numpy.where(~self._is_boundary_edge_gid)[0],
+            numpy.where(self._is_boundary_edge)[0],
+            numpy.where(~self._is_boundary_edge)[0],
         ]
 
     @property
@@ -992,7 +992,7 @@ class MeshTri(_BaseMesh):
             is_pos[self._edge_to_edge_gid[2][pos]] = True
 
             # Mark Delaunay-conforming boundary edges
-            is_pos_boundary = self.ce_ratios[self.is_boundary_edge] >= 0
+            is_pos_boundary = self.ce_ratios[self.is_boundary_edge_local] >= 0
             is_pos[self._edge_to_edge_gid[1][is_pos_boundary]] = True
 
             line_segments0 = LineCollection(e[is_pos], color=mesh_color)
@@ -1028,7 +1028,7 @@ class MeshTri(_BaseMesh):
             ax.add_collection(line_segments)
 
         if boundary_edge_color:
-            e = self.points[self.edges["points"][self.is_boundary_edge_gid]][:, :, :2]
+            e = self.points[self.edges["points"][self.is_boundary_edge]][:, :, :2]
             line_segments1 = LineCollection(e, color=boundary_edge_color)
             ax.add_collection(line_segments1)
 
@@ -1132,7 +1132,7 @@ class MeshTri(_BaseMesh):
         # Now compute the boundary edges. A little more costly, but we'd have to do that
         # anyway. If all _interior_ coedge/edge ratios are positive, all cells are
         # Delaunay.
-        if numpy.all(self.ce_ratios[~self.is_boundary_edge] > -0.5 * tol):
+        if numpy.all(self.ce_ratios[~self.is_boundary_edge_local] > -0.5 * tol):
             return num_flips
 
         step = 0
@@ -1256,9 +1256,9 @@ class MeshTri(_BaseMesh):
             ]
         )
 
-        # update is_boundary_edge
+        # update is_boundary_edge_local
         for k in range(3):
-            self.is_boundary_edge[k, adj_cells] = self.is_boundary_edge_gid[
+            self.is_boundary_edge_local[k, adj_cells] = self.is_boundary_edge[
                 self.cells["edges"][adj_cells, k]
             ]
 

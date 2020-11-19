@@ -63,22 +63,21 @@ def test_remove_cells_boundary():
     mesh = meshplex.MeshTri(points, cells)
 
     assert numpy.all(mesh.is_boundary_point == [True, True, True, True, False])
-    assert numpy.all(mesh.is_boundary_edge[0] == [False, False, False, False])
-    assert numpy.all(mesh.is_boundary_edge[1] == [False, False, False, True])
-    assert numpy.all(mesh.is_boundary_edge[2] == [True, True, True, False])
+    assert numpy.all(mesh.is_boundary_edge_local[0] == [False, False, False, False])
+    assert numpy.all(mesh.is_boundary_edge_local[1] == [False, False, False, True])
+    assert numpy.all(mesh.is_boundary_edge_local[2] == [True, True, True, False])
     assert numpy.all(
-        mesh.is_boundary_edge_gid
-        == [True, True, False, True, False, True, False, False]
+        mesh.is_boundary_edge == [True, True, False, True, False, True, False, False]
     )
     assert numpy.all(mesh.is_boundary_cell)
 
     mesh.remove_cells([0])
     assert numpy.all(mesh.is_boundary_point)
-    assert numpy.all(mesh.is_boundary_edge[0] == [False, False, False])
-    assert numpy.all(mesh.is_boundary_edge[1] == [True, False, True])
-    assert numpy.all(mesh.is_boundary_edge[2] == [True, True, True])
+    assert numpy.all(mesh.is_boundary_edge_local[0] == [False, False, False])
+    assert numpy.all(mesh.is_boundary_edge_local[1] == [True, False, True])
+    assert numpy.all(mesh.is_boundary_edge_local[2] == [True, True, True])
     assert numpy.all(
-        mesh.is_boundary_edge_gid == [True, True, True, True, True, False, False]
+        mesh.is_boundary_edge == [True, True, True, True, True, False, False]
     )
     assert numpy.all(mesh.is_boundary_cell)
 
@@ -106,8 +105,8 @@ def test_reference():
     assert numpy.all(numpy.abs(mesh0.points - mesh1.points) < 1.0e-14)
 
     assert numpy.all(mesh0.is_boundary_point == mesh1.is_boundary_point)
+    assert numpy.all(mesh0.is_boundary_edge_local == mesh1.is_boundary_edge_local)
     assert numpy.all(mesh0.is_boundary_edge == mesh1.is_boundary_edge)
-    assert numpy.all(mesh0.is_boundary_edge_gid == mesh1.is_boundary_edge_gid)
     assert numpy.all(mesh0.is_boundary_cell == mesh1.is_boundary_cell)
 
     assert numpy.all(numpy.abs(mesh0.cell_volumes - mesh1.cell_volumes) < 1.0e-14)
