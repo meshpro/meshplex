@@ -55,7 +55,6 @@ class MeshTri(_BaseMesh):
         self._is_boundary_point = None
         self._is_boundary_edge_local = None
         self._is_boundary_edge = None
-        self._is_boundary_facet = None
         self._is_boundary_cell = None
         self._edges_cells = None
         self._edge_gid_to_edge_list = None
@@ -211,17 +210,16 @@ class MeshTri(_BaseMesh):
             if self._edges_cells is None:
                 self._compute_edges_cells()
 
-            # # Set edge to is_boundary_edge_local=True if it was adjacent to a remvoed cell.
-            # edge_list_idx = self.edge_gid_to_edge_list[self.cells["edges"].flat]
-            # # only consider interior edges, i.e., **2** adjacent cells
-            # idx = edge_list_idx[edge_list_idx[:, 0] == 2, 1]
-            # cell_id = self.edges_cells[2]["cell"][idx]
-            # local_edge_id = self.edges_cells[2]["local edge"][idx]
-            # self._is_boundary_edge_local[local_edge_id, cell_id] = True
-            # # now remove the cell
-            # self._is_boundary_edge_local = self._is_boundary_edge_local[:, keep]
-
-            self._is_boundary_edge_local = None
+            # Set edge to is_boundary_edge_local=True if it was adjacent to a remvoed
+            # cell.
+            edge_list_idx = self.edge_gid_to_edge_list[self.cells["edges"][~keep].flat]
+            # only consider interior edges, i.e., **2** adjacent cells
+            idx = edge_list_idx[edge_list_idx[:, 0] == 2, 1]
+            cell_id = self.edges_cells[2]["cell"][idx]
+            local_edge_id = self.edges_cells[2]["local edge"][idx]
+            self._is_boundary_edge_local[local_edge_id, cell_id] = True
+            # now remove the cell
+            self._is_boundary_edge_local = self._is_boundary_edge_local[:, keep]
 
             self._edges_cells = None
             self._is_boundary_cell = None
