@@ -116,3 +116,7 @@ def test_reference():
         numpy.abs(mesh0.signed_cell_areas - mesh1.signed_cell_areas) < 1.0e-14
     )
     assert numpy.all(numpy.abs(mesh0.cell_centroids - mesh1.cell_centroids) < 1.0e-14)
+
+
+if __name__ == "__main__":
+    test_remove_cells_boundary()

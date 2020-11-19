@@ -140,7 +140,6 @@ class MeshTetra(_BaseMesh):
         self.is_boundary_point[
             self.faces["points"][self.is_boundary_facet_individual]
         ] = True
-        return
 
     def create_cell_face_relationships(self):
         # Reshape into individual faces, and take the first point per edge. (The face is
@@ -178,8 +177,6 @@ class MeshTetra(_BaseMesh):
         # save for create_edge_cells
         self._inv_faces = inv
 
-        return
-
     def create_face_edge_relationships(self):
         a = numpy.vstack(
             [
@@ -202,8 +199,6 @@ class MeshTetra(_BaseMesh):
         num_faces = len(self.faces["points"])
         face_edges = inv.reshape([3, num_faces]).T
         self.faces["edges"] = face_edges
-
-        return
 
     def _compute_cell_circumcenters(self):
         """Computes the center of the circumsphere of each cell."""
@@ -235,7 +230,6 @@ class MeshTetra(_BaseMesh):
         self._circumcenters = numpy.sum(
             alpha[None].T * self.points[self.cells["points"]], axis=1
         )
-        return
 
     # Question:
     # We're looking for an explicit expression for the algebraic c/e ratios. Might it be

@@ -5,11 +5,22 @@ import tempfile
 import meshio
 import numpy
 import pytest
-from helpers import compute_polygon_area, near_equal, run
+from helpers import near_equal, run
 
 import meshplex
 
 this_dir = pathlib.Path(__file__).resolve().parent
+
+
+def _compute_polygon_area(pts):
+    # shoelace formula
+    return (
+        numpy.abs(
+            numpy.dot(pts[0], numpy.roll(pts[1], -1))
+            - numpy.dot(numpy.roll(pts[0], -1), pts[1])
+        )
+        / 2
+    )
 
 
 @pytest.mark.parametrize(
@@ -100,8 +111,6 @@ def test_regular_tri_additional_points():
     )
     cells = numpy.array([[1, 2, 3]])
     mesh = meshplex.MeshTri(points, cells)
-
-    mesh.mark_boundary()
 
     assert numpy.array_equal(mesh.is_point_used, [False, True, True, True, False])
     assert numpy.array_equal(mesh.is_boundary_point, [False, True, True, True, False])
@@ -653,7 +662,7 @@ def test_flat_boundary():
             mesh.cell_circumcenters[3][:2],
         ]
     )
-    ref_area = compute_polygon_area(control_volume_corners.T)
+    ref_area = _compute_polygon_area(control_volume_corners.T)
 
     assert numpy.abs(mesh.control_volumes[4] - ref_area) < 1.0e-12
 

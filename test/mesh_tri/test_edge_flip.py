@@ -125,13 +125,10 @@ def test_flip_delaunay_near_boundary_preserve_boundary_count():
     mesh.create_edges()
     assert mesh.num_delaunay_violations() == 1
 
-    mesh.mark_boundary()
     is_boundary_point_ref = [False, True, True, True, True, True]
     assert numpy.array_equal(mesh.is_boundary_point, is_boundary_point_ref)
 
     mesh.flip_until_delaunay()
-
-    mesh.mark_boundary()
     assert numpy.array_equal(mesh.is_boundary_point, is_boundary_point_ref)
 
 

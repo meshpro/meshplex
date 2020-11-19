@@ -246,6 +246,20 @@ class MeshTri(_BaseMesh):
 
         # handle edges; this is a bit messy
         if "edges" in self.cells:
+            # print(self._is_boundary_point)
+            # exit(1)
+            # print(self._is_boundary_edge)
+            # print(self._is_boundary_edge.shape)
+            # print(~keep)
+            # print(self.cells["edges"])
+            # print()
+            # print(self.cells["edges"][~keep].flatten())
+            # print()
+            # print(self.edges_cells)
+            # # self._is_boundary_edge[:, ~keep] = True
+            # # print(self._is_boundary_edge)
+            # exit(1)
+
             num_edges_old = len(self.edges["points"])
             adjacent_edges, counts = numpy.unique(
                 numpy.concatenate(self.cells["edges"][~keep]), return_counts=True
@@ -408,10 +422,10 @@ class MeshTri(_BaseMesh):
         return (x[0, idx, 1] * x[2, idx, 0] - x[0, idx, 0] * x[2, idx, 1]) / 2
 
     def mark_boundary(self):
-        self._is_boundary_point = numpy.zeros(len(self.points), dtype=bool)
-        self._is_boundary_point[self.idx_hierarchy[..., self.is_boundary_edge]] = True
-        self._is_interior_point = self.is_point_used & ~self.is_boundary_point
-        self._is_boundary_facet = self.is_boundary_edge
+        warnings.warn(
+            "mark_boundary() does nothing. "
+            "Boundary entities are computed on the fly."
+        )
 
     @property
     def is_point_used(self):
@@ -440,6 +454,8 @@ class MeshTri(_BaseMesh):
             self.create_edges()
         return self._is_boundary_edge
 
+    is_boundary_facet = is_boundary_edge
+
     @property
     def is_boundary_edge_gid(self):
         if self._is_boundary_edge_gid is None:
@@ -449,20 +465,17 @@ class MeshTri(_BaseMesh):
     @property
     def is_boundary_point(self):
         if self._is_boundary_point is None:
-            self.mark_boundary()
+            self._is_boundary_point = numpy.zeros(len(self.points), dtype=bool)
+            self._is_boundary_point[
+                self.idx_hierarchy[..., self.is_boundary_edge]
+            ] = True
         return self._is_boundary_point
 
     @property
     def is_interior_point(self):
         if self._is_interior_point is None:
-            self.mark_boundary()
+            self._is_interior_point = self.is_point_used & ~self.is_boundary_point
         return self._is_interior_point
-
-    @property
-    def is_boundary_facet(self):
-        if self._is_boundary_facet is None:
-            self.mark_boundary()
-        return self._is_boundary_facet
 
     def create_edges(self):
         """Set up edge->point and edge->cell relations."""
@@ -502,8 +515,8 @@ class MeshTri(_BaseMesh):
         return self._edges_cells
 
     def _compute_edges_cells(self):
-        """This creates interior edge->cells relations. While it's not
-        necessary for many applications, it sometimes does come in handy.
+        """This creates interior edge->cells relations. While it's not necessary for
+        many applications, it sometimes does come in handy.
         """
         if self.edges is None:
             self.create_edges()
@@ -541,7 +554,6 @@ class MeshTri(_BaseMesh):
         l2 = numpy.sum(c2)
         self._edge_gid_to_edge_list[c2, 1] = numpy.arange(l2)
         assert l1 + l2 == len(count)
-        return
 
     @property
     def edge_gid_to_edge_list(self):
@@ -670,7 +682,6 @@ class MeshTri(_BaseMesh):
         average = (corner + edge_midpoints[None] + cc[None, None]) / 3.0
 
         contribs = right_triangle_vols[None, :, :, None] * average
-
         return point_edges, contribs
 
     # def _compute_surface_areas(self, cell_ids):
@@ -847,7 +858,6 @@ class MeshTri(_BaseMesh):
             plt.close()
         else:
             self.write(filename)
-        return
 
     def plot(
         self,
@@ -1105,8 +1115,6 @@ class MeshTri(_BaseMesh):
             return num_flips
 
         # If all _interior_ coedge/edge ratios are positive, all cells are Delaunay.
-        if self.is_boundary_edge is None:
-            self.mark_boundary()
         if numpy.all(self.ce_ratios[~self.is_boundary_edge] > 0):
             return num_flips
 
