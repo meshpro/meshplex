@@ -398,20 +398,14 @@ class MeshTri(_BaseMesh):
         return self._signed_cell_areas
 
     def compute_signed_cell_areas(self, idx=slice(None)):
-        # http://mathworld.wolfram.com/TriangleArea.html
         assert (
             self.points.shape[1] == 2
         ), "Signed areas only make sense for triangles in 2D."
-
-        # One could make p contiguous by adding a copy(), but that's not
-        # really worth it here.
-        p = self.points[self.cells["points"][idx]].T
-        # <https://stackoverflow.com/q/50411583/353337>
-        return (
-            +p[0][2] * (p[1][0] - p[1][1])
-            + p[0][0] * (p[1][1] - p[1][2])
-            + p[0][1] * (p[1][2] - p[1][0])
-        ) / 2
+        # On <https://stackoverflow.com/q/50411583/353337>, we have a number of
+        # possibilities computing the oriented area, but it's fastest with the half
+        # edges.
+        x = self.half_edge_coords
+        return (x[0, :, 1] * x[2, :, 0] - x[0, :, 0] * x[2, :, 1]) / 2
 
     def mark_boundary(self):
         self._is_boundary_point = numpy.zeros(len(self.points), dtype=bool)
