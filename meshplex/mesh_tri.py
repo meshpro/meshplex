@@ -205,6 +205,68 @@ class MeshTri(_BaseMesh):
         if numpy.all(keep):
             return 0
 
+        # handle edges; this is a bit messy
+        if "edges" in self.cells:
+            # updating the boundary data is a lot easier with edges_cells
+            if self._edges_cells is None:
+                self._compute_edges_cells()
+
+            # # Set edge to is_boundary_edge=True if it was adjacent to a remvoed cell.
+            # edge_list_idx = self.edge_gid_to_edge_list[self.cells["edges"].flat]
+            # # only consider interior edges, i.e., **2** adjacent cells
+            # idx = edge_list_idx[edge_list_idx[:, 0] == 2, 1]
+            # cell_id = self.edges_cells[2]["cell"][idx]
+            # local_edge_id = self.edges_cells[2]["local edge"][idx]
+            # self._is_boundary_edge[local_edge_id, cell_id] = True
+            # # now remove the cell
+            # self._is_boundary_edge = self._is_boundary_edge[:, keep]
+
+            self._is_boundary_edge = None
+
+            self._edges_cells = None
+            self._is_boundary_cell = None
+            # TODO These could also be updated, but let's implement it when needed
+            self._edge_gid_to_edge_list = None
+            self._edge_to_edge_gid = None
+
+            # print(self._is_boundary_point)
+            # exit(1)
+            # print(self._is_boundary_edge)
+            # print(self._is_boundary_edge.shape)
+            # print(~keep)
+            # print(self.cells["edges"])
+            # print()
+            # print(self.cells["edges"][~keep].flatten())
+            # print()
+            # print(self.edges_cells)
+            # # self._is_boundary_edge[:, ~keep] = True
+            # # print(self._is_boundary_edge)
+            # exit(1)
+
+            num_edges_old = len(self.edges["points"])
+            adjacent_edges, counts = numpy.unique(
+                numpy.concatenate(self.cells["edges"][~keep]), return_counts=True
+            )
+            # remove edge entirely either if 2 adjacent cells are removed or if it
+            # is a boundary edge and 1 adjacent cells is removed
+            is_edge_removed = (counts == 2) | (
+                (counts == 1) & self._is_boundary_edge_gid[adjacent_edges]
+            )
+
+            # set the new boundary edges
+            self._is_boundary_edge_gid[adjacent_edges[~is_edge_removed]] = True
+            # Now actually remove the edges. This includes a reindexing.
+            remaining_edges = numpy.ones(len(self._is_boundary_edge_gid), dtype=bool)
+            remaining_edges[adjacent_edges[is_edge_removed]] = False
+            # make sure there is only edges["points"], not edges["cells"] etc.
+            assert len(self.edges) == 1
+            self.edges["points"] = self.edges["points"][remaining_edges]
+            self._is_boundary_edge_gid = self._is_boundary_edge_gid[remaining_edges]
+
+            self.cells["edges"] = self.cells["edges"][keep]
+            new_index = numpy.arange(num_edges_old) - numpy.cumsum(~remaining_edges)
+            self.cells["edges"] = new_index[self.cells["edges"]]
+
         if self._is_boundary_point is not None:
             self._is_boundary_point[self.cells["points"][~keep].flatten()] = True
 
@@ -245,53 +307,6 @@ class MeshTri(_BaseMesh):
         self._cv_centroids = None
         self._cvc_cell_mask = None
         self._is_point_used = None
-
-        # handle edges; this is a bit messy
-        if "edges" in self.cells:
-            # print(self._is_boundary_point)
-            # exit(1)
-            # print(self._is_boundary_edge)
-            # print(self._is_boundary_edge.shape)
-            # print(~keep)
-            # print(self.cells["edges"])
-            # print()
-            # print(self.cells["edges"][~keep].flatten())
-            # print()
-            # print(self.edges_cells)
-            # # self._is_boundary_edge[:, ~keep] = True
-            # # print(self._is_boundary_edge)
-            # exit(1)
-
-            num_edges_old = len(self.edges["points"])
-            adjacent_edges, counts = numpy.unique(
-                numpy.concatenate(self.cells["edges"][~keep]), return_counts=True
-            )
-            # remove edge entirely either if 2 adjacent cells are removed or if it
-            # is a boundary edge and 1 adjacent cells is removed
-            is_edge_removed = (counts == 2) | (
-                (counts == 1) & self._is_boundary_edge_gid[adjacent_edges]
-            )
-
-            # set the new boundary edges
-            self._is_boundary_edge_gid[adjacent_edges[~is_edge_removed]] = True
-            # Now actually remove the edges. This includes a reindexing.
-            remaining_edges = numpy.ones(len(self._is_boundary_edge_gid), dtype=bool)
-            remaining_edges[adjacent_edges[is_edge_removed]] = False
-            # make sure there is only edges["points"], not edges["cells"] etc.
-            assert len(self.edges) == 1
-            self.edges["points"] = self.edges["points"][remaining_edges]
-            self._is_boundary_edge_gid = self._is_boundary_edge_gid[remaining_edges]
-
-            self.cells["edges"] = self.cells["edges"][keep]
-            new_index = numpy.arange(num_edges_old) - numpy.cumsum(~remaining_edges)
-            self.cells["edges"] = new_index[self.cells["edges"]]
-
-            # TODO These could also be updated, but let's implement it when needed
-            self._is_boundary_edge = None
-            self._is_boundary_cell = None
-            self._edges_cells = None
-            self._edge_gid_to_edge_list = None
-            self._edge_to_edge_gid = None
 
         return numpy.sum(~keep)
 
@@ -532,7 +547,7 @@ class MeshTri(_BaseMesh):
         edges_flat = self.cells["edges"].flat
         idx_sort = numpy.argsort(edges_flat)
         idx_start, count = grp_start_len(edges_flat[idx_sort])
-        res1 = idx_sort[idx_start[count == 1]][:, numpy.newaxis]
+        res1 = idx_sort[idx_start[count == 1]][:, None]
         idx = idx_start[count == 2]
         res2 = numpy.column_stack([idx_sort[idx], idx_sort[idx + 1]])
         self._edges_cells = [
@@ -1118,23 +1133,19 @@ class MeshTri(_BaseMesh):
         if numpy.all(self.ce_ratios[~self.is_boundary_edge] > 0):
             return num_flips
 
-        if self._edges_cells is None:
-            self._compute_edges_cells()
-
         step = 0
 
-        ce_ratios_per_interior_edge = self.ce_ratios_per_interior_edge
-        while numpy.any(ce_ratios_per_interior_edge < -tol):
+        while numpy.any(self.ce_ratios_per_interior_edge < -tol):
             step += 1
             if step > max_steps:
-                m = numpy.min(ce_ratios_per_interior_edge)
+                m = numpy.min(self.ce_ratios_per_interior_edge)
                 warnings.warn(
                     f"Maximum number of edge flips reached. Smallest ce-ratio: {m:.3e}."
                 )
                 break
-            is_flip_interior_edge = ce_ratios_per_interior_edge < -tol
+            is_flip_interior_edge = self.ce_ratios_per_interior_edge < -tol
 
-            interior_edges_cells = self._edges_cells[2]["cell"]
+            interior_edges_cells = self.edges_cells[2]["cell"]
             adj_cells = interior_edges_cells[is_flip_interior_edge].T
 
             # Check if there are cells for which more than one edge needs to be flipped.
@@ -1147,7 +1158,7 @@ class MeshTri(_BaseMesh):
                     edge_gids = self.cells["edges"][cell_gid]
                     num_adj_cells, edge_id = self._edge_gid_to_edge_list[edge_gids].T
                     edge_ids = edge_id[num_adj_cells == 2]
-                    k = numpy.argmin(ce_ratios_per_interior_edge[edge_ids])
+                    k = numpy.argmin(self.ce_ratios_per_interior_edge[edge_ids])
                     is_flip_interior_edge[edge_ids] = False
                     is_flip_interior_edge[edge_ids[k]] = True
 
@@ -1159,7 +1170,6 @@ class MeshTri(_BaseMesh):
 
             self.flip_interior_edges(is_flip_interior_edge)
             num_flips += numpy.sum(is_flip_interior_edge)
-            ce_ratios_per_interior_edge = self.ce_ratios_per_interior_edge
 
         return num_flips
 
