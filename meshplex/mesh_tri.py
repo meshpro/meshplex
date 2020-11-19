@@ -221,25 +221,14 @@ class MeshTri(_BaseMesh):
             # now remove the cell
             self._is_boundary_edge_local = self._is_boundary_edge_local[:, keep]
 
-            self._edges_cells = None
-            self._is_boundary_cell = None
+            if self._is_boundary_cell is not None:
+                self._is_boundary_cell[cell_id] = True
+                self._is_boundary_cell = self._is_boundary_cell[keep]
+
             # TODO These could also be updated, but let's implement it when needed
+            self._edges_cells = None
             self._edge_gid_to_edge_list = None
             self._edge_to_edge_gid = None
-
-            # print(self._is_boundary_point)
-            # exit(1)
-            # print(self._is_boundary_edge_local)
-            # print(self._is_boundary_edge_local.shape)
-            # print(~keep)
-            # print(self.cells["edges"])
-            # print()
-            # print(self.cells["edges"][~keep].flatten())
-            # print()
-            # print(self.edges_cells)
-            # # self._is_boundary_edge_local[:, ~keep] = True
-            # # print(self._is_boundary_edge_local)
-            # exit(1)
 
             num_edges_old = len(self.edges["points"])
             adjacent_edges, counts = numpy.unique(

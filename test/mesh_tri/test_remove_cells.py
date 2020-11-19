@@ -96,6 +96,7 @@ def test_reference():
     mesh0 = meshplex.read(this_dir / ".." / "meshes" / "pacman.vtk")
     mesh0 = meshplex.MeshTri(mesh0.points[:, :2], mesh0.cells["points"])
     mesh0.signed_cell_areas
+    mesh0.is_boundary_cell
     mesh0.remove_cells([0, 3, 57, 59, 60, 61, 100])
 
     # recreate the reduced mesh from scratch
