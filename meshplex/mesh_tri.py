@@ -1129,8 +1129,10 @@ class MeshTri(_BaseMesh):
         if numpy.all(self.ce_ratios > -0.5 * tol):
             return num_flips
 
-        # If all _interior_ coedge/edge ratios are positive, all cells are Delaunay.
-        if numpy.all(self.ce_ratios[~self.is_boundary_edge] > 0):
+        # Now compute the boundary edges. A little more costly, but we'd have to do that
+        # anyway. If all _interior_ coedge/edge ratios are positive, all cells are
+        # Delaunay.
+        if numpy.all(self.ce_ratios[~self.is_boundary_edge] > -0.5 * tol):
             return num_flips
 
         step = 0
@@ -1230,8 +1232,6 @@ class MeshTri(_BaseMesh):
 
         # Reset flipped edges
         self.edges["points"][edge_gids] = numpy.sort(verts[[0, 1]].T, axis=1)
-        # No need to touch self.is_boundary_edge or self.is_boundary_edge_gid;
-        # we're only flipping interior edges.
 
         # Set up new cells->edges relationships.
         previous_edges = self.cells["edges"][adj_cells].copy()
