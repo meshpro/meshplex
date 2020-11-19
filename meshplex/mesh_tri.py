@@ -205,6 +205,9 @@ class MeshTri(_BaseMesh):
         if numpy.all(keep):
             return 0
 
+        if self._is_boundary_point is not None:
+            self._is_boundary_point[self.cells["points"][~keep].flatten()] = True
+
         self.cells["points"] = self.cells["points"][keep]
         self.idx_hierarchy = self.idx_hierarchy[..., keep]
 
@@ -241,7 +244,6 @@ class MeshTri(_BaseMesh):
         self._cv_cell_mask = None
         self._cv_centroids = None
         self._cvc_cell_mask = None
-        self._is_boundary_point = None
         self._is_point_used = None
 
         # handle edges; this is a bit messy
