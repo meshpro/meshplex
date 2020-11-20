@@ -95,10 +95,7 @@ def test_remove_cells_boundary():
         mesh.is_boundary_edge == [True, True, False, True, False, True, False, False]
     )
     assert numpy.all(mesh.is_boundary_cell)
-    assert numpy.all(
-        mesh.edge_gid_to_edge_list
-        == [[1, 0], [1, 1], [2, 0], [1, 2], [2, 1], [1, 3], [2, 2], [2, 3]]
-    )
+    assert numpy.all(mesh.edge_gid_to_edges_cells == [0, 1, 0, 2, 1, 3, 2, 3])
     assert numpy.all(mesh.edges_cells["boundary"]["cell id"] == [0, 3, 1, 2])
     assert numpy.all(mesh.edges_cells["boundary"]["local edge"] == [2, 1, 2, 2])
     assert numpy.all(

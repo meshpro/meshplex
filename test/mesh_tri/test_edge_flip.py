@@ -25,12 +25,11 @@ def test_flip_delaunay():
     # Assert edges_cells integrity
     for cell_gid, edge_gids in enumerate(mesh.cells["edges"]):
         for edge_gid in edge_gids:
-            num_adj_cells, edge_id = mesh._edge_gid_to_edge_list[edge_gid]
-            if num_adj_cells == 1:
-                assert cell_gid == mesh._edges_cells["boundary"]["cell id"][edge_id]
+            idx = mesh._edge_gid_to_edges_cells[edge_gid]
+            if mesh.is_boundary_edge[edge_gid]:
+                assert cell_gid == mesh._edges_cells["boundary"]["cell id"][idx]
             else:
-                assert num_adj_cells == 2
-                assert cell_gid in mesh._edges_cells["interior"]["cell id"][edge_id]
+                assert cell_gid in mesh._edges_cells["interior"]["cell id"][idx]
 
     new_cells = mesh.cells["points"].copy()
     new_coords = mesh.points.copy()
@@ -77,12 +76,11 @@ def test_flip_same_edge_twice():
     # Assert edges_cells integrity
     for cell_gid, edge_gids in enumerate(mesh.cells["edges"]):
         for edge_gid in edge_gids:
-            num_adj_cells, edge_id = mesh._edge_gid_to_edge_list[edge_gid]
-            if num_adj_cells == 1:
-                assert cell_gid == mesh._edges_cells["boundary"]["cell id"][edge_id]
+            idx = mesh._edge_gid_to_edges_cells[edge_gid]
+            if mesh.is_boundary_edge[edge_gid]:
+                assert cell_gid == mesh._edges_cells["boundary"]["cell id"][idx]
             else:
-                assert num_adj_cells == 2
-                assert cell_gid in mesh._edges_cells["interior"]["cell id"][edge_id]
+                assert cell_gid in mesh._edges_cells["interior"]["cell id"][idx]
 
     new_points = numpy.array(
         [[0.0, +0.0, 0.0], [0.1, -0.5, 0.0], [0.2, +0.0, 0.0], [0.1, +0.5, 0.0]]
