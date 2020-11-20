@@ -25,7 +25,7 @@ def test_flip_delaunay():
     # Assert edges_cells integrity
     for cell_gid, edge_gids in enumerate(mesh.cells["edges"]):
         for edge_gid in edge_gids:
-            idx = mesh._edge_gid_to_edges_cells[edge_gid]
+            idx = mesh._edge_gid_to_edges_cells_idx[edge_gid]
             if mesh.is_boundary_edge[edge_gid]:
                 assert cell_gid == mesh._edges_cells["boundary"]["cell id"][idx]
             else:
@@ -76,7 +76,7 @@ def test_flip_same_edge_twice():
     # Assert edges_cells integrity
     for cell_gid, edge_gids in enumerate(mesh.cells["edges"]):
         for edge_gid in edge_gids:
-            idx = mesh._edge_gid_to_edges_cells[edge_gid]
+            idx = mesh._edge_gid_to_edges_cells_idx[edge_gid]
             if mesh.is_boundary_edge[edge_gid]:
                 assert cell_gid == mesh._edges_cells["boundary"]["cell id"][idx]
             else:

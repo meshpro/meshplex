@@ -57,7 +57,7 @@ class MeshTri(_BaseMesh):
         self._is_boundary_edge = None
         self._is_boundary_cell = None
         self._edges_cells = None
-        self._edge_gid_to_edges_cells = None
+        self._edge_gid_to_edges_cells_idx = None
         self._boundary_edges = None
         self._interior_edges = None
         self._is_point_used = None
@@ -213,7 +213,7 @@ class MeshTri(_BaseMesh):
 
             # Set edge to is_boundary_edge_local=True if it was adjacent to a removed
             # cell.
-            # edge_list_idx = self.edge_gid_to_edges_cells[
+            # edge_list_idx = self.edge_gid_to_edges_cells_idx[
             #     self.cells["edges"][~keep].flat
             # ]
             # only consider interior edges, i.e., **2** adjacent cells
@@ -231,14 +231,14 @@ class MeshTri(_BaseMesh):
             #     self._is_boundary_cell[cell_id] = True
             #     self._is_boundary_cell = self._is_boundary_cell[keep]
 
-            # print(self._edge_gid_to_edges_cells)
+            # print(self._edge_gid_to_edges_cells_idx)
             # print()
             # print(self._edges_cells)
             # exit(1)
 
             # TODO These two could also be updated, but let's implement it when needed
             self._edges_cells = None
-            self._edge_gid_to_edges_cells = None
+            self._edge_gid_to_edges_cells_idx = None
 
             # simply set those to None
             self._boundary_edges = None
@@ -533,7 +533,7 @@ class MeshTri(_BaseMesh):
         self.cells["edges"] = inv.reshape(3, -1).T
 
         self._edges_cells = None
-        self._edge_gid_to_edges_cells = None
+        self._edge_gid_to_edges_cells_idx = None
 
     @property
     def edges_cells(self):
@@ -573,17 +573,21 @@ class MeshTri(_BaseMesh):
         }
 
         # For each edge, store the index into the respective edge array.
-        self._edge_gid_to_edges_cells = numpy.empty(num_edges, dtype=int)
+        self._edge_gid_to_edges_cells_idx = numpy.empty(num_edges, dtype=int)
         num_b_edges = numpy.sum(self.is_boundary_edge)
         num_i_edges = numpy.sum(self.is_interior_edge)
-        self._edge_gid_to_edges_cells[self.is_boundary_edge] = numpy.arange(num_b_edges)
-        self._edge_gid_to_edges_cells[self.is_interior_edge] = numpy.arange(num_i_edges)
+        self._edge_gid_to_edges_cells_idx[self.is_boundary_edge] = numpy.arange(
+            num_b_edges
+        )
+        self._edge_gid_to_edges_cells_idx[self.is_interior_edge] = numpy.arange(
+            num_i_edges
+        )
 
     @property
-    def edge_gid_to_edges_cells(self):
-        if self._edge_gid_to_edges_cells is None:
+    def edge_gid_to_edges_cells_idx(self):
+        if self._edge_gid_to_edges_cells_idx is None:
             self._compute_edges_cells()
-        return self._edge_gid_to_edges_cells
+        return self._edge_gid_to_edges_cells_idx
 
     @property
     def face_partitions(self):
@@ -1168,7 +1172,7 @@ class MeshTri(_BaseMesh):
                 for cell_gid in critical_cell_gids:
                     edge_gids = self.cells["edges"][cell_gid]
                     is_interior_edge = self.is_interior_edge[edge_gids]
-                    idx = self._edge_gid_to_edges_cells[edge_gids[is_interior_edge]]
+                    idx = self._edge_gid_to_edges_cells_idx[edge_gids[is_interior_edge]]
                     k = numpy.argmin(self.ce_ratios_per_interior_edge[idx])
                     is_flip_interior_edge[idx] = False
                     is_flip_interior_edge[idx[k]] = True
@@ -1281,7 +1285,7 @@ class MeshTri(_BaseMesh):
             c, d, edge_gids = conf
             is_boundary_edge = self.is_boundary_edge[edge_gids]
             is_interior_edge = ~is_boundary_edge
-            edge_id = self.edge_gid_to_edges_cells[edge_gids]
+            edge_id = self.edge_gid_to_edges_cells_idx[edge_gids]
 
             # k1 = num_adj_cells == 1
             # k2 = num_adj_cells == 2
@@ -1320,7 +1324,7 @@ class MeshTri(_BaseMesh):
         update_cell_ids = numpy.unique(adj_cells.T.flat)
         # Same for edge ids
         update_edge_gids = self.cells["edges"][update_cell_ids].flat
-        edge_cell_idx = self._edge_gid_to_edges_cells[update_edge_gids]
+        edge_cell_idx = self._edge_gid_to_edges_cells_idx[update_edge_gids]
         update_interior_edge_ids = numpy.unique(
             edge_cell_idx[self.is_interior_edge[update_edge_gids]]
         )
