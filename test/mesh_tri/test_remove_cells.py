@@ -95,16 +95,31 @@ def test_remove_cells_boundary():
         mesh.is_boundary_edge == [True, True, False, True, False, True, False, False]
     )
     assert numpy.all(mesh.is_boundary_cell)
-
-    mesh.remove_cells([0])
-    assert numpy.all(mesh.is_boundary_point)
-    assert numpy.all(mesh.is_boundary_edge_local[0] == [False, False, False])
-    assert numpy.all(mesh.is_boundary_edge_local[1] == [True, False, True])
-    assert numpy.all(mesh.is_boundary_edge_local[2] == [True, True, True])
     assert numpy.all(
-        mesh.is_boundary_edge == [True, True, True, True, True, False, False]
+        mesh.edge_gid_to_edge_list
+        == [[1, 0], [1, 1], [2, 0], [1, 2], [2, 1], [1, 3], [2, 2], [2, 3]]
     )
-    assert numpy.all(mesh.is_boundary_cell)
+    assert mesh.edges_cells[0] == []
+    assert numpy.all(mesh.edges_cells[1]["cell"] == [[0], [3], [1], [2]])
+    assert numpy.all(mesh.edges_cells[1]["local edge"] == [[2], [1], [2], [2]])
+    assert numpy.all(mesh.edges_cells[2]["cell"] == [[0, 3], [0, 1], [1, 2], [2, 3]])
+    assert numpy.all(
+        mesh.edges_cells[2]["local edge"] == [[1, 2], [0, 1], [0, 1], [0, 0]]
+    )
+
+    # print(mesh.cells)
+    # mesh.remove_cells([0])
+    # print(mesh.edges_cells)
+    # mesh.show()
+    # exit(1)
+    # assert numpy.all(mesh.is_boundary_point)
+    # assert numpy.all(mesh.is_boundary_edge_local[0] == [False, False, False])
+    # assert numpy.all(mesh.is_boundary_edge_local[1] == [True, False, True])
+    # assert numpy.all(mesh.is_boundary_edge_local[2] == [True, True, True])
+    # assert numpy.all(
+    #     mesh.is_boundary_edge == [True, True, True, True, True, False, False]
+    # )
+    # assert numpy.all(mesh.is_boundary_cell)
 
 
 def test_remove_all():
@@ -121,7 +136,7 @@ def test_remove_all():
     "mesh0, remove_cells",
     [
         # (get_mesh0(), [0]),
-        # (get_mesh1(), [1, 2]),
+        # (get_mesh1(), [0, 1]),
         (get_mesh2(), [0, 3, 57, 59, 60, 61, 100]),
     ],
 )
@@ -136,16 +151,23 @@ def test_reference(mesh0, remove_cells):
     mesh0.ce_ratios
     mesh0.signed_cell_areas
     mesh0.cell_centroids
+    mesh0.create_edges()
     # now remove some cells
     mesh0.remove_cells(remove_cells)
 
     # recreate the reduced mesh from scratch
     mesh1 = meshplex.MeshTri(mesh0.points, mesh0.cells["points"])
+    mesh1.create_edges()
 
     # check against the original
     assert numpy.all(mesh0.cells["points"] == mesh1.cells["points"])
     assert numpy.all(numpy.abs(mesh0.points - mesh1.points) < 1.0e-14)
 
+    assert numpy.all(numpy.abs(mesh0.points - mesh1.points) < 1.0e-14)
+    assert numpy.all(mesh0.edges["points"] == mesh1.edges["points"])
+
+    print(mesh0.is_boundary_point)
+    print(mesh0.is_boundary_point)
     assert numpy.all(mesh0.is_boundary_point == mesh1.is_boundary_point)
     assert numpy.all(mesh0.is_boundary_edge_local == mesh1.is_boundary_edge_local)
     assert numpy.all(mesh0.is_boundary_edge == mesh1.is_boundary_edge)

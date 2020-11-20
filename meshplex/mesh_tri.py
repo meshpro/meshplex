@@ -58,7 +58,8 @@ class MeshTri(_BaseMesh):
         self._is_boundary_cell = None
         self._edges_cells = None
         self._edge_gid_to_edge_list = None
-        self._edge_to_edge_gid = None
+        self._boundary_edges = None
+        self._interior_edges = None
         self._is_point_used = None
 
         # compute data
@@ -228,7 +229,8 @@ class MeshTri(_BaseMesh):
             # TODO These could also be updated, but let's implement it when needed
             self._edges_cells = None
             self._edge_gid_to_edge_list = None
-            self._edge_to_edge_gid = None
+            self._boundary_edges = None
+            self._interior_edges = None
 
             num_edges_old = len(self.edges["points"])
             adjacent_edges, counts = numpy.unique(
@@ -467,6 +469,18 @@ class MeshTri(_BaseMesh):
         return self._is_boundary_edge
 
     @property
+    def boundary_edges(self):
+        if self._boundary_edges is None:
+            self._boundary_edges = numpy.where(self.is_boundary_edge)[0]
+        return self._boundary_edges
+
+    @property
+    def interior_edges(self):
+        if self._interior_edges is None:
+            self._interior_edges = numpy.where(~self.is_boundary_edge)[0]
+        return self._interior_edges
+
+    @property
     def is_boundary_point(self):
         if self._is_boundary_point is None:
             self._is_boundary_point = numpy.zeros(len(self.points), dtype=bool)
@@ -504,13 +518,6 @@ class MeshTri(_BaseMesh):
 
         self._edges_cells = None
         self._edge_gid_to_edge_list = None
-
-        # Store an index {boundary,interior}_edge -> edge_gid
-        self._edge_to_edge_gid = [
-            [],
-            numpy.where(self._is_boundary_edge)[0],
-            numpy.where(~self._is_boundary_edge)[0],
-        ]
 
     @property
     def edges_cells(self):
@@ -976,11 +983,11 @@ class MeshTri(_BaseMesh):
             pos = ce_ratios >= 0
 
             is_pos = numpy.zeros(len(self.edges["points"]), dtype=bool)
-            is_pos[self._edge_to_edge_gid[2][pos]] = True
+            is_pos[self.interior_edges[pos]] = True
 
             # Mark Delaunay-conforming boundary edges
             is_pos_boundary = self.ce_ratios[self.is_boundary_edge_local] >= 0
-            is_pos[self._edge_to_edge_gid[1][is_pos_boundary]] = True
+            is_pos[self.boundary_edges[is_pos_boundary]] = True
 
             line_segments0 = LineCollection(e[is_pos], color=mesh_color)
             ax.add_collection(line_segments0)
@@ -1166,7 +1173,8 @@ class MeshTri(_BaseMesh):
         interior_edges_cells = self.edges_cells[2]
         # adj_cells = interior_edges_cells[is_flip_interior_edge].T
 
-        edge_gids = self._edge_to_edge_gid[2][is_flip_interior_edge]
+        edge_gids = self.interior_edges[is_flip_interior_edge]
+
         adj_cells = interior_edges_cells["cell"][is_flip_interior_edge].T
 
         # Get the local ids of the edge in the two adjacent cells.
@@ -1257,7 +1265,7 @@ class MeshTri(_BaseMesh):
         ]
         for conf in confs:
             c, d, edge_gids = conf
-            num_adj_cells, edge_id = self._edge_gid_to_edge_list[edge_gids].T
+            num_adj_cells, edge_id = self.edge_gid_to_edge_list[edge_gids].T
 
             k1 = num_adj_cells == 1
             k2 = num_adj_cells == 2
@@ -1349,7 +1357,7 @@ class MeshTri(_BaseMesh):
 
         if self._interior_ce_ratios is not None:
             self._interior_ce_ratios[interior_edge_ids] = 0.0
-            edge_gids = self._edge_to_edge_gid[2][interior_edge_ids]
+            edge_gids = self.interior_edges[interior_edge_ids]
             adj_cells = self.edges_cells[2]["cell"][interior_edge_ids]
 
             is_edge = numpy.array(
