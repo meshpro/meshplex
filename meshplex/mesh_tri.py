@@ -546,7 +546,7 @@ class MeshTri(_BaseMesh):
         edges_flat = self.cells["edges"].flat
         idx_sort = numpy.argsort(edges_flat)
         idx_start, count = grp_start_len(edges_flat[idx_sort])
-        res1 = idx_sort[idx_start[count == 1]][:, None]
+        res1 = idx_sort[idx_start[count == 1]]
         idx = idx_start[count == 2]
         res2 = numpy.column_stack([idx_sort[idx], idx_sort[idx + 1]])
         self._edges_cells = {
@@ -1277,10 +1277,9 @@ class MeshTri(_BaseMesh):
             # outer boundary edges
             edge_id1 = edge_id[k1]
             assert numpy.all(
-                self.edges_cells["boundary"]["cell id"][edge_id1][:, 0]
-                == adj_cells[c, k1]
+                self.edges_cells["boundary"]["cell id"][edge_id1] == adj_cells[c, k1]
             )
-            self.edges_cells["boundary"]["cell id"][edge_id1, 0] = adj_cells[d, k1]
+            self.edges_cells["boundary"]["cell id"][edge_id1] = adj_cells[d, k1]
 
             # interior edges
             edge_id2 = edge_id[k2]
