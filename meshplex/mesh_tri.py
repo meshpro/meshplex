@@ -213,28 +213,19 @@ class MeshTri(_BaseMesh):
 
             # Set edge to is_boundary_edge_local=True if it was adjacent to a removed
             # cell.
-            # edge_list_idx = self.edge_gid_to_edges_cells_idx[
-            #     self.cells["edges"][~keep].flat
-            # ]
-            # only consider interior edges, i.e., **2** adjacent cells
-            # idx = edge_list_idx[edge_list_idx[:, 0] == 2, 1]
-            # cell_id = self.edges_cells["interior"]["cell id"][idx]
-            # local_edge_id = self.edges_cells["interior"]["local edge"][idx]
-            # self._is_boundary_edge_local[local_edge_id, cell_id] = True
-            # # now remove the cells
-            # self._is_boundary_edge_local = self._is_boundary_edge_local[:, keep]
+            edge_ids = self.cells["edges"][~keep].flatten()
+            # only consider interior edges
+            edge_ids = edge_ids[self.is_interior_edge[edge_ids]]
+            idx = self.edge_gid_to_edges_cells_idx[edge_ids]
+            cell_id = self.edges_cells["interior"]["cell id"][idx]
+            local_edge_id = self.edges_cells["interior"]["local edge"][idx]
+            self._is_boundary_edge_local[local_edge_id, cell_id] = True
+            # now remove the entries corresponding to the removed cells
+            self._is_boundary_edge_local = self._is_boundary_edge_local[:, keep]
 
-            self._is_boundary_edge_local = None
-            self._is_boundary_cell = None
-
-            # if self._is_boundary_cell is not None:
-            #     self._is_boundary_cell[cell_id] = True
-            #     self._is_boundary_cell = self._is_boundary_cell[keep]
-
-            # print(self._edge_gid_to_edges_cells_idx)
-            # print()
-            # print(self._edges_cells)
-            # exit(1)
+            if self._is_boundary_cell is not None:
+                self._is_boundary_cell[cell_id] = True
+                self._is_boundary_cell = self._is_boundary_cell[keep]
 
             # TODO These two could also be updated, but let's implement it when needed
             self._edges_cells = None
