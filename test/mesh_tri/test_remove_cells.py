@@ -68,6 +68,8 @@ def get_mesh2():
     [
         # remove corner cell
         [[0], 5, 11],
+        # remove corner cell
+        [[0, 4], 4, 10],
         # remove interior cells
         [[4, 5], 4, 12],
         # remove no cells at all
