@@ -609,13 +609,6 @@ class MeshTri(_BaseMesh):
         return self._edges_cells_idx
 
     @property
-    def face_partitions(self):
-        # face = edge for triangles.
-        # The partition is simply along the center of the edge.
-        edge_lengths = self.edge_lengths
-        return numpy.array([0.5 * edge_lengths, 0.5 * edge_lengths])
-
-    @property
     def cell_partitions(self):
         if self._cell_partitions is None:
             # Compute the control volumes. Note that
