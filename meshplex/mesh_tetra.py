@@ -847,4 +847,3 @@ class MeshTetra(_BaseMesh):
             del render_window, render_window_interactor
         else:
             render_window_interactor.Start()
-        return

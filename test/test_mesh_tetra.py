@@ -473,7 +473,7 @@ def test_signed_volume():
     assert numpy.all(abs(abs(vols) - mesh.cell_volumes) < 1.0e-12 * mesh.cell_volumes)
 
 
-def test_show_cell():
+def test_show_cell(render=False):
     pytest.importorskip("vtk")
     # filename = download_mesh("toy.vtk", "f48abda972822bab224b91a74d695573")
     # mesh = meshplex.read(filename)
@@ -515,11 +515,11 @@ def test_show_cell():
         control_volume_boundaries_rgba=(1.0, 0.0, 0.0, 1.0),
         line_width=3.0,
         close=True,
-        render=False,
+        render=render,
     )
 
 
 if __name__ == "__main__":
-    # test_show_cell()
-    test_regular_tet0(0.5)
+    test_show_cell(render=True)
+    # test_regular_tet0(0.5)
     # test_toy_geometric()
