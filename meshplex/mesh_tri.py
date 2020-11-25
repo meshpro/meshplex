@@ -211,10 +211,6 @@ class MeshTri(_BaseMesh):
             if self._edges_cells is None:
                 self._compute_edges_cells()
 
-            # print(self.edges_cells_idx)
-            # print(self.edges_cells["boundary"]["cell id"])
-            # print(self.edges_cells["interior"]["cell id"])
-
             # Set edge to is_boundary_edge_local=True if it was adjacent to a removed
             # cell.
             edge_ids = self.cells["edges"][~keep].flatten()
@@ -232,24 +228,42 @@ class MeshTri(_BaseMesh):
                 self._is_boundary_cell = self._is_boundary_cell[keep]
 
             # update edges_cells
-            print(self.edges_cells["interior"]["cell id"])
-            print(~keep[self.edges_cells["boundary"]["cell id"]])
-            print(~keep[self.edges_cells["interior"]["cell id"]])
-            print(numpy.sum(~keep[self.edges_cells["interior"]["cell id"]], axis=1))
-            print()
-            idx = numpy.logical_and(*~keep[self.edges_cells["interior"]["cell id"]].T)
-            print(idx)
-            idx = numpy.logical_xor(*~keep[self.edges_cells["interior"]["cell id"]].T)
-            print(idx)
-            idx = ~keep[self.edges_cells["boundary"]["cell id"]]
-            print(idx)
-            exit(1)
+            keep_b_ec = keep[self.edges_cells["boundary"]["cell id"]]
+            keep_i_ec0, keep_i_ec1 = keep[self.edges_cells["interior"]["cell id"]].T
+            # move ec from interior to boundary if exactly one of the two adjacent cells
+            # was removed
+            keep_i_0 = keep_i_ec0 & ~keep_i_ec1
+            keep_i_1 = keep_i_ec1 & ~keep_i_ec0
+            self._edges_cells["boundary"] = {
+                "edge id": numpy.concatenate(
+                    [
+                        self._edges_cells["boundary"]["edge id"][keep_b_ec],
+                        self._edges_cells["interior"]["edge id"][keep_i_0],
+                        self._edges_cells["interior"]["edge id"][keep_i_1],
+                    ]
+                ),
+                "cell id": numpy.concatenate(
+                    [
+                        self._edges_cells["boundary"]["cell id"][keep_b_ec],
+                        self._edges_cells["interior"]["cell id"][keep_i_0, 0],
+                        self._edges_cells["interior"]["cell id"][keep_i_1, 1],
+                    ]
+                ),
+                "local edge id": numpy.concatenate(
+                    [
+                        self._edges_cells["boundary"]["local edge"][keep_b_ec],
+                        self._edges_cells["interior"]["local edge"][keep_i_0, 0],
+                        self._edges_cells["interior"]["local edge"][keep_i_1, 1],
+                    ]
+                ),
+            }
+            self._edges_cells["interior"] = {
+                key: self.edges_cells["interior"][key][keep_i_ec0 & keep_i_ec1]
+                for key in self.edges_cells["interior"]
+            }
 
-            # TODO These two could also be updated, but let's implement it when needed
-            self._edges_cells = None
+            # simply set those to None; their reset is cheap
             self._edges_cells_idx = None
-
-            # simply set those to None
             self._boundary_edges = None
             self._interior_edges = None
 
@@ -257,8 +271,8 @@ class MeshTri(_BaseMesh):
             adjacent_edges, counts = numpy.unique(
                 numpy.concatenate(self.cells["edges"][~keep]), return_counts=True
             )
-            # remove edge entirely either if 2 adjacent cells are removed or if it
-            # is a boundary edge and 1 adjacent cells is removed
+            # remove edge entirely either if 2 adjacent cells are removed or if it is a
+            # boundary edge and 1 adjacent cells are removed
             is_edge_removed = (counts == 2) | (
                 (counts == 1) & self._is_boundary_edge[adjacent_edges]
             )
@@ -266,16 +280,33 @@ class MeshTri(_BaseMesh):
             # set the new boundary edges
             self._is_boundary_edge[adjacent_edges[~is_edge_removed]] = True
             # Now actually remove the edges. This includes a reindexing.
-            remaining_edges = numpy.ones(len(self._is_boundary_edge), dtype=bool)
-            remaining_edges[adjacent_edges[is_edge_removed]] = False
+            keep_edges = numpy.ones(len(self._is_boundary_edge), dtype=bool)
+            keep_edges[adjacent_edges[is_edge_removed]] = False
             # make sure there is only edges["points"], not edges["cells"] etc.
             assert len(self.edges) == 1
-            self.edges["points"] = self.edges["points"][remaining_edges]
-            self._is_boundary_edge = self._is_boundary_edge[remaining_edges]
+            self.edges["points"] = self.edges["points"][keep_edges]
+            self._is_boundary_edge = self._is_boundary_edge[keep_edges]
 
             self.cells["edges"] = self.cells["edges"][keep]
-            new_index = numpy.arange(num_edges_old) - numpy.cumsum(~remaining_edges)
-            self.cells["edges"] = new_index[self.cells["edges"]]
+            new_index_edges = numpy.arange(num_edges_old) - numpy.cumsum(~keep_edges)
+            self.cells["edges"] = new_index_edges[self.cells["edges"]]
+
+            self._edges_cells["boundary"]["edge id"] = new_index_edges[
+                self._edges_cells["boundary"]["edge id"]
+            ]
+            self._edges_cells["interior"]["edge id"] = new_index_edges[
+                self._edges_cells["interior"]["edge id"]
+            ]
+
+            # also reindex cells
+            num_cells_old = len(self.cells["points"])
+            new_index_cells = numpy.arange(num_cells_old) - numpy.cumsum(~keep)
+            self._edges_cells["boundary"]["cell id"] = new_index_cells[
+                self._edges_cells["boundary"]["cell id"]
+            ]
+            self._edges_cells["interior"]["cell id"] = new_index_cells[
+                self._edges_cells["interior"]["cell id"]
+            ]
 
         if self._is_boundary_point is not None:
             self._is_boundary_point[self.cells["points"][~keep].flatten()] = True
@@ -750,8 +781,8 @@ class MeshTri(_BaseMesh):
 
     #     def compute_gradient(self, u):
     #         '''Computes an approximation to the gradient :math:`\\nabla u` of a
-    #         given scalar valued function :math:`u`, defined in the point points.
-    #         This is taken from :cite:`NME2187`,
+    #         given scalar valued function :math:`u`, defined in the points.
+    #         This is taken from
     #
     #            Discrete gradient method in solid mechanics,
     #            Lu, Jia and Qian, Jing and Han, Weimin,
