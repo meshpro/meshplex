@@ -185,7 +185,10 @@ class MeshTri(_BaseMesh):
             self._ce_ratios = compute_ce_ratios(self.ei_dot_ej, self.cell_volumes)
         return self._ce_ratios
 
-    def remove_cells(self, remove_array):
+    # The following function is a copy-paste from remove_cells2(). It's only here to
+    # make profiling easier.
+    # TODO remove this entire function
+    def remove_cells2(self, remove_array):
         """Remove cells and take care of all the dependent data structures. The input
         argument `remove_array` can be a boolean array or a list of indices.
         """
@@ -210,6 +213,105 @@ class MeshTri(_BaseMesh):
             # updating the boundary data is a lot easier with edges_cells
             if self._edges_cells is None:
                 self._compute_edges_cells()
+
+            ###
+            # Set edge to is_boundary_edge_local=True if it was adjacent to a removed
+            # cell.
+            edge_ids = self.cells["edges"][~keep].flatten()
+            # only consider interior edges
+            edge_ids = edge_ids[self.is_interior_edge[edge_ids]]
+            idx = self.edges_cells_idx[edge_ids]
+            cell_id = self.edges_cells["interior"]["cell id"][idx]
+            local_edge_id = self.edges_cells["interior"]["local edge"][idx]
+            self._is_boundary_edge_local[local_edge_id, cell_id] = True
+            # now remove the entries corresponding to the removed cells
+            self._is_boundary_edge_local = self._is_boundary_edge_local[:, keep]
+
+            if self._is_boundary_cell is not None:
+                self._is_boundary_cell[cell_id] = True
+                self._is_boundary_cell = self._is_boundary_cell[keep]
+
+            # update edges_cells
+            keep_b_ec = keep[self.edges_cells["boundary"]["cell id"]]
+            keep_i_ec0, keep_i_ec1 = keep[self.edges_cells["interior"]["cell id"]].T
+            # move ec from interior to boundary if exactly one of the two adjacent cells
+            # was removed
+            keep_i_0 = keep_i_ec0 & ~keep_i_ec1
+            keep_i_1 = keep_i_ec1 & ~keep_i_ec0
+            self._edges_cells["boundary"] = {
+                "edge id": numpy.concatenate(
+                    [
+                        self._edges_cells["boundary"]["edge id"][keep_b_ec],
+                        self._edges_cells["interior"]["edge id"][keep_i_0],
+                        self._edges_cells["interior"]["edge id"][keep_i_1],
+                    ]
+                ),
+                "cell id": numpy.concatenate(
+                    [
+                        self._edges_cells["boundary"]["cell id"][keep_b_ec],
+                        self._edges_cells["interior"]["cell id"][keep_i_0, 0],
+                        self._edges_cells["interior"]["cell id"][keep_i_1, 1],
+                    ]
+                ),
+                "local edge": numpy.concatenate(
+                    [
+                        self._edges_cells["boundary"]["local edge"][keep_b_ec],
+                        self._edges_cells["interior"]["local edge"][keep_i_0, 0],
+                        self._edges_cells["interior"]["local edge"][keep_i_1, 1],
+                    ]
+                ),
+            }
+            self._edges_cells["interior"] = {
+                key: self.edges_cells["interior"][key][keep_i_ec0 & keep_i_ec1]
+                for key in self.edges_cells["interior"]
+            }
+
+            # simply set those to None; their reset is cheap
+            self._edges_cells_idx = None
+            self._boundary_edges = None
+            self._interior_edges = None
+
+            num_edges_old = len(self.edges["points"])
+            adjacent_edges, counts = numpy.unique(
+                numpy.concatenate(self.cells["edges"][~keep]), return_counts=True
+            )
+            # remove edge entirely either if 2 adjacent cells are removed or if it is a
+            # boundary edge and 1 adjacent cells are removed
+            is_edge_removed = (counts == 2) | (
+                (counts == 1) & self._is_boundary_edge[adjacent_edges]
+            )
+
+            # set the new boundary edges
+            self._is_boundary_edge[adjacent_edges[~is_edge_removed]] = True
+            # Now actually remove the edges. This includes a reindexing.
+            keep_edges = numpy.ones(len(self._is_boundary_edge), dtype=bool)
+            keep_edges[adjacent_edges[is_edge_removed]] = False
+            # make sure there is only edges["points"], not edges["cells"] etc.
+            assert len(self.edges) == 1
+            self.edges["points"] = self.edges["points"][keep_edges]
+            self._is_boundary_edge = self._is_boundary_edge[keep_edges]
+
+            self.cells["edges"] = self.cells["edges"][keep]
+            new_index_edges = numpy.arange(num_edges_old) - numpy.cumsum(~keep_edges)
+            self.cells["edges"] = new_index_edges[self.cells["edges"]]
+
+            self._edges_cells["boundary"]["edge id"] = new_index_edges[
+                self._edges_cells["boundary"]["edge id"]
+            ]
+            self._edges_cells["interior"]["edge id"] = new_index_edges[
+                self._edges_cells["interior"]["edge id"]
+            ]
+
+            # also reindex cells
+            num_cells_old = len(self.cells["points"])
+            new_index_cells = numpy.arange(num_cells_old) - numpy.cumsum(~keep)
+            self._edges_cells["boundary"]["cell id"] = new_index_cells[
+                self._edges_cells["boundary"]["cell id"]
+            ]
+            self._edges_cells["interior"]["cell id"] = new_index_cells[
+                self._edges_cells["interior"]["cell id"]
+            ]
+            ###
 
             # Set edge to is_boundary_edge_local=True if it was adjacent to a removed
             # cell.
@@ -249,7 +351,7 @@ class MeshTri(_BaseMesh):
                         self._edges_cells["interior"]["cell id"][keep_i_1, 1],
                     ]
                 ),
-                "local edge id": numpy.concatenate(
+                "local edge": numpy.concatenate(
                     [
                         self._edges_cells["boundary"]["local edge"][keep_b_ec],
                         self._edges_cells["interior"]["local edge"][keep_i_0, 0],
@@ -350,6 +452,194 @@ class MeshTri(_BaseMesh):
         self._is_point_used = None
 
         return numpy.sum(~keep)
+
+    def remove_cells(self, remove_array):
+        """Remove cells and take care of all the dependent data structures. The input
+        argument `remove_array` can be a boolean array or a list of indices.
+        """
+        remove_array = numpy.asarray(remove_array)
+        if len(remove_array) == 0:
+            return 0
+
+        if remove_array.dtype == int:
+            keep = numpy.ones(len(self.cells["points"]), dtype=bool)
+            keep[remove_array] = False
+        else:
+            assert remove_array.dtype == bool
+            keep = ~remove_array
+
+        assert len(keep) == len(self.cells["points"]), "Wrong length of index array."
+
+        if numpy.all(keep):
+            return 0
+
+        # handle edges; this is a bit messy
+        if "edges" in self.cells:
+            # updating the boundary data is a lot easier with edges_cells
+            if self._edges_cells is None:
+                self._compute_edges_cells()
+
+            self._rem_cells_helper1(keep)
+            keep_b_ec, keep_i_ec0, keep_i_ec1 = self._rem_cells_helper2a(keep)
+            self._rem_cells_helper2b(keep, keep_b_ec, keep_i_ec0, keep_i_ec1)
+            keep_i = self._rem_cells_helper2c(keep, keep_b_ec, keep_i_ec0, keep_i_ec1)
+            self._rem_cells_helper2d(keep, keep_i)
+            keep_edges, num_edges_old = self._rem_cells_helper3(keep)
+            self._rem_cells_helper4(keep, keep_edges, num_edges_old)
+
+        if self._is_boundary_point is not None:
+            self._is_boundary_point[self.cells["points"][~keep].flatten()] = True
+
+        self.cells["points"] = self.cells["points"][keep]
+        self.idx_hierarchy = self.idx_hierarchy[..., keep]
+
+        if self._cell_volumes is not None:
+            self._cell_volumes = self._cell_volumes[keep]
+
+        if self._ce_ratios is not None:
+            self._ce_ratios = self._ce_ratios[:, keep]
+
+        if self._half_edge_coords is not None:
+            self._half_edge_coords = self._half_edge_coords[:, keep]
+
+        if self._ei_dot_ej is not None:
+            self._ei_dot_ej = self._ei_dot_ej[:, keep]
+
+        if self._ei_dot_ei is not None:
+            self._ei_dot_ei = self._ei_dot_ei[:, keep]
+
+        if self._cell_centroids is not None:
+            self._cell_centroids = self._cell_centroids[keep]
+
+        if self._cell_circumcenters is not None:
+            self._cell_circumcenters = self._cell_circumcenters[keep]
+
+        if self._cell_partitions is not None:
+            self._cell_partitions = self._cell_partitions[keep]
+
+        if self._signed_cell_areas is not None:
+            self._signed_cell_areas = self._signed_cell_areas[keep]
+
+        # TODO These could also be updated, but let's implement it when needed
+        self._interior_ce_ratios = None
+        self._control_volumes = None
+        self._cv_cell_mask = None
+        self._cv_centroids = None
+        self._cvc_cell_mask = None
+        self._is_point_used = None
+
+        return numpy.sum(~keep)
+
+    def _rem_cells_helper1(self, keep):
+        # Set edge to is_boundary_edge_local=True if it was adjacent to a removed
+        # cell.
+        edge_ids = self.cells["edges"][~keep].flatten()
+        # only consider interior edges
+        edge_ids = edge_ids[self.is_interior_edge[edge_ids]]
+        idx = self.edges_cells_idx[edge_ids]
+        cell_id = self.edges_cells["interior"]["cell id"][idx]
+        local_edge_id = self.edges_cells["interior"]["local edge"][idx]
+        self._is_boundary_edge_local[local_edge_id, cell_id] = True
+        # now remove the entries corresponding to the removed cells
+        self._is_boundary_edge_local = self._is_boundary_edge_local[:, keep]
+
+        if self._is_boundary_cell is not None:
+            self._is_boundary_cell[cell_id] = True
+            self._is_boundary_cell = self._is_boundary_cell[keep]
+
+    def _rem_cells_helper2a(self, keep):
+        # update edges_cells
+        keep_b_ec = keep[self.edges_cells["boundary"]["cell id"]]
+        keep_i_ec0, keep_i_ec1 = keep[self.edges_cells["interior"]["cell id"]].T
+        # move ec from interior to boundary if exactly one of the two adjacent cells
+        # was removed
+        return keep_b_ec, keep_i_ec0, keep_i_ec1
+
+    def _rem_cells_helper2b(self, keep, keep_b_ec, keep_i_ec0, keep_i_ec1):
+        keep_i_0 = keep_i_ec0 & ~keep_i_ec1
+        keep_i_1 = keep_i_ec1 & ~keep_i_ec0
+        self._edges_cells["boundary"] = {
+            "edge id": numpy.concatenate(
+                [
+                    self._edges_cells["boundary"]["edge id"][keep_b_ec],
+                    self._edges_cells["interior"]["edge id"][keep_i_0],
+                    self._edges_cells["interior"]["edge id"][keep_i_1],
+                ]
+            ),
+            "cell id": numpy.concatenate(
+                [
+                    self._edges_cells["boundary"]["cell id"][keep_b_ec],
+                    self._edges_cells["interior"]["cell id"][keep_i_0, 0],
+                    self._edges_cells["interior"]["cell id"][keep_i_1, 1],
+                ]
+            ),
+            "local edge": numpy.concatenate(
+                [
+                    self._edges_cells["boundary"]["local edge"][keep_b_ec],
+                    self._edges_cells["interior"]["local edge"][keep_i_0, 0],
+                    self._edges_cells["interior"]["local edge"][keep_i_1, 1],
+                ]
+            ),
+        }
+
+    def _rem_cells_helper2c(self, keep, keep_b_ec, keep_i_ec0, keep_i_ec1):
+        keep_i = keep_i_ec0 & keep_i_ec1
+        return keep_i
+
+    def _rem_cells_helper2d(self, keep, keep_i):
+        # print(self._edges_cells["interior"]["cell id"].shape)
+        # print(numpy.sum(~keep_i))
+        # print(numpy.where(~keep_i)[0])
+        # exit(1)
+        # self._edges_cells["interior"] = {
+        #     key: self._edges_cells["interior"][key][keep_i]
+        #     for key in self._edges_cells["interior"]
+        # }
+        self._edges_cells["interior"] = {
+            "edge id": self._edges_cells["interior"]["edge id"][keep_i],
+            "cell id": self._edges_cells["interior"]["cell id"][keep_i],
+            "local edge": self._edges_cells["interior"]["local edge"][keep_i],
+        }
+
+    def _rem_cells_helper3(self, keep):
+        # simply set those to None; their reset is cheap
+        self._edges_cells_idx = None
+        self._boundary_edges = None
+        self._interior_edges = None
+
+        num_edges_old = len(self.edges["points"])
+        adjacent_edges, counts = numpy.unique(
+            self.cells["edges"][~keep].flat, return_counts=True
+        )
+        # remove edge entirely either if 2 adjacent cells are removed or if it is a
+        # boundary edge and 1 adjacent cells are removed
+        is_edge_removed = (counts == 2) | (
+            (counts == 1) & self._is_boundary_edge[adjacent_edges]
+        )
+
+        # set the new boundary edges
+        self._is_boundary_edge[adjacent_edges[~is_edge_removed]] = True
+        # Now actually remove the edges. This includes a reindexing.
+        keep_edges = numpy.ones(len(self._is_boundary_edge), dtype=bool)
+        keep_edges[adjacent_edges[is_edge_removed]] = False
+
+        # make sure there is only edges["points"], not edges["cells"] etc.
+        assert len(self.edges) == 1
+        self.edges["points"] = self.edges["points"][keep_edges]
+        self._is_boundary_edge = self._is_boundary_edge[keep_edges]
+        return keep_edges, num_edges_old
+
+    def _rem_cells_helper4(self, keep, keep_edges, num_edges_old):
+        # update edge and cell indices
+        self.cells["edges"] = self.cells["edges"][keep]
+        new_index_edges = numpy.arange(num_edges_old) - numpy.cumsum(~keep_edges)
+        self.cells["edges"] = new_index_edges[self.cells["edges"]]
+        num_cells_old = len(self.cells["points"])
+        new_index_cells = numpy.arange(num_cells_old) - numpy.cumsum(~keep)
+        for key in ["boundary", "interior"]:
+            s = self._edges_cells[key]
+            s["edge id"] = new_index_edges[s["edge id"]]
+            s["cell id"] = new_index_cells[s["cell id"]]
 
     @property
     def ce_ratios_per_interior_edge(self):
