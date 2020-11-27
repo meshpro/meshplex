@@ -98,27 +98,30 @@ def test_remove_cells_boundary():
     )
     assert numpy.all(mesh.is_boundary_cell)
     assert numpy.all(mesh.edges_cells_idx == [0, 1, 0, 2, 1, 3, 2, 3])
-    assert numpy.all(mesh.edges_cells["boundary"]["cell id"] == [0, 3, 1, 2])
-    assert numpy.all(mesh.edges_cells["boundary"]["local edge"] == [2, 1, 2, 2])
+    # cell id:
+    assert numpy.all(mesh.edges_cells["boundary"][1] == [0, 3, 1, 2])
+    # local edge:
+    assert numpy.all(mesh.edges_cells["boundary"][2] == [2, 1, 2, 2])
+    # cell id:
     assert numpy.all(
-        mesh.edges_cells["interior"]["cell id"] == [[0, 3], [0, 1], [1, 2], [2, 3]]
+        mesh.edges_cells["interior"][1:3].T == [[0, 3], [0, 1], [1, 2], [2, 3]]
     )
+    # local edge:
     assert numpy.all(
-        mesh.edges_cells["interior"]["local edge"] == [[1, 2], [0, 1], [0, 1], [0, 0]]
+        mesh.edges_cells["interior"][3:5].T == [[1, 2], [0, 1], [0, 1], [0, 0]]
     )
 
     # now lets remove some cells
     mesh.remove_cells([0])
 
-    # exit(1)
-    # assert numpy.all(mesh.is_boundary_point)
-    # assert numpy.all(mesh.is_boundary_edge_local[0] == [False, False, False])
-    # assert numpy.all(mesh.is_boundary_edge_local[1] == [True, False, True])
-    # assert numpy.all(mesh.is_boundary_edge_local[2] == [True, True, True])
-    # assert numpy.all(
-    #     mesh.is_boundary_edge == [True, True, True, True, True, False, False]
-    # )
-    # assert numpy.all(mesh.is_boundary_cell)
+    assert numpy.all(mesh.is_boundary_point)
+    assert numpy.all(mesh.is_boundary_edge_local[0] == [False, False, False])
+    assert numpy.all(mesh.is_boundary_edge_local[1] == [True, False, True])
+    assert numpy.all(mesh.is_boundary_edge_local[2] == [True, True, True])
+    assert numpy.all(
+        mesh.is_boundary_edge == [True, True, True, True, True, False, False]
+    )
+    assert numpy.all(mesh.is_boundary_cell)
 
 
 def test_remove_all():

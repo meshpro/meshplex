@@ -537,8 +537,8 @@ class MeshTri(_BaseMesh):
         # only consider interior edges
         edge_ids = edge_ids[self.is_interior_edge[edge_ids]]
         idx = self.edges_cells_idx[edge_ids]
-        cell_id = self.edges_cells["interior"]["cell id"][idx]
-        local_edge_id = self.edges_cells["interior"]["local edge"][idx]
+        cell_id = self.edges_cells["interior"][1:3, idx].T
+        local_edge_id = self.edges_cells["interior"][3:5, idx].T
         self._is_boundary_edge_local[local_edge_id, cell_id] = True
         # now remove the entries corresponding to the removed cells
         self._is_boundary_edge_local = self._is_boundary_edge_local[:, keep]
@@ -549,8 +549,8 @@ class MeshTri(_BaseMesh):
 
     def _rem_cells_helper2a(self, keep):
         # update edges_cells
-        keep_b_ec = keep[self.edges_cells["boundary"]["cell id"]]
-        keep_i_ec0, keep_i_ec1 = keep[self.edges_cells["interior"]["cell id"]].T
+        keep_b_ec = keep[self.edges_cells["boundary"][1].T]
+        keep_i_ec0, keep_i_ec1 = keep[self.edges_cells["interior"][1:3].T].T
         # move ec from interior to boundary if exactly one of the two adjacent cells
         # was removed
         return keep_b_ec, keep_i_ec0, keep_i_ec1
@@ -558,29 +558,34 @@ class MeshTri(_BaseMesh):
     def _rem_cells_helper2b(self, keep, keep_b_ec, keep_i_ec0, keep_i_ec1):
         keep_i_0 = keep_i_ec0 & ~keep_i_ec1
         keep_i_1 = keep_i_ec1 & ~keep_i_ec0
-        self._edges_cells["boundary"] = {
-            "edge id": numpy.concatenate(
-                [
-                    self._edges_cells["boundary"]["edge id"][keep_b_ec],
-                    self._edges_cells["interior"]["edge id"][keep_i_0],
-                    self._edges_cells["interior"]["edge id"][keep_i_1],
-                ]
-            ),
-            "cell id": numpy.concatenate(
-                [
-                    self._edges_cells["boundary"]["cell id"][keep_b_ec],
-                    self._edges_cells["interior"]["cell id"][keep_i_0, 0],
-                    self._edges_cells["interior"]["cell id"][keep_i_1, 1],
-                ]
-            ),
-            "local edge": numpy.concatenate(
-                [
-                    self._edges_cells["boundary"]["local edge"][keep_b_ec],
-                    self._edges_cells["interior"]["local edge"][keep_i_0, 0],
-                    self._edges_cells["interior"]["local edge"][keep_i_1, 1],
-                ]
-            ),
-        }
+        self._edges_cells["boundary"] = numpy.array(
+            [
+                # edge id
+                numpy.concatenate(
+                    [
+                        self._edges_cells["boundary"][0, keep_b_ec],
+                        self._edges_cells["interior"][0, keep_i_0],
+                        self._edges_cells["interior"][0, keep_i_1],
+                    ]
+                ),
+                # cell id
+                numpy.concatenate(
+                    [
+                        self._edges_cells["boundary"][1, keep_b_ec],
+                        self._edges_cells["interior"][1, keep_i_0],
+                        self._edges_cells["interior"][2, keep_i_1],
+                    ]
+                ),
+                # local edge id
+                numpy.concatenate(
+                    [
+                        self._edges_cells["boundary"][2, keep_b_ec],
+                        self._edges_cells["interior"][3, keep_i_0],
+                        self._edges_cells["interior"][4, keep_i_1],
+                    ]
+                ),
+            ]
+        )
 
     def _rem_cells_helper2c(self, keep, keep_b_ec, keep_i_ec0, keep_i_ec1):
         keep_i = keep_i_ec0 & keep_i_ec1
@@ -595,11 +600,7 @@ class MeshTri(_BaseMesh):
         #     key: self._edges_cells["interior"][key][keep_i]
         #     for key in self._edges_cells["interior"]
         # }
-        self._edges_cells["interior"] = {
-            "edge id": self._edges_cells["interior"]["edge id"][keep_i],
-            "cell id": self._edges_cells["interior"]["cell id"][keep_i],
-            "local edge": self._edges_cells["interior"]["local edge"][keep_i],
-        }
+        self._edges_cells["interior"] = self._edges_cells["interior"][:, keep_i]
 
     def _rem_cells_helper3(self, keep):
         # simply set those to None; their reset is cheap
@@ -636,10 +637,20 @@ class MeshTri(_BaseMesh):
         self.cells["edges"] = new_index_edges[self.cells["edges"]]
         num_cells_old = len(self.cells["points"])
         new_index_cells = numpy.arange(num_cells_old) - numpy.cumsum(~keep)
-        for key in ["boundary", "interior"]:
-            s = self._edges_cells[key]
-            s["edge id"] = new_index_edges[s["edge id"]]
-            s["cell id"] = new_index_cells[s["cell id"]]
+
+        self._edges_cells["boundary"][0] = new_index_edges[
+            self._edges_cells["boundary"][0]
+        ]
+        self._edges_cells["boundary"][1] = new_index_cells[
+            self._edges_cells["boundary"][1]
+        ]
+
+        self._edges_cells["interior"][0] = new_index_edges[
+            self._edges_cells["interior"][0]
+        ]
+        self._edges_cells["interior"][1:3] = new_index_cells[
+            self._edges_cells["interior"][1:3]
+        ]
 
     @property
     def ce_ratios_per_interior_edge(self):
@@ -879,8 +890,7 @@ class MeshTri(_BaseMesh):
         if self.edges is None:
             self.create_edges()
 
-        num_edges = len(self.edges["points"])
-
+        # num_edges = len(self.edges["points"])
         # count = numpy.bincount(self.cells["edges"].flat, minlength=num_edges)
 
         # <https://stackoverflow.com/a/50395231/353337>
@@ -896,23 +906,27 @@ class MeshTri(_BaseMesh):
         idx_start_count_1 = idx_start[count == 1]
         idx_start_count_2 = idx_start[count == 2]
         res1 = idx_sort[idx_start_count_1]
-        res2 = idx_sort[numpy.column_stack([idx_start_count_2, idx_start_count_2 + 1])]
+        res2 = idx_sort[numpy.array([idx_start_count_2, idx_start_count_2 + 1])]
 
         edge_id_boundary = sorted_edges[idx_start_count_1]
         edge_id_interior = sorted_edges[idx_start_count_2]
+
+        # It'd be nicer if we could organize the data differently, e.g., as a structured
+        # array or as a dict. Those possibilities are slower, unfortunately, for some
+        # operations. <https://github.com/numpy/numpy/issues/17850>
         self._edges_cells = {
-            # The first entry gives the cell ID, the second the local edge ID in the
-            # cell (0, 1, or 2).
-            "boundary": {
-                "edge id": edge_id_boundary,
-                "cell id": res1 // 3,
-                "local edge": res1 % 3,
-            },
-            "interior": {
-                "edge id": edge_id_interior,
-                "cell id": res2 // 3,
-                "local edge": res2 % 3,
-            },
+            # rows:
+            #  0: edge id
+            #  1: cell id
+            #  2: local edge id (0, 1, or 2)
+            "boundary": numpy.array([edge_id_boundary, res1 // 3, res1 % 3]),
+            # rows:
+            #  0: edge id
+            #  1: cell id 0
+            #  2: cell id 1
+            #  3: local edge id 0 (0, 1, or 2)
+            #  4: local edge id 1 (0, 1, or 2)
+            "interior": numpy.array([edge_id_interior, *(res2 // 3), *(res2 % 3)]),
         }
 
         self._edges_cells_idx = None
@@ -954,7 +968,8 @@ class MeshTri(_BaseMesh):
 
     @property
     def cell_centroids(self):
-        """The centroids (barycenters, midpoints of the circumcircles) of all triangles."""
+        """The centroids (barycenters, midpoints of the circumcircles) of all
+        triangles."""
         if self._cell_centroids is None:
             self._cell_centroids = self.compute_centroids()
         return self._cell_centroids
@@ -1493,7 +1508,7 @@ class MeshTri(_BaseMesh):
                 break
             is_flip_interior_edge = self.ce_ratios_per_interior_edge < -tol
 
-            interior_edges_cells = self.edges_cells["interior"]["cell id"]
+            interior_edges_cells = self.edges_cells["interior"][1:3].T
             adj_cells = interior_edges_cells[is_flip_interior_edge].T
 
             # Check if there are cells for which more than one edge needs to be flipped.
@@ -1522,7 +1537,7 @@ class MeshTri(_BaseMesh):
         return num_flips
 
     def flip_interior_edges(self, is_flip_interior_edge):
-        interior_edges_cells = self.edges_cells["interior"]["cell id"]
+        interior_edges_cells = self.edges_cells["interior"][1:3].T
 
         edge_gids = self.interior_edges[is_flip_interior_edge]
 
@@ -1627,31 +1642,29 @@ class MeshTri(_BaseMesh):
             # outer boundary edges
             edge_id1 = edge_id[is_boundary_edge]
             assert numpy.all(
-                self.edges_cells["boundary"]["cell id"][edge_id1]
+                self.edges_cells["boundary"][1, edge_id1]
                 == adj_cells[c, is_boundary_edge]
             )
-            self.edges_cells["boundary"]["cell id"][edge_id1] = adj_cells[
-                d, is_boundary_edge
-            ]
+            self.edges_cells["boundary"][1, edge_id1] = adj_cells[d, is_boundary_edge]
 
             # interior edges
             edge_id2 = edge_id[is_interior_edge]
             is_column0 = (
-                self.edges_cells["interior"]["cell id"][edge_id2][:, 0]
+                self.edges_cells["interior"][1, edge_id2]
                 == adj_cells[c, is_interior_edge]
             )
             is_column1 = (
-                self.edges_cells["interior"]["cell id"][edge_id2][:, 1]
+                self.edges_cells["interior"][2, edge_id2]
                 == adj_cells[c, is_interior_edge]
             )
             assert numpy.all(numpy.logical_xor(is_column0, is_column1))
             #
-            self.edges_cells["interior"]["cell id"][
-                edge_id2[is_column0], 0
-            ] = adj_cells[d, is_interior_edge][is_column0]
-            self.edges_cells["interior"]["cell id"][
-                edge_id2[is_column1], 1
-            ] = adj_cells[d, is_interior_edge][is_column1]
+            self.edges_cells["interior"][1, edge_id2[is_column0]] = adj_cells[
+                d, is_interior_edge
+            ][is_column0]
+            self.edges_cells["interior"][2, edge_id2[is_column1]] = adj_cells[
+                d, is_interior_edge
+            ][is_column1]
 
         # Schedule the cell ids for data updates
         update_cell_ids = numpy.unique(adj_cells.T.flat)
@@ -1721,7 +1734,7 @@ class MeshTri(_BaseMesh):
         if self._interior_ce_ratios is not None:
             self._interior_ce_ratios[interior_edge_ids] = 0.0
             edge_gids = self.interior_edges[interior_edge_ids]
-            adj_cells = self.edges_cells["interior"]["cell id"][interior_edge_ids]
+            adj_cells = self.edges_cells["interior"][1:3, interior_edge_ids].T
 
             is_edge = numpy.array(
                 [
