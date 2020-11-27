@@ -549,8 +549,8 @@ class MeshTri(_BaseMesh):
 
     def _rem_cells_helper2a(self, keep):
         # update edges_cells
-        keep_b_ec = keep[self.edges_cells["boundary"][1].T]
-        keep_i_ec0, keep_i_ec1 = keep[self.edges_cells["interior"][1:3].T].T
+        keep_b_ec = keep[self.edges_cells["boundary"][1]]
+        keep_i_ec0, keep_i_ec1 = keep[self.edges_cells["interior"][1:3]]
         # move ec from interior to boundary if exactly one of the two adjacent cells
         # was removed
         return keep_b_ec, keep_i_ec0, keep_i_ec1
@@ -592,14 +592,6 @@ class MeshTri(_BaseMesh):
         return keep_i
 
     def _rem_cells_helper2d(self, keep, keep_i):
-        # print(self._edges_cells["interior"]["cell id"].shape)
-        # print(numpy.sum(~keep_i))
-        # print(numpy.where(~keep_i)[0])
-        # exit(1)
-        # self._edges_cells["interior"] = {
-        #     key: self._edges_cells["interior"][key][keep_i]
-        #     for key in self._edges_cells["interior"]
-        # }
         self._edges_cells["interior"] = self._edges_cells["interior"][:, keep_i]
 
     def _rem_cells_helper3(self, keep):
