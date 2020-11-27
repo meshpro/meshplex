@@ -16,6 +16,7 @@ def test_show_mesh():
         show_cell_numbers=True,
         mark_cells=[0, 3, 7],
         mark_points=[1],
+        mark_edges=[0],
         nondelaunay_edge_color="r",
         boundary_edge_color="b",
         control_volume_centroid_color="g",

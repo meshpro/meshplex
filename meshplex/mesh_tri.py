@@ -954,8 +954,9 @@ class MeshTri(_BaseMesh):
         show_cell_numbers=False,
         cell_mask=None,
         show_edge_numbers=False,
-        mark_cells=None,
         mark_points=None,
+        mark_edges=None,
+        mark_cells=None,
     ):
         """Show the mesh using matplotlib."""
         # Importing matplotlib takes a while, so don't do that at the header.
@@ -1029,16 +1030,16 @@ class MeshTri(_BaseMesh):
             if show_colorbar:
                 plt.colorbar()
 
+        if mark_points is not None:
+            idx = mark_points
+            plt.plot(self.points[idx, 0], self.points[idx, 1], "x", color="r")
+
         if mark_cells is not None:
             patches = [
                 Polygon(self.points[self.cells["points"][idx]]) for idx in mark_cells
             ]
             p = PatchCollection(patches, facecolor="C1")
             ax.add_collection(p)
-
-        if mark_points is not None:
-            idx = mark_points
-            plt.plot(self.points[idx, 0], self.points[idx, 1], "x", color="r")
 
         if self.edges is None:
             self.create_edges()
@@ -1066,6 +1067,10 @@ class MeshTri(_BaseMesh):
             #
             line_segments1 = LineCollection(e[~is_pos], color=nondelaunay_edge_color)
             ax.add_collection(line_segments1)
+
+        if mark_edges is not None:
+            e = self.points[self.edges["points"][mark_edges]][..., :2]
+            ax.add_collection(LineCollection(e, color="r"))
 
         if show_coedges:
             # Connect all cell circumcenters with the edge midpoints
@@ -1346,6 +1351,9 @@ class MeshTri(_BaseMesh):
 
             # outer boundary edges
             edge_id1 = edge_id[is_boundary_edge]
+            # self.show(mark_edges=edge_id1)
+            # exit(1)
+
             assert numpy.all(
                 self.edges_cells["boundary"][1, edge_id1]
                 == adj_cells[c, is_boundary_edge]
