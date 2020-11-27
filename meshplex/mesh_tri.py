@@ -144,9 +144,8 @@ class MeshTri(_BaseMesh):
     @property
     def half_edge_coords(self):
         if self._half_edge_coords is None:
-            self._half_edge_coords = (
-                self.points[self.idx_hierarchy[1]] - self.points[self.idx_hierarchy[0]]
-            )
+            p = self.points[self.idx_hierarchy]
+            self._half_edge_coords = p[1] - p[0]
         return self._half_edge_coords
 
     @property
