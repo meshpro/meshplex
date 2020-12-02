@@ -105,8 +105,8 @@ class MeshTetra(_BaseMesh):
         self.is_boundary_point = None
         self._inv_faces = None
         self.edges = None
-        self.is_boundary_facet_individual = None
         self.is_boundary_facet = None
+        self.is_boundary_facet_local = None
         self.faces = None
 
         self._cell_centroids = None
@@ -137,9 +137,7 @@ class MeshTetra(_BaseMesh):
             self.create_cell_face_relationships()
 
         self.is_boundary_point = numpy.zeros(len(self.points), dtype=bool)
-        self.is_boundary_point[
-            self.faces["points"][self.is_boundary_facet_individual]
-        ] = True
+        self.is_boundary_point[self.faces["points"][self.is_boundary_facet]] = True
 
     def create_cell_face_relationships(self):
         # Reshape into individual faces, and take the first point per edge. (The face is
@@ -161,8 +159,8 @@ class MeshTetra(_BaseMesh):
         # listed twice.
         assert all(cts < 3)
 
-        self.is_boundary_facet = (cts[inv] == 1).reshape(s[2:])
-        self.is_boundary_facet_individual = cts == 1
+        self.is_boundary_facet_local = (cts[inv] == 1).reshape(s[2:])
+        self.is_boundary_facet = cts == 1
 
         self.faces = {"points": a[idx]}
 

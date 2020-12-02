@@ -8,6 +8,38 @@ import meshplex
 this_dir = pathlib.Path(__file__).resolve().parent
 
 
+def compute_all_entities(mesh):
+    mesh.is_boundary_point
+    mesh.is_boundary_edge_local
+    mesh.is_boundary_edge
+    mesh.is_boundary_cell
+    mesh.cell_volumes
+    mesh.ce_ratios
+    mesh.signed_cell_areas
+    mesh.cell_centroids
+    mesh.create_edges()
+
+
+def assert_mesh_equality(mesh0, mesh1):
+    assert numpy.all(mesh0.cells["points"] == mesh1.cells["points"])
+    assert numpy.all(numpy.abs(mesh0.points - mesh1.points) < 1.0e-14)
+
+    assert numpy.all(numpy.abs(mesh0.points - mesh1.points) < 1.0e-14)
+    assert numpy.all(mesh0.edges["points"] == mesh1.edges["points"])
+
+    assert numpy.all(mesh0.is_boundary_point == mesh1.is_boundary_point)
+    assert numpy.all(mesh0.is_boundary_edge_local == mesh1.is_boundary_edge_local)
+    assert numpy.all(mesh0.is_boundary_edge == mesh1.is_boundary_edge)
+    assert numpy.all(mesh0.is_boundary_cell == mesh1.is_boundary_cell)
+
+    assert numpy.all(numpy.abs(mesh0.cell_volumes - mesh1.cell_volumes) < 1.0e-14)
+    assert numpy.all(numpy.abs(mesh0.ce_ratios - mesh1.ce_ratios) < 1.0e-14)
+    assert numpy.all(
+        numpy.abs(mesh0.signed_cell_areas - mesh1.signed_cell_areas) < 1.0e-14
+    )
+    assert numpy.all(numpy.abs(mesh0.cell_centroids - mesh1.cell_centroids) < 1.0e-14)
+
+
 def get_mesh0():
     # _____________
     # |   _/ \_   |
@@ -145,42 +177,15 @@ def test_remove_all():
 def test_reference(mesh0, remove_cells):
     # some dummy calls to make sure the respective value are computed before the cell
     # removal and then updated
-    mesh0.is_boundary_point
-    mesh0.is_boundary_edge_local
-    mesh0.is_boundary_edge
-    mesh0.is_boundary_cell
-    mesh0.cell_volumes
-    mesh0.ce_ratios
-    mesh0.signed_cell_areas
-    mesh0.cell_centroids
-    mesh0.create_edges()
+    compute_all_entities(mesh0)
     # now remove some cells
     mesh0.remove_cells(remove_cells)
-
     # recreate the reduced mesh from scratch
     mesh1 = meshplex.MeshTri(mesh0.points, mesh0.cells["points"])
     mesh1.create_edges()
 
     # check against the original
-    assert numpy.all(mesh0.cells["points"] == mesh1.cells["points"])
-    assert numpy.all(numpy.abs(mesh0.points - mesh1.points) < 1.0e-14)
-
-    assert numpy.all(numpy.abs(mesh0.points - mesh1.points) < 1.0e-14)
-    assert numpy.all(mesh0.edges["points"] == mesh1.edges["points"])
-
-    print(mesh0.is_boundary_point)
-    print(mesh0.is_boundary_point)
-    assert numpy.all(mesh0.is_boundary_point == mesh1.is_boundary_point)
-    assert numpy.all(mesh0.is_boundary_edge_local == mesh1.is_boundary_edge_local)
-    assert numpy.all(mesh0.is_boundary_edge == mesh1.is_boundary_edge)
-    assert numpy.all(mesh0.is_boundary_cell == mesh1.is_boundary_cell)
-
-    assert numpy.all(numpy.abs(mesh0.cell_volumes - mesh1.cell_volumes) < 1.0e-14)
-    assert numpy.all(numpy.abs(mesh0.ce_ratios - mesh1.ce_ratios) < 1.0e-14)
-    assert numpy.all(
-        numpy.abs(mesh0.signed_cell_areas - mesh1.signed_cell_areas) < 1.0e-14
-    )
-    assert numpy.all(numpy.abs(mesh0.cell_centroids - mesh1.cell_centroids) < 1.0e-14)
+    assert_mesh_equality(mesh0, mesh1)
 
 
 if __name__ == "__main__":

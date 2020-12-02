@@ -87,7 +87,7 @@ class _BaseMesh:
 
         if subdomain.is_boundary_only:
             # Filter for boundary
-            is_inside = is_inside & self.is_boundary_facet
+            is_inside = is_inside & self.is_boundary_facet_local
 
         return is_inside
 
