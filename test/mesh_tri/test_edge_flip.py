@@ -96,7 +96,9 @@ def test_flip_same_edge_twice():
 
 def test_flip_two_edges():
     alpha = numpy.array([1.0, 3.0, 5.0, 7.0, 9.0, 11.0]) / 6.0 * numpy.pi
-    R = [0.9, 1.0, 0.9, 1.0, 1.2, 1.0]
+    # Make the mesh slightly asymmetric to get the same flips on every architecture; see
+    # <https://github.com/nschloe/meshplex/issues/78>.
+    R = [0.95, 1.0, 0.9, 1.0, 1.2, 1.0]
     points = numpy.array(
         [[r * numpy.cos(a), r * numpy.sin(a), 0.0] for a, r in zip(alpha, R)]
     )
@@ -109,7 +111,7 @@ def test_flip_two_edges():
 
     mesh.show(show_point_numbers=True)
     assert numpy.array_equal(
-        mesh.cells["points"], [[5, 0, 2], [0, 1, 2], [5, 2, 3], [3, 4, 5]]
+        mesh.cells["points"], [[2, 5, 0], [2, 0, 1], [5, 2, 3], [3, 4, 5]]
     )
 
 
@@ -168,3 +170,7 @@ def test_flip_infinite():
     mesh = meshplex.MeshTri(points, cells)
     num_flips = mesh.flip_until_delaunay(tol=1.0e-13)
     assert num_flips == 0
+
+
+if __name__ == "__main__":
+    test_flip_two_edges()
