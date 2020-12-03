@@ -1,5 +1,6 @@
 import os
 import pathlib
+import platform
 import tempfile
 
 import meshio
@@ -23,14 +24,22 @@ def _compute_polygon_area(pts):
     )
 
 
-@pytest.mark.parametrize(
-    "cells_dtype",
-    [
-        numpy.int64
-        # depends on <https://github.com/numpy/numpy/issues/17760>
+# The dtype restriction is because of numpy.bincount.
+# See  <https://github.com/numpy/numpy/issues/17760> and
+# <https://github.com/nschloe/meshplex/issues/90>.
+cell_dtypes = []
+cell_dtypes += [
+    numpy.int32,
+    numpy.uint32,
+]
+if platform.architecture()[0] == "64bit":
+    cell_dtypes += [
+        numpy.int64,
         # numpy.uint64
-    ],
-)
+    ]
+
+
+@pytest.mark.parametrize("cells_dtype", cell_dtypes)
 def test_unit_triangle(cells_dtype):
     points = numpy.array([[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]])
     cells = numpy.array([[0, 1, 2]], dtype=cells_dtype)
