@@ -3,7 +3,7 @@ import warnings
 
 import numpy
 
-from .base import _BaseMesh
+from .base import _SimplexMesh
 from .helpers import (
     compute_ce_ratios,
     compute_tri_areas,
@@ -15,38 +15,15 @@ from .helpers import (
 __all__ = ["MeshTri"]
 
 
-class MeshTri(_BaseMesh):
+class MeshTri(_SimplexMesh):
     """Class for handling triangular meshes."""
 
     def __init__(self, points, cells, sort_cells=False):
         """Initialization."""
-        if sort_cells:
-            # Sort cells, first every row, then the rows themselves. This helps in many
-            # downstream applications, e.g., when constructing linear systems with the
-            # cells/edges. (When converting to CSR format, the I/J entries must be
-            # sorted.) Don't use cells.sort(axis=1) to avoid
-            # ```
-            # ValueError: sort array is read-only
-            # ```
-            cells = numpy.sort(cells, axis=1)
-            cells = cells[cells[:, 0].argsort()]
-
-        points = numpy.asarray(points)
-        cells = numpy.asarray(cells)
-        assert len(points.shape) == 2, f"Illegal point coordinates shape {points.shape}"
-        assert (
-            len(cells.shape) == 2 and cells.shape[1] == 3
-        ), f"Illegal cells shape {cells.shape}"
-
-        self._points = numpy.asarray(points)
-        # prevent accidental override of parts of the array
-        self._points.setflags(write=False)
-        super().__init__()
+        super().__init__(points, cells, sort_cells=sort_cells)
 
         # reset all data that changes when point coordinates change
         self._reset_point_data()
-
-        self.cells = {"points": cells}
 
         self._cv_cell_mask = None
         self.edges = None
@@ -61,28 +38,6 @@ class MeshTri(_BaseMesh):
         self._boundary_edges = None
         self._interior_edges = None
         self._is_point_used = None
-
-        # compute data
-        # Create the idx_hierarchy (points->edges->cells), i.e., the value of
-        # `self.idx_hierarchy[0, 2, 27]` is the index of the point of cell 27, edge 2,
-        # point 0. The shape of `self.idx_hierarchy` is `(2, 3, n)`, where `n` is the
-        # number of cells. Make sure that the k-th edge is opposite of the k-th point in
-        # the triangle.
-        self.local_idx = numpy.array([[1, 2], [2, 0], [0, 1]]).T
-        # Map idx back to the points. This is useful if quantities which are in idx
-        # shape need to be added up into points (e.g., equation system rhs).
-        nds = self.cells["points"].T
-        self.idx_hierarchy = nds[self.local_idx]
-
-        # The inverted local index.
-        # This array specifies for each of the three points which edge endpoints
-        # correspond to it. For the above local_idx, this should give
-        #
-        #    [[(1, 1), (0, 2)], [(0, 0), (1, 2)], [(1, 0), (0, 1)]]
-        #
-        self.local_idx_inv = [
-            [tuple(i) for i in zip(*numpy.where(self.local_idx == k))] for k in range(3)
-        ]
 
     def __repr__(self):
         num_points = len(self.points)

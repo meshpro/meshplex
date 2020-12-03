@@ -13,7 +13,6 @@ class MeshLine:
 
         self.create_cell_volumes()
         self.create_control_volumes()
-        return
 
     def create_cell_volumes(self):
         """Computes the volumes of the "cells" in the mesh."""
@@ -23,7 +22,6 @@ class MeshLine:
                 for cell in self.cells
             ]
         )
-        return
 
     def create_control_volumes(self):
         """Compute the control volumes of all nodes in the mesh."""
@@ -37,11 +35,9 @@ class MeshLine:
         sum_cells = sum(self.cell_volumes)
         alpha = sum_cv - sum_cells
         assert abs(alpha) < 1.0e-6
-        return
 
     def show_vertex_function(self, u):
         """"""
         from matplotlib import pyplot as plt
 
         plt.plot(self.points, u)
-        return
