@@ -121,4 +121,3 @@ class _BaseMesh:
                 is_inside = is_inside & self.is_boundary_point
 
         self.subdomains[subdomain] = {"vertices": is_inside}
-        return
