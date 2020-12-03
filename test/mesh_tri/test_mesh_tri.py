@@ -88,7 +88,7 @@ def test_unit_triangle(cells_dtype):
             return numpy.ones(X.shape[1:], dtype=bool)
 
     cell_mask = mesh.get_cell_mask(Subdomain())
-    assert sum(cell_mask) == 1
+    assert numpy.sum(cell_mask) == 1
 
     # save
     _, filename = tempfile.mkstemp(suffix=".png")
@@ -684,7 +684,7 @@ def test_set_points():
     ref = mesh.cell_volumes.copy()
 
     mesh2 = meshplex.MeshTri(mesh.points, mesh.cells["points"])
-    assert numpy.all(numpy.abs(ref - mesh2.cell_volumes)) < 1.0e-10
+    assert numpy.all(numpy.abs(ref - mesh2.cell_volumes) < 1.0e-10)
 
 
 if __name__ == "__main__":

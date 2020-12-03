@@ -5,7 +5,7 @@ __all__ = []
 
 
 class _BaseMesh:
-    def __init__(self, points, cells_points):
+    def __init__(self):
         self._edge_lengths = None
 
     def write(self, filename, point_data=None, cell_data=None, field_data=None):

@@ -41,7 +41,7 @@ class MeshTri(_BaseMesh):
         self._points = numpy.asarray(points)
         # prevent accidental override of parts of the array
         self._points.setflags(write=False)
-        super().__init__(points, cells)
+        super().__init__()
 
         # reset all data that changes when point coordinates change
         self._reset_point_data()
@@ -511,6 +511,7 @@ class MeshTri(_BaseMesh):
     @property
     def is_boundary_cell(self):
         if self._is_boundary_cell is None:
+            assert self.is_boundary_edge_local is not None
             self._is_boundary_cell = numpy.any(self.is_boundary_edge_local, axis=0)
         return self._is_boundary_cell
 
@@ -641,6 +642,7 @@ class MeshTri(_BaseMesh):
     @property
     def edges_cells_idx(self):
         if self._edges_cells_idx is None:
+            assert self.is_boundary_edge is not None
             # For each edge, store the index into the respective edge array.
             num_edges = len(self.edges["points"])
             self._edges_cells_idx = numpy.empty(num_edges, dtype=int)
@@ -955,7 +957,6 @@ class MeshTri(_BaseMesh):
         show_point_numbers=False,
         show_cell_numbers=False,
         cell_mask=None,
-        show_edge_numbers=False,
         mark_points=None,
         mark_edges=None,
         mark_cells=None,

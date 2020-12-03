@@ -19,7 +19,7 @@ def _main():
     # circumcircle
     circle1 = plt.Circle(
         mesh.cell_circumcenters[0],
-        mesh.circumradius[0],
+        mesh.cell_circumradius[0],
         color=col,
         fill=False,
         linewidth=lw,
@@ -32,7 +32,7 @@ def _main():
         v1 = m1 - mesh.cell_circumcenters[0]
         e1 = (
             mesh.cell_circumcenters[0]
-            + v1 / numpy.linalg.norm(v1) * mesh.circumradius[0]
+            + v1 / numpy.linalg.norm(v1) * mesh.cell_circumradius[0]
         )
         plt.plot(
             [mesh.cell_circumcenters[0, 0], e1[0]],
