@@ -5,7 +5,7 @@ __all__ = []
 
 
 class _BaseMesh:
-    def __init__(self, points, cells_points):
+    def __init__(self):
         self._edge_lengths = None
 
     def write(self, filename, point_data=None, cell_data=None, field_data=None):
@@ -87,7 +87,7 @@ class _BaseMesh:
 
         if subdomain.is_boundary_only:
             # Filter for boundary
-            is_inside = is_inside & self.is_boundary_facet
+            is_inside = is_inside & self.is_boundary_facet_local
 
         return is_inside
 
@@ -121,4 +121,3 @@ class _BaseMesh:
                 is_inside = is_inside & self.is_boundary_point
 
         self.subdomains[subdomain] = {"vertices": is_inside}
-        return

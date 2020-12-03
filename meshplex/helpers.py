@@ -18,9 +18,9 @@ def get_signed_simplex_volumes(cells, pts):
 
 
 def grp_start_len(a):
-    """Given a sorted 1D input array `a`, e.g., [0 0, 1, 2, 3, 4, 4, 4], this
-    routine returns the indices where the blocks of equal integers start and
-    how long the blocks are.
+    """Given a sorted 1D input array `a`, e.g., [0 0, 1, 2, 3, 4, 4, 4], this routine
+    returns the indices where the blocks of equal integers start and how long the blocks
+    are.
     """
     # https://stackoverflow.com/a/50394587/353337
     m = numpy.concatenate([[True], a[:-1] != a[1:], [True]])
@@ -46,7 +46,7 @@ def compute_tri_areas(ei_dot_ej):
         + ei_dot_ej[1] * ei_dot_ej[2]
     )
     # vol2 is the squared volume, but can be slightly negative if it comes to round-off
-    # errors. Corrrect those.
+    # errors. Correct those.
     assert numpy.all(vol2 > -1.0e-14)
     vol2[vol2 < 0] = 0.0
     return numpy.sqrt(vol2)

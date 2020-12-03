@@ -38,13 +38,3 @@ def run(mesh, volume, convol_norms, ce_ratio_norms, cellvol_norms, tol=1.0e-12):
     norm2 = numpy.linalg.norm(mesh.control_volumes, ord=2)
     norm_inf = numpy.linalg.norm(mesh.control_volumes, ord=numpy.Inf)
     assert near_equal(convol_norms, [norm2, norm_inf], tol)
-
-    return
-
-
-def compute_polygon_area(pts):
-    # shoelace formula
-    return 0.5 * abs(
-        numpy.dot(pts[0], numpy.roll(pts[1], -1))
-        - numpy.dot(numpy.roll(pts[0], -1), pts[1])
-    )

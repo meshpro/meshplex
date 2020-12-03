@@ -12,10 +12,10 @@ class MeshTetra(_BaseMesh):
 
     def __init__(self, points, cells):
         """Initialization."""
-        # Sort cells and points, first every row, then the rows themselves. This helps in
-        # many downstream applications, e.g., when constructing linear systems with the
-        # cells/edges. (When converting to CSR format, the I/J entries must be sorted.)
-        # Don't use cells.sort(axis=1) to avoid
+        # Sort cells and points, first every row, then the rows themselves. This helps
+        # in many downstream applications, e.g., when constructing linear systems with
+        # the cells/edges. (When converting to CSR format, the I/J entries must be
+        # sorted.) Don't use cells.sort(axis=1) to avoid
         # ```
         # ValueError: sort array is read-only
         # ```
@@ -23,7 +23,7 @@ class MeshTetra(_BaseMesh):
         cells = cells[cells[:, 0].argsort()]
 
         self._points = points
-        super().__init__(points, cells)
+        super().__init__()
 
         # Assert that all vertices are used.
         # If there are vertices which do not appear in the cells list, this
@@ -84,19 +84,19 @@ class MeshTetra(_BaseMesh):
         ]
 
         # create ei_dot_ei, ei_dot_ej
-        self.edge_coords = (
+        self.half_edge_coords = (
             self.points[self.idx_hierarchy[1]] - self.points[self.idx_hierarchy[0]]
         )
         self.ei_dot_ei = numpy.einsum(
-            "ijkl, ijkl->ijk", self.edge_coords, self.edge_coords
+            "ijkl, ijkl->ijk", self.half_edge_coords, self.half_edge_coords
         )
         self.ei_dot_ej = numpy.einsum(
             "ijkl, ijkl->ijk",
-            self.edge_coords[[1, 2, 0]],
-            self.edge_coords[[2, 0, 1]]
+            self.half_edge_coords[[1, 2, 0]],
+            self.half_edge_coords[[2, 0, 1]]
             # This is equivalent:
-            # numpy.roll(self.edge_coords, 1, axis=0),
-            # numpy.roll(self.edge_coords, 2, axis=0),
+            # numpy.roll(self.half_edge_coords, 1, axis=0),
+            # numpy.roll(self.half_edge_coords, 2, axis=0),
         )
 
         self.ce_ratios = self._compute_ce_ratios_geometric()
@@ -105,8 +105,8 @@ class MeshTetra(_BaseMesh):
         self.is_boundary_point = None
         self._inv_faces = None
         self.edges = None
-        self.is_boundary_facet_individual = None
         self.is_boundary_facet = None
+        self.is_boundary_facet_local = None
         self.faces = None
 
         self._cell_centroids = None
@@ -137,10 +137,7 @@ class MeshTetra(_BaseMesh):
             self.create_cell_face_relationships()
 
         self.is_boundary_point = numpy.zeros(len(self.points), dtype=bool)
-        self.is_boundary_point[
-            self.faces["points"][self.is_boundary_facet_individual]
-        ] = True
-        return
+        self.is_boundary_point[self.faces["points"][self.is_boundary_facet]] = True
 
     def create_cell_face_relationships(self):
         # Reshape into individual faces, and take the first point per edge. (The face is
@@ -162,8 +159,8 @@ class MeshTetra(_BaseMesh):
         # listed twice.
         assert all(cts < 3)
 
-        self.is_boundary_facet = (cts[inv] == 1).reshape(s[2:])
-        self.is_boundary_facet_individual = cts == 1
+        self.is_boundary_facet_local = (cts[inv] == 1).reshape(s[2:])
+        self.is_boundary_facet = cts == 1
 
         self.faces = {"points": a[idx]}
 
@@ -177,8 +174,6 @@ class MeshTetra(_BaseMesh):
 
         # save for create_edge_cells
         self._inv_faces = inv
-
-        return
 
     def create_face_edge_relationships(self):
         a = numpy.vstack(
@@ -202,8 +197,6 @@ class MeshTetra(_BaseMesh):
         num_faces = len(self.faces["points"])
         face_edges = inv.reshape([3, num_faces]).T
         self.faces["edges"] = face_edges
-
-        return
 
     def _compute_cell_circumcenters(self):
         """Computes the center of the circumsphere of each cell."""
@@ -235,7 +228,6 @@ class MeshTetra(_BaseMesh):
         self._circumcenters = numpy.sum(
             alpha[None].T * self.points[self.cells["points"]], axis=1
         )
-        return
 
     # Question:
     # We're looking for an explicit expression for the algebraic c/e ratios. Might it be

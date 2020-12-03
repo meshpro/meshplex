@@ -5,11 +5,22 @@ import tempfile
 import meshio
 import numpy
 import pytest
-from helpers import compute_polygon_area, near_equal, run
+from helpers import near_equal, run
 
 import meshplex
 
 this_dir = pathlib.Path(__file__).resolve().parent
+
+
+def _compute_polygon_area(pts):
+    # shoelace formula
+    return (
+        numpy.abs(
+            numpy.dot(pts[0], numpy.roll(pts[1], -1))
+            - numpy.dot(numpy.roll(pts[0], -1), pts[1])
+        )
+        / 2
+    )
 
 
 @pytest.mark.parametrize(
@@ -77,7 +88,7 @@ def test_unit_triangle(cells_dtype):
             return numpy.ones(X.shape[1:], dtype=bool)
 
     cell_mask = mesh.get_cell_mask(Subdomain())
-    assert sum(cell_mask) == 1
+    assert numpy.sum(cell_mask) == 1
 
     # save
     _, filename = tempfile.mkstemp(suffix=".png")
@@ -101,9 +112,7 @@ def test_regular_tri_additional_points():
     cells = numpy.array([[1, 2, 3]])
     mesh = meshplex.MeshTri(points, cells)
 
-    mesh.mark_boundary()
-
-    assert numpy.array_equal(mesh.point_is_used, [False, True, True, True, False])
+    assert numpy.array_equal(mesh.is_point_used, [False, True, True, True, False])
     assert numpy.array_equal(mesh.is_boundary_point, [False, True, True, True, False])
     assert numpy.array_equal(
         mesh.is_interior_point, [False, False, False, False, False]
@@ -447,7 +456,7 @@ def test_rectanglesmall():
 
 
 def test_pacman():
-    mesh = meshplex.read(this_dir / "meshes" / "pacman.vtk")
+    mesh = meshplex.read(this_dir / ".." / "meshes" / "pacman.vtk")
 
     run(
         mesh,
@@ -487,7 +496,7 @@ def test_shell():
 
 
 def test_sphere():
-    mesh = meshplex.read(this_dir / "meshes" / "sphere.vtk")
+    mesh = meshplex.read(this_dir / ".." / "meshes" / "sphere.vtk")
     run(
         mesh,
         12.273645818711595,
@@ -498,31 +507,8 @@ def test_sphere():
     # assertEqual(mesh.num_delaunay_violations(), 60)
 
 
-def test_signed_area():
-    mesh = meshio.read(this_dir / "meshes" / "pacman.vtk")
-    assert numpy.all(numpy.abs(mesh.points[:, 2]) < 1.0e-15)
-    X = mesh.points[:, :2]
-
-    mesh = meshplex.MeshTri(X, mesh.get_cells_type("triangle"))
-
-    vols = mesh.signed_cell_areas
-    assert numpy.all(abs(abs(vols) - mesh.cell_volumes) < 1.0e-12 * mesh.cell_volumes)
-
-
-def test_signed_area2():
-    points = numpy.array([[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]])
-    cells = numpy.array([[0, 1, 2]])
-    mesh = meshplex.MeshTri(points, cells)
-    ref = 0.5
-    assert abs(mesh.signed_cell_areas[0] - ref) < 1.0e-10 * abs(ref)
-
-    mesh.points = numpy.array([[0.0, 0.0], [0.0, 1.0], [1.0, 0.0]])
-    ref = -0.5
-    assert abs(mesh.signed_cell_areas[0] - ref) < 1.0e-10 * abs(ref)
-
-
 def test_update_point_coordinates():
-    mesh = meshio.read(this_dir / "meshes" / "pacman.vtk")
+    mesh = meshio.read(this_dir / ".." / "meshes" / "pacman.vtk")
     assert numpy.all(numpy.abs(mesh.points[:, 2]) < 1.0e-15)
 
     mesh1 = meshplex.MeshTri(mesh.points, mesh.get_cells_type("triangle"))
@@ -536,164 +522,6 @@ def test_update_point_coordinates():
     tol = 1.0e-12
     assert near_equal(mesh1.ei_dot_ej, mesh2.ei_dot_ej, tol)
     assert near_equal(mesh1.cell_volumes, mesh2.cell_volumes, tol)
-
-
-def test_flip_delaunay():
-    mesh = meshio.read(this_dir / "meshes" / "pacman.vtk")
-
-    numpy.random.seed(123)
-    mesh.points[:, :2] += 5.0e-2 * numpy.random.rand(*mesh.points[:, :2].shape)
-
-    mesh = meshplex.MeshTri(mesh.points, mesh.get_cells_type("triangle"))
-
-    assert mesh.num_delaunay_violations() == 16
-
-    mesh.flip_until_delaunay()
-    assert mesh.num_delaunay_violations() == 0
-
-    # Assert edges_cells integrity
-    for cell_gid, edge_gids in enumerate(mesh.cells["edges"]):
-        for edge_gid in edge_gids:
-            num_adj_cells, edge_id = mesh._edge_gid_to_edge_list[edge_gid]
-            assert cell_gid in mesh._edges_cells[num_adj_cells][edge_id]
-
-    new_cells = mesh.cells["points"].copy()
-    new_coords = mesh.points.copy()
-
-    # Assert that some key values are updated properly
-    mesh2 = meshplex.MeshTri(new_coords, new_cells)
-    assert numpy.all(mesh.idx_hierarchy == mesh2.idx_hierarchy)
-    tol = 1.0e-15
-    assert near_equal(mesh.half_edge_coords, mesh2.half_edge_coords, tol)
-    assert near_equal(mesh.cell_volumes, mesh2.cell_volumes, tol)
-    assert near_equal(mesh.ei_dot_ej, mesh2.ei_dot_ej, tol)
-
-
-def test_flip_delaunay_near_boundary():
-    points = numpy.array(
-        [[0.0, +0.0, 0.0], [0.5, -0.1, 0.0], [1.0, +0.0, 0.0], [0.5, +0.1, 0.0]]
-    )
-    cells = numpy.array([[0, 1, 2], [0, 2, 3]])
-    mesh = meshplex.MeshTri(points, cells)
-
-    mesh.create_edges()
-    assert mesh.num_delaunay_violations() == 1
-    assert numpy.array_equal(mesh.cells["points"], [[0, 1, 2], [0, 2, 3]])
-    assert numpy.array_equal(mesh.cells["edges"], [[3, 1, 0], [4, 2, 1]])
-
-    mesh.flip_until_delaunay()
-
-    assert mesh.num_delaunay_violations() == 0
-    assert numpy.array_equal(mesh.cells["points"], [[1, 2, 3], [1, 3, 0]])
-    assert numpy.array_equal(mesh.cells["edges"], [[4, 1, 3], [2, 0, 1]])
-
-
-def test_flip_same_edge_twice():
-    points = numpy.array(
-        [[0.0, +0.0, 0.0], [0.5, -0.1, 0.0], [1.0, +0.0, 0.0], [0.5, +0.1, 0.0]]
-    )
-    cells = numpy.array([[0, 1, 2], [0, 2, 3]])
-    mesh = meshplex.MeshTri(points, cells)
-    assert mesh.num_delaunay_violations() == 1
-
-    mesh.flip_until_delaunay()
-    assert mesh.num_delaunay_violations() == 0
-
-    # Assert edges_cells integrity
-    for cell_gid, edge_gids in enumerate(mesh.cells["edges"]):
-        for edge_gid in edge_gids:
-            num_adj_cells, edge_id = mesh._edge_gid_to_edge_list[edge_gid]
-            assert cell_gid in mesh._edges_cells[num_adj_cells][edge_id]
-
-    new_points = numpy.array(
-        [[0.0, +0.0, 0.0], [0.1, -0.5, 0.0], [0.2, +0.0, 0.0], [0.1, +0.5, 0.0]]
-    )
-    mesh.points = new_points
-    assert mesh.num_delaunay_violations() == 1
-
-    mesh.flip_until_delaunay()
-    assert mesh.num_delaunay_violations() == 0
-    # mesh.show()
-    mesh.plot()
-
-
-def test_flip_two_edges():
-    alpha = numpy.array([1.0, 3.0, 5.0, 7.0, 9.0, 11.0]) / 6.0 * numpy.pi
-    R = [0.9, 1.0, 0.9, 1.0, 1.2, 1.0]
-    points = numpy.array(
-        [[r * numpy.cos(a), r * numpy.sin(a), 0.0] for a, r in zip(alpha, R)]
-    )
-    cells = numpy.array([[1, 3, 5], [0, 1, 5], [1, 2, 3], [3, 4, 5]])
-    mesh = meshplex.MeshTri(points, cells)
-    assert mesh.num_delaunay_violations() == 2
-
-    mesh.flip_until_delaunay()
-    assert mesh.num_delaunay_violations() == 0
-
-    mesh.show(show_point_numbers=True)
-    assert numpy.array_equal(
-        mesh.cells["points"], [[5, 0, 2], [0, 1, 2], [5, 2, 3], [3, 4, 5]]
-    )
-
-
-def test_flip_delaunay_near_boundary_preserve_boundary_count():
-    # This test is to make sure meshplex preserves the boundary point count.
-    points = numpy.array(
-        [
-            [+0.0, +0.0, 0.0],
-            [+0.5, -0.5, 0.0],
-            [+0.5, +0.5, 0.0],
-            [+0.0, +0.6, 0.0],
-            [-0.5, +0.5, 0.0],
-            [-0.5, -0.5, 0.0],
-        ]
-    )
-    cells = numpy.array([[0, 1, 2], [0, 2, 4], [0, 4, 5], [0, 5, 1], [2, 3, 4]])
-    mesh = meshplex.MeshTri(points, cells)
-
-    mesh.create_edges()
-    assert mesh.num_delaunay_violations() == 1
-
-    mesh.mark_boundary()
-    is_boundary_point_ref = [False, True, True, True, True, True]
-    assert numpy.array_equal(mesh.is_boundary_point, is_boundary_point_ref)
-
-    mesh.flip_until_delaunay()
-
-    mesh.mark_boundary()
-    assert numpy.array_equal(mesh.is_boundary_point, is_boundary_point_ref)
-
-
-def test_flip_orientation():
-    points = numpy.array([[0.0, +0.0], [0.5, -0.1], [1.0, +0.0], [0.5, +0.1]])
-
-    # preserve positive orientation
-    cells = numpy.array([[0, 1, 2], [0, 2, 3]])
-    mesh = meshplex.MeshTri(points, cells)
-    assert numpy.all(mesh.signed_cell_areas > 0.0)
-    mesh.flip_until_delaunay()
-    assert numpy.all(mesh.signed_cell_areas > 0.0)
-
-    # also preserve negative orientation
-    cells = numpy.array([[0, 2, 1], [0, 3, 2]])
-    mesh = meshplex.MeshTri(points, cells)
-    assert numpy.all(mesh.signed_cell_areas < 0.0)
-    mesh.flip_until_delaunay()
-    assert numpy.all(mesh.signed_cell_areas < 0.0)
-
-
-def test_flip_infinite():
-    """In rare cases, it can happen that the ce-ratio of an edge is negative (up to
-    machine precision, -2.13e-15 or something like that), an edge flip is done, and the
-    ce-ratio of the resulting edge is again negative. The flip_until_delaunay() method
-    would continue indefinitely. This test replicates such an edge case."""
-    a = 3.9375644347017862e02
-    points = numpy.array([[205.0, a], [185.0, a], [330.0, 380.0], [60.0, 380.0]])
-    cells = [[0, 1, 2], [1, 2, 3]]
-
-    mesh = meshplex.MeshTri(points, cells)
-    num_flips = mesh.flip_until_delaunay(tol=1.0e-13)
-    assert num_flips == 0
 
 
 def test_inradius():
@@ -787,7 +615,6 @@ def test_angles():
     assert near_equal(ic, [[90], [60], [30]], tol)
 
 
-# TODO reactivate
 def test_flat_boundary():
     #
     #  3___________2
@@ -835,7 +662,7 @@ def test_flat_boundary():
             mesh.cell_circumcenters[3][:2],
         ]
     )
-    ref_area = compute_polygon_area(control_volume_corners.T)
+    ref_area = _compute_polygon_area(control_volume_corners.T)
 
     assert numpy.abs(mesh.control_volumes[4] - ref_area) < 1.0e-12
 
@@ -848,89 +675,6 @@ def test_flat_boundary():
     assert numpy.all(numpy.abs(cv - mesh.control_volumes) < 1.0e-12 * cv)
 
 
-def test_show_mesh():
-    mesh = meshplex.read(this_dir / "meshes" / "pacman-optimized.vtk")
-    mesh = meshplex.MeshTri(mesh.points[:, :2], mesh.cells["points"])
-    print(mesh)  # test __repr__
-    # mesh.plot(show_axes=False)
-    mesh.show(
-        show_axes=False,
-        cell_quality_coloring=("viridis", 0.0, 1.0, True),
-        show_cell_numbers=True,
-        mark_cells=[0, 3, 7],
-        mark_points=[1],
-        nondelaunay_edge_color="r",
-        boundary_edge_color="b",
-        control_volume_centroid_color="g",
-    )
-    # mesh.save("pacman.png", show_axes=False)
-
-
-def test_show_vertex():
-    mesh = meshplex.read(this_dir / "meshes" / "pacman-optimized.vtk")
-    # mesh.plot_vertex(125)
-    mesh.show_vertex(125)
-
-
-def _get_test_mesh():
-    points = numpy.array(
-        [
-            [0.0, 0.0],
-            [1.0, 0.0],
-            [1.0, 1.0],
-            [0.0, 1.0],
-            [0.0, 0.5],
-            [0.5, 0.0],
-            [1.0, 0.5],
-            [0.5, 1.0],
-        ]
-    )
-    cells = numpy.array(
-        [
-            [0, 5, 4],
-            [5, 1, 6],
-            [6, 2, 7],
-            [7, 3, 4],
-            [5, 6, 4],
-            [6, 7, 4],
-        ]
-    )
-    mesh = meshplex.MeshTri(points, cells)
-    mesh.create_edges()
-    return mesh
-
-
-@pytest.mark.parametrize(
-    "remove_idx,expected_num_cells,expected_num_edges",
-    [
-        # remove corner cell
-        [[0], 5, 11],
-        # remove interior cells
-        [[4, 5], 4, 12],
-        # remove no cells at all
-        [[], 6, 13],
-    ],
-)
-def test_remove_cells(remove_idx, expected_num_cells, expected_num_edges):
-    mesh = _get_test_mesh()
-    assert len(mesh.cells["points"]) == 6
-    assert len(mesh.edges["points"]) == 13
-    # remove a corner cell
-    mesh.remove_cells(remove_idx)
-    assert len(mesh.cells["points"]) == expected_num_cells
-    assert len(mesh.edges["points"]) == expected_num_edges
-
-
-def test_remove_cells_boundary():
-    points = [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0], [0.5, 0.5]]
-    cells = [[0, 1, 4], [1, 2, 4], [2, 3, 4], [0, 4, 3]]
-    mesh = meshplex.MeshTri(points, cells)
-    assert numpy.all(mesh.is_boundary_point == [True, True, True, True, False])
-
-    mesh.remove_cells([0])
-    assert numpy.all(mesh.is_boundary_point == [True, True, True, True, True])
-
-
 def test_set_points():
     points = numpy.array([[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]])
     cells = numpy.array([[0, 1, 2]])
@@ -940,8 +684,8 @@ def test_set_points():
     ref = mesh.cell_volumes.copy()
 
     mesh2 = meshplex.MeshTri(mesh.points, mesh.cells["points"])
-    assert numpy.all(numpy.abs(ref - mesh2.cell_volumes)) < 1.0e-10
+    assert numpy.all(numpy.abs(ref - mesh2.cell_volumes) < 1.0e-10)
 
 
 if __name__ == "__main__":
-    test_flip_infinite()
+    test_set_points()
