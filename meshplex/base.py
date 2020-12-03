@@ -47,27 +47,12 @@ class _SimplexMesh:
         nds = self.cells["points"].T
 
         if cells.shape[1] == 3:
-            # compute data
             # Create the idx_hierarchy (points->edges->cells), i.e., the value of
             # `self.idx_hierarchy[0, 2, 27]` is the index of the point of cell 27, edge
             # 2, point 0. The shape of `self.idx_hierarchy` is `(2, 3, n)`, where `n` is
             # the number of cells. Make sure that the k-th edge is opposite of the k-th
             # point in the triangle.
             self.local_idx = numpy.array([[1, 2], [2, 0], [0, 1]]).T
-            # Map idx back to the points. This is useful if quantities which are in idx
-            # shape need to be added up into points (e.g., equation system rhs).
-            self.idx_hierarchy = nds[self.local_idx]
-
-            # The inverted local index.
-            # This array specifies for each of the three points which edge endpoints
-            # correspond to it. For the above local_idx, this should give
-            #
-            #    [[(1, 1), (0, 2)], [(0, 0), (1, 2)], [(1, 0), (0, 1)]]
-            #
-            self.local_idx_inv = [
-                [tuple(i) for i in zip(*numpy.where(self.local_idx == k))]
-                for k in range(3)
-            ]
         else:
             assert cells.shape[1] == 4
             # Arrange the point_face_cells such that point k is opposite of face k in
@@ -97,15 +82,21 @@ class _SimplexMesh:
                     [[1, 2], [2, 0], [0, 1]],
                 ]
             ).T
-            self.idx_hierarchy = nds[self.local_idx]
 
-            # The inverted local index.
-            # This array specifies for each of the three points which edge endpoints
-            # correspond to it.
-            self.local_idx_inv = [
-                [tuple(i) for i in zip(*numpy.where(self.local_idx == point_idx))]
-                for point_idx in range(4)
-            ]
+        # Map idx back to the points. This is useful if quantities which are in idx
+        # shape need to be added up into points (e.g., equation system rhs).
+        self.idx_hierarchy = nds[self.local_idx]
+
+        # The inverted local index.
+        # This array specifies for each of the three points which edge endpoints
+        # correspond to it. For triangles, the above local_idx should give
+        #
+        #    [[(1, 1), (0, 2)], [(0, 0), (1, 2)], [(1, 0), (0, 1)]]
+        #
+        n = cells.shape[1]
+        self.local_idx_inv = [
+            [tuple(i) for i in zip(*numpy.where(self.local_idx == k))] for k in range(n)
+        ]
 
         self._edge_lengths = None
 
