@@ -17,6 +17,27 @@ def assert_mesh_consistency(mesh):
         ]
     )
     assert numpy.all(numpy.sum(bpts, axis=0) == 1)
+
+    # consistency check for edges_cells
+    assert numpy.all(mesh.is_boundary_edge[mesh.edges_cells["boundary"][0]])
+    assert not numpy.any(mesh.is_boundary_edge[mesh.edges_cells["interior"][0]])
+
+    for edge_id, cell_id, local_edge_id in mesh.edges_cells["boundary"].T:
+        assert edge_id == mesh.cells["edges"][cell_id][local_edge_id]
+
+    for edge_id, cell_id0, cell_id1, local_edge_id0, local_edge_id1 in mesh.edges_cells[
+        "interior"
+    ].T:
+        assert edge_id == mesh.cells["edges"][cell_id0][local_edge_id0]
+        assert edge_id == mesh.cells["edges"][cell_id1][local_edge_id1]
+
+    # check consistency of edges_cells_idx with edges_cells
+    for edge_id, idx in enumerate(mesh.edges_cells_idx):
+        if mesh.is_boundary_edge[edge_id]:
+            assert edge_id == mesh.edges_cells["boundary"][0, idx]
+        else:
+            assert edge_id == mesh.edges_cells["interior"][0, idx]
+
     # TODO add more consistency checks
 
 
