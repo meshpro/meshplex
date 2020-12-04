@@ -37,10 +37,6 @@ class MeshTetra(_SimplexMesh):
         string = f"<meshplex tetra mesh, {num_points} cells, {num_cells} points>"
         return string
 
-    def get_ce_ratios(self):
-        """Covolume-edge length ratios."""
-        return self.ce_ratios
-
     def mark_boundary(self):
         if "faces" not in self.cells:
             self.create_cell_face_relationships()
@@ -316,7 +312,7 @@ class MeshTetra(_SimplexMesh):
 
     @property
     def cell_circumradius(self):
-        # # Just take the distance of the circumcenter to one of the points for now.
+        # Just take the distance of the circumcenter to one of the points for now.
         dist = self.points[self.idx_hierarchy[0, 0, 0]] - self.cell_circumcenters
         circumradius = numpy.sqrt(numpy.einsum("ij,ij->i", dist, dist))
         # https://en.wikipedia.org/wiki/Tetrahedron#Circumradius
