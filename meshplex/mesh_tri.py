@@ -258,6 +258,7 @@ class MeshTri(_SimplexMesh):
         self._cv_centroids = None
         self._cvc_cell_mask = None
         self._is_point_used = None
+        self._is_interior_point = None
         self._is_boundary_point = None
 
         return numpy.sum(~keep)

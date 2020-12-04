@@ -8,6 +8,18 @@ import meshplex
 this_dir = pathlib.Path(__file__).resolve().parent
 
 
+def assert_mesh_consistency(mesh):
+    bpts = numpy.array(
+        [
+            mesh.is_boundary_point,
+            mesh.is_interior_point,
+            ~mesh.is_point_used,
+        ]
+    )
+    assert numpy.all(numpy.sum(bpts, axis=0) == 1)
+    # TODO add more consistency checks
+
+
 def compute_all_entities(mesh):
     mesh.is_boundary_point
     mesh.is_interior_point
@@ -63,13 +75,32 @@ def assert_mesh_equality(mesh0, mesh1):
     assert numpy.all(numpy.abs(mesh0.points - mesh1.points) < 1.0e-14)
     assert numpy.all(mesh0.edges["points"] == mesh1.edges["points"])
 
-    assert numpy.all(mesh0.edges_cells[0] == mesh1.edges_cells[0])
-    assert numpy.all(mesh0.edges_cells[1] == mesh1.edges_cells[1])
-    assert numpy.all(mesh0.edges_cells_idx == mesh1.edges_cells_idx)
+    # # Assume that in mesh1, the rows are ordered such that the edge indices [0] are in
+    # # order. The mesh0 array isn't order in many cases, e.g., if cells were removed and
+    # # rows appened the boundary array. Hence, justsort the array in mesh0 and compare.
+    # k = numpy.argsort(mesh0.edges_cells["boundary"][0])
+    # assert numpy.all(mesh0.edges_cells["boundary"][:, k] == mesh1.edges_cells["boundary"])
+
+    # # The interior edges_cells are already ordered, even after remove_cells(). (As
+    # # opposed to boundary edges, there can be no new interior edges, just some are
+    # # removed.)
+    # print(mesh0.edges_cells["interior"].T)
+    # print()
+    # print(mesh1.edges_cells["interior"].T)
+    # assert numpy.all(mesh0.edges_cells["interior"] == mesh1.edges_cells["interior"])
+    # exit(1)
+    # # print()
+    # # print(mesh0.edges_cells["interior"])
+    # # print()
+    # # print(mesh1.edges_cells["interior"])
+    #
+    # # These should not be equal; see reordering above
+    # assert numpy.all(mesh0.edges_cells_idx == mesh1.edges_cells_idx)
 
     assert numpy.all(mesh0.boundary_edges == mesh1.boundary_edges)
     assert numpy.all(mesh0.interior_edges == mesh1.interior_edges)
 
+    assert numpy.all(mesh0.is_point_used == mesh1.is_point_used)
     assert numpy.all(mesh0.is_boundary_point == mesh1.is_boundary_point)
     assert numpy.all(mesh0.is_interior_point == mesh1.is_interior_point)
     assert numpy.all(mesh0.is_boundary_edge_local == mesh1.is_boundary_edge_local)
@@ -89,11 +120,15 @@ def assert_mesh_equality(mesh0, mesh1):
     )
     assert numpy.all(numpy.abs(mesh0.cell_centroids - mesh1.cell_centroids) < 1.0e-14)
     assert numpy.all(
-        numpy.abs(mesh0.cell_circulcenters - mesh1.cell_circumcenters) < 1.0e-14
+        numpy.abs(mesh0.cell_circumcenters - mesh1.cell_circumcenters) < 1.0e-14
     )
     assert numpy.all(numpy.abs(mesh0.control_volumes - mesh1.control_volumes) < 1.0e-14)
+
+    ipu = mesh0.is_point_used
     assert numpy.all(
-        numpy.abs(mesh0.control_volume_centroids - mesh1.control_volume_centroids)
+        numpy.abs(
+            mesh0.control_volume_centroids[ipu] - mesh1.control_volume_centroids[ipu]
+        )
         < 1.0e-14
     )
 
@@ -174,6 +209,7 @@ def test_remove_cells(remove_idx, expected_num_cells, expected_num_edges):
     mesh.remove_cells(remove_idx)
     assert len(mesh.cells["points"]) == expected_num_cells
     assert len(mesh.edges["points"]) == expected_num_edges
+    assert_mesh_consistency(mesh)
 
 
 def test_remove_cells_boundary():
@@ -204,6 +240,8 @@ def test_remove_cells_boundary():
     # now lets remove some cells
     mesh.remove_cells([0])
 
+    assert_mesh_consistency(mesh)
+
     assert numpy.all(mesh.is_boundary_point)
     assert numpy.all(mesh.is_boundary_edge_local[0] == [False, False, False])
     assert numpy.all(mesh.is_boundary_edge_local[1] == [True, False, True])
@@ -221,14 +259,16 @@ def test_remove_all():
     assert numpy.all(mesh.is_point_used)
 
     mesh.remove_cells([0])
+    assert_mesh_consistency(mesh)
     assert not numpy.any(mesh.is_point_used)
 
 
 @pytest.mark.parametrize(
     "mesh0, remove_cells",
     [
-        # (get_mesh0(), [0]),
-        # (get_mesh1(), [0, 1]),
+        # TODO enable all
+        (get_mesh0(), [0]),
+        (get_mesh1(), [0, 1]),
         (get_mesh2(), [0, 3, 57, 59, 60, 61, 100]),
     ],
 )
@@ -238,6 +278,9 @@ def test_reference(mesh0, remove_cells):
     compute_all_entities(mesh0)
     # now remove some cells
     mesh0.remove_cells(remove_cells)
+
+    assert_mesh_consistency(mesh0)
+
     # recreate the reduced mesh from scratch
     mesh1 = meshplex.MeshTri(mesh0.points, mesh0.cells["points"])
     mesh1.create_edges()
