@@ -78,19 +78,6 @@ class MeshTri(_SimplexMesh):
         return 1 - self.euler_characteristic / 2
 
     @property
-    def ei_dot_ej(self):
-        if self._ei_dot_ej is None:
-            # einsum is faster if the tail survives, e.g., ijk,ijk->jk.
-            # <https://gist.github.com/nschloe/8bc015cc1a9e5c56374945ddd711df7b>
-            # TODO reorganize the data?
-            self._ei_dot_ej = numpy.einsum(
-                "ijk, ijk->ij",
-                self.half_edge_coords[[1, 2, 0]],
-                self.half_edge_coords[[2, 0, 1]],
-            )
-        return self._ei_dot_ej
-
-    @property
     def cell_volumes(self):
         if self._cell_volumes is None:
             self._cell_volumes = compute_tri_areas(self.ei_dot_ej)

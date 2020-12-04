@@ -14,19 +14,10 @@ class MeshTetra(_SimplexMesh):
 
         self._half_edge_coords = None
         self._ei_dot_ei = None
+        self._ei_dot_ej = None
         self._control_volumes = None
         self._circumcenters = None
         self.subdomains = {}
-
-        # create ei_dot_ei, ei_dot_ej
-        self.ei_dot_ej = numpy.einsum(
-            "ijkl, ijkl->ijk",
-            self.half_edge_coords[[1, 2, 0]],
-            self.half_edge_coords[[2, 0, 1]]
-            # This is equivalent:
-            # numpy.roll(self.half_edge_coords, 1, axis=0),
-            # numpy.roll(self.half_edge_coords, 2, axis=0),
-        )
 
         self.ce_ratios = self._compute_ce_ratios_geometric()
         # self.ce_ratios = self._compute_ce_ratios_algebraic()
@@ -45,16 +36,6 @@ class MeshTetra(_SimplexMesh):
         num_cells = len(self.cells["points"])
         string = f"<meshplex tetra mesh, {num_points} cells, {num_cells} points>"
         return string
-
-    @property
-    def points(self):
-        return self._points
-
-    @points.setter
-    def set_points(self, new_points):
-        assert new_points.shape == self._points.shape
-        # reset all computed values
-        self.ei_do_ei = None
 
     def get_ce_ratios(self):
         """Covolume-edge length ratios."""
