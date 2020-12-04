@@ -100,6 +100,43 @@ class _SimplexMesh:
 
         self._edge_lengths = None
 
+    # prevent overriding points without adapting the other mesh data
+    @property
+    def points(self):
+        return self._points
+
+    @points.setter
+    def points(self, new_points):
+        new_points = numpy.asarray(new_points)
+        assert new_points.shape == self._points.shape
+        self._points = new_points
+        # reset all computed values
+        self._reset_point_data()
+
+    def set_points(self, new_points, idx=slice(None)):
+        self.points.setflags(write=True)
+        self.points[idx] = new_points
+        self.points.setflags(write=False)
+        self._reset_point_data()
+
+    @property
+    def half_edge_coords(self):
+        if self._half_edge_coords is None:
+            p = self.points[self.idx_hierarchy]
+            self._half_edge_coords = p[1] - p[0]
+        return self._half_edge_coords
+
+    @property
+    def ei_dot_ei(self):
+        if self._ei_dot_ei is None:
+            # einsum is faster if the tail survives, e.g., ijk,ijk->jk.
+            # <https://gist.github.com/nschloe/8bc015cc1a9e5c56374945ddd711df7b>
+            # TODO reorganize the data?
+            self._ei_dot_ei = numpy.einsum(
+                "...k, ...k->...", self.half_edge_coords, self.half_edge_coords
+            )
+        return self._ei_dot_ei
+
     def write(self, filename, point_data=None, cell_data=None, field_data=None):
         if self.points.shape[1] == 2:
             n = len(self.points)

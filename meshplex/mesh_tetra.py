@@ -12,17 +12,13 @@ class MeshTetra(_SimplexMesh):
     def __init__(self, points, cells, sort_cells=False):
         super().__init__(points, cells, sort_cells=sort_cells)
 
+        self._half_edge_coords = None
+        self._ei_dot_ei = None
         self._control_volumes = None
         self._circumcenters = None
         self.subdomains = {}
 
         # create ei_dot_ei, ei_dot_ej
-        self.half_edge_coords = (
-            self.points[self.idx_hierarchy[1]] - self.points[self.idx_hierarchy[0]]
-        )
-        self.ei_dot_ei = numpy.einsum(
-            "ijkl, ijkl->ijk", self.half_edge_coords, self.half_edge_coords
-        )
         self.ei_dot_ej = numpy.einsum(
             "ijkl, ijkl->ijk",
             self.half_edge_coords[[1, 2, 0]],
@@ -43,7 +39,6 @@ class MeshTetra(_SimplexMesh):
         self.faces = None
 
         self._cell_centroids = None
-        return
 
     def __repr__(self):
         num_points = len(self.points)
