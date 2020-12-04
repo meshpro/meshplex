@@ -121,7 +121,7 @@ class MeshTri(_SimplexMesh):
             if self._edges_cells is None:
                 self._compute_edges_cells()
 
-            # Set edge to is_boundary_edge_local=True if it was adjacent to a removed
+            # Set edge to is_boundary_edge_local=True if it is adjacent to a removed
             # cell.
             edge_ids = self.cells["edges"][~keep].flatten()
             # only consider interior edges
@@ -221,9 +221,6 @@ class MeshTri(_SimplexMesh):
             self._boundary_edges = None
             self._interior_edges = None
 
-        if self._is_boundary_point is not None:
-            self._is_boundary_point[self.cells["points"][~keep].flatten()] = True
-
         self.cells["points"] = self.cells["points"][keep]
         self.idx_hierarchy = self.idx_hierarchy[..., keep]
 
@@ -249,7 +246,7 @@ class MeshTri(_SimplexMesh):
             self._cell_circumcenters = self._cell_circumcenters[keep]
 
         if self._cell_partitions is not None:
-            self._cell_partitions = self._cell_partitions[keep]
+            self._cell_partitions = self._cell_partitions[:, keep]
 
         if self._signed_cell_areas is not None:
             self._signed_cell_areas = self._signed_cell_areas[keep]
@@ -261,6 +258,7 @@ class MeshTri(_SimplexMesh):
         self._cv_centroids = None
         self._cvc_cell_mask = None
         self._is_point_used = None
+        self._is_boundary_point = None
 
         return numpy.sum(~keep)
 
@@ -501,8 +499,8 @@ class MeshTri(_SimplexMesh):
         assert numpy.all((count == 1) == self.is_boundary_edge)
         assert numpy.all((count == 2) == self.is_interior_edge)
 
-        idx_start_count_1 = idx_start[count == 1]
-        idx_start_count_2 = idx_start[count == 2]
+        idx_start_count_1 = idx_start[self.is_boundary_edge]
+        idx_start_count_2 = idx_start[self.is_interior_edge]
         res1 = idx_sort[idx_start_count_1]
         res2 = idx_sort[numpy.array([idx_start_count_2, idx_start_count_2 + 1])]
 
@@ -511,7 +509,8 @@ class MeshTri(_SimplexMesh):
 
         # It'd be nicer if we could organize the data differently, e.g., as a structured
         # array or as a dict. Those possibilities are slower, unfortunately, for some
-        # operations. <https://github.com/numpy/numpy/issues/17850>
+        # operations in remove_cells() (and perhaps elsewhere).
+        # <https://github.com/numpy/numpy/issues/17850>
         self._edges_cells = {
             # rows:
             #  0: edge id
@@ -548,7 +547,7 @@ class MeshTri(_SimplexMesh):
             # Compute the control volumes. Note that
             #
             #   0.5 * (0.5 * edge_length) * covolume
-            # = 0.25 * edge_length**2 * ce_ratio_edge_ratio
+            # = 0.25 * edge_length ** 2 * ce_ratio_edge_ratio
             #
             self._cell_partitions = self.ei_dot_ei * self.ce_ratios / 4
         return self._cell_partitions
