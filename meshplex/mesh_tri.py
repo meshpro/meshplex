@@ -399,21 +399,6 @@ class MeshTri(_SimplexMesh):
         )
 
     @property
-    def is_point_used(self):
-        # Check which vertices are used.
-        # If there are vertices which do not appear in the cells list, this
-        # ```
-        # uvertices, uidx = numpy.unique(cells, return_inverse=True)
-        # cells = uidx.reshape(cells.shape)
-        # points = points[uvertices]
-        # ```
-        # helps.
-        if self._is_point_used is None:
-            self._is_point_used = numpy.zeros(len(self.points), dtype=bool)
-            self._is_point_used[self.cells["points"]] = True
-        return self._is_point_used
-
-    @property
     def is_boundary_cell(self):
         if self._is_boundary_cell is None:
             assert self.is_boundary_edge_local is not None
@@ -595,7 +580,8 @@ class MeshTri(_SimplexMesh):
     @property
     def cell_circumradius(self):
         """Get the circumradii of all cells"""
-        # See <http://mathworld.wolfram.com/Circumradius.html>.
+        # See <http://mathworld.wolfram.com/Circumradius.html> and
+        # <https://en.wikipedia.org/wiki/Cayley%E2%80%93Menger_determinant#Finding_the_circumradius_of_a_simplex>.
         a, b, c = numpy.sqrt(self.ei_dot_ei)
         return (a * b * c) / numpy.sqrt(
             (a + b + c) * (-a + b + c) * (a - b + c) * (a + b - c)
@@ -1023,7 +1009,6 @@ class MeshTri(_SimplexMesh):
         self.plot_vertex(*args, **kwargs)
         plt.show()
         plt.close()
-        return
 
     def plot_vertex(self, point_id, show_ce_ratio=True):
         """Plot the vicinity of a point and its covolume/edgelength ratio.

@@ -165,6 +165,21 @@ class _SimplexMesh:
         """See cell_centroids."""
         return self.cell_centroids
 
+    @property
+    def is_point_used(self):
+        # Check which vertices are used.
+        # If there are vertices which do not appear in the cells list, this
+        # ```
+        # uvertices, uidx = numpy.unique(cells, return_inverse=True)
+        # cells = uidx.reshape(cells.shape)
+        # points = points[uvertices]
+        # ```
+        # helps.
+        if self._is_point_used is None:
+            self._is_point_used = numpy.zeros(len(self.points), dtype=bool)
+            self._is_point_used[self.cells["points"]] = True
+        return self._is_point_used
+
     def write(self, filename, point_data=None, cell_data=None, field_data=None):
         if self.points.shape[1] == 2:
             n = len(self.points)
