@@ -1,7 +1,7 @@
 import meshio
 import numpy
 
-__all__ = []
+__all__ = ["_SimplexMesh"]
 
 
 class _SimplexMesh:
@@ -20,10 +20,9 @@ class _SimplexMesh:
         points = numpy.asarray(points)
         cells = numpy.asarray(cells)
         assert len(points.shape) == 2, f"Illegal point coordinates shape {points.shape}"
-        assert len(cells.shape) == 2 and cells.shape[1] in [
-            3,
-            4,
-        ], f"Illegal cells shape {cells.shape}"
+        assert len(cells.shape) == 2, f"Illegal cells shape {cells.shape}"
+        self.n = cells.shape[1]
+        assert self.n in [3, 4], f"Illegal cells shape {cells.shape}"
 
         # Assert that all vertices are used.
         # If there are vertices which do not appear in the cells list, this
@@ -93,9 +92,9 @@ class _SimplexMesh:
         #
         #    [[(1, 1), (0, 2)], [(0, 0), (1, 2)], [(1, 0), (0, 1)]]
         #
-        n = cells.shape[1]
         self.local_idx_inv = [
-            [tuple(i) for i in zip(*numpy.where(self.local_idx == k))] for k in range(n)
+            [tuple(i) for i in zip(*numpy.where(self.local_idx == k))]
+            for k in range(self.n)
         ]
 
         self._edge_lengths = None
@@ -149,6 +148,22 @@ class _SimplexMesh:
                 self.half_edge_coords[[2, 0, 1]],
             )
         return self._ei_dot_ej
+
+    def compute_centroids(self, idx=slice(None)):
+        return numpy.sum(self.points[self.cells["points"][idx]], axis=1) / self.n
+
+    @property
+    def cell_centroids(self):
+        """The centroids (barycenters, midpoints of the circumcircles) of all
+        simplices."""
+        if self._cell_centroids is None:
+            self._cell_centroids = self.compute_centroids()
+        return self._cell_centroids
+
+    @property
+    def cell_barycenters(self):
+        """See cell_centroids."""
+        return self.cell_centroids
 
     def write(self, filename, point_data=None, cell_data=None, field_data=None):
         if self.points.shape[1] == 2:

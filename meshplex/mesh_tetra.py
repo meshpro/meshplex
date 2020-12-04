@@ -294,20 +294,6 @@ class MeshTetra(_SimplexMesh):
         return ce_ratios
 
     @property
-    def cell_centroids(self):
-        """The centroids (barycenters, midpoints of the circumcircles) of all tetrahedra."""
-        if self._cell_centroids is None:
-            self._cell_centroids = (
-                numpy.sum(self.points[self.cells["points"]], axis=1) / 4.0
-            )
-        return self._cell_centroids
-
-    @property
-    def cell_barycenters(self):
-        """See cell_centroids()."""
-        return self.cell_centroids
-
-    @property
     def cell_circumcenters(self):
         if self._circumcenters is None:
             self._compute_cell_circumcenters()

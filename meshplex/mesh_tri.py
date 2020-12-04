@@ -577,22 +577,6 @@ class MeshTri(_SimplexMesh):
             )
         return self._cell_circumcenters
 
-    def compute_centroids(self, idx=slice(None)):
-        return numpy.sum(self.points[self.cells["points"][idx]], axis=1) / 3.0
-
-    @property
-    def cell_centroids(self):
-        """The centroids (barycenters, midpoints of the circumcircles) of all
-        triangles."""
-        if self._cell_centroids is None:
-            self._cell_centroids = self.compute_centroids()
-        return self._cell_centroids
-
-    @property
-    def cell_barycenters(self):
-        """See cell_centroids."""
-        return self.cell_centroids
-
     @property
     def cell_incenters(self):
         """Get the midpoints of the incircles."""
