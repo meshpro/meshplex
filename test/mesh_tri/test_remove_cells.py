@@ -9,6 +9,8 @@ this_dir = pathlib.Path(__file__).resolve().parent
 
 
 def assert_mesh_consistency(mesh):
+    assert numpy.all(numpy.logical_xor(mesh.is_boundary_edge, mesh.is_interior_edge))
+
     bpts = numpy.array(
         [
             mesh.is_boundary_point,

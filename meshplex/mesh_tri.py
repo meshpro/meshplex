@@ -4,13 +4,9 @@ import warnings
 import numpy
 
 from .base import _SimplexMesh
-from .helpers import (
-    compute_ce_ratios,
-    compute_tri_areas,
-    compute_triangle_circumcenters,
-    grp_start_len,
-    unique_rows,
-)
+from .helpers import (compute_ce_ratios, compute_tri_areas,
+                      compute_triangle_circumcenters, grp_start_len,
+                      unique_rows)
 
 __all__ = ["MeshTri"]
 
@@ -532,14 +528,21 @@ class MeshTri(_SimplexMesh):
     @property
     def edges_cells_idx(self):
         if self._edges_cells_idx is None:
+            if self._edges_cells is None:
+                self._compute_edges_cells()
             assert self.is_boundary_edge is not None
             # For each edge, store the index into the respective edge array.
             num_edges = len(self.edges["points"])
             self._edges_cells_idx = numpy.empty(num_edges, dtype=int)
+            self._edges_cells_idx[:] = -100
             num_b_edges = numpy.sum(self.is_boundary_edge)
             num_i_edges = numpy.sum(self.is_interior_edge)
-            self._edges_cells_idx[self.is_boundary_edge] = numpy.arange(num_b_edges)
-            self._edges_cells_idx[self.is_interior_edge] = numpy.arange(num_i_edges)
+            self._edges_cells_idx[self.edges_cells["boundary"][0]] = numpy.arange(
+                num_b_edges
+            )
+            self._edges_cells_idx[self.edges_cells["interior"][0]] = numpy.arange(
+                num_i_edges
+            )
         return self._edges_cells_idx
 
     @property
