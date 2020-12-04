@@ -3,7 +3,7 @@ import warnings
 
 import numpy
 
-from .base import _BaseMesh
+from .base import _SimplexMesh
 from .helpers import (
     compute_ce_ratios,
     compute_tri_areas,
@@ -15,38 +15,15 @@ from .helpers import (
 __all__ = ["MeshTri"]
 
 
-class MeshTri(_BaseMesh):
+class MeshTri(_SimplexMesh):
     """Class for handling triangular meshes."""
 
     def __init__(self, points, cells, sort_cells=False):
         """Initialization."""
-        if sort_cells:
-            # Sort cells, first every row, then the rows themselves. This helps in many
-            # downstream applications, e.g., when constructing linear systems with the
-            # cells/edges. (When converting to CSR format, the I/J entries must be
-            # sorted.) Don't use cells.sort(axis=1) to avoid
-            # ```
-            # ValueError: sort array is read-only
-            # ```
-            cells = numpy.sort(cells, axis=1)
-            cells = cells[cells[:, 0].argsort()]
-
-        points = numpy.asarray(points)
-        cells = numpy.asarray(cells)
-        assert len(points.shape) == 2, f"Illegal point coordinates shape {points.shape}"
-        assert (
-            len(cells.shape) == 2 and cells.shape[1] == 3
-        ), f"Illegal cells shape {cells.shape}"
-
-        self._points = numpy.asarray(points)
-        # prevent accidental override of parts of the array
-        self._points.setflags(write=False)
-        super().__init__()
+        super().__init__(points, cells, sort_cells=sort_cells)
 
         # reset all data that changes when point coordinates change
         self._reset_point_data()
-
-        self.cells = {"points": cells}
 
         self._cv_cell_mask = None
         self.edges = None
@@ -62,38 +39,11 @@ class MeshTri(_BaseMesh):
         self._interior_edges = None
         self._is_point_used = None
 
-        # compute data
-        # Create the idx_hierarchy (points->edges->cells), i.e., the value of
-        # `self.idx_hierarchy[0, 2, 27]` is the index of the point of cell 27, edge 2,
-        # point 0. The shape of `self.idx_hierarchy` is `(2, 3, n)`, where `n` is the
-        # number of cells. Make sure that the k-th edge is opposite of the k-th point in
-        # the triangle.
-        self.local_idx = numpy.array([[1, 2], [2, 0], [0, 1]]).T
-        # Map idx back to the points. This is useful if quantities which are in idx
-        # shape need to be added up into points (e.g., equation system rhs).
-        nds = self.cells["points"].T
-        self.idx_hierarchy = nds[self.local_idx]
-
-        # The inverted local index.
-        # This array specifies for each of the three points which edge endpoints
-        # correspond to it. For the above local_idx, this should give
-        #
-        #    [[(1, 1), (0, 2)], [(0, 0), (1, 2)], [(1, 0), (0, 1)]]
-        #
-        self.local_idx_inv = [
-            [tuple(i) for i in zip(*numpy.where(self.local_idx == k))] for k in range(3)
-        ]
-
     def __repr__(self):
         num_points = len(self.points)
         num_cells = len(self.cells["points"])
         string = f"<meshplex triangle mesh, {num_points} cells, {num_cells} points>"
         return string
-
-    # prevent overriding points without adapting the other mesh data
-    @property
-    def points(self):
-        return self._points
 
     def _reset_point_data(self):
         """Reset all data that changes when point coordinates changes."""
@@ -111,20 +61,6 @@ class MeshTri(_BaseMesh):
         self._signed_cell_areas = None
         self._cell_centroids = None
 
-    @points.setter
-    def points(self, new_points):
-        new_points = numpy.asarray(new_points)
-        assert new_points.shape == self._points.shape
-        self._points = new_points
-        # reset all computed values
-        self._reset_point_data()
-
-    def set_points(self, new_points, idx=slice(None)):
-        self.points.setflags(write=True)
-        self.points[idx] = new_points
-        self.points.setflags(write=False)
-        self._reset_point_data()
-
     @property
     def euler_characteristic(self):
         # number of vertices - number of edges + number of faces
@@ -140,37 +76,6 @@ class MeshTri(_BaseMesh):
     def genus(self):
         # https://math.stackexchange.com/a/85164/36678
         return 1 - self.euler_characteristic / 2
-
-    @property
-    def half_edge_coords(self):
-        if self._half_edge_coords is None:
-            p = self.points[self.idx_hierarchy]
-            self._half_edge_coords = p[1] - p[0]
-        return self._half_edge_coords
-
-    @property
-    def ei_dot_ei(self):
-        if self._ei_dot_ei is None:
-            # einsum is faster if the tail survives, e.g., ijk,ijk->jk.
-            # <https://gist.github.com/nschloe/8bc015cc1a9e5c56374945ddd711df7b>
-            # TODO reorganize the data?
-            self._ei_dot_ei = numpy.einsum(
-                "ijk, ijk->ij", self.half_edge_coords, self.half_edge_coords
-            )
-        return self._ei_dot_ei
-
-    @property
-    def ei_dot_ej(self):
-        if self._ei_dot_ej is None:
-            # einsum is faster if the tail survives, e.g., ijk,ijk->jk.
-            # <https://gist.github.com/nschloe/8bc015cc1a9e5c56374945ddd711df7b>
-            # TODO reorganize the data?
-            self._ei_dot_ej = numpy.einsum(
-                "ijk, ijk->ij",
-                self.half_edge_coords[[1, 2, 0]],
-                self.half_edge_coords[[2, 0, 1]],
-            )
-        return self._ei_dot_ej
 
     @property
     def cell_volumes(self):
@@ -494,21 +399,6 @@ class MeshTri(_BaseMesh):
         )
 
     @property
-    def is_point_used(self):
-        # Check which vertices are used.
-        # If there are vertices which do not appear in the cells list, this
-        # ```
-        # uvertices, uidx = numpy.unique(cells, return_inverse=True)
-        # cells = uidx.reshape(cells.shape)
-        # points = points[uvertices]
-        # ```
-        # helps.
-        if self._is_point_used is None:
-            self._is_point_used = numpy.zeros(len(self.points), dtype=bool)
-            self._is_point_used[self.cells["points"]] = True
-        return self._is_point_used
-
-    @property
     def is_boundary_cell(self):
         if self._is_boundary_cell is None:
             assert self.is_boundary_edge_local is not None
@@ -660,7 +550,7 @@ class MeshTri(_BaseMesh):
             #   0.5 * (0.5 * edge_length) * covolume
             # = 0.25 * edge_length**2 * ce_ratio_edge_ratio
             #
-            self._cell_partitions = 0.25 * self.ei_dot_ei * self.ce_ratios
+            self._cell_partitions = self.ei_dot_ei * self.ce_ratios / 4
         return self._cell_partitions
 
     @property
@@ -671,22 +561,6 @@ class MeshTri(_BaseMesh):
                 self.points[point_cells], self.ei_dot_ei, self.ei_dot_ej
             )
         return self._cell_circumcenters
-
-    def compute_centroids(self, idx=slice(None)):
-        return numpy.sum(self.points[self.cells["points"][idx]], axis=1) / 3.0
-
-    @property
-    def cell_centroids(self):
-        """The centroids (barycenters, midpoints of the circumcircles) of all
-        triangles."""
-        if self._cell_centroids is None:
-            self._cell_centroids = self.compute_centroids()
-        return self._cell_centroids
-
-    @property
-    def cell_barycenters(self):
-        """See cell_centroids."""
-        return self.cell_centroids
 
     @property
     def cell_incenters(self):
@@ -706,7 +580,8 @@ class MeshTri(_BaseMesh):
     @property
     def cell_circumradius(self):
         """Get the circumradii of all cells"""
-        # See <http://mathworld.wolfram.com/Circumradius.html>.
+        # See <http://mathworld.wolfram.com/Circumradius.html> and
+        # <https://en.wikipedia.org/wiki/Cayley%E2%80%93Menger_determinant#Finding_the_circumradius_of_a_simplex>.
         a, b, c = numpy.sqrt(self.ei_dot_ei)
         return (a * b * c) / numpy.sqrt(
             (a + b + c) * (-a + b + c) * (a - b + c) * (a + b - c)
@@ -1134,7 +1009,6 @@ class MeshTri(_BaseMesh):
         self.plot_vertex(*args, **kwargs)
         plt.show()
         plt.close()
-        return
 
     def plot_vertex(self, point_id, show_ce_ratio=True):
         """Plot the vicinity of a point and its covolume/edgelength ratio.

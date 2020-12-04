@@ -1,103 +1,23 @@
 import numpy
 
-from .base import _BaseMesh
+from .base import _SimplexMesh
 from .helpers import compute_tri_areas, compute_triangle_circumcenters
 
 __all__ = ["MeshTetra"]
 
 
-# pylint: disable=too-many-instance-attributes
-class MeshTetra(_BaseMesh):
+class MeshTetra(_SimplexMesh):
     """Class for handling tetrahedral meshes."""
 
-    def __init__(self, points, cells):
-        """Initialization."""
-        # Sort cells and points, first every row, then the rows themselves. This helps
-        # in many downstream applications, e.g., when constructing linear systems with
-        # the cells/edges. (When converting to CSR format, the I/J entries must be
-        # sorted.) Don't use cells.sort(axis=1) to avoid
-        # ```
-        # ValueError: sort array is read-only
-        # ```
-        cells = numpy.sort(cells, axis=1)
-        cells = cells[cells[:, 0].argsort()]
+    def __init__(self, points, cells, sort_cells=False):
+        super().__init__(points, cells, sort_cells=sort_cells)
 
-        self._points = points
-        super().__init__()
-
-        # Assert that all vertices are used.
-        # If there are vertices which do not appear in the cells list, this
-        # ```
-        # uvertices, uidx = numpy.unique(cells, return_inverse=True)
-        # cells = uidx.reshape(cells.shape)
-        # points = points[uvertices]
-        # ```
-        # helps.
-        is_used = numpy.zeros(len(points), dtype=bool)
-        is_used[cells] = True
-        assert numpy.all(is_used), "There are {} dangling points in the mesh".format(
-            numpy.sum(~is_used)
-        )
-
-        self.cells = {"points": cells}
-
+        self._half_edge_coords = None
+        self._ei_dot_ei = None
+        self._ei_dot_ej = None
         self._control_volumes = None
         self._circumcenters = None
         self.subdomains = {}
-
-        # Arrange the point_face_cells such that point k is opposite of face k in each
-        # cell.
-        nds = self.cells["points"].T
-        idx = numpy.array([[1, 2, 3], [2, 3, 0], [3, 0, 1], [0, 1, 2]]).T
-        self.point_face_cells = nds[idx]
-
-        # Arrange the idx_hierarchy (point->edge->face->cells) such that
-        #
-        #   * point k is opposite of edge k in each face,
-        #   * duplicate edges are in the same spot of the each of the faces,
-        #   * all points are in domino order ([1, 2], [2, 3], [3, 1]),
-        #   * the same edges are easy to find:
-        #      - edge 0: face+1, edge 2
-        #      - edge 1: face+2, edge 1
-        #      - edge 2: face+3, edge 0
-        #   * opposite edges are easy to find, too:
-        #      - edge 0  <-->  (face+2, edge 0)  equals  (face+3, edge 2)
-        #      - edge 1  <-->  (face+1, edge 1)  equals  (face+3, edge 1)
-        #      - edge 2  <-->  (face+1, edge 0)  equals  (face+2, edge 2)
-        #
-        self.local_idx = numpy.array(
-            [
-                [[2, 3], [3, 1], [1, 2]],
-                [[3, 0], [0, 2], [2, 3]],
-                [[0, 1], [1, 3], [3, 0]],
-                [[1, 2], [2, 0], [0, 1]],
-            ]
-        ).T
-        self.idx_hierarchy = nds[self.local_idx]
-
-        # The inverted local index.
-        # This array specifies for each of the three points which edge endpoints
-        # correspond to it.
-        self.local_idx_inv = [
-            [tuple(i) for i in zip(*numpy.where(self.local_idx == point_idx))]
-            for point_idx in range(4)
-        ]
-
-        # create ei_dot_ei, ei_dot_ej
-        self.half_edge_coords = (
-            self.points[self.idx_hierarchy[1]] - self.points[self.idx_hierarchy[0]]
-        )
-        self.ei_dot_ei = numpy.einsum(
-            "ijkl, ijkl->ijk", self.half_edge_coords, self.half_edge_coords
-        )
-        self.ei_dot_ej = numpy.einsum(
-            "ijkl, ijkl->ijk",
-            self.half_edge_coords[[1, 2, 0]],
-            self.half_edge_coords[[2, 0, 1]]
-            # This is equivalent:
-            # numpy.roll(self.half_edge_coords, 1, axis=0),
-            # numpy.roll(self.half_edge_coords, 2, axis=0),
-        )
 
         self.ce_ratios = self._compute_ce_ratios_geometric()
         # self.ce_ratios = self._compute_ce_ratios_algebraic()
@@ -110,27 +30,12 @@ class MeshTetra(_BaseMesh):
         self.faces = None
 
         self._cell_centroids = None
-        return
 
     def __repr__(self):
         num_points = len(self.points)
         num_cells = len(self.cells["points"])
         string = f"<meshplex tetra mesh, {num_points} cells, {num_cells} points>"
         return string
-
-    @property
-    def points(self):
-        return self._points
-
-    @points.setter
-    def set_points(self, new_points):
-        assert new_points.shape == self._points.shape
-        # reset all computed values
-        self.ei_do_ei = None
-
-    def get_ce_ratios(self):
-        """Covolume-edge length ratios."""
-        return self.ce_ratios
 
     def mark_boundary(self):
         if "faces" not in self.cells:
@@ -385,20 +290,6 @@ class MeshTetra(_BaseMesh):
         return ce_ratios
 
     @property
-    def cell_centroids(self):
-        """The centroids (barycenters, midpoints of the circumcircles) of all tetrahedra."""
-        if self._cell_centroids is None:
-            self._cell_centroids = (
-                numpy.sum(self.points[self.cells["points"]], axis=1) / 4.0
-            )
-        return self._cell_centroids
-
-    @property
-    def cell_barycenters(self):
-        """See cell_centroids()."""
-        return self.cell_centroids
-
-    @property
     def cell_circumcenters(self):
         if self._circumcenters is None:
             self._compute_cell_circumcenters()
@@ -408,20 +299,22 @@ class MeshTetra(_BaseMesh):
     def cell_incenters(self):
         """Get the midpoints of the inspheres."""
         # https://math.stackexchange.com/a/2864770/36678
-        face_areas = compute_tri_areas(self.ei_dot_ej)
+        facet_areas = compute_tri_areas(self.ei_dot_ej)
         # abc = numpy.sqrt(self.ei_dot_ei)
-        face_areas /= numpy.sum(face_areas, axis=0)
-        return numpy.einsum("ij,jik->jk", face_areas, self.points[self.cells["points"]])
+        facet_areas /= numpy.sum(facet_areas, axis=0)
+        return numpy.einsum(
+            "ij,jik->jk", facet_areas, self.points[self.cells["points"]]
+        )
 
     @property
     def cell_inradius(self):
         # https://en.wikipedia.org/wiki/Tetrahedron#Inradius
-        face_areas = compute_tri_areas(self.ei_dot_ej)
-        return 3 * self.cell_volumes / numpy.sum(face_areas, axis=0)
+        facet_areas = compute_tri_areas(self.ei_dot_ej)
+        return 3 * self.cell_volumes / numpy.sum(facet_areas, axis=0)
 
     @property
     def cell_circumradius(self):
-        # # Just take the distance of the circumcenter to one of the points for now.
+        # Just take the distance of the circumcenter to one of the points for now.
         dist = self.points[self.idx_hierarchy[0, 0, 0]] - self.cell_circumcenters
         circumradius = numpy.sqrt(numpy.einsum("ij,ij->i", dist, dist))
         # https://en.wikipedia.org/wiki/Tetrahedron#Circumradius
@@ -523,7 +416,7 @@ class MeshTetra(_BaseMesh):
         if self._control_volumes is None:
             #   1/3. * (0.5 * edge_length) * covolume
             # = 1/6 * edge_length**2 * ce_ratio_edge_ratio
-            v = self.ei_dot_ei * self.ce_ratios / 6.0
+            v = self.ei_dot_ei * self.ce_ratios / 6
             # Explicitly sum up contributions per cell first. Makes numpy.add.at faster.
             # For every point k (range(4)), check for which edges k appears in local_idx,
             # and sum() up the v's from there.
