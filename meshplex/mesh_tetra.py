@@ -299,16 +299,18 @@ class MeshTetra(_SimplexMesh):
     def cell_incenters(self):
         """Get the midpoints of the inspheres."""
         # https://math.stackexchange.com/a/2864770/36678
-        face_areas = compute_tri_areas(self.ei_dot_ej)
+        facet_areas = compute_tri_areas(self.ei_dot_ej)
         # abc = numpy.sqrt(self.ei_dot_ei)
-        face_areas /= numpy.sum(face_areas, axis=0)
-        return numpy.einsum("ij,jik->jk", face_areas, self.points[self.cells["points"]])
+        facet_areas /= numpy.sum(facet_areas, axis=0)
+        return numpy.einsum(
+            "ij,jik->jk", facet_areas, self.points[self.cells["points"]]
+        )
 
     @property
     def cell_inradius(self):
         # https://en.wikipedia.org/wiki/Tetrahedron#Inradius
-        face_areas = compute_tri_areas(self.ei_dot_ej)
-        return 3 * self.cell_volumes / numpy.sum(face_areas, axis=0)
+        facet_areas = compute_tri_areas(self.ei_dot_ej)
+        return 3 * self.cell_volumes / numpy.sum(facet_areas, axis=0)
 
     @property
     def cell_circumradius(self):
@@ -414,7 +416,7 @@ class MeshTetra(_SimplexMesh):
         if self._control_volumes is None:
             #   1/3. * (0.5 * edge_length) * covolume
             # = 1/6 * edge_length**2 * ce_ratio_edge_ratio
-            v = self.ei_dot_ei * self.ce_ratios / 6.0
+            v = self.ei_dot_ei * self.ce_ratios / 6
             # Explicitly sum up contributions per cell first. Makes numpy.add.at faster.
             # For every point k (range(4)), check for which edges k appears in local_idx,
             # and sum() up the v's from there.

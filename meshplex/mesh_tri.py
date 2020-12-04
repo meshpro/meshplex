@@ -550,7 +550,7 @@ class MeshTri(_SimplexMesh):
             #   0.5 * (0.5 * edge_length) * covolume
             # = 0.25 * edge_length**2 * ce_ratio_edge_ratio
             #
-            self._cell_partitions = 0.25 * self.ei_dot_ei * self.ce_ratios
+            self._cell_partitions = self.ei_dot_ei * self.ce_ratios / 4
         return self._cell_partitions
 
     @property
