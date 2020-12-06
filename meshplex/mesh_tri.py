@@ -832,6 +832,7 @@ class MeshTri(_SimplexMesh):
         show_axes=True,
         cell_quality_coloring=None,
         show_point_numbers=False,
+        show_edge_numbers=False,
         show_cell_numbers=False,
         cell_mask=None,
         mark_points=None,
@@ -878,7 +879,20 @@ class MeshTri(_SimplexMesh):
                     x[0],
                     x[1],
                     str(i),
-                    bbox=dict(facecolor="w", alpha=0.7),
+                    bbox={"facecolor": "w", "alpha": 0.7},
+                    horizontalalignment="center",
+                    verticalalignment="center",
+                )
+
+        if show_edge_numbers:
+            for i, point_ids in enumerate(self.edges["points"]):
+                midpoint = numpy.sum(self.points[point_ids], axis=0) / 2
+                plt.text(
+                    midpoint[0],
+                    midpoint[1],
+                    str(i),
+                    bbox={"facecolor": "b", "alpha": 0.7},
+                    color="w",
                     horizontalalignment="center",
                     verticalalignment="center",
                 )
@@ -889,7 +903,7 @@ class MeshTri(_SimplexMesh):
                     x[0],
                     x[1],
                     str(i),
-                    bbox=dict(facecolor="r", alpha=0.5),
+                    bbox={"facecolor": "r", "alpha": 0.5},
                     horizontalalignment="center",
                     verticalalignment="center",
                 )

@@ -13,10 +13,12 @@ def test_show_mesh():
     mesh.show(
         show_axes=False,
         cell_quality_coloring=("viridis", 0.0, 1.0, True),
+        show_point_numbers=True,
+        show_edge_numbers=True,
         show_cell_numbers=True,
-        mark_cells=[0, 3, 7],
         mark_points=[1],
         mark_edges=[0],
+        mark_cells=[0, 3, 7],
         nondelaunay_edge_color="r",
         boundary_edge_color="b",
         control_volume_centroid_color="g",
