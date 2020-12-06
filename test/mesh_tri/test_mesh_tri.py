@@ -6,7 +6,7 @@ import tempfile
 import meshio
 import numpy
 import pytest
-from helpers import near_equal, run
+from ..helpers import near_equal, run
 
 import meshplex
 

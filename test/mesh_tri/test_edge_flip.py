@@ -2,7 +2,7 @@ import pathlib
 
 import meshio
 import numpy
-from helpers import near_equal
+from ..helpers import near_equal
 
 import meshplex
 
