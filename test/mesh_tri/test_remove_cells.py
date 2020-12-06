@@ -3,9 +3,9 @@ import pathlib
 import numpy
 import pytest
 
-from .helpers import assert_mesh_consistency, assert_mesh_equality, compute_all_entities
-
 import meshplex
+
+from .helpers import assert_mesh_consistency, assert_mesh_equality, compute_all_entities
 
 
 def get_mesh0():

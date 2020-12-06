@@ -917,6 +917,7 @@ class MeshTri(_SimplexMesh):
         if mark_cells is not None:
             if numpy.asarray(mark_cells).dtype == bool:
                 mark_cells = numpy.where(mark_cells)[0]
+
             patches = [
                 Polygon(self.points[self.cells["points"][idx]]) for idx in mark_cells
             ]
@@ -1232,9 +1233,6 @@ class MeshTri(_SimplexMesh):
 
             # outer boundary edges
             ec_idx1 = ec_idx[is_boundary_edge]
-            # print(self.edges_cells["boundary"][1, ec_idx1])
-            # print(adj_cells[c, is_boundary_edge])
-            # self.show(mark_edges=edge_gids)
             assert numpy.all(
                 self.edges_cells["boundary"][1, ec_idx1]
                 == adj_cells[c, is_boundary_edge]

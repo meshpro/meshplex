@@ -3,9 +3,10 @@ from math import fsum
 
 import numpy
 import pytest
-from .helpers import near_equal, run
 
 import meshplex
+
+from .helpers import near_equal, run
 
 this_dir = pathlib.Path(__file__).resolve().parent
 
