@@ -915,6 +915,8 @@ class MeshTri(_SimplexMesh):
             plt.plot(self.points[idx, 0], self.points[idx, 1], "x", color="r")
 
         if mark_cells is not None:
+            if numpy.asarray(mark_cells).dtype == bool:
+                mark_cells = numpy.where(mark_cells)[0]
             patches = [
                 Polygon(self.points[self.cells["points"][idx]]) for idx in mark_cells
             ]
