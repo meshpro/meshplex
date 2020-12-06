@@ -2,7 +2,7 @@ import pathlib
 
 import meshio
 import numpy
-from ..helpers import near_equal
+from .helpers import assert_mesh_consistency, assert_mesh_equality, compute_all_entities
 
 import meshplex
 
@@ -10,37 +10,23 @@ this_dir = pathlib.Path(__file__).resolve().parent
 
 
 def test_flip_delaunay():
-    mesh = meshio.read(this_dir / ".." / "meshes" / "pacman.vtk")
+    mesh0 = meshio.read(this_dir / ".." / "meshes" / "pacman.vtk")
 
     numpy.random.seed(123)
-    mesh.points[:, :2] += 5.0e-2 * numpy.random.rand(*mesh.points[:, :2].shape)
+    mesh0.points[:, :2] += 5.0e-2 * numpy.random.rand(*mesh0.points[:, :2].shape)
 
-    mesh = meshplex.MeshTri(mesh.points, mesh.get_cells_type("triangle"))
+    mesh0 = meshplex.MeshTri(mesh0.points[:, :2], mesh0.get_cells_type("triangle"))
+    compute_all_entities(mesh0)
 
-    assert mesh.num_delaunay_violations() == 16
+    assert mesh0.num_delaunay_violations() == 16
 
-    mesh.flip_until_delaunay()
-    assert mesh.num_delaunay_violations() == 0
+    mesh0.flip_until_delaunay()
+    assert mesh0.num_delaunay_violations() == 0
 
-    # Assert edges_cells integrity
-    for cell_gid, edge_gids in enumerate(mesh.cells["edges"]):
-        for edge_gid in edge_gids:
-            idx = mesh.edges_cells_idx[edge_gid]
-            if mesh.is_boundary_edge[edge_gid]:
-                assert cell_gid == mesh.edges_cells["boundary"][1, idx]
-            else:
-                assert cell_gid in mesh.edges_cells["interior"][1:3, idx]
+    assert_mesh_consistency(mesh0)
 
-    new_cells = mesh.cells["points"].copy()
-    new_coords = mesh.points.copy()
-
-    # Assert that some key values are updated properly
-    mesh2 = meshplex.MeshTri(new_coords, new_cells)
-    assert numpy.all(mesh.idx_hierarchy == mesh2.idx_hierarchy)
-    tol = 1.0e-15
-    assert near_equal(mesh.half_edge_coords, mesh2.half_edge_coords, tol)
-    assert near_equal(mesh.cell_volumes, mesh2.cell_volumes, tol)
-    assert near_equal(mesh.ei_dot_ej, mesh2.ei_dot_ej, tol)
+    mesh1 = meshplex.MeshTri(mesh0.points.copy(), mesh0.cells["points"].copy())
+    assert_mesh_equality(mesh0, mesh1)
 
 
 def test_flip_delaunay_near_boundary():
@@ -73,14 +59,7 @@ def test_flip_same_edge_twice():
     mesh.flip_until_delaunay()
     assert mesh.num_delaunay_violations() == 0
 
-    # Assert edges_cells integrity
-    for cell_gid, edge_gids in enumerate(mesh.cells["edges"]):
-        for edge_gid in edge_gids:
-            idx = mesh.edges_cells_idx[edge_gid]
-            if mesh.is_boundary_edge[edge_gid]:
-                assert cell_gid == mesh.edges_cells["boundary"][1, idx]
-            else:
-                assert cell_gid in mesh.edges_cells["interior"][1:3, idx]
+    assert_mesh_consistency(mesh)
 
     new_points = numpy.array(
         [[0.0, +0.0, 0.0], [0.1, -0.5, 0.0], [0.2, +0.0, 0.0], [0.1, +0.5, 0.0]]
