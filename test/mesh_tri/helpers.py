@@ -42,6 +42,15 @@ def assert_mesh_consistency(mesh):
             else:
                 assert cell_gid in mesh.edges_cells["interior"][1:3, idx]
 
+    # make sure the edges are opposite of the points
+    for cell_gid, (point_ids, edge_ids) in enumerate(
+        zip(mesh.cells["points"], mesh.cells["edges"])
+    ):
+        for k in range(len(point_ids)):
+            assert set(point_ids) == set(
+                [*mesh.edges["points"][edge_ids][k], point_ids[k]]
+            )
+
     # TODO add more consistency checks
 
 
