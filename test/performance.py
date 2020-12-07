@@ -1,7 +1,9 @@
 """
 """
-import perfplot
+import random
+
 import numpy
+import perfplot
 from scipy.spatial import Delaunay
 
 import meshplex
@@ -44,28 +46,40 @@ def setup(n):
         tri = Delaunay(pts)
 
         # Make sure there are exactly `n` boundary points
-        mesh = meshplex.MeshTri(pts, tri.simplices)
-        if numpy.sum(mesh.is_boundary_point) == n:
+        mesh0 = meshplex.MeshTri(pts, tri.simplices)
+        mesh1 = meshplex.MeshTri(pts, tri.simplices)
+        if numpy.sum(mesh0.is_boundary_point) == n:
             break
 
-    # move interior points a little bit such that we have edges to flip
-    max_step = numpy.min(mesh.cell_inradius) / 2
-    mesh.points = mesh.points + max_step * numpy.random.rand(*mesh.points.shape)
-    print(mesh.num_delaunay_violations())
-    return mesh
+    mesh0.create_edges()
+    mesh1.create_edges()
+
+    num_interior_edges = numpy.sum(mesh0.is_interior_edge)
+    idx = random.sample(range(num_interior_edges), n // 10)
+    print(num_interior_edges, len(idx), len(idx) / num_interior_edges)
+
+    # # move interior points a little bit such that we have edges to flip
+    # max_step = numpy.min(mesh.cell_inradius) / 2
+    # mesh.points = mesh.points + max_step * numpy.random.rand(*mesh.points.shape)
+    # print(mesh.num_delaunay_violations())
+    return mesh0, mesh1, idx
 
 
-def flip_old(mesh):
-    mesh.flip_until_delaunay_old()
+def flip_old(data):
+    mesh0, mesh1, idx = data
+    mesh0.flip_interior_edges_old(idx)
 
 
-def flip_new(mesh):
-    mesh.flip_until_delaunay()
+def flip_new(data):
+    mesh0, mesh1, idx = data
+    mesh1.flip_interior_edges(idx)
 
 
 perfplot.show(
     setup=setup,
-    kernels=[flip_old],
+    kernels=[flip_old, flip_new],
     n_range=[2 ** k for k in range(5, 13)],
-    equality_check=None
+    equality_check=None,
+    # set target time to 0 to avoid more than one repetition
+    target_time_per_measurement=0.0,
 )
