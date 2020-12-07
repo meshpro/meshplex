@@ -4,6 +4,7 @@ import warnings
 import numpy
 
 from .base import _SimplexMesh
+from .exceptions import MeshplexError
 from .helpers import (
     compute_ce_ratios,
     compute_tri_areas,
@@ -1137,31 +1138,10 @@ class MeshTri(_SimplexMesh):
         return num_flips
 
     def flip_interior_edges(self, is_flip_interior_edge):
-        interior_edges_cells = self.edges_cells["interior"][1:3].T
-
-        edge_gids = self.interior_edges[is_flip_interior_edge]
-
-        # self.show(mark_edges=edge_gids)
-        # self.show(mark_edges=self.is_boundary_edge)
-        # self.show(mark_edges=self.edges_cells["boundary"][0])
-        # self.show(mark_edges=self.edges_cells["interior"][0])
-        # exit(1)
-
-        adj_cells = interior_edges_cells[is_flip_interior_edge].T
-
-        # Get the local ids of the edge in the two adjacent cells.
-        # Get all edges of the adjacent cells
-        ec = self.cells["edges"][adj_cells]
-        # Find where the edge sits.
-        hits = ec == edge_gids[None, :, None]
-        # Make sure that there is exactly one match per cell
-        assert numpy.all(numpy.sum(hits, axis=2) == 1)
-        # translate to lids
-        idx = numpy.empty(hits.shape, dtype=int)
-        idx[..., 0] = 0
-        idx[..., 1] = 1
-        idx[..., 2] = 2
-        lids = idx[hits].reshape((2, -1))
+        edges_cells_flip = self.edges_cells["interior"][:, is_flip_interior_edge]
+        edge_gids = edges_cells_flip[0]
+        adj_cells = edges_cells_flip[1:3]
+        lids = edges_cells_flip[3:5]
 
         #        3                   3
         #        A                   A
@@ -1333,9 +1313,11 @@ class MeshTri(_SimplexMesh):
 
         # update cell_volumes, ce_ratios_per_half_edge
         cv = compute_tri_areas(self.ei_dot_ej[:, cell_ids])
-        ce = compute_ce_ratios(self.ei_dot_ej[:, cell_ids], cv)
         self.cell_volumes[cell_ids] = cv
-        self._ce_ratios[:, cell_ids] = ce
+
+        if self._ce_ratios is not None:
+            ce = compute_ce_ratios(self.ei_dot_ej[:, cell_ids], cv)
+            self._ce_ratios[:, cell_ids] = ce
 
         if self._interior_ce_ratios is not None:
             self._interior_ce_ratios[interior_edge_ids] = 0.0
