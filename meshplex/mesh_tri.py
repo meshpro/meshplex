@@ -264,6 +264,29 @@ class MeshTri(_SimplexMesh):
 
         return numpy.sum(~keep)
 
+    def remove_boundary_cells(self, criterion):
+        """Helper method for removing cells along the boundary.
+        The input criterion is a boolean array of length `sum(mesh.is_boundary_cell)`.
+
+        This helps, for example, in the following scenario.
+        When points are moving around, flip_until_delaunay() makes sure the mesh remains
+        a Delaunay mesh. This does not work on boundaries where very flat cells can
+        still occur or cells may even 'invert'. (The interior point moves outside.) In
+        this case, the boundary cell can be removed, and the newly outward node is made
+        a boundary node."""
+        num_removed = 0
+        while True:
+            crit = criterion(self.is_boundary_cell)
+            if numpy.all(~crit):
+                break
+            idx = self.is_boundary_cell.copy()
+            idx[idx] = crit
+            n = self.remove_cells(idx)
+            num_removed += n
+            if n == 0:
+                break
+        return num_removed
+
     @property
     def ce_ratios_per_interior_edge(self):
         if self._interior_ce_ratios is None:
@@ -1276,29 +1299,6 @@ class MeshTri(_SimplexMesh):
 
         self._update_cell_values(update_cell_ids, update_interior_edge_ids)
 
-    def remove_boundary_cells(self, criterion):
-        """Helper method for removing cells along the boundary.
-        The input criterion is a boolean array of length `sum(mesh.is_boundary_cell)`.
-
-        This helps, for example, in the following scenario.
-        When points are moving around, flip_until_delaunay() makes sure the mesh remains
-        a Delaunay mesh. This does not work on boundaries where very flat cells can
-        still occur or cells may even 'invert'. (The interior point moves outside.) In
-        this case, the boundary cell can be removed, and the newly outward node is made
-        a boundary node."""
-        num_removed = 0
-        while True:
-            crit = criterion(self.is_boundary_cell)
-            if numpy.all(~crit):
-                break
-            idx = self.is_boundary_cell.copy()
-            idx[idx] = crit
-            n = self.remove_cells(idx)
-            num_removed += n
-            if n == 0:
-                break
-        return num_removed
-
     def _update_cell_values(self, cell_ids, interior_edge_ids):
         """Updates all sorts of cell information for the given cell IDs."""
         # update idx_hierarchy
@@ -1360,6 +1360,11 @@ class MeshTri(_SimplexMesh):
                 self._interior_ce_ratios[
                     interior_edge_ids[is_edge[k]]
                 ] += self.ce_ratios[k, adj_cells[is_edge[k], 1]]
+
+        if self._is_boundary_cell is not None:
+            self._is_boundary_cell[cell_ids] = numpy.any(
+                self.is_boundary_edge_local[:, cell_ids], axis=0
+            )
 
         # TODO update those values
         self._cell_centroids = None

@@ -51,6 +51,13 @@ def assert_mesh_consistency(mesh):
                 [*mesh.edges["points"][edge_ids][k], point_ids[k]]
             )
 
+    # make sure the is_boundary_point/edge/cell is consistent
+    ref_cells = numpy.any(mesh.is_boundary_edge_local, axis=0)
+    assert numpy.all(mesh.is_boundary_cell == ref_cells)
+    ref_points = numpy.zeros(len(mesh.points), dtype=bool)
+    ref_points[mesh.idx_hierarchy[..., mesh.is_boundary_edge_local]] = True
+    assert numpy.all(mesh.is_boundary_point == ref_points)
+
     # TODO add more consistency checks
 
 

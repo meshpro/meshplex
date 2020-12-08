@@ -246,6 +246,29 @@ def test_flip_infinite():
     assert num_flips == 0
 
 
+def test_flip_interior_to_boundary():
+    #  __________          __________
+    #  |\__      A         |\__      A
+    #  |   \__  /|\        |   \__  / \
+    #  |      \/ | \  ==>  |      \/___\
+    #  |    __/\ | /       |    __/\   /
+    #  | __/    \|/        | __/    \ /
+    #  |/________V         |/________V
+    #
+    points = numpy.array(
+        [[0.0, 0.0], [1.0, 0.0], [1.1, 0.5], [1.0, 1.0], [0.0, 1.0], [0.9, 0.5]]
+    )
+    cells = numpy.array([[0, 1, 5], [1, 3, 5], [1, 2, 3], [3, 4, 5], [0, 5, 4]])
+
+    mesh = meshplex.MeshTri(points, cells)
+    compute_all_entities(mesh)
+    # mesh.show(mark_cells=mesh.is_boundary_cell)
+    mesh.flip_until_delaunay()
+    assert_mesh_consistency(mesh)
+    # mesh.show(mark_cells=mesh.is_boundary_cell)
+    assert numpy.all(mesh.is_boundary_cell)
+
+
 def test_flip_delaunay():
     numpy.random.seed(123)
     mesh0 = meshio.read(this_dir / ".." / "meshes" / "pacman.vtk")
@@ -261,8 +284,13 @@ def test_flip_delaunay():
 
     assert_mesh_consistency(mesh0)
 
-    mesh1 = meshplex.MeshTri(mesh0.points.copy(), mesh0.cells["points"].copy())
-    assert_mesh_equality(mesh0, mesh1)
+    # mesh0.show(mark_cells=mesh0.is_boundary_cell)
+
+    # We don't need to check for exact equality with a replicated mesh. The order of the
+    # edges will be different, for example. Just make sure the mesh is consistent.
+    # mesh1 = meshplex.MeshTri(mesh0.points.copy(), mesh0.cells["points"].copy())
+    # mesh1.create_edges()
+    # assert_mesh_equality(mesh0, mesh1)
 
 
 if __name__ == "__main__":
