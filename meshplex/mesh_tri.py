@@ -4,7 +4,6 @@ import warnings
 import numpy
 
 from .base import _SimplexMesh
-from .exceptions import MeshplexError
 from .helpers import (
     compute_ce_ratios,
     compute_tri_areas,

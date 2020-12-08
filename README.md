@@ -66,7 +66,7 @@ mesh.show()
 For triangular meshes, meshplex also has some mesh manipulation routines:
 <!--exdown-skip-->
 ```python
-mesh.flip_until_delaunay()      # flips edges until the mesh is Delaunay
+mesh.flip_until_delaunay()  # flips edges until the mesh is Delaunay
 mesh.remove_cells([0, 2, ...])  # removes some cells
 ```
 
