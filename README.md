@@ -24,6 +24,7 @@ meshplex is used in [optimesh](https://github.com/nschloe/optimesh) and
 
 ### Quickstart
 
+For triangular and tetrahedral meshes, meshplex can compute the following data:
 ```python
 import numpy
 import meshplex
@@ -62,9 +63,15 @@ mesh.flip_until_delaunay()
 # show the mesh
 mesh.show()
 ```
+For triangular meshes, meshplex also has some mesh manipulation routines:
+<!--exdown-skip-->
+```python
+mesh.flip_until_delaunay()  # flips edges until the mesh is Delaunay
+mesh.remove_cells([0, 2, ...])  # removes some cells
+```
 
-meshplex works much the same way with tetrahedral meshes. For a documentation of all
-classes and functions, see [readthedocs](https://meshplex.readthedocs.io/).
+For a documentation of all classes and functions, see
+[readthedocs](https://meshplex.readthedocs.io/).
 
 (For mesh creation, check out
 [this list](https://github.com/nschloe/awesome-scientific-computing#meshing)).
