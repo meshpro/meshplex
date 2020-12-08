@@ -49,10 +49,6 @@ jobs:
     - uses: actions/checkout@v2
       with:
         lfs: true
-    - name: Install system requirements
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y python3-vtk7
     - name: Test with tox
       run: |
         pip install tox
