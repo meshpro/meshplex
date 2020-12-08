@@ -909,6 +909,8 @@ class MeshTri(_SimplexMesh):
                 )
 
         if show_edge_numbers:
+            if self.edges is None:
+                self.create_edges()
             for i, point_ids in enumerate(self.edges["points"]):
                 midpoint = numpy.sum(self.points[point_ids], axis=0) / 2
                 plt.text(
