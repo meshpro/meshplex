@@ -14,22 +14,74 @@ def test_flip_simple():
     #        3                   3
     #        A                   A
     #       /|\                 / \
-    #      / | \               /   \
-    #     /  |  \             /  1  \
-    #   0/ 0 |   \1   ==>   0/_______\1
+    #     1/ | \4             1/ 1 \4
+    #     /  |  \             /     \
+    #   0/ 0 3   \2   ==>   0/___3___\2
     #    \   | 1 /           \       /
-    #     \  |  /             \  0  /
-    #      \ | /               \   /
+    #     \  |  /             \     /
+    #     0\ | /2             0\ 0 /2
     #       \|/                 \ /
     #        V                   V
-    #        2                   2
+    #        1                   1
     #
     points = numpy.array([[-0.1, 0.0], [0.0, -1.0], [0.1, 0.0], [0.0, 1.1]])
     cells = numpy.array([[0, 1, 3], [1, 2, 3]])
     mesh = meshplex.MeshTri(points, cells)
+
+    mesh.create_edges()
+    assert mesh.num_delaunay_violations() == 1
+    assert numpy.array_equal(
+        mesh.edges["points"], [[0, 1], [0, 3], [1, 2], [1, 3], [2, 3]]
+    )
+    assert numpy.array_equal(mesh.cells["edges"], [[3, 1, 0], [4, 3, 2]])
+    assert_mesh_consistency(mesh)
+
     # mesh.show()
     mesh.flip_until_delaunay()
     assert_mesh_consistency(mesh)
+    assert mesh.num_delaunay_violations() == 0
+    assert numpy.array_equal(
+        mesh.edges["points"], [[0, 1], [0, 3], [1, 2], [0, 2], [2, 3]]
+    )
+    assert numpy.array_equal(mesh.cells["points"], [[0, 1, 2], [0, 2, 3]])
+    assert numpy.array_equal(mesh.cells["edges"], [[2, 3, 0], [4, 1, 3]])
+
+
+def test_flip_simple_opposite_orientation():
+    #        3                   3
+    #        A                   A
+    #       /|\                 / \
+    #     1/ | \4             1/ 1 \4
+    #     /  |  \             /     \
+    #   0/ 0 3   \2   ==>   0/___3___\2
+    #    \   | 1 /           \       /
+    #     \  |  /             \     /
+    #     0\ | /2             0\ 0 /2
+    #       \|/                 \ /
+    #        V                   V
+    #        1                   1
+    #
+    points = numpy.array([[-0.1, 0.0], [0.0, -1.0], [0.1, 0.0], [0.0, 1.1]])
+    cells = numpy.array([[0, 1, 3], [1, 3, 2]])
+    mesh = meshplex.MeshTri(points, cells)
+
+    mesh.create_edges()
+    assert mesh.num_delaunay_violations() == 1
+    assert numpy.array_equal(
+        mesh.edges["points"], [[0, 1], [0, 3], [1, 2], [1, 3], [2, 3]]
+    )
+    assert numpy.array_equal(mesh.cells["edges"], [[3, 1, 0], [4, 2, 3]])
+    assert_mesh_consistency(mesh)
+
+    # mesh.show()
+    mesh.flip_until_delaunay()
+    assert_mesh_consistency(mesh)
+    assert mesh.num_delaunay_violations() == 0
+    assert numpy.array_equal(
+        mesh.edges["points"], [[0, 1], [0, 3], [1, 2], [0, 2], [2, 3]]
+    )
+    assert numpy.array_equal(mesh.cells["points"], [[0, 1, 2], [0, 2, 3]])
+    assert numpy.array_equal(mesh.cells["edges"], [[2, 3, 0], [4, 1, 3]])
 
 
 def test_flip_delaunay_near_boundary():

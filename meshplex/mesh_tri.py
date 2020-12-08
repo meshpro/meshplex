@@ -1165,6 +1165,12 @@ class MeshTri(_SimplexMesh):
             ]
         )
 
+        # This must be computed before the points are reset
+        equal_orientation = (
+            self.cells["points"][adj_cells[0], (lids[0] + 1) % 3]
+            == self.cells["points"][adj_cells[1], (lids[1] + 2) % 3]
+        )
+
         # Set up new cells->points relationships.
         # Make sure that positive/negative area orientation is preserved. This is
         # especially important for signed area computations: In a mesh of all positive
@@ -1181,10 +1187,6 @@ class MeshTri(_SimplexMesh):
         previous_edges = self.cells["edges"][adj_cells].copy()  # TODO need copy?
         # Do the neighboring cells have equal orientation (both point sets
         # clockwise/counterclockwise)?
-        equal_orientation = (
-            self.cells["points"][adj_cells[0], (lids[0] + 1) % 3]
-            == self.cells["points"][adj_cells[1], (lids[1] + 2) % 3]
-        )
         #
         # edges as in the above ascii art
         i0 = numpy.ones(equal_orientation.shape[0], dtype=int)
