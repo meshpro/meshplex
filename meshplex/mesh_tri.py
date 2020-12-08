@@ -1230,37 +1230,35 @@ class MeshTri(_SimplexMesh):
             (e[2], 1, 1, 0),
             (e[3], 0, 1, 1),
         ]
-        for edge, prev_adj, new_adj, new_local_edge_index in conf:
+        for edge, prev_adj_idx, new_adj_idx, new_local_edge_index in conf:
             idx = self.edges_cells_idx[edge]
             # boundary...
             is_boundary = self.is_boundary_edge[edge]
             idx_bou = idx[is_boundary]
-            previous_adjacent = adj_cells[prev_adj][is_boundary]
-            new_adjacent = adj_cells[new_adj][is_boundary]
+            prev_adjacent = adj_cells[prev_adj_idx][is_boundary]
+            new__adjacent = adj_cells[new_adj_idx][is_boundary]
             # The assertion just makes sure we're doing the right thing. It should never
             # trigger.
-            assert numpy.all(
-                previous_adjacent == self.edges_cells["boundary"][1, idx_bou]
-            )
-            self.edges_cells["boundary"][1, idx_bou] = new_adjacent
+            assert numpy.all(prev_adjacent == self.edges_cells["boundary"][1, idx_bou])
+            self.edges_cells["boundary"][1, idx_bou] = new__adjacent
             self.edges_cells["boundary"][2, idx_bou] = new_local_edge_index
             # ...or interior?
-            previous_adjacent = adj_cells[prev_adj][~is_boundary]
-            new_adjacent = adj_cells[new_adj][~is_boundary]
+            prev_adjacent = adj_cells[prev_adj_idx][~is_boundary]
+            new__adjacent = adj_cells[new_adj_idx][~is_boundary]
             idx_int = idx[~is_boundary]
             # Interior edges have two neighboring cells in no particular order. Find out
             # if the adj_cell if the flipped edge comes first or second.
-            is_first = previous_adjacent == self.edges_cells["interior"][1, idx_int]
+            is_first = prev_adjacent == self.edges_cells["interior"][1, idx_int]
             # The following is just a safety net. We could as well take ~is_first.
-            is_second = previous_adjacent == self.edges_cells["interior"][2, idx_int]
+            is_second = prev_adjacent == self.edges_cells["interior"][2, idx_int]
             assert numpy.all(numpy.logical_xor(is_first, is_second))
             # actually set the data
             idx_first = idx_int[is_first]
-            idx_secnd = idx_int[~is_first]
-            self.edges_cells["interior"][1, idx_first] = new_adjacent[is_first]
+            self.edges_cells["interior"][1, idx_first] = new__adjacent[is_first]
             self.edges_cells["interior"][3, idx_first] = new_local_edge_index
             # likewise for when the cell appears in the second column
-            self.edges_cells["interior"][2, idx_secnd] = new_adjacent[~is_first]
+            idx_secnd = idx_int[~is_first]
+            self.edges_cells["interior"][2, idx_secnd] = new__adjacent[~is_first]
             self.edges_cells["interior"][4, idx_secnd] = new_local_edge_index
 
         # Schedule the cell ids for data updates
