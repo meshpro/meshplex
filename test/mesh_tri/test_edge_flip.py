@@ -10,6 +10,25 @@ from .helpers import assert_mesh_consistency, assert_mesh_equality, compute_all_
 this_dir = pathlib.Path(__file__).resolve().parent
 
 
+def test_flip_delaunay():
+    numpy.random.seed(123)
+    mesh0 = meshio.read(this_dir / ".." / "meshes" / "pacman.vtk")
+    mesh0.points[:, :2] += 5.0e-2 * numpy.random.rand(*mesh0.points[:, :2].shape)
+
+    mesh0 = meshplex.MeshTri(mesh0.points[:, :2], mesh0.get_cells_type("triangle"))
+    compute_all_entities(mesh0)
+
+    assert mesh0.num_delaunay_violations() == 16
+
+    mesh0.flip_until_delaunay()
+    assert mesh0.num_delaunay_violations() == 0
+
+    assert_mesh_consistency(mesh0)
+
+    mesh1 = meshplex.MeshTri(mesh0.points.copy(), mesh0.cells["points"].copy())
+    assert_mesh_equality(mesh0, mesh1)
+
+
 def test_flip_delaunay_near_boundary():
     points = numpy.array([[0.0, +0.0], [0.5, -0.1], [1.0, +0.0], [0.5, +0.1]])
     cells = numpy.array([[0, 1, 2], [0, 2, 3]])
@@ -118,26 +137,6 @@ def test_flip_orientation():
     assert numpy.all(mesh.signed_cell_areas < 0.0)
     mesh.flip_until_delaunay()
     assert numpy.all(mesh.signed_cell_areas < 0.0)
-
-
-def test_flip_delaunay():
-    mesh0 = meshio.read(this_dir / ".." / "meshes" / "pacman.vtk")
-
-    numpy.random.seed(123)
-    mesh0.points[:, :2] += 5.0e-2 * numpy.random.rand(*mesh0.points[:, :2].shape)
-
-    mesh0 = meshplex.MeshTri(mesh0.points[:, :2], mesh0.get_cells_type("triangle"))
-    compute_all_entities(mesh0)
-
-    assert mesh0.num_delaunay_violations() == 16
-
-    mesh0.flip_until_delaunay()
-    assert mesh0.num_delaunay_violations() == 0
-
-    assert_mesh_consistency(mesh0)
-
-    mesh1 = meshplex.MeshTri(mesh0.points.copy(), mesh0.cells["points"].copy())
-    assert_mesh_equality(mesh0, mesh1)
 
 
 def test_flip_infinite():

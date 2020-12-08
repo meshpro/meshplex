@@ -1146,17 +1146,17 @@ class MeshTri(_SimplexMesh):
         #        3                   3
         #        A                   A
         #       /|\                 / \
-        #      / | \               /   \
+        #     3/ | \2             3/   \2
         #     /  |  \             /  1  \
         #   0/ 0 |   \1   ==>   0/_______\1
         #    \   | 1 /           \       /
         #     \  |  /             \  0  /
-        #      \ | /               \   /
+        #     0\ | /1             0\   /1
         #       \|/                 \ /
         #        V                   V
         #        2                   2
         #
-        verts = numpy.array(
+        v = numpy.array(
             [
                 self.cells["points"][adj_cells[0], lids[0]],
                 self.cells["points"][adj_cells[1], lids[1]],
@@ -1165,43 +1165,41 @@ class MeshTri(_SimplexMesh):
             ]
         )
 
+        # Set up new cells->points relationships.
+        # Make sure that positive/negative area orientation is preserved. This is
+        # especially important for signed area computations: In a mesh of all positive
+        # areas, you don't want a negative area appear after an edge flip.
+        self.cells["points"][adj_cells[0]] = numpy.column_stack([v[0], v[2], v[1]])
+        self.cells["points"][adj_cells[1]] = numpy.column_stack([v[0], v[1], v[3]])
+
+        # Set up new edges->points relationships.
+        self.edges["points"][edge_gids] = numpy.sort(
+            numpy.column_stack([v[0], v[1]]), axis=1
+        )
+
+        # Set up new cells->edges relationships.
+        previous_edges = self.cells["edges"][adj_cells].copy()  # TODO need copy?
         # Do the neighboring cells have equal orientation (both point sets
         # clockwise/counterclockwise)?
         equal_orientation = (
             self.cells["points"][adj_cells[0], (lids[0] + 1) % 3]
             == self.cells["points"][adj_cells[1], (lids[1] + 2) % 3]
         )
-
-        # Set new cells.
-        # Make sure that positive/negative area orientation is preserved.
-        self.cells["points"][adj_cells[0]] = verts[[0, 2, 1]].T
-        self.cells["points"][adj_cells[1]] = verts[[0, 1, 3]].T
-
-        # Reset flipped edges
-        self.edges["points"][edge_gids] = numpy.sort(verts[[0, 1]].T, axis=1)
-
-        # Set up new cells->edges relationships.
-        previous_edges = self.cells["edges"][adj_cells].copy()
-
+        #
+        # edges as in the above ascii art
         i0 = numpy.ones(equal_orientation.shape[0], dtype=int)
         i0[~equal_orientation] = 2
         i1 = numpy.ones(equal_orientation.shape[0], dtype=int)
         i1[equal_orientation] = 2
-
-        self.cells["edges"][adj_cells[0]] = numpy.column_stack(
-            [
-                numpy.choose((lids[1] + i0) % 3, previous_edges[1].T),
-                edge_gids,
-                numpy.choose((lids[0] + 2) % 3, previous_edges[0].T),
-            ]
-        )
-        self.cells["edges"][adj_cells[1]] = numpy.column_stack(
-            [
-                numpy.choose((lids[1] + i1) % 3, previous_edges[1].T),
-                numpy.choose((lids[0] + 1) % 3, previous_edges[0].T),
-                edge_gids,
-            ]
-        )
+        e = [
+            numpy.choose((lids[0] + 2) % 3, previous_edges[0].T),
+            numpy.choose((lids[1] + i0) % 3, previous_edges[1].T),
+            numpy.choose((lids[1] + i1) % 3, previous_edges[1].T),
+            numpy.choose((lids[0] + 1) % 3, previous_edges[0].T),
+        ]
+        # The order here is tightly coupled to self.cells["points"] above
+        self.cells["edges"][adj_cells[0]] = numpy.column_stack([e[1], edge_gids, e[0]])
+        self.cells["edges"][adj_cells[1]] = numpy.column_stack([e[2], e[3], edge_gids])
 
         # update is_boundary_edge_local
         for k in range(3):
@@ -1209,48 +1207,61 @@ class MeshTri(_SimplexMesh):
                 self.cells["edges"][adj_cells, k]
             ]
 
-        # Update the edge->cells relationship. It doesn't change for the edge that was
-        # flipped, but for two of the other edges.
-        confs = [
-            (0, 1, numpy.choose((lids[0] + 1) % 3, previous_edges[0].T)),
-            (1, 0, numpy.choose((lids[1] + i0) % 3, previous_edges[1].T)),
+        # Update the edge->cells relationship. We need to update edges_cells info for
+        # all five edges.
+        # First update the flipped edge; it's always interior.
+        idx = self.edges_cells_idx[edge_gids]
+        # cell ids
+        self.edges_cells["interior"][1, idx] = adj_cells[0]
+        self.edges_cells["interior"][2, idx] = adj_cells[1]
+        # local edge ids; see self.cells["edges"]
+        self.edges_cells["interior"][3, idx] = 1
+        self.edges_cells["interior"][4, idx] = 2
+        #
+        # Now handle the four surrounding edges
+        conf = [
+            # The data is:
+            # (1) edge id
+            # (2) previous adjacent cell (adj_cells[0] or adj_cells[1])
+            # (3) new adjacent cell (adj_cells[0] or adj_cells[1])
+            # (4) local edge index in the new adjacent cell
+            (e[0], 0, 0, 2),
+            (e[1], 1, 0, 0),
+            (e[2], 1, 1, 0),
+            (e[3], 0, 1, 1),
         ]
-        for conf in confs:
-            c, d, edge_gids = conf
-            is_boundary_edge = self.is_boundary_edge[edge_gids]
-            is_interior_edge = ~is_boundary_edge
-            ec_idx = self.edges_cells_idx[edge_gids]
-
-            # k1 = num_adj_cells == 1
-            # k2 = num_adj_cells == 2
-            # assert numpy.all(numpy.logical_xor(k1, k2))
-
-            # outer boundary edges
-            ec_idx1 = ec_idx[is_boundary_edge]
+        for edge, prev_adj, new_adj, new_local_edge_index in conf:
+            idx = self.edges_cells_idx[edge]
+            # boundary...
+            is_boundary = self.is_boundary_edge[edge]
+            idx_bou = idx[is_boundary]
+            previous_adjacent = adj_cells[prev_adj][is_boundary]
+            new_adjacent = adj_cells[new_adj][is_boundary]
+            # The assertion just makes sure we're doing the right thing. It should never
+            # trigger.
             assert numpy.all(
-                self.edges_cells["boundary"][1, ec_idx1]
-                == adj_cells[c, is_boundary_edge]
+                previous_adjacent == self.edges_cells["boundary"][1, idx_bou]
             )
-            self.edges_cells["boundary"][1, ec_idx1] = adj_cells[d, is_boundary_edge]
-
-            # interior edges
-            ec_idx2 = ec_idx[is_interior_edge]
-            is_column0 = (
-                self.edges_cells["interior"][1, ec_idx2]
-                == adj_cells[c, is_interior_edge]
-            )
-            is_column1 = (
-                self.edges_cells["interior"][2, ec_idx2]
-                == adj_cells[c, is_interior_edge]
-            )
-            assert numpy.all(numpy.logical_xor(is_column0, is_column1))
-            #
-            self.edges_cells["interior"][1, ec_idx2[is_column0]] = adj_cells[
-                d, is_interior_edge
-            ][is_column0]
-            self.edges_cells["interior"][2, ec_idx2[is_column1]] = adj_cells[
-                d, is_interior_edge
-            ][is_column1]
+            self.edges_cells["boundary"][1, idx_bou] = new_adjacent
+            self.edges_cells["boundary"][2, idx_bou] = new_local_edge_index
+            # ...or interior?
+            previous_adjacent = adj_cells[prev_adj][~is_boundary]
+            new_adjacent = adj_cells[new_adj][~is_boundary]
+            idx_int = idx[~is_boundary]
+            # Interior edges have two neighboring cells in no particular order. Find out
+            # if the adj_cell if the flipped edge comes first or second.
+            is_first = previous_adjacent == self.edges_cells["interior"][1, idx_int]
+            # The following is just a safety net. We could as well take ~is_first.
+            is_second = previous_adjacent == self.edges_cells["interior"][2, idx_int]
+            assert numpy.all(numpy.logical_xor(is_first, is_second))
+            # actually set the data
+            idx_first = idx_int[is_first]
+            idx_secnd = idx_int[~is_first]
+            self.edges_cells["interior"][1, idx_first] = new_adjacent[is_first]
+            self.edges_cells["interior"][3, idx_first] = new_local_edge_index
+            # likewise for when the cell appears in the second column
+            self.edges_cells["interior"][2, idx_secnd] = new_adjacent[~is_first]
+            self.edges_cells["interior"][4, idx_secnd] = new_local_edge_index
 
         # Schedule the cell ids for data updates
         update_cell_ids = numpy.unique(adj_cells.T.flat)
