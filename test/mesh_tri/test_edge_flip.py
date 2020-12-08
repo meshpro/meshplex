@@ -148,8 +148,6 @@ def test_flip_same_edge_twice():
     mesh.flip_until_delaunay()
     assert mesh.num_delaunay_violations() == 0
 
-    print(mesh.cells)
-    print(mesh.edges_cells)
     mesh.show(
         mark_cells=mesh.is_boundary_cell,
         show_point_numbers=True,
