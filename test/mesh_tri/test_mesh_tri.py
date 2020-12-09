@@ -31,12 +31,12 @@ def _compute_polygon_area(pts):
 cell_dtypes = []
 cell_dtypes += [
     numpy.int32,
-    numpy.uint32,
 ]
 if platform.architecture()[0] == "64bit":
     cell_dtypes += [
+        numpy.uint32,  # when numpy is fixed, this can go to all arches
         numpy.int64,
-        # numpy.uint64
+        # numpy.uint64  # depends on the numpy fix
     ]
 
 
