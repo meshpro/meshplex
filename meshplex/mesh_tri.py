@@ -591,7 +591,7 @@ class MeshTri(_SimplexMesh):
     def cell_incenters(self):
         """Get the midpoints of the incircles."""
         # https://en.wikipedia.org/wiki/Incenter#Barycentric_coordinates
-        abc = numpy.sqrt(self.ei_dot_ei)
+        abc = self.edge_lengths
         abc /= numpy.sum(abc, axis=0)
         return numpy.einsum("ij,jik->jk", abc, self.points[self.cells["points"]])
 
@@ -599,7 +599,7 @@ class MeshTri(_SimplexMesh):
     def cell_inradius(self):
         """Get the inradii of all cells"""
         # See <http://mathworld.wolfram.com/Incircle.html>.
-        abc = numpy.sqrt(self.ei_dot_ei)
+        abc = self.edge_lengths
         return 2 * self.cell_volumes / numpy.sum(abc, axis=0)
 
     @property
@@ -607,10 +607,8 @@ class MeshTri(_SimplexMesh):
         """Get the circumradii of all cells"""
         # See <http://mathworld.wolfram.com/Circumradius.html> and
         # <https://en.wikipedia.org/wiki/Cayley%E2%80%93Menger_determinant#Finding_the_circumradius_of_a_simplex>.
-        a, b, c = numpy.sqrt(self.ei_dot_ei)
-        return (a * b * c) / numpy.sqrt(
-            (a + b + c) * (-a + b + c) * (a - b + c) * (a + b - c)
-        )
+        abc = self.edge_lengths
+        return numpy.prod(abc, axis=0) / 4 / self.cell_volumes
 
     @property
     def cell_quality(self):
@@ -627,7 +625,7 @@ class MeshTri(_SimplexMesh):
         #
         # where r_in is the incircle radius and r_out the circumcircle radius
         # and a, b, c are the edge lengths.
-        a, b, c = numpy.sqrt(self.ei_dot_ei)
+        a, b, c = self.edge_lengths
         return (-a + b + c) * (a - b + c) * (a + b - c) / (a * b * c)
 
     @property
@@ -635,7 +633,7 @@ class MeshTri(_SimplexMesh):
         """All angles in the triangle."""
         # The cosines of the angles are the negative dot products of the normalized
         # edges adjacent to the angle.
-        norms = numpy.sqrt(self.ei_dot_ei)
+        norms = self.edge_lengths
         normalized_ei_dot_ej = numpy.array(
             [
                 self.ei_dot_ej[0] / norms[1] / norms[2],
@@ -650,8 +648,8 @@ class MeshTri(_SimplexMesh):
         #
         #   \\int_V x,
         #
-        # over all atomic "triangles", i.e., areas cornered by a point, an edge midpoint,
-        # and a circumcenter.
+        # over all atomic "triangles", i.e., areas cornered by a point, an edge
+        # midpoint, and a circumcenter.
 
         # The integral of any linear function over a triangle is the average of the
         # values of the function in each of the three corners, times the area of the

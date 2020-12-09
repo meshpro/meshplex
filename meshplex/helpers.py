@@ -72,7 +72,6 @@ def compute_ce_ratios(ei_dot_ej, tri_areas):
     # Note that edge e_i is opposite of node i and the edges add up to 0.
     # (Those quantities can be shared between numerous methods, so share them.)
     #
-
     # There are multiple ways of deriving a closed form for the
     # covolume-edgelength ratios.
     #
