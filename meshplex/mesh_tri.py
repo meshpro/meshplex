@@ -42,7 +42,7 @@ class MeshTri(_SimplexMesh):
     def __repr__(self):
         num_points = len(self.points)
         num_cells = len(self.cells["points"])
-        string = f"<meshplex triangle mesh, {num_points} cells, {num_cells} points>"
+        string = f"<meshplex triangle mesh, {num_points} points, {num_cells} cells>"
         return string
 
     def _reset_point_data(self):
