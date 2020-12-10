@@ -48,6 +48,7 @@ class MeshTri(_SimplexMesh):
     def _reset_point_data(self):
         """Reset all data that changes when point coordinates changes."""
         self._half_edge_coords = None
+        self._edge_lengths = None
         self._ei_dot_ei = None
         self._ei_dot_ej = None
         self._cell_volumes = None
