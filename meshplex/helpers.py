@@ -114,7 +114,7 @@ def compute_ce_ratios(ei_dot_ej, tri_areas):
     #
     # Note that some simplifications are achieved by virtue of
     #
-    #   e1 + e2 + e3 = 0.
+    #   e0 + e1 + e2 = 0.
     #
     if numpy.any(tri_areas <= 0.0):
         raise MeshplexError("Degenerate cells.")
@@ -184,5 +184,6 @@ def compute_triangle_circumcenters(X, ei_dot_ei, ei_dot_ej):
     #     ei_dot_ei[2] * (ei_dot_ei[0] + ei_dot_ei[1] - ei_dot_ei[2]),
     # ])
     # alpha /= numpy.sum(alpha, axis=0)
+    # This last sum is the squared cell volume.
     # cc = (X[0].T * alpha[0] + X[1].T * alpha[1] + X[2].T * alpha[2]).T
     return cc
