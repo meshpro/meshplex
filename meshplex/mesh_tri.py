@@ -592,24 +592,21 @@ class MeshTri(_SimplexMesh):
     def cell_incenters(self):
         """Get the midpoints of the incircles."""
         # https://en.wikipedia.org/wiki/Incenter#Barycentric_coordinates
-        abc = self.edge_lengths
-        abc /= numpy.sum(abc, axis=0)
+        abc = self.edge_lengths / numpy.sum(self.edge_lengths, axis=0)
         return numpy.einsum("ij,jik->jk", abc, self.points[self.cells["points"]])
 
     @property
     def cell_inradius(self):
         """Get the inradii of all cells"""
         # See <http://mathworld.wolfram.com/Incircle.html>.
-        abc = self.edge_lengths
-        return 2 * self.cell_volumes / numpy.sum(abc, axis=0)
+        return 2 * self.cell_volumes / numpy.sum(self.edge_lengths, axis=0)
 
     @property
     def cell_circumradius(self):
         """Get the circumradii of all cells"""
         # See <http://mathworld.wolfram.com/Circumradius.html> and
         # <https://en.wikipedia.org/wiki/Cayley%E2%80%93Menger_determinant#Finding_the_circumradius_of_a_simplex>.
-        abc = self.edge_lengths
-        return numpy.prod(abc, axis=0) / 4 / self.cell_volumes
+        return numpy.prod(self.edge_lengths, axis=0) / 4 / self.cell_volumes
 
     @property
     def cell_quality(self):
