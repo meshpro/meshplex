@@ -139,14 +139,17 @@ class _SimplexMesh:
     @property
     def ei_dot_ej(self):
         if self._ei_dot_ej is None:
-            # einsum is faster if the tail survives, e.g., ijk,ijk->jk.
-            # <https://gist.github.com/nschloe/8bc015cc1a9e5c56374945ddd711df7b>
-            # TODO reorganize the data?
-            self._ei_dot_ej = numpy.einsum(
-                "...k, ...k->...",
-                self.half_edge_coords[[1, 2, 0]],
-                self.half_edge_coords[[2, 0, 1]],
-            )
+            self._ei_dot_ej = self.ei_dot_ei - numpy.sum(self.ei_dot_ei, axis=0) / 2
+            # An alternative is
+            # ```
+            # self._ei_dot_ej = numpy.einsum(
+            #     "...k, ...k->...",
+            #     self.half_edge_coords[[1, 2, 0]],
+            #     self.half_edge_coords[[2, 0, 1]],
+            # )
+            # ```
+            # but this is slower, cf.
+            # <https://gist.github.com/nschloe/d9c1d872a3ab8b47ff22d97d103be266>.
         return self._ei_dot_ej
 
     def compute_centroids(self, idx=slice(None)):
