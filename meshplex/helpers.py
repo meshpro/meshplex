@@ -39,7 +39,21 @@ def unique_rows(a):
     return a_unique, inv, cts
 
 
-def compute_tri_areas(ei_dot_ej):
+def compute_tri_areas(ei_dot_ei, ei_dot_ej):
+    # The alternative
+    # ```
+    # vol2 = (
+    #    0.5 * numpy.sum(ei_dot_ei, axis=0) ** 2
+    #    - numpy.sum(ei_dot_ei ** 2, axis=0))
+    # ) / 8
+    # ```
+    # is slower. If both sums can be cached, it is faster than the ei_dot_ej expression.
+    # The alternative
+    # ```
+    # vol2 = -numpy.einsum("ij,ij->j", ei_dot_ei, ei_dot_ej) / 8
+    # ```
+    # Is equally fast.
+    # <https://gist.github.com/nschloe/94508c001fd8297670bbcca3903105a2>
     vol2 = 0.25 * (
         ei_dot_ej[2] * ei_dot_ej[0]
         + ei_dot_ej[0] * ei_dot_ej[1]
@@ -70,19 +84,18 @@ def compute_ce_ratios(ei_dot_ej, tri_areas):
     #   e2: x0->x1.
     #
     # Note that edge e_i is opposite of node i and the edges add up to 0.
-    # (Those quantities can be shared between numerous methods, so share them.)
     #
-    # There are multiple ways of deriving a closed form for the
-    # covolume-edgelength ratios.
+    # There are multiple ways of deriving a closed form for the covolume-edgelength
+    # ratios.
     #
-    #   * The covolume-edge ratios for the edges of each cell is the solution
-    #     of the equation system
+    #   * The covolume-edge ratios for the edges of each cell is the solution of the
+    #     equation system
     #
     #       |simplex| ||u||^2 = \sum_i \alpha_i <u,e_i> <e_i,u>,
     #
-    #     where alpha_i are the covolume contributions for the edges. This
-    #     equation system holds for all vectors u in the plane spanned by the
-    #     edges, particularly by the edges themselves.
+    #     where alpha_i are the covolume contributions for the edges. This equation
+    #     system holds for all vectors u in the plane spanned by the edges, particularly
+    #     by the edges themselves.
     #
     #     For triangles, the exact solution of the system is
     #
@@ -91,18 +104,17 @@ def compute_ce_ratios(ei_dot_ej, tri_areas):
     #     see <https://math.stackexchange.com/a/1855380/36678>.
     #
     #   * In trilinear coordinates
-    #     <https://en.wikipedia.org/wiki/Trilinear_coordinates>, the
-    #     circumcenter is
+    #     <https://en.wikipedia.org/wiki/Trilinear_coordinates>, the circumcenter is
     #
     #         cos(alpha0) : cos(alpha1) : cos(alpha2)
     #
-    #     where the alpha_i are the angles opposite of the respective edge.
-    #     With
+    #     where the alpha_i are the angles opposite of the respective edge.  With
     #
     #       cos(alpha0) = <e1, e2> / ||e1|| / ||e2||
     #
-    #     and the conversion formula to Cartesian coordinates, ones gets the
-    #     expression
+    #      (<e1, e1> + <e2, e2> - <e0, e0>) / 2 / sqrt(<e1, e1> <e2, e2>)
+    #
+    #     and the conversion formula to Cartesian coordinates, ones gets the expression
     #
     #         ce0 = <e1, e2> * 0.5 / sqrt(alpha)
     #
