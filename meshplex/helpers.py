@@ -134,7 +134,7 @@ def compute_ce_ratios(ei_dot_ej, tri_areas):
     return -ei_dot_ej * 0.25 / tri_areas[None]
 
 
-def compute_triangle_circumcenters(X, ei_dot_ei, ei_dot_ej):
+def compute_triangle_circumcenters(X, cell_partitions):
     """Computes the circumcenters of all given triangles."""
     # The input argument are the dot products
     #
@@ -174,17 +174,20 @@ def compute_triangle_circumcenters(X, ei_dot_ei, ei_dot_ej):
     #      + ... P1
     #      + ... P2.
     #
-    # Note that the circumcenter in barycentric coordinates is
-    # barycentric coordinates of the circumcenter are
+    # Note that the circumcenter in barycentric coordinates is barycentric coordinates
+    # of the circumcenter are
     #
     #   a^2 (b^2 + c^2 - a^2) : b^2 (c^2 + a^2 - b^2) : c^2 (a^2 + b^2 - c^2).
     #
     # (<https://en.wikipedia.org/wiki/Circumscribed_circle#Barycentric_coordinates>).
     # The terms in brackets are ei_dot_ej (scaled by a fixed factor).
     #
+    # This is, up to scaling by cell_volume, cells_partition. Take this instead of
+    # `alpha = ei_dot_ei * ei_dot_ej`,
+    #
     # Perhaps it's possible to cache the ei_dot_ei * ei_dot_ej product. (It's used
     # elsewhere, too. See the triangle area computation or cells_partition.)
-    alpha = ei_dot_ei * ei_dot_ej
+    alpha = cell_partitions.copy()
     alpha_sum = alpha[0] + alpha[1] + alpha[2]
     alpha /= alpha_sum[None]
 

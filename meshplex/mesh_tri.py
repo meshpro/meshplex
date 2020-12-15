@@ -584,7 +584,7 @@ class MeshTri(_SimplexMesh):
         if self._cell_circumcenters is None:
             point_cells = self.cells["points"].T
             self._cell_circumcenters = compute_triangle_circumcenters(
-                self.points[point_cells], self.ei_dot_ei, self.ei_dot_ej
+                self.points[point_cells], self.cell_partitions
             )
         return self._cell_circumcenters
 
