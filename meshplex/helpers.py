@@ -174,28 +174,19 @@ def compute_triangle_circumcenters(X, ei_dot_ei, ei_dot_ej):
     #      + ... P1
     #      + ... P2.
     #
-    alpha = ei_dot_ei * ei_dot_ej
-    alpha_sum = alpha[0] + alpha[1] + alpha[2]
-    beta = alpha / alpha_sum[None]
-    a = X * beta[..., None]
-    cc = a[0] + a[1] + a[2]
-
-    # An even nicer formula is given on
-    # <https://en.wikipedia.org/wiki/Circumscribed_circle#Barycentric_coordinates>: The
+    # Note that the circumcenter in barycentric coordinates is
     # barycentric coordinates of the circumcenter are
     #
     #   a^2 (b^2 + c^2 - a^2) : b^2 (c^2 + a^2 - b^2) : c^2 (a^2 + b^2 - c^2).
     #
-    # This is only using the squared edge lengths, too!
-    # TODO make this happen, perhaps with something like
-    #    ei_dot_ei * (numpy.sum(ei_dot_ei, axis=0) - 2 * ei_dot_ei)
+    # (<https://en.wikipedia.org/wiki/Circumscribed_circle#Barycentric_coordinates>).
+    # The terms in brackets are ei_dot_ej (scaled by a fixed factor).
     #
-    # alpha = numpy.array([
-    #     ei_dot_ei[0] * (ei_dot_ei[1] + ei_dot_ei[2] - ei_dot_ei[0]),
-    #     ei_dot_ei[1] * (ei_dot_ei[2] + ei_dot_ei[0] - ei_dot_ei[1]),
-    #     ei_dot_ei[2] * (ei_dot_ei[0] + ei_dot_ei[1] - ei_dot_ei[2]),
-    # ])
-    # alpha /= numpy.sum(alpha, axis=0)
-    # This last sum is the squared cell volume.
-    # cc = (X[0].T * alpha[0] + X[1].T * alpha[1] + X[2].T * alpha[2]).T
-    return cc
+    # Perhaps it's possible to cache the ei_dot_ei * ei_dot_ej product. (It's used
+    # elsewhere, too. See the triangle area computation or cells_partition.)
+    alpha = ei_dot_ei * ei_dot_ej
+    alpha_sum = alpha[0] + alpha[1] + alpha[2]
+    alpha /= alpha_sum[None]
+
+    a = X * alpha[..., None]
+    return a[0] + a[1] + a[2]
