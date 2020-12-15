@@ -39,7 +39,7 @@ def unique_rows(a):
     return a_unique, inv, cts
 
 
-def compute_tri_areas(ei_dot_ei, ei_dot_ej):
+def compute_tri_areas(ei_dot_ej):
     # The alternative
     # ```
     # vol2 = (

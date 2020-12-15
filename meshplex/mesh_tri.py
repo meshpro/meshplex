@@ -571,7 +571,7 @@ class MeshTri(_SimplexMesh):
     @property
     def cell_partitions(self):
         if self._cell_partitions is None:
-            # Compute the control volumes. Note that
+            # Compute the control volume contributions. Note that
             #
             #   0.5 * (0.5 * edge_length) * covolume
             # = 0.25 * edge_length ** 2 * ce_ratio_edge_ratio
@@ -1310,16 +1310,15 @@ class MeshTri(_SimplexMesh):
             1,
         )
 
-        # update self.ei_dot_ej
-        self.ei_dot_ej[:, cell_ids] = numpy.einsum(
-            "ijk, ijk->ij",
-            self.half_edge_coords[[1, 2, 0]][:, cell_ids],
-            self.half_edge_coords[[2, 0, 1]][:, cell_ids],
-        )
-
         # update self.ei_dot_ei
         e = self.half_edge_coords[:, cell_ids]
-        self.ei_dot_ei[:, cell_ids] = numpy.einsum("ijk, ijk->ij", e, e)
+        self.ei_dot_ei[:, cell_ids] = numpy.einsum("...k,...k->...", e, e)
+
+        # update self.ei_dot_ej
+        self._ei_dot_ej[:, cell_ids] = (
+            self.ei_dot_ei[:, cell_ids]
+            - numpy.sum(self.ei_dot_ei[:, cell_ids], axis=0) / 2
+        )
 
         # update cell_volumes, ce_ratios_per_half_edge
         cv = compute_tri_areas(self.ei_dot_ej[:, cell_ids])
