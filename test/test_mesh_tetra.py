@@ -6,7 +6,7 @@ import pytest
 
 import meshplex
 
-from .helpers import near_equal, run
+from .helpers import is_near_equal, run
 
 this_dir = pathlib.Path(__file__).resolve().parent
 
@@ -54,17 +54,17 @@ def test_regular_tet0(a):
     tol = 1.0e-14
 
     z = a / numpy.sqrt(24.0)
-    assert near_equal(mesh.cell_circumcenters, [0.0, 0.0, z], tol)
+    assert is_near_equal(mesh.cell_circumcenters, [0.0, 0.0, z], tol)
 
     # pylint: disable=protected-access
     mesh._compute_ce_ratios_geometric()
-    assert near_equal(mesh.circumcenter_face_distances, [z, z, z, z], tol)
+    assert is_near_equal(mesh.circumcenter_face_distances, [z, z, z, z], tol)
 
     # covolume/edge length ratios
     # alpha = a / 12.0 / numpy.sqrt(2)
     alpha = a / 2 / numpy.sqrt(24) / numpy.sqrt(12)
     vals = mesh.ce_ratios
-    assert near_equal(
+    assert is_near_equal(
         vals,
         [
             [
@@ -79,36 +79,38 @@ def test_regular_tet0(a):
 
     # cell volumes
     vol = a ** 3 / 6.0 / numpy.sqrt(2)
-    assert near_equal(mesh.cell_volumes, [vol], tol)
+    assert is_near_equal(mesh.cell_volumes, [vol], tol)
 
     # control volumes
     val = vol / 4.0
-    assert near_equal(mesh.control_volumes, [val, val, val, val], tol)
+    assert is_near_equal(mesh.control_volumes, [val, val, val, val], tol)
 
     # inradius
     # side_area = numpy.sqrt(3) / 4 * a ** 2
     # vol = a ** 3 / 6.0 / numpy.sqrt(2)
     # inradius = 3 * vol / (4 * side_area)
     inradius = a * numpy.sqrt(6) / 12
-    assert near_equal(mesh.cell_inradius, [inradius], tol)
+    assert is_near_equal(mesh.cell_inradius, [inradius], tol)
 
     # circumradius
     circumradius = a * numpy.sqrt(6) / 4
-    assert near_equal(mesh.cell_circumradius, [circumradius], tol)
+    assert is_near_equal(mesh.cell_circumradius, [circumradius], tol)
 
     # cell quality
-    assert near_equal(mesh.q_radius_ratio, [1.0], tol)
+    assert is_near_equal(mesh.q_radius_ratio, [1.0], tol)
 
     mesh.mark_boundary()
 
-    assert near_equal(mesh.cell_barycenters, mesh.cell_centroids, tol)
-    assert near_equal(mesh.cell_barycenters, [[0.0, 0.0, a * numpy.sqrt(6) / 12]], tol)
+    assert is_near_equal(mesh.cell_barycenters, mesh.cell_centroids, tol)
+    assert is_near_equal(
+        mesh.cell_barycenters, [[0.0, 0.0, a * numpy.sqrt(6) / 12]], tol
+    )
 
-    assert near_equal(mesh.cell_incenters, [[0.0, 0.0, a * numpy.sqrt(6) / 12]], tol)
+    assert is_near_equal(mesh.cell_incenters, [[0.0, 0.0, a * numpy.sqrt(6) / 12]], tol)
 
-    assert near_equal(mesh.q_min_sin_dihedral_angles, [1.0], tol)
+    assert is_near_equal(mesh.q_min_sin_dihedral_angles, [1.0], tol)
 
-    assert near_equal(mesh.q_vol_rms_edgelength3, [1.0], tol)
+    assert is_near_equal(mesh.q_vol_rms_edgelength3, [1.0], tol)
 
 
 # @pytest.mark.parametrize(
@@ -127,24 +129,24 @@ def test_regular_tet0(a):
 #
 #     mesh = meshplex.MeshTetra(points, cells, mode='algebraic')
 #
-#     assert near_equal(
+#     assert is_near_equal(
 #         mesh.cell_circumcenters,
 #         [[a/2.0, a/2.0, a/2.0]],
 #         tol
 #         )
 #
 #     # covolume/edge length ratios
-#     assert near_equal(
+#     assert is_near_equal(
 #         mesh.ce_ratios_per_edge,
 #         [a/6.0, a/6.0, a/6.0, 0.0, 0.0, 0.0],
 #         tol
 #         )
 #
 #     # cell volumes
-#     assert near_equal(mesh.cell_volumes, [a**3/6.0], tol)
+#     assert is_near_equal(mesh.cell_volumes, [a**3/6.0], tol)
 #
 #     # control volumes
-#     assert near_equal(
+#     assert is_near_equal(
 #         mesh.control_volumes,
 #         [a**3/12.0, a**3/36.0, a**3/36.0, a**3/36.0],
 #         tol
@@ -168,7 +170,7 @@ def test_unit_tetrahedron_geometric(a):
 
     assert all((mesh.cells["points"] == cells).flat)
 
-    assert near_equal(mesh.cell_circumcenters, [a / 2.0, a / 2.0, a / 2.0], tol)
+    assert is_near_equal(mesh.cell_circumcenters, [a / 2.0, a / 2.0, a / 2.0], tol)
 
     # covolume/edge length ratios
     ref = numpy.array(
@@ -178,19 +180,19 @@ def test_unit_tetrahedron_geometric(a):
             [[-a / 24.0], [0.0], [a / 8.0], [a / 8.0]],
         ]
     )
-    assert near_equal(mesh.ce_ratios, ref, tol)
+    assert is_near_equal(mesh.ce_ratios, ref, tol)
 
     # cell volumes
-    assert near_equal(mesh.cell_volumes, [a ** 3 / 6.0], tol)
+    assert is_near_equal(mesh.cell_volumes, [a ** 3 / 6.0], tol)
 
     # control volumes
-    assert near_equal(
+    assert is_near_equal(
         mesh.control_volumes,
         [a ** 3 / 8.0, a ** 3 / 72.0, a ** 3 / 72.0, a ** 3 / 72.0],
         tol,
     )
 
-    assert near_equal(
+    assert is_near_equal(
         mesh.circumcenter_face_distances.T,
         [-0.5 / numpy.sqrt(3) * a, 0.5 * a, 0.5 * a, 0.5 * a],
         tol,
@@ -198,19 +200,19 @@ def test_unit_tetrahedron_geometric(a):
 
     # inradius
     ref = a * 0.2113248654051872
-    assert near_equal(mesh.cell_inradius, [ref], tol)
+    assert is_near_equal(mesh.cell_inradius, [ref], tol)
 
     # circumradius
     ref = a * numpy.sqrt(3) / 2
-    assert near_equal(mesh.cell_circumradius, [ref], tol)
+    assert is_near_equal(mesh.cell_circumradius, [ref], tol)
 
     # cell quality
     ref = 7.320508075688774e-01
-    assert near_equal(mesh.q_radius_ratio, [ref], tol)
+    assert is_near_equal(mesh.q_radius_ratio, [ref], tol)
 
-    assert near_equal(mesh.q_min_sin_dihedral_angles, [numpy.sqrt(3) / 2], tol)
+    assert is_near_equal(mesh.q_min_sin_dihedral_angles, [numpy.sqrt(3) / 2], tol)
 
-    assert near_equal(mesh.q_vol_rms_edgelength3, [4 * numpy.sqrt(3) / 9], tol)
+    assert is_near_equal(mesh.q_vol_rms_edgelength3, [4 * numpy.sqrt(3) / 9], tol)
 
 
 def test_regular_tet1_geometric_order():
@@ -223,7 +225,7 @@ def test_regular_tet1_geometric_order():
 
     assert all((mesh.cells["points"] == [0, 1, 2, 3]).flat)
 
-    assert near_equal(mesh.cell_circumcenters, [a / 2.0, a / 2.0, a / 2.0], tol)
+    assert is_near_equal(mesh.cell_circumcenters, [a / 2.0, a / 2.0, a / 2.0], tol)
 
     # covolume/edge length ratios
     ref = numpy.array(
@@ -233,19 +235,19 @@ def test_regular_tet1_geometric_order():
             [[a / 8.0], [-a / 24.0], [0.0], [a / 8.0]],
         ]
     )
-    assert near_equal(mesh.ce_ratios, ref, tol)
+    assert is_near_equal(mesh.ce_ratios, ref, tol)
 
     # cell volumes
-    assert near_equal(mesh.cell_volumes, [a ** 3 / 6.0], tol)
+    assert is_near_equal(mesh.cell_volumes, [a ** 3 / 6.0], tol)
 
     # control volumes
-    assert near_equal(
+    assert is_near_equal(
         mesh.control_volumes,
         [a ** 3 / 72.0, a ** 3 / 8.0, a ** 3 / 72.0, a ** 3 / 72.0],
         tol,
     )
 
-    assert near_equal(
+    assert is_near_equal(
         mesh.circumcenter_face_distances.T,
         [0.5 * a, -0.5 / numpy.sqrt(3) * a, 0.5 * a, 0.5 * a],
         tol,
@@ -269,7 +271,7 @@ def test_regular_tet1_geometric_order():
 #     tol = 1.0e-14
 #
 #     z = 0.5 * h - 1.0 / (4*h)
-#     assert near_equal(
+#     assert is_near_equal(
 #         mesh.cell_circumcenters,
 #         [[0.5, 0.5, z]],
 #         tol
@@ -278,7 +280,7 @@ def test_regular_tet1_geometric_order():
 #     # covolume/edge length ratios
 #     print(h)
 #     print(mesh.ce_ratios)
-#     assert near_equal(
+#     assert is_near_equal(
 #         mesh.ce_ratios,
 #         [[
 #             [0.0, 0.0, 0.0],
@@ -297,10 +299,10 @@ def test_regular_tet1_geometric_order():
 #         1.0/72.0 * (3*h - 1.0/(2*h)),
 #         1.0/36.0 * (h + 1.0/(2*h))
 #         ]
-#     assert near_equal(mesh.control_volumes, ref, tol)
+#     assert is_near_equal(mesh.control_volumes, ref, tol)
 #
 #     # cell volumes
-#     assert near_equal(mesh.cell_volumes, [h/6.0], tol)
+#     assert is_near_equal(mesh.cell_volumes, [h/6.0], tol)
 
 
 # @pytest.mark.parametrize(
@@ -355,8 +357,8 @@ def test_cubesmall():
     cv = numpy.ones(8) * 1.25
     cellvols = [5.0 / 3.0, 5.0 / 3.0, 10.0 / 3.0, 5.0 / 3.0, 5.0 / 3.0]
 
-    assert near_equal(mesh.control_volumes, cv, tol)
-    assert near_equal(mesh.cell_volumes, cellvols, tol)
+    assert is_near_equal(mesh.control_volumes, cv, tol)
+    assert is_near_equal(mesh.cell_volumes, cellvols, tol)
 
     cv_norms = [numpy.linalg.norm(cv, ord=2), numpy.linalg.norm(cv, ord=numpy.Inf)]
     cellvol_norms = [
