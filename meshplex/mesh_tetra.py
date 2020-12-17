@@ -479,7 +479,10 @@ class MeshTetra(_SimplexMesh):
             cc = self._circumcenters[cell_id]
             #
             x = X[self.point_face_cells[..., [cell_id]]]
-            face_ccs = compute_triangle_circumcenters(x, self.ei_dot_ei, self.ei_dot_ej)
+            # TODO replace `self.ei_dot_ei * self.ei_dot_ej` with cell_partitions
+            face_ccs = compute_triangle_circumcenters(
+                x, self.ei_dot_ei * self.ei_dot_ej
+            )
             # draw the face circumcenters
             ax.plot(
                 face_ccs[..., 0].flatten(),
@@ -559,7 +562,10 @@ class MeshTetra(_SimplexMesh):
             cc = self._circumcenters[cell_id]
             #
             x = X[self.point_face_cells[..., [cell_id]]]
-            face_ccs = compute_triangle_circumcenters(x, self.ei_dot_ei, self.ei_dot_ej)
+            # TODO replace `self.ei_dot_ei * self.ei_dot_ej` with cell_partitions
+            face_ccs = compute_triangle_circumcenters(
+                x, self.ei_dot_ei * self.ei_dot_ej
+            )
             # draw the face circumcenters
             ax.plot(
                 face_ccs[..., 0].flatten(),
@@ -684,8 +690,9 @@ class MeshTetra(_SimplexMesh):
 
         if face_circumcenter_rgba is not None:
             x = self.points[self.point_face_cells[..., [cell_id]]]
+            # TODO replace `self.ei_dot_ei * self.ei_dot_ej` with cell_partitions
             face_ccs = compute_triangle_circumcenters(
-                x, self.ei_dot_ei, self.ei_dot_ej
+                x, self.ei_dot_ei * self.ei_dot_ej
             )[:, 0, :]
             for f in face_ccs:
                 renderer.AddActor(get_sphere_actor(f, r, face_circumcenter_rgba))
@@ -693,8 +700,9 @@ class MeshTetra(_SimplexMesh):
         if control_volume_boundaries_rgba:
             cell_cc = self.cell_circumcenters[cell_id]
             x = self.points[self.point_face_cells[..., [cell_id]]]
+            # TODO replace `self.ei_dot_ei * self.ei_dot_ej` with cell_partitions
             face_ccs = compute_triangle_circumcenters(
-                x, self.ei_dot_ei, self.ei_dot_ej
+                x, self.ei_dot_ei * self.ei_dot_ej
             )[:, 0, :]
             for face, face_cc in zip(range(4), face_ccs):
                 for edge in range(3):

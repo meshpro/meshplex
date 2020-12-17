@@ -3,7 +3,7 @@ from math import fsum
 import numpy
 
 
-def near_equal(a, b, tol):
+def is_near_equal(a, b, tol):
     return numpy.allclose(a, b, rtol=0.0, atol=tol)
 
 
@@ -13,7 +13,7 @@ def run(mesh, volume, convol_norms, ce_ratio_norms, cellvol_norms, tol=1.0e-12):
     assert abs(volume - total_cellvolume) < tol * volume
     norm2 = numpy.linalg.norm(mesh.cell_volumes, ord=2)
     norm_inf = numpy.linalg.norm(mesh.cell_volumes, ord=numpy.Inf)
-    assert near_equal(cellvol_norms, [norm2, norm_inf], tol)
+    assert is_near_equal(cellvol_norms, [norm2, norm_inf], tol)
 
     # If everything is Delaunay and the boundary elements aren't flat, the
     # volume of the domain is given by
@@ -28,7 +28,7 @@ def run(mesh, volume, convol_norms, ce_ratio_norms, cellvol_norms, tol=1.0e-12):
     # TODO reinstate
     alpha2 = fsum((mesh.ce_ratios ** 2).flat)
     alpha_inf = max(abs(mesh.ce_ratios).flat)
-    assert near_equal(ce_ratio_norms, [alpha2, alpha_inf], tol)
+    assert is_near_equal(ce_ratio_norms, [alpha2, alpha_inf], tol)
 
     # Check the volume by summing over the absolute value of the control
     # volumes.
@@ -37,4 +37,20 @@ def run(mesh, volume, convol_norms, ce_ratio_norms, cellvol_norms, tol=1.0e-12):
     # Check control volume norms.
     norm2 = numpy.linalg.norm(mesh.control_volumes, ord=2)
     norm_inf = numpy.linalg.norm(mesh.control_volumes, ord=numpy.Inf)
-    assert near_equal(convol_norms, [norm2, norm_inf], tol)
+    assert is_near_equal(convol_norms, [norm2, norm_inf], tol)
+
+
+def assert_norms(x, ref, tol):
+    ref = numpy.asarray(ref)
+    val = numpy.array(
+        [
+            numpy.linalg.norm(x.flat, 1),
+            numpy.linalg.norm(x.flat, 2),
+            numpy.linalg.norm(x.flat, numpy.inf),
+        ]
+    )
+    assert numpy.all(numpy.abs(val - ref) < tol * numpy.abs(ref)), (
+        "Norms don't coincide.\n"
+        f"Expected: [{ref[0]:.16e}, {ref[1]:.16e}, {ref[2]:.16e}]\n"
+        f"Computed: [{val[0]:.16e}, {val[1]:.16e}, {val[2]:.16e}]\n"
+    )
