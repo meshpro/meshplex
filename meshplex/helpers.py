@@ -187,6 +187,7 @@ def compute_triangle_circumcenters(X, cell_partitions):
     #
     # Perhaps it's possible to cache the ei_dot_ei * ei_dot_ej product. (It's used
     # elsewhere, too. See the triangle area computation or cells_partition.)
+    # alpha = ei_dot_ei * ei_dot_ej
     alpha = cell_partitions.copy()
     alpha_sum = alpha[0] + alpha[1] + alpha[2]
     alpha /= alpha_sum[None]
