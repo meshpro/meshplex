@@ -24,7 +24,7 @@ def _main():
         fill=False,
         linewidth=lw,
     )
-    ax.add_artist(circle1)
+    ax.add_patch(circle1)
 
     # perpendicular bisectors
     for i, j in [[0, 1], [1, 2], [2, 0]]:
@@ -54,7 +54,7 @@ def _main():
     # circle2 = plt.Circle(
     #     mesh.cell_incenters[0], mesh.inradius[0], color=col, fill=False, linewidth=lw
     # )
-    # ax.add_artist(circle2)
+    # ax.add_patch(circle2)
 
     # # angle bisectors
     # for i, j, k in [[0, 1, 2], [1, 2, 0], [2, 0, 1]]:
