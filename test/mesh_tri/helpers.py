@@ -1,21 +1,21 @@
-import numpy
+import numpy as np
 
 
 def assert_mesh_consistency(mesh):
-    assert numpy.all(numpy.logical_xor(mesh.is_boundary_edge, mesh.is_interior_edge))
+    assert np.all(np.logical_xor(mesh.is_boundary_edge, mesh.is_interior_edge))
 
-    bpts = numpy.array(
+    bpts = np.array(
         [
             mesh.is_boundary_point,
             mesh.is_interior_point,
             ~mesh.is_point_used,
         ]
     )
-    assert numpy.all(numpy.sum(bpts, axis=0) == 1)
+    assert np.all(np.sum(bpts, axis=0) == 1)
 
     # consistency check for edges_cells
-    assert numpy.all(mesh.is_boundary_edge[mesh.edges_cells["boundary"][0]])
-    assert not numpy.any(mesh.is_boundary_edge[mesh.edges_cells["interior"][0]])
+    assert np.all(mesh.is_boundary_edge[mesh.edges_cells["boundary"][0]])
+    assert not np.any(mesh.is_boundary_edge[mesh.edges_cells["interior"][0]])
 
     for edge_id, cell_id, local_edge_id in mesh.edges_cells["boundary"].T:
         assert edge_id == mesh.cells["edges"][cell_id][local_edge_id]
@@ -52,11 +52,11 @@ def assert_mesh_consistency(mesh):
             )
 
     # make sure the is_boundary_point/edge/cell is consistent
-    ref_cells = numpy.any(mesh.is_boundary_edge_local, axis=0)
-    assert numpy.all(mesh.is_boundary_cell == ref_cells)
-    ref_points = numpy.zeros(len(mesh.points), dtype=bool)
+    ref_cells = np.any(mesh.is_boundary_edge_local, axis=0)
+    assert np.all(mesh.is_boundary_cell == ref_cells)
+    ref_points = np.zeros(len(mesh.points), dtype=bool)
     ref_points[mesh.idx_hierarchy[..., mesh.is_boundary_edge_local]] = True
-    assert numpy.all(mesh.is_boundary_point == ref_points)
+    assert np.all(mesh.is_boundary_point == ref_points)
 
     # TODO add more consistency checks
 
@@ -110,17 +110,17 @@ def compute_all_entities(mesh):
 
 
 def assert_mesh_equality(mesh0, mesh1):
-    assert numpy.all(mesh0.cells["points"] == mesh1.cells["points"])
-    assert numpy.all(numpy.abs(mesh0.points - mesh1.points) < 1.0e-14)
+    assert np.all(mesh0.cells["points"] == mesh1.cells["points"])
+    assert np.all(np.abs(mesh0.points - mesh1.points) < 1.0e-14)
 
-    assert numpy.all(numpy.abs(mesh0.points - mesh1.points) < 1.0e-14)
-    assert numpy.all(mesh0.edges["points"] == mesh1.edges["points"])
+    assert np.all(np.abs(mesh0.points - mesh1.points) < 1.0e-14)
+    assert np.all(mesh0.edges["points"] == mesh1.edges["points"])
 
     # # Assume that in mesh1, the rows are ordered such that the edge indices [0] are in
     # # order. The mesh0 array isn't order in many cases, e.g., if cells were removed and
     # # rows appened the boundary array. Hence, justsort the array in mesh0 and compare.
-    # k = numpy.argsort(mesh0.edges_cells["boundary"][0])
-    # assert numpy.all(mesh0.edges_cells["boundary"][:, k] == mesh1.edges_cells["boundary"])
+    # k = np.argsort(mesh0.edges_cells["boundary"][0])
+    # assert np.all(mesh0.edges_cells["boundary"][:, k] == mesh1.edges_cells["boundary"])
 
     # # The interior edges_cells are already ordered, even after remove_cells(). (As
     # # opposed to boundary edges, there can be no new interior edges, just some are
@@ -128,7 +128,7 @@ def assert_mesh_equality(mesh0, mesh1):
     # print(mesh0.edges_cells["interior"].T)
     # print()
     # print(mesh1.edges_cells["interior"].T)
-    # assert numpy.all(mesh0.edges_cells["interior"] == mesh1.edges_cells["interior"])
+    # assert np.all(mesh0.edges_cells["interior"] == mesh1.edges_cells["interior"])
     # exit(1)
     # # print()
     # # print(mesh0.edges_cells["interior"])
@@ -136,38 +136,34 @@ def assert_mesh_equality(mesh0, mesh1):
     # # print(mesh1.edges_cells["interior"])
     #
     # # These should not be equal; see reordering above
-    # assert numpy.all(mesh0.edges_cells_idx == mesh1.edges_cells_idx)
+    # assert np.all(mesh0.edges_cells_idx == mesh1.edges_cells_idx)
 
-    assert numpy.all(mesh0.boundary_edges == mesh1.boundary_edges)
-    assert numpy.all(mesh0.interior_edges == mesh1.interior_edges)
+    assert np.all(mesh0.boundary_edges == mesh1.boundary_edges)
+    assert np.all(mesh0.interior_edges == mesh1.interior_edges)
 
-    assert numpy.all(mesh0.is_point_used == mesh1.is_point_used)
-    assert numpy.all(mesh0.is_boundary_point == mesh1.is_boundary_point)
-    assert numpy.all(mesh0.is_interior_point == mesh1.is_interior_point)
-    assert numpy.all(mesh0.is_boundary_edge_local == mesh1.is_boundary_edge_local)
-    assert numpy.all(mesh0.is_boundary_edge == mesh1.is_boundary_edge)
-    assert numpy.all(mesh0.is_boundary_cell == mesh1.is_boundary_cell)
+    assert np.all(mesh0.is_point_used == mesh1.is_point_used)
+    assert np.all(mesh0.is_boundary_point == mesh1.is_boundary_point)
+    assert np.all(mesh0.is_interior_point == mesh1.is_interior_point)
+    assert np.all(mesh0.is_boundary_edge_local == mesh1.is_boundary_edge_local)
+    assert np.all(mesh0.is_boundary_edge == mesh1.is_boundary_edge)
+    assert np.all(mesh0.is_boundary_cell == mesh1.is_boundary_cell)
 
-    assert numpy.all(numpy.abs(mesh0.ei_dot_ei - mesh1.ei_dot_ei) < 1.0e-14)
-    assert numpy.all(numpy.abs(mesh0.ei_dot_ej - mesh1.ei_dot_ej) < 1.0e-14)
-    assert numpy.all(numpy.abs(mesh0.cell_volumes - mesh1.cell_volumes) < 1.0e-14)
-    assert numpy.all(numpy.abs(mesh0.ce_ratios - mesh1.ce_ratios) < 1.0e-14)
-    assert numpy.all(
-        numpy.abs(mesh0.ce_ratios_per_interior_edge - mesh1.ce_ratios_per_interior_edge)
+    assert np.all(np.abs(mesh0.ei_dot_ei - mesh1.ei_dot_ei) < 1.0e-14)
+    assert np.all(np.abs(mesh0.ei_dot_ej - mesh1.ei_dot_ej) < 1.0e-14)
+    assert np.all(np.abs(mesh0.cell_volumes - mesh1.cell_volumes) < 1.0e-14)
+    assert np.all(np.abs(mesh0.ce_ratios - mesh1.ce_ratios) < 1.0e-14)
+    assert np.all(
+        np.abs(mesh0.ce_ratios_per_interior_edge - mesh1.ce_ratios_per_interior_edge)
         < 1.0e-14
     )
-    assert numpy.all(
-        numpy.abs(mesh0.signed_cell_areas - mesh1.signed_cell_areas) < 1.0e-14
-    )
-    assert numpy.all(numpy.abs(mesh0.cell_centroids - mesh1.cell_centroids) < 1.0e-14)
-    assert numpy.all(
-        numpy.abs(mesh0.cell_circumcenters - mesh1.cell_circumcenters) < 1.0e-14
-    )
-    assert numpy.all(numpy.abs(mesh0.control_volumes - mesh1.control_volumes) < 1.0e-14)
+    assert np.all(np.abs(mesh0.signed_cell_areas - mesh1.signed_cell_areas) < 1.0e-14)
+    assert np.all(np.abs(mesh0.cell_centroids - mesh1.cell_centroids) < 1.0e-14)
+    assert np.all(np.abs(mesh0.cell_circumcenters - mesh1.cell_circumcenters) < 1.0e-14)
+    assert np.all(np.abs(mesh0.control_volumes - mesh1.control_volumes) < 1.0e-14)
 
     ipu = mesh0.is_point_used
-    assert numpy.all(
-        numpy.abs(
+    assert np.all(
+        np.abs(
             mesh0.control_volume_centroids[ipu] - mesh1.control_volume_centroids[ipu]
         )
         < 1.0e-14

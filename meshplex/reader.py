@@ -5,7 +5,7 @@ formats.
 .. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
 """
 import meshio
-import numpy
+import numpy as np
 
 from .mesh_tetra import MeshTetra
 from .mesh_tri import MeshTri
@@ -14,7 +14,7 @@ __all__ = ["read"]
 
 
 def _sanitize(points, cells):
-    uvertices, uidx = numpy.unique(cells, return_inverse=True)
+    uvertices, uidx = np.unique(cells, return_inverse=True)
     cells = uidx.reshape(cells.shape)
     points = points[uvertices]
     return points, cells

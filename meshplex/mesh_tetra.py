@@ -1,4 +1,4 @@
-import numpy
+import numpy as np
 
 from .base import _SimplexMesh
 from .helpers import compute_tri_areas, compute_triangle_circumcenters
@@ -41,7 +41,7 @@ class MeshTetra(_SimplexMesh):
         if "faces" not in self.cells:
             self.create_cell_face_relationships()
 
-        self.is_boundary_point = numpy.zeros(len(self.points), dtype=bool)
+        self.is_boundary_point = np.zeros(len(self.points), dtype=bool)
         self.is_boundary_point[self.faces["points"][self.is_boundary_facet]] = True
 
     def create_cell_face_relationships(self):
@@ -50,13 +50,13 @@ class MeshTetra(_SimplexMesh):
         # `unique()` to identify individual faces.
         s = self.idx_hierarchy.shape
         a = self.idx_hierarchy.reshape([s[0], s[1], s[2] * s[3]]).T
-        a = numpy.sort(a[:, :, 0])
+        a = np.sort(a[:, :, 0])
 
         # Find the unique faces
-        b = numpy.ascontiguousarray(a).view(
-            numpy.dtype((numpy.void, a.dtype.itemsize * a.shape[1]))
+        b = np.ascontiguousarray(a).view(
+            np.dtype((np.void, a.dtype.itemsize * a.shape[1]))
         )
-        _, idx, inv, cts = numpy.unique(
+        _, idx, inv, cts = np.unique(
             b, return_index=True, return_inverse=True, return_counts=True
         )
 
@@ -81,7 +81,7 @@ class MeshTetra(_SimplexMesh):
         self._inv_faces = inv
 
     def create_face_edge_relationships(self):
-        a = numpy.vstack(
+        a = np.vstack(
             [
                 self.faces["points"][:, [1, 2]],
                 self.faces["points"][:, [2, 0]],
@@ -90,10 +90,10 @@ class MeshTetra(_SimplexMesh):
         )
 
         # Find the unique edges
-        b = numpy.ascontiguousarray(a).view(
-            numpy.dtype((numpy.void, a.dtype.itemsize * a.shape[1]))
+        b = np.ascontiguousarray(a).view(
+            np.dtype((np.void, a.dtype.itemsize * a.shape[1]))
         )
-        _, idx, inv = numpy.unique(b, return_index=True, return_inverse=True)
+        _, idx, inv = np.unique(b, return_index=True, return_inverse=True)
         edge_points = a[idx]
 
         self.edges = {"points": edge_points}
@@ -128,9 +128,9 @@ class MeshTetra(_SimplexMesh):
         #
         # TODO See <https://math.stackexchange.com/a/2864770/36678> for another
         #      interesting approach.
-        alpha = self._zeta / numpy.sum(self._zeta, axis=0)
+        alpha = self._zeta / np.sum(self._zeta, axis=0)
 
-        self._circumcenters = numpy.sum(
+        self._circumcenters = np.sum(
             alpha[None].T * self.points[self.cells["points"]], axis=1
         )
 
@@ -154,16 +154,16 @@ class MeshTetra(_SimplexMesh):
     #     #
     #     # has to hold for all vectors u in the plane spanned by the edges,
     #     # particularly by the edges themselves.
-    #     # A = numpy.empty(3, 4, half_edges.shape[2], 3, 3)
-    #     A = numpy.einsum("j...k,l...k->jl...", half_edges, half_edges)
+    #     # A = np.empty(3, 4, half_edges.shape[2], 3, 3)
+    #     A = np.einsum("j...k,l...k->jl...", half_edges, half_edges)
     #     A = A ** 2
 
     #     # Compute the RHS  cell_volume * <edge, edge>.
     #     # The dot product <edge, edge> is also on the diagonals of A (before squaring),
     #     # but simply computing it again is cheaper than extracting it from A.
-    #     edge_dot_edge = numpy.einsum("...i,...j->...", half_edges, half_edges)
+    #     edge_dot_edge = np.einsum("...i,...j->...", half_edges, half_edges)
     #     # TODO cell_volumes
-    #     self.cell_volumes = numpy.random.rand(2951)
+    #     self.cell_volumes = np.random.rand(2951)
     #     rhs = edge_dot_edge * self.cell_volumes
     #     exit(1)
 
@@ -172,7 +172,7 @@ class MeshTetra(_SimplexMesh):
     #     # If the matrix A is (close to) singular if and only if the cell is (close to
     #     # being) degenerate. Hence, it has volume 0, and so all the edge coefficients
     #     # are 0, too. Hence, do nothing.
-    #     ce_ratios = numpy.linalg.solve(A, rhs)
+    #     ce_ratios = np.linalg.solve(A, rhs)
 
     #     return ce_ratios
 
@@ -267,8 +267,8 @@ class MeshTetra(_SimplexMesh):
         #
         # sum(self.circumcenter_face_distances * face_areas / 3) = cell_volumes
         # =>
-        # cell_volumes = numpy.sqrt(sum(zeta / 72))
-        self.cell_volumes = numpy.sqrt(numpy.sum(self._zeta, axis=0) / 72.0)
+        # cell_volumes = np.sqrt(sum(zeta / 72))
+        self.cell_volumes = np.sqrt(np.sum(self._zeta, axis=0) / 72.0)
 
         #
         # self.circumcenter_face_distances =
@@ -282,7 +282,7 @@ class MeshTetra(_SimplexMesh):
         )
 
         # Distances of the cell circumcenter to the faces.
-        face_areas = 0.5 * numpy.sqrt(alpha)
+        face_areas = 0.5 * np.sqrt(alpha)
         self.circumcenter_face_distances = (
             self._zeta / (24.0 * face_areas) / self.cell_volumes[None]
         )
@@ -300,33 +300,31 @@ class MeshTetra(_SimplexMesh):
         """Get the midpoints of the inspheres."""
         # https://math.stackexchange.com/a/2864770/36678
         facet_areas = compute_tri_areas(self.ei_dot_ej)
-        # abc = numpy.sqrt(self.ei_dot_ei)
-        facet_areas /= numpy.sum(facet_areas, axis=0)
-        return numpy.einsum(
-            "ij,jik->jk", facet_areas, self.points[self.cells["points"]]
-        )
+        # abc = np.sqrt(self.ei_dot_ei)
+        facet_areas /= np.sum(facet_areas, axis=0)
+        return np.einsum("ij,jik->jk", facet_areas, self.points[self.cells["points"]])
 
     @property
     def cell_inradius(self):
         # https://en.wikipedia.org/wiki/Tetrahedron#Inradius
         facet_areas = compute_tri_areas(self.ei_dot_ej)
-        return 3 * self.cell_volumes / numpy.sum(facet_areas, axis=0)
+        return 3 * self.cell_volumes / np.sum(facet_areas, axis=0)
 
     @property
     def cell_circumradius(self):
         # Just take the distance of the circumcenter to one of the points for now.
         dist = self.points[self.idx_hierarchy[0, 0, 0]] - self.cell_circumcenters
-        circumradius = numpy.sqrt(numpy.einsum("ij,ij->i", dist, dist))
+        circumradius = np.sqrt(np.einsum("ij,ij->i", dist, dist))
         # https://en.wikipedia.org/wiki/Tetrahedron#Circumradius
         #
         # Compute opposite edge length products
         # TODO something is wrong here, the expression under the sqrt can be negative
-        # edge_lengths = numpy.sqrt(self.ei_dot_ei)
+        # edge_lengths = np.sqrt(self.ei_dot_ei)
         # aA = edge_lengths[0, 0] * edge_lengths[0, 2]
         # bB = edge_lengths[0, 1] * edge_lengths[2, 0]
         # cC = edge_lengths[0, 2] * edge_lengths[2, 1]
         # circumradius = (
-        #     numpy.sqrt(
+        #     np.sqrt(
         #         (aA + bB + cC) * (-aA + bB + cC) * (aA - bB + cC) * (aA + bB - cC)
         #     )
         #     / 24
@@ -391,10 +389,10 @@ class MeshTetra(_SimplexMesh):
         # The faces share (face 2, edge 0), (face 3, edge 2).
         cos_alpha += [(fa[2] ** 2 + fa[3] ** 2 - H2) / (2 * fa[2] * fa[3])]
 
-        cos_alpha = numpy.array(cos_alpha).T
-        sin_alpha = numpy.sqrt(1 - cos_alpha ** 2)
+        cos_alpha = np.array(cos_alpha).T
+        sin_alpha = np.sqrt(1 - cos_alpha ** 2)
 
-        m = numpy.min(sin_alpha, axis=1) / (numpy.sqrt(2) * 2 / 3)
+        m = np.min(sin_alpha, axis=1) / (np.sqrt(2) * 2 / 3)
         return m
 
     @property
@@ -404,10 +402,10 @@ class MeshTetra(_SimplexMesh):
         <https://people.eecs.berkeley.edu/~jrs/stellar>.)
         """
         el2 = self.ei_dot_ei
-        rms = numpy.sqrt(
+        rms = np.sqrt(
             (el2[0][0] + el2[1][0] + el2[2][0] + el2[0][2] + el2[1][1] + el2[0][1]) / 6
         )
-        alpha = numpy.sqrt(2) / 12  # normalization factor
+        alpha = np.sqrt(2) / 12  # normalization factor
         return self.cell_volumes / rms ** 3 / alpha
 
     @property
@@ -417,10 +415,10 @@ class MeshTetra(_SimplexMesh):
             #   1/3. * (0.5 * edge_length) * covolume
             # = 1/6 * edge_length**2 * ce_ratio_edge_ratio
             v = self.ei_dot_ei * self.ce_ratios / 6
-            # Explicitly sum up contributions per cell first. Makes numpy.add.at faster.
+            # Explicitly sum up contributions per cell first. Makes np.add.at faster.
             # For every point k (range(4)), check for which edges k appears in local_idx,
             # and sum() up the v's from there.
-            vals = numpy.array(
+            vals = np.array(
                 [
                     v[0, 2] + v[1, 1] + v[2, 3] + v[0, 1] + v[1, 3] + v[2, 2],
                     v[0, 3] + v[1, 2] + v[2, 0] + v[0, 2] + v[1, 0] + v[2, 3],
@@ -429,7 +427,7 @@ class MeshTetra(_SimplexMesh):
                 ]
             ).T
             #
-            self._control_volumes = numpy.bincount(
+            self._control_volumes = np.bincount(
                 self.cells["points"].reshape(-1),
                 vals.reshape(-1),
                 minlength=len(self.points),
@@ -448,12 +446,12 @@ class MeshTetra(_SimplexMesh):
         if "faces" not in self.cells:
             self.create_cell_face_relationships()
 
-        sums = numpy.bincount(
+        sums = np.bincount(
             self.cells["faces"].T.reshape(-1),
             self.circumcenter_face_distances.reshape(-1),
         )
 
-        return numpy.sum(sums < 0.0)
+        return np.sum(sums < 0.0)
 
     def show(self):
         from matplotlib import pyplot as plt
@@ -528,17 +526,17 @@ class MeshTetra(_SimplexMesh):
         # plt.axis("equal")
 
         # find all faces with this edge
-        adj_face_ids = numpy.where((self.faces["edges"] == edge_id).any(axis=1))[0]
+        adj_face_ids = np.where((self.faces["edges"] == edge_id).any(axis=1))[0]
         # find all cells with the faces
         # https://stackoverflow.com/a/38481969/353337
-        adj_cell_ids = numpy.where(
-            numpy.in1d(self.cells["faces"], adj_face_ids)
+        adj_cell_ids = np.where(
+            np.in1d(self.cells["faces"], adj_face_ids)
             .reshape(self.cells["faces"].shape)
             .any(axis=1)
         )[0]
 
         # plot all those adjacent cells; first collect all edges
-        adj_edge_ids = numpy.unique(
+        adj_edge_ids = np.unique(
             [
                 adj_edge_id
                 for adj_cell_id in adj_cell_ids

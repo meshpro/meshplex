@@ -1,14 +1,14 @@
-import numpy
+import numpy as np
 
 import meshplex
 
 
 def _is_near_equal(a, b, tol=1.0e-12):
-    return numpy.allclose(a, b, rtol=0.0, atol=tol)
+    return np.allclose(a, b, rtol=0.0, atol=tol)
 
 
 def test_mesh_line():
-    pts = numpy.array([0.0, 1.0, 3.0, 4.0])
+    pts = np.array([0.0, 1.0, 3.0, 4.0])
     cells = [[0, 1], [1, 2], [2, 3]]
     mesh = meshplex.mesh_line.MeshLine(pts, cells)
     assert _is_near_equal(mesh.cell_volumes, [1.0, 2.0, 1.0])

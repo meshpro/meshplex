@@ -1,6 +1,6 @@
 import math
 
-import numpy
+import numpy as np
 
 from .exceptions import MeshplexError
 
@@ -13,8 +13,8 @@ def get_signed_simplex_volumes(cells, pts):
     assert cells.shape[1] == n + 1
 
     p = pts[cells]
-    p = numpy.concatenate([p, numpy.ones(list(p.shape[:2]) + [1])], axis=-1)
-    return numpy.linalg.det(p) / math.factorial(n)
+    p = np.concatenate([p, np.ones(list(p.shape[:2]) + [1])], axis=-1)
+    return np.linalg.det(p) / math.factorial(n)
 
 
 def grp_start_len(a):
@@ -23,18 +23,16 @@ def grp_start_len(a):
     are.
     """
     # https://stackoverflow.com/a/50394587/353337
-    m = numpy.concatenate([[True], a[:-1] != a[1:], [True]])
-    idx = numpy.flatnonzero(m)
-    return idx[:-1], numpy.diff(idx)
+    m = np.concatenate([[True], a[:-1] != a[1:], [True]])
+    idx = np.flatnonzero(m)
+    return idx[:-1], np.diff(idx)
 
 
 def unique_rows(a):
-    # The numpy alternative `numpy.unique(a, axis=0)` is slow; cf.
+    # The numpy alternative `np.unique(a, axis=0)` is slow; cf.
     # <https://github.com/numpy/numpy/issues/11136>.
-    b = numpy.ascontiguousarray(a).view(
-        numpy.dtype((numpy.void, a.dtype.itemsize * a.shape[1]))
-    )
-    a_unique, inv, cts = numpy.unique(b, return_inverse=True, return_counts=True)
+    b = np.ascontiguousarray(a).view(np.dtype((np.void, a.dtype.itemsize * a.shape[1])))
+    a_unique, inv, cts = np.unique(b, return_inverse=True, return_counts=True)
     a_unique = a_unique.view(a.dtype).reshape(-1, a.shape[1])
     return a_unique, inv, cts
 
@@ -43,14 +41,14 @@ def compute_tri_areas(ei_dot_ej):
     # The alternative
     # ```
     # vol2 = (
-    #    0.5 * numpy.sum(ei_dot_ei, axis=0) ** 2
-    #    - numpy.sum(ei_dot_ei ** 2, axis=0))
+    #    0.5 * np.sum(ei_dot_ei, axis=0) ** 2
+    #    - np.sum(ei_dot_ei ** 2, axis=0))
     # ) / 8
     # ```
     # is slower. If both sums can be cached, it is faster than the ei_dot_ej expression.
     # The alternative
     # ```
-    # vol2 = -numpy.einsum("ij,ij->j", ei_dot_ei, ei_dot_ej) / 8
+    # vol2 = -np.einsum("ij,ij->j", ei_dot_ei, ei_dot_ej) / 8
     # ```
     # Is equally fast.
     # <https://gist.github.com/nschloe/94508c001fd8297670bbcca3903105a2>
@@ -61,9 +59,9 @@ def compute_tri_areas(ei_dot_ej):
     )
     # vol2 is the squared volume, but can be slightly negative if it comes to round-off
     # errors. Correct those.
-    assert numpy.all(vol2 > -1.0e-14)
+    assert np.all(vol2 > -1.0e-14)
     vol2[vol2 < 0] = 0.0
-    return numpy.sqrt(vol2)
+    return np.sqrt(vol2)
 
 
 def compute_ce_ratios(ei_dot_ej, tri_areas):
@@ -128,7 +126,7 @@ def compute_ce_ratios(ei_dot_ej, tri_areas):
     #
     #   e0 + e1 + e2 = 0.
     #
-    if numpy.any(tri_areas <= 0.0):
+    if np.any(tri_areas <= 0.0):
         raise MeshplexError("Degenerate cells.")
 
     return -ei_dot_ej * 0.25 / tri_areas[None]
