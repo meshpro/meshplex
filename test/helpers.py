@@ -1,18 +1,18 @@
 from math import fsum
 
-import numpy
+import numpy as np
 
 
 def is_near_equal(a, b, tol):
-    return numpy.allclose(a, b, rtol=0.0, atol=tol)
+    return np.allclose(a, b, rtol=0.0, atol=tol)
 
 
 def run(mesh, volume, convol_norms, ce_ratio_norms, cellvol_norms, tol=1.0e-12):
     # Check cell volumes.
     total_cellvolume = fsum(mesh.cell_volumes)
     assert abs(volume - total_cellvolume) < tol * volume
-    norm2 = numpy.linalg.norm(mesh.cell_volumes, ord=2)
-    norm_inf = numpy.linalg.norm(mesh.cell_volumes, ord=numpy.Inf)
+    norm2 = np.linalg.norm(mesh.cell_volumes, ord=2)
+    norm_inf = np.linalg.norm(mesh.cell_volumes, ord=np.Inf)
     assert is_near_equal(cellvol_norms, [norm2, norm_inf], tol)
 
     # If everything is Delaunay and the boundary elements aren't flat, the
@@ -35,21 +35,21 @@ def run(mesh, volume, convol_norms, ce_ratio_norms, cellvol_norms, tol=1.0e-12):
     vol = fsum(mesh.control_volumes)
     assert abs(volume - vol) < tol * volume
     # Check control volume norms.
-    norm2 = numpy.linalg.norm(mesh.control_volumes, ord=2)
-    norm_inf = numpy.linalg.norm(mesh.control_volumes, ord=numpy.Inf)
+    norm2 = np.linalg.norm(mesh.control_volumes, ord=2)
+    norm_inf = np.linalg.norm(mesh.control_volumes, ord=np.Inf)
     assert is_near_equal(convol_norms, [norm2, norm_inf], tol)
 
 
 def assert_norms(x, ref, tol):
-    ref = numpy.asarray(ref)
-    val = numpy.array(
+    ref = np.asarray(ref)
+    val = np.array(
         [
-            numpy.linalg.norm(x.flat, 1),
-            numpy.linalg.norm(x.flat, 2),
-            numpy.linalg.norm(x.flat, numpy.inf),
+            np.linalg.norm(x.flat, 1),
+            np.linalg.norm(x.flat, 2),
+            np.linalg.norm(x.flat, np.inf),
         ]
     )
-    assert numpy.all(numpy.abs(val - ref) < tol * numpy.abs(ref)), (
+    assert np.all(np.abs(val - ref) < tol * np.abs(ref)), (
         "Norms don't coincide.\n"
         f"Expected: [{ref[0]:.16e}, {ref[1]:.16e}, {ref[2]:.16e}]\n"
         f"Computed: [{val[0]:.16e}, {val[1]:.16e}, {val[2]:.16e}]\n"

@@ -7,7 +7,7 @@
 # clearly superior.
 #
 import meshio
-import numpy
+import numpy as np
 
 import meshplex
 
@@ -15,16 +15,16 @@ import meshplex
 def _objective(mesh):
     double_vol = 2 * mesh.cell_volumes
     num_cells = len(mesh.cell_volumes)
-    return -numpy.sum(numpy.sum(mesh.ei_dot_ej, axis=0) / double_vol) / num_cells
+    return -np.sum(np.sum(mesh.ei_dot_ej, axis=0) / double_vol) / num_cells
 
 
 def _grad(mesh):
     double_vol = 2 * mesh.cell_volumes
 
-    s = numpy.sum(mesh.ei_dot_ej, axis=0)
+    s = np.sum(mesh.ei_dot_ej, axis=0)
     e = mesh.half_edge_coords
 
-    ei_dot_ei = numpy.einsum("ijk, ijk->ij", e, e)
+    ei_dot_ei = np.einsum("ijk, ijk->ij", e, e)
     grad_x0 = (
         +(e[1] - e[2]) * double_vol[..., None] ** 2
         + 0.5
@@ -53,11 +53,11 @@ def _grad(mesh):
         )
     ) / double_vol[..., None] ** 3
 
-    grad_stack = numpy.array([grad_x0, grad_x1, grad_x2])
+    grad_stack = np.array([grad_x0, grad_x1, grad_x2])
 
     # add up all the contributions
-    grad = numpy.zeros(mesh.points.shape)
-    numpy.add.at(grad, mesh.cells["nodes"].T, grad_stack)
+    grad = np.zeros(mesh.points.shape)
+    np.add.at(grad, mesh.cells["nodes"].T, grad_stack)
 
     return grad
 
@@ -81,12 +81,12 @@ def read(filename):
 
     # x = mesh.points.copy()
     # x[:, :2] += 1.0e-1 * (
-    #     numpy.random.rand(len(mesh.points), 2) - 0.5
+    #     np.random.rand(len(mesh.points), 2) - 0.5
     #     )
     # x[boundary_verts] = mesh.points[boundary_verts]
 
     # only include nodes which are part of a cell
-    uvertices, uidx = numpy.unique(mesh.get_cells_type("triangle"), return_inverse=True)
+    uvertices, uidx = np.unique(mesh.get_cells_type("triangle"), return_inverse=True)
     cells = uidx.reshape(mesh.get_cells_type("triangle").shape)
     pts = mesh.points[uvertices]
 
@@ -94,17 +94,15 @@ def read(filename):
 
 
 def circle(num_segments=7):
-    angles = numpy.linspace(0.0, 2 * numpy.pi, num_segments, endpoint=False)
-    pts = numpy.array(
-        [numpy.cos(angles), numpy.sin(angles), numpy.zeros(len(angles))]
-    ).transpose()
-    pts = numpy.vstack([pts, [[-0.8, 0.0, 0.0]]])
+    angles = np.linspace(0.0, 2 * np.pi, num_segments, endpoint=False)
+    pts = np.array([np.cos(angles), np.sin(angles), np.zeros(len(angles))]).transpose()
+    pts = np.vstack([pts, [[-0.8, 0.0, 0.0]]])
 
     n = len(pts) - 1
-    cells = numpy.array([[k, (k + 1) % n, n] for k in range(n)])
+    cells = np.array([[k, (k + 1) % n, n] for k in range(n)])
 
-    pts = numpy.ascontiguousarray(pts)
-    cells = numpy.ascontiguousarray(cells)
+    pts = np.ascontiguousarray(pts)
+    cells = np.ascontiguousarray(cells)
     return pts, cells
 
 

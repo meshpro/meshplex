@@ -1,7 +1,7 @@
 # from helpers import download_mesh
 # import meshplex
 #
-# import numpy
+# import numpy as np
 # import unittest
 #
 #
@@ -18,9 +18,9 @@
 #         a0 = 1.0
 #         u = a_x * mesh.points[:, 0] + \
 #             a_y * mesh.points[:, 1] + \
-#             a0 * numpy.ones(num_nodes)
+#             a0 * np.ones(num_nodes)
 #         # Get the gradient analytically.
-#         sol = numpy.empty((num_nodes, 2))
+#         sol = np.empty((num_nodes, 2))
 #         sol[:, 0] = a_x
 #         sol[:, 1] = a_y
 #         # Compute the gradient numerically.

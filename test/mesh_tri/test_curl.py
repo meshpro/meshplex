@@ -1,6 +1,6 @@
 import pathlib
 
-import numpy
+import numpy as np
 
 import meshplex
 
@@ -12,7 +12,7 @@ def test_pacman():
 
     # Create circular vector field 0.5 * (y, -x, 0)
     # which has curl (0, 0, 1).
-    A = numpy.array([[-0.5 * coord[1], 0.5 * coord[0], 0.0] for coord in mesh.points])
+    A = np.array([[-0.5 * coord[1], 0.5 * coord[0], 0.0] for coord in mesh.points])
     # Compute the curl numerically.
     B = mesh.compute_curl(A)
 

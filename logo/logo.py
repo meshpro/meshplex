@@ -1,13 +1,13 @@
 import matplotlib.pyplot as plt
-import numpy
+import numpy as np
 
 import meshplex
 
 
 def _main():
-    points = numpy.array([[0.0, 0.0], [1.0, 0.0], [0.3, 0.8]])
-    # points = numpy.array([[0.0, 0.0], [1.0, 0.0], [0.5, numpy.sqrt(3) / 2]])
-    cells = numpy.array([[0, 1, 2]])
+    points = np.array([[0.0, 0.0], [1.0, 0.0], [0.3, 0.8]])
+    # points = np.array([[0.0, 0.0], [1.0, 0.0], [0.5, np.sqrt(3) / 2]])
+    cells = np.array([[0, 1, 2]])
 
     mesh = meshplex.mesh_tri.MeshTri(points, cells)
 
@@ -32,7 +32,7 @@ def _main():
         v1 = m1 - mesh.cell_circumcenters[0]
         e1 = (
             mesh.cell_circumcenters[0]
-            + v1 / numpy.linalg.norm(v1) * mesh.cell_circumradius[0]
+            + v1 / np.linalg.norm(v1) * mesh.cell_circumradius[0]
         )
         plt.plot(
             [mesh.cell_circumcenters[0, 0], e1[0]],
@@ -44,8 +44,8 @@ def _main():
     # heights
     for i, j, k in [[0, 1, 2], [1, 2, 0], [2, 0, 1]]:
         p = points - points[i]
-        v1 = p[j] / numpy.linalg.norm(p[j])
-        m1 = points[i] + numpy.dot(p[k], v1) * v1
+        v1 = p[j] / np.linalg.norm(p[j])
+        m1 = points[i] + np.dot(p[k], v1) * v1
         plt.plot(
             [points[k, 0], m1[0]], [points[k, 1], m1[1]], col, linewidth=lw, color=col
         )
@@ -59,13 +59,13 @@ def _main():
     # # angle bisectors
     # for i, j, k in [[0, 1, 2], [1, 2, 0], [2, 0, 1]]:
     #     p = points - points[i]
-    #     v1 = p[j] / numpy.linalg.norm(p[j])
-    #     v2 = p[k] / numpy.linalg.norm(p[k])
-    #     alpha = numpy.arccos(numpy.dot(v1, v2))
-    #     c = numpy.cos(alpha / 2)
-    #     s = numpy.sin(alpha / 2)
-    #     beta = numpy.linalg.norm(mesh.cell_incenters[0] - points[i]) + mesh.inradius[0]
-    #     m1 = points[i] + numpy.dot([[c, -s], [s, c]], v1) * beta
+    #     v1 = p[j] / np.linalg.norm(p[j])
+    #     v2 = p[k] / np.linalg.norm(p[k])
+    #     alpha = np.arccos(np.dot(v1, v2))
+    #     c = np.cos(alpha / 2)
+    #     s = np.sin(alpha / 2)
+    #     beta = np.linalg.norm(mesh.cell_incenters[0] - points[i]) + mesh.inradius[0]
+    #     m1 = points[i] + np.dot([[c, -s], [s, c]], v1) * beta
     #     plt.plot(
     #         [points[i, 0], m1[0]],
     #         [points[i, 1], m1[1]],

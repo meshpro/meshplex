@@ -1,7 +1,7 @@
 import tempfile
 
 import meshzoo
-import numpy
+import numpy as np
 
 import meshplex
 
@@ -19,7 +19,7 @@ def test_io_2d():
         mesh.write(tmpdir + "test.vtk")
         mesh2 = meshplex.read(tmpdir + "test.vtk")
 
-    assert numpy.all(mesh.cells["points"] == mesh2.cells["points"])
+    assert np.all(mesh.cells["points"] == mesh2.cells["points"])
 
 
 # def test_io_3d(self):
