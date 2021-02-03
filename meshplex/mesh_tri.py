@@ -90,6 +90,17 @@ class MeshTri(_SimplexMesh):
             self._ce_ratios = compute_ce_ratios(self.ei_dot_ej, self.cell_volumes)
         return self._ce_ratios
 
+    def remove_dangling_points(self):
+        """Remove all points which aren't part of an array
+        """
+        is_part_of_cell = np.zeros(self.points.shape[0], dtype=bool)
+        is_part_of_cell[self.cells["points"].flat] = True
+
+        new_point_idx = np.cumsum(is_part_of_cell) - 1
+
+        self.cells["points"] = new_point_idx[self.cells["points"]]
+        self._points = self._points[is_part_of_cell]
+
     def remove_cells(self, remove_array):
         """Remove cells and take care of all the dependent data structures. The input
         argument `remove_array` can be a boolean array or a list of indices.
