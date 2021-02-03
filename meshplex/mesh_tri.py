@@ -97,8 +97,9 @@ class MeshTri(_SimplexMesh):
 
         new_point_idx = np.cumsum(is_part_of_cell) - 1
 
-        self.cells["points"] = new_point_idx[self.cells["points"]]
         self._points = self._points[is_part_of_cell]
+        self.cells["points"] = new_point_idx[self.cells["points"]]
+        self.idx_hierarchy = new_point_idx[self.idx_hierarchy]
 
         if self._control_volumes is not None:
             self._control_volumes = self._control_volumes[is_part_of_cell]
@@ -108,6 +109,15 @@ class MeshTri(_SimplexMesh):
 
         if self.edges is not None:
             self.edges["points"] = new_point_idx[self.edges["points"]]
+
+        if self._is_interior_point is not None:
+            self._is_interior_point = self._is_interior_point[is_part_of_cell]
+
+        if self._is_boundary_point is not None:
+            self._is_boundary_point = self._is_boundary_point[is_part_of_cell]
+
+        if self._is_point_used is not None:
+            self._is_point_used = self._is_point_used[is_part_of_cell]
 
     def remove_cells(self, remove_array):
         """Remove cells and take care of all the dependent data structures. The input

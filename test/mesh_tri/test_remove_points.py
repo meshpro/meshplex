@@ -2,7 +2,7 @@ import numpy as np
 
 import meshplex
 
-from .helpers import assert_mesh_consistency
+from .helpers import assert_mesh_consistency, compute_all_entities
 
 
 def test():
@@ -16,9 +16,7 @@ def test():
     ]
     cells = [[1, 2, 4], [1, 4, 5]]
     mesh = meshplex.MeshTri(points, cells)
-    mesh.control_volumes
-    mesh.control_volume_centroids
-    mesh.create_edges()
+    compute_all_entities(mesh)
 
     mesh.remove_dangling_points()
 
