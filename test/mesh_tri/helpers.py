@@ -58,6 +58,9 @@ def assert_mesh_consistency(mesh):
     ref_points[mesh.idx_hierarchy[..., mesh.is_boundary_edge_local]] = True
     assert np.all(mesh.is_boundary_point == ref_points)
 
+    assert len(mesh.control_volumes) == len(mesh.points)
+    assert len(mesh.control_volume_centroids) == len(mesh.points)
+
     # TODO add more consistency checks
 
 
