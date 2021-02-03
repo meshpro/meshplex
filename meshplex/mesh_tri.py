@@ -411,9 +411,9 @@ class MeshTri(_SimplexMesh):
             ).T
 
             # Divide by the control volume
-            cv = self.get_control_volumes(cell_mask=cell_mask)[:, None]
+            cv = self.get_control_volumes(cell_mask=cell_mask)
             # self._cv_centroids /= np.where(cv > 0.0, cv, 1.0)
-            self._cv_centroids /= cv
+            self._cv_centroids = (self._cv_centroids.T / cv).T
             self._cvc_cell_mask = cell_mask
             assert np.all(cell_mask == self._cv_cell_mask)
 
