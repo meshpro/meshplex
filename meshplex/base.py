@@ -1,3 +1,5 @@
+import math
+
 import meshio
 import numpy as np
 
@@ -304,11 +306,21 @@ class _SimplexMesh:
         return self._signed_cell_volumes
 
     def compute_signed_cell_volumes(self, idx=slice(None)):
-        assert (
-            self.points.shape[1] == self.cells["points"].shape[1] - 1
-        ), "Signed areas only make sense for n-simplices in in nD."
-        # On <https://stackoverflow.com/q/50411583/353337>, we have a number of
-        # alternatives computing the oriented area, but it's fastest with the
-        # half-edges.
-        x = self.half_edge_coords
-        return (x[0, idx, 1] * x[2, idx, 0] - x[0, idx, 0] * x[2, idx, 1]) / 2
+        n = self.points.shape[1]
+        assert n == self.cells["points"].shape[1] - 1, (
+            "Signed areas only make sense for n-simplices in in nD. "
+            f"Got {n}D points."
+        )
+        if n == 2:
+            # On <https://stackoverflow.com/q/50411583/353337>, we have a number of
+            # alternatives computing the oriented area, but it's fastest with the
+            # half-edges.
+            x = self.half_edge_coords
+            out = (x[0, idx, 1] * x[2, idx, 0] - x[0, idx, 0] * x[2, idx, 1]) / 2
+        else:
+            # https://en.wikipedia.org/wiki/Simplex#Volume
+            cp = self.points[self.cells["points"]]
+            # append ones
+            cp1 = np.concatenate([cp, np.ones(cp.shape[:-1] + (1,))], axis=-1)
+            out = np.linalg.det(cp1) / math.factorial(n)
+        return out
