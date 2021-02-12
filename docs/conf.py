@@ -22,7 +22,7 @@ master_doc = "index"
 # -- Project information -----------------------------------------------------
 
 project = "meshplex"
-copyright = "2017-2019, Nico Schlömer"
+copyright = "2017-2021, Nico Schlömer"
 author = "Nico Schlömer"
 
 #

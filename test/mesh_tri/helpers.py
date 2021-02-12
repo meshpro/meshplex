@@ -72,7 +72,7 @@ def compute_all_entities(mesh):
     mesh.is_boundary_cell
     mesh.cell_volumes
     mesh.ce_ratios
-    mesh.signed_cell_areas
+    mesh.signed_cell_volumes
     mesh.cell_centroids
     mesh.control_volumes
     mesh.create_edges()
@@ -108,7 +108,7 @@ def compute_all_entities(mesh):
     assert mesh._cell_partitions is not None
     assert mesh._cv_centroids is not None
     assert mesh._cvc_cell_mask is not None
-    assert mesh._signed_cell_areas is not None
+    assert mesh._signed_cell_volumes is not None
     assert mesh._cell_centroids is not None
 
 
@@ -159,7 +159,9 @@ def assert_mesh_equality(mesh0, mesh1):
         np.abs(mesh0.ce_ratios_per_interior_edge - mesh1.ce_ratios_per_interior_edge)
         < 1.0e-14
     )
-    assert np.all(np.abs(mesh0.signed_cell_areas - mesh1.signed_cell_areas) < 1.0e-14)
+    assert np.all(
+        np.abs(mesh0.signed_cell_volumes - mesh1.signed_cell_volumes) < 1.0e-14
+    )
     assert np.all(np.abs(mesh0.cell_centroids - mesh1.cell_centroids) < 1.0e-14)
     assert np.all(np.abs(mesh0.cell_circumcenters - mesh1.cell_circumcenters) < 1.0e-14)
     assert np.all(np.abs(mesh0.control_volumes - mesh1.control_volumes) < 1.0e-14)
