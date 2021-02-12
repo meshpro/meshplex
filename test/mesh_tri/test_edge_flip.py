@@ -216,16 +216,16 @@ def test_flip_orientation():
     # preserve positive orientation
     cells = np.array([[0, 1, 2], [0, 2, 3]])
     mesh = meshplex.MeshTri(points, cells)
-    assert np.all(mesh.signed_cell_areas > 0.0)
+    assert np.all(mesh.signed_cell_volumes > 0.0)
     mesh.flip_until_delaunay()
-    assert np.all(mesh.signed_cell_areas > 0.0)
+    assert np.all(mesh.signed_cell_volumes > 0.0)
 
     # also preserve negative orientation
     cells = np.array([[0, 2, 1], [0, 3, 2]])
     mesh = meshplex.MeshTri(points, cells)
-    assert np.all(mesh.signed_cell_areas < 0.0)
+    assert np.all(mesh.signed_cell_volumes < 0.0)
     mesh.flip_until_delaunay()
-    assert np.all(mesh.signed_cell_areas < 0.0)
+    assert np.all(mesh.signed_cell_volumes < 0.0)
 
 
 def test_flip_infinite():

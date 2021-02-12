@@ -98,6 +98,7 @@ class _SimplexMesh:
         ]
 
         self._edge_lengths = None
+        self._signed_cell_volumes = None
 
     # prevent overriding points without adapting the other mesh data
     @property
@@ -294,3 +295,20 @@ class _SimplexMesh:
                 is_inside = is_inside & self.is_boundary_point
 
         self.subdomains[subdomain] = {"vertices": is_inside}
+
+    @property
+    def signed_cell_volumes(self):
+        """Signed volumes of an n-simplex in nD."""
+        if self._signed_cell_volumes is None:
+            self._signed_cell_volumes = self.compute_signed_cell_volumes()
+        return self._signed_cell_volumes
+
+    def compute_signed_cell_volumes(self, idx=slice(None)):
+        assert (
+            self.points.shape[1] == self.cells["points"].shape[1] - 1
+        ), "Signed areas only make sense for n-simplices in in nD."
+        # On <https://stackoverflow.com/q/50411583/353337>, we have a number of
+        # alternatives computing the oriented area, but it's fastest with the
+        # half-edges.
+        x = self.half_edge_coords
+        return (x[0, idx, 1] * x[2, idx, 0] - x[0, idx, 0] * x[2, idx, 1]) / 2

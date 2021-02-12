@@ -59,7 +59,7 @@ class MeshTri(_SimplexMesh):
         self._cell_partitions = None
         self._cv_centroids = None
         self._cvc_cell_mask = None
-        self._signed_cell_areas = None
+        self._signed_cell_volumes = None
         self._cell_centroids = None
 
     @property
@@ -278,8 +278,8 @@ class MeshTri(_SimplexMesh):
         if self._cell_partitions is not None:
             self._cell_partitions = self._cell_partitions[:, keep]
 
-        if self._signed_cell_areas is not None:
-            self._signed_cell_areas = self._signed_cell_areas[keep]
+        if self._signed_cell_volumes is not None:
+            self._signed_cell_volumes = self._signed_cell_volumes[keep]
 
         # TODO These could also be updated, but let's implement it when needed
         self._interior_ce_ratios = None
@@ -422,23 +422,6 @@ class MeshTri(_SimplexMesh):
     @property
     def control_volume_centroids(self):
         return self.get_control_volume_centroids()
-
-    @property
-    def signed_cell_areas(self):
-        """Signed area of a triangle in 2D."""
-        if self._signed_cell_areas is None:
-            self._signed_cell_areas = self.compute_signed_cell_areas()
-        return self._signed_cell_areas
-
-    def compute_signed_cell_areas(self, idx=slice(None)):
-        assert (
-            self.points.shape[1] == 2
-        ), "Signed areas only make sense for triangles in 2D."
-        # On <https://stackoverflow.com/q/50411583/353337>, we have a number of
-        # alternatives computing the oriented area, but it's fastest with the
-        # half-edges.
-        x = self.half_edge_coords
-        return (x[0, idx, 1] * x[2, idx, 0] - x[0, idx, 0] * x[2, idx, 1]) / 2
 
     def mark_boundary(self):
         warnings.warn(
@@ -1388,5 +1371,5 @@ class MeshTri(_SimplexMesh):
         self._control_volumes = None
         self._cell_partitions = None
         self._cv_centroids = None
-        self._signed_cell_areas = None
+        self._signed_cell_volumes = None
         self.subdomains = {}

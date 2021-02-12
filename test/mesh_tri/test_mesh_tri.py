@@ -754,7 +754,7 @@ def test_reference_vals_pacman():
         1.0e-15,
     )
     assert_norms(
-        mesh.signed_cell_areas,
+        mesh.signed_cell_volumes,
         [7.3645739331058977e01, 2.6213234038171014e00, 1.3841739494523259e-01],
         1.0e-15,
     )
