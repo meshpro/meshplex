@@ -102,6 +102,16 @@ class _SimplexMesh:
         self._edge_lengths = None
         self._signed_cell_volumes = None
 
+    def __repr__(self):
+        name = {
+            3: "triangle",
+            4: "tetra",
+        }[self.cells["points"].shape[1]]
+        num_points = len(self.points)
+        num_cells = len(self.cells["points"])
+        string = f"<meshplex {name} mesh, {num_points} points, {num_cells} cells>"
+        return string
+
     # prevent overriding points without adapting the other mesh data
     @property
     def points(self):
