@@ -395,3 +395,30 @@ class _SimplexMesh:
         # <http://mathworld.wolfram.com/Cayley-MengerDeterminant.html> or the
         # computation via heights.
         return self._cell_volumes
+
+    @property
+    def cell_incenters(self):
+        """Get the midpoints of the inspheres."""
+        if self.n == 3:
+            abc = self.edge_lengths / np.sum(self.edge_lengths, axis=0)
+            return np.einsum("ij,jik->jk", abc, self.points[self.cells["points"]])
+
+        assert self.n == 4
+        # https://en.wikipedia.org/wiki/Incenter#Barycentric_coordinates
+        # https://math.stackexchange.com/a/2864770/36678
+        facet_areas = compute_tri_areas(self.ei_dot_ej)
+        # abc = np.sqrt(self.ei_dot_ei)
+        facet_areas /= np.sum(facet_areas, axis=0)
+        return np.einsum("ij,jik->jk", facet_areas, self.points[self.cells["points"]])
+
+    @property
+    def cell_inradius(self):
+        """Get the inradii of all cells"""
+        # See <http://mathworld.wolfram.com/Incircle.html>.
+        # https://en.wikipedia.org/wiki/Tetrahedron#Inradius
+        if self.n == 3:
+            return 2 * self.cell_volumes / np.sum(self.edge_lengths, axis=0)
+
+        assert self.n == 4
+        facet_areas = compute_tri_areas(self.ei_dot_ej)
+        return 3 * self.cell_volumes / np.sum(facet_areas, axis=0)

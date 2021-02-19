@@ -275,21 +275,6 @@ class MeshTetra(_SimplexMesh):
         return self._circumcenters
 
     @property
-    def cell_incenters(self):
-        """Get the midpoints of the inspheres."""
-        # https://math.stackexchange.com/a/2864770/36678
-        facet_areas = compute_tri_areas(self.ei_dot_ej)
-        # abc = np.sqrt(self.ei_dot_ei)
-        facet_areas /= np.sum(facet_areas, axis=0)
-        return np.einsum("ij,jik->jk", facet_areas, self.points[self.cells["points"]])
-
-    @property
-    def cell_inradius(self):
-        # https://en.wikipedia.org/wiki/Tetrahedron#Inradius
-        facet_areas = compute_tri_areas(self.ei_dot_ej)
-        return 3 * self.cell_volumes / np.sum(facet_areas, axis=0)
-
-    @property
     def cell_circumradius(self):
         # Just take the distance of the circumcenter to one of the points for now.
         dist = self.points[self.idx_hierarchy[0, 0, 0]] - self.cell_circumcenters
