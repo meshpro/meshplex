@@ -3,6 +3,8 @@ import math
 import meshio
 import numpy as np
 
+from .helpers import compute_tri_areas
+
 __all__ = ["_SimplexMesh"]
 
 
@@ -99,9 +101,16 @@ class _SimplexMesh:
             for k in range(self.n)
         ]
 
+        self._is_point_used = None
+
         self._edge_lengths = None
+        self._facet_areas = None
         self._signed_cell_volumes = None
+        self._cell_volumes = None
         self._heights = None
+
+        # only used for tetra
+        self._zeta = None
 
     def __repr__(self):
         name = {
@@ -251,6 +260,17 @@ class _SimplexMesh:
             self._edge_lengths = np.sqrt(self.ei_dot_ei)
         return self._edge_lengths
 
+    @property
+    def facet_areas(self):
+        if self._facet_areas is None:
+            if self.n == 3:
+                self._facet_areas = self.edge_lengths
+            else:
+                assert self.n == 4
+                self._facet_areas = compute_tri_areas(self.ei_dot_ej)
+
+        return self._facet_areas
+
     def get_vertex_mask(self, subdomain=None):
         if subdomain is None:
             # https://stackoverflow.com/a/42392791/353337
@@ -359,3 +379,47 @@ class _SimplexMesh:
             cp1 = np.concatenate([cp, np.ones(cp.shape[:-1] + (1,))], axis=-1)
             out = np.linalg.det(cp1) / math.factorial(n)
         return out
+
+    @property
+    def zeta(self):
+        assert self.n == 4
+        ee = self.ei_dot_ej
+        self._zeta = (
+            -ee[2, [1, 2, 3, 0]] * ee[1] * ee[2]
+            - ee[1, [2, 3, 0, 1]] * ee[2] * ee[0]
+            - ee[0, [3, 0, 1, 2]] * ee[0] * ee[1]
+            + ee[0] * ee[1] * ee[2]
+        )
+        return self._zeta
+
+    @property
+    def cell_volumes(self):
+        if self._cell_volumes is None:
+            if self.n == 3:
+                self._cell_volumes = compute_tri_areas(self.ei_dot_ej)
+            else:
+                assert self.n == 4
+                # sum(self.circumcenter_face_distances * face_areas / 3) = cell_volumes
+                # =>
+                # cell_volumes = np.sqrt(sum(zeta / 72))
+                self._cell_volumes = np.sqrt(np.sum(self.zeta, axis=0) / 72.0)
+
+        # For higher-dimensional volumes, check out the Cayley-Menger determinant
+        # <http://mathworld.wolfram.com/Cayley-MengerDeterminant.html> or the
+        # computation via heights.
+        return self._cell_volumes
+
+    @property
+    def cell_incenters(self):
+        """Get the midpoints of the inspheres."""
+        # https://en.wikipedia.org/wiki/Incenter#Barycentric_coordinates
+        # https://math.stackexchange.com/a/2864770/36678
+        abc = self.facet_areas / np.sum(self.facet_areas, axis=0)
+        return np.einsum("ij,jik->jk", abc, self.points[self.cells["points"]])
+
+    @property
+    def cell_inradius(self):
+        """Get the inradii of all cells"""
+        # See <http://mathworld.wolfram.com/Incircle.html>.
+        # https://en.wikipedia.org/wiki/Tetrahedron#Inradius
+        return (self.n - 1) * self.cell_volumes / np.sum(self.facet_areas, axis=0)

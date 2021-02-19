@@ -37,7 +37,6 @@ class MeshTri(_SimplexMesh):
         self._edges_cells_idx = None
         self._boundary_edges = None
         self._interior_edges = None
-        self._is_point_used = None
 
     def _reset_point_data(self):
         """Reset all data that changes when point coordinates changes."""
@@ -71,12 +70,6 @@ class MeshTri(_SimplexMesh):
     def genus(self):
         # https://math.stackexchange.com/a/85164/36678
         return 1 - self.euler_characteristic / 2
-
-    @property
-    def cell_volumes(self):
-        if self._cell_volumes is None:
-            self._cell_volumes = compute_tri_areas(self.ei_dot_ej)
-        return self._cell_volumes
 
     @property
     def ce_ratios(self):
@@ -587,19 +580,6 @@ class MeshTri(_SimplexMesh):
                 self.points[point_cells], self.cell_partitions
             )
         return self._cell_circumcenters
-
-    @property
-    def cell_incenters(self):
-        """Get the midpoints of the incircles."""
-        # https://en.wikipedia.org/wiki/Incenter#Barycentric_coordinates
-        abc = self.edge_lengths / np.sum(self.edge_lengths, axis=0)
-        return np.einsum("ij,jik->jk", abc, self.points[self.cells["points"]])
-
-    @property
-    def cell_inradius(self):
-        """Get the inradii of all cells"""
-        # See <http://mathworld.wolfram.com/Incircle.html>.
-        return 2 * self.cell_volumes / np.sum(self.edge_lengths, axis=0)
 
     @property
     def cell_circumradius(self):
