@@ -122,7 +122,7 @@ class MeshTetra(_SimplexMesh):
         #
         # TODO See <https://math.stackexchange.com/a/2864770/36678> for another
         #      interesting approach.
-        alpha = self._zeta / np.sum(self._zeta, axis=0)
+        alpha = self.zeta / np.sum(self.zeta, axis=0)
 
         self._circumcenters = np.sum(
             alpha[None].T * self.points[self.cells["points"]], axis=1
@@ -238,13 +238,6 @@ class MeshTetra(_SimplexMesh):
         # (which is the square of the face area). It's funny that there should be no
         # further simplification in zeta/alpha, but nothing has been found here yet.
         #
-        ee = self.ei_dot_ej
-        self._zeta = (
-            -ee[2, [1, 2, 3, 0]] * ee[1] * ee[2]
-            - ee[1, [2, 3, 0, 1]] * ee[2] * ee[0]
-            - ee[0, [3, 0, 1, 2]] * ee[0] * ee[1]
-            + ee[0] * ee[1] * ee[2]
-        )
 
         # From base.py, but spelled out here since we can avoid one sqrt when computing
         # the c/e ratios for the faces.
@@ -256,14 +249,6 @@ class MeshTetra(_SimplexMesh):
         # face_ce_ratios = -self.ei_dot_ej * 0.25 / face_areas[None]
         face_ce_ratios_div_face_areas = -self.ei_dot_ej / alpha
 
-        # TODO Check out the Cayley-Menger determinant
-        # <http://mathworld.wolfram.com/Cayley-MengerDeterminant.html
-        #
-        # sum(self.circumcenter_face_distances * face_areas / 3) = cell_volumes
-        # =>
-        # cell_volumes = np.sqrt(sum(zeta / 72))
-        self.cell_volumes = np.sqrt(np.sum(self._zeta, axis=0) / 72.0)
-
         #
         # self.circumcenter_face_distances =
         #    zeta / (24.0 * face_areas) / self.cell_volumes[None]
@@ -272,13 +257,13 @@ class MeshTetra(_SimplexMesh):
         #
         # so
         ce_ratios = (
-            self._zeta / 48.0 * face_ce_ratios_div_face_areas / self.cell_volumes[None]
+            self.zeta / 48.0 * face_ce_ratios_div_face_areas / self.cell_volumes[None]
         )
 
         # Distances of the cell circumcenter to the faces.
         face_areas = 0.5 * np.sqrt(alpha)
         self.circumcenter_face_distances = (
-            self._zeta / (24.0 * face_areas) / self.cell_volumes[None]
+            self.zeta / (24.0 * face_areas) / self.cell_volumes[None]
         )
 
         return ce_ratios

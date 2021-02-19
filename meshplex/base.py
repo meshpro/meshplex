@@ -3,6 +3,9 @@ import math
 import meshio
 import numpy as np
 
+from .helpers import compute_tri_areas
+
+
 __all__ = ["_SimplexMesh"]
 
 
@@ -101,7 +104,11 @@ class _SimplexMesh:
 
         self._edge_lengths = None
         self._signed_cell_volumes = None
+        self._cell_volumes = None
         self._heights = None
+
+        # only used for tetra
+        self._zeta = None
 
     def __repr__(self):
         name = {
@@ -359,3 +366,32 @@ class _SimplexMesh:
             cp1 = np.concatenate([cp, np.ones(cp.shape[:-1] + (1,))], axis=-1)
             out = np.linalg.det(cp1) / math.factorial(n)
         return out
+
+    @property
+    def zeta(self):
+        assert self.n == 4
+        ee = self.ei_dot_ej
+        self._zeta = (
+            -ee[2, [1, 2, 3, 0]] * ee[1] * ee[2]
+            - ee[1, [2, 3, 0, 1]] * ee[2] * ee[0]
+            - ee[0, [3, 0, 1, 2]] * ee[0] * ee[1]
+            + ee[0] * ee[1] * ee[2]
+        )
+        return self._zeta
+
+    @property
+    def cell_volumes(self):
+        if self._cell_volumes is None:
+            if self.n == 3:
+                self._cell_volumes = compute_tri_areas(self.ei_dot_ej)
+            else:
+                assert self.n == 4
+                # sum(self.circumcenter_face_distances * face_areas / 3) = cell_volumes
+                # =>
+                # cell_volumes = np.sqrt(sum(zeta / 72))
+                self._cell_volumes = np.sqrt(np.sum(self.zeta, axis=0) / 72.0)
+
+        # For higher-dimensional volumes, check out the Cayley-Menger determinant
+        # <http://mathworld.wolfram.com/Cayley-MengerDeterminant.html> or the
+        # computation via heights.
+        return self._cell_volumes

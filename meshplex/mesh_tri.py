@@ -73,12 +73,6 @@ class MeshTri(_SimplexMesh):
         return 1 - self.euler_characteristic / 2
 
     @property
-    def cell_volumes(self):
-        if self._cell_volumes is None:
-            self._cell_volumes = compute_tri_areas(self.ei_dot_ej)
-        return self._cell_volumes
-
-    @property
     def ce_ratios(self):
         if self._ce_ratios is None:
             self._ce_ratios = compute_ce_ratios(self.ei_dot_ej, self.cell_volumes)
