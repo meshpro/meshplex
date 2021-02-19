@@ -31,12 +31,6 @@ class MeshTetra(_SimplexMesh):
 
         self._cell_centroids = None
 
-    def __repr__(self):
-        num_points = len(self.points)
-        num_cells = len(self.cells["points"])
-        string = f"<meshplex tetra mesh, {num_points} points, {num_cells} cells>"
-        return string
-
     def mark_boundary(self):
         if "faces" not in self.cells:
             self.create_cell_face_relationships()

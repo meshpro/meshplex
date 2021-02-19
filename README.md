@@ -30,14 +30,16 @@ import numpy
 import meshplex
 
 # create a simple MeshTri instance
-points = numpy.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
+points = numpy.array([[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]])
 cells = numpy.array([[0, 1, 2]])
 mesh = meshplex.MeshTri(points, cells)
 # or read it from a file
 # mesh = meshplex.read("pacman.vtk")
 
-# triangle volumes
+# triangle volumes, heights
 print(mesh.cell_volumes)
+print(mesh.signed_cell_volumes)
+print(mesh.heights)
 
 # circumcenters, centroids, incenters
 print(mesh.cell_circumcenters)

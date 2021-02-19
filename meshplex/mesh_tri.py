@@ -39,12 +39,6 @@ class MeshTri(_SimplexMesh):
         self._interior_edges = None
         self._is_point_used = None
 
-    def __repr__(self):
-        num_points = len(self.points)
-        num_cells = len(self.cells["points"])
-        string = f"<meshplex triangle mesh, {num_points} points, {num_cells} cells>"
-        return string
-
     def _reset_point_data(self):
         """Reset all data that changes when point coordinates changes."""
         self._half_edge_coords = None

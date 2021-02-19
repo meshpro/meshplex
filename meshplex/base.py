@@ -101,6 +101,17 @@ class _SimplexMesh:
 
         self._edge_lengths = None
         self._signed_cell_volumes = None
+        self._heights = None
+
+    def __repr__(self):
+        name = {
+            3: "triangle",
+            4: "tetra",
+        }[self.cells["points"].shape[1]]
+        num_points = len(self.points)
+        num_cells = len(self.cells["points"])
+        string = f"<meshplex {name} mesh, {num_points} points, {num_cells} cells>"
+        return string
 
     # prevent overriding points without adapting the other mesh data
     @property
@@ -165,6 +176,30 @@ class _SimplexMesh:
         if self._cell_centroids is None:
             self._cell_centroids = self.compute_centroids()
         return self._cell_centroids
+
+    @property
+    def heights(self):
+        if self._heights is None:
+            # compute the distance between the base (n-1)-simplex and the left-over
+            # point
+            # See <https://math.stackexchange.com/a/4025438/36678>.
+            cp = self.cells["points"]
+            n = cp.shape[1]
+            base_idx = np.moveaxis(
+                np.array([cp[:, np.arange(n) != k] for k in range(n)]),
+                -1,
+                0,
+            )
+            base = self.points[base_idx]
+            tip = self.points[cp.T]
+
+            A = base - tip
+            assert A.shape == base.shape
+            ATA = np.einsum("i...j,k...j->...ik", A, A)
+            e = np.ones(ATA.shape[:-1])
+            self._heights = np.sqrt(1 / np.sum(np.linalg.solve(ATA, e), axis=-1))
+
+        return self._heights
 
     @property
     def cell_barycenters(self):
