@@ -183,9 +183,18 @@ class _SimplexMesh:
             # compute the distance between the base (n-1)-simplex and the left-over
             # point
             # See <https://math.stackexchange.com/a/4025438/36678>.
-            base = self.points[self.idx_hierarchy]
-            tip = self.points[self.cells["points"].T]
+            cp = self.cells["points"]
+            n = cp.shape[1]
+            base_idx = np.moveaxis(
+                np.array([cp[:, np.arange(n) != k] for k in range(n)]),
+                -1,
+                0,
+            )
+            base = self.points[base_idx]
+            tip = self.points[cp.T]
+
             A = base - tip
+            assert A.shape == base.shape
             ATA = np.einsum("i...j,k...j->...ik", A, A)
             e = np.ones(ATA.shape[:-1])
             self._heights = np.sqrt(1 / np.sum(np.linalg.solve(ATA, e), axis=-1))
