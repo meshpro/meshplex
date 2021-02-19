@@ -101,6 +101,7 @@ class _SimplexMesh:
 
         self._edge_lengths = None
         self._signed_cell_volumes = None
+        self._heights = None
 
     def __repr__(self):
         name = {
@@ -175,6 +176,21 @@ class _SimplexMesh:
         if self._cell_centroids is None:
             self._cell_centroids = self.compute_centroids()
         return self._cell_centroids
+
+    @property
+    def heights(self):
+        if self._heights is None:
+            # compute the distance between the base (n-1)-simplex and the left-over
+            # point
+            # See <https://math.stackexchange.com/a/4025438/36678>.
+            base = self.points[self.idx_hierarchy]
+            tip = self.points[self.cells["points"].T]
+            A = base - tip
+            ATA = np.einsum("i...j,k...j->...ik", A, A)
+            e = np.ones(ATA.shape[:-1])
+            self._heights = np.sqrt(1 / np.sum(np.linalg.solve(ATA, e), axis=-1))
+
+        return self._heights
 
     @property
     def cell_barycenters(self):

@@ -36,9 +36,10 @@ mesh = meshplex.MeshTri(points, cells)
 # or read it from a file
 # mesh = meshplex.read("pacman.vtk")
 
-# triangle volumes
+# triangle volumes, heights
 print(mesh.cell_volumes)
 print(mesh.signed_cell_volumes)
+print(mesh.heights)
 
 # circumcenters, centroids, incenters
 print(mesh.cell_circumcenters)
