@@ -101,6 +101,8 @@ class _SimplexMesh:
             for k in range(self.n)
         ]
 
+        self._is_point_used = None
+
         self._edge_lengths = None
         self._facet_areas = None
         self._signed_cell_volumes = None
