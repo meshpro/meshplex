@@ -75,7 +75,7 @@ def compute_all_entities(mesh):
     mesh.signed_cell_volumes
     mesh.cell_centroids
     mesh.control_volumes
-    mesh.create_edges()
+    mesh.create_facets()
     mesh.edges_cells
     mesh.edges_cells_idx
     mesh.boundary_edges

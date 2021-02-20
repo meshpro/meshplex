@@ -4,6 +4,7 @@ import warnings
 import numpy as np
 
 from .base import _SimplexMesh
+from .exceptions import MeshplexError
 from .helpers import (
     compute_ce_ratios,
     compute_tri_areas,
@@ -59,7 +60,7 @@ class MeshTri(_SimplexMesh):
     def euler_characteristic(self):
         # number of vertices - number of edges + number of faces
         if "edges" not in self.cells:
-            self.create_edges()
+            self.create_facets()
         return (
             self.points.shape[0]
             - self.edges["points"].shape[0]
@@ -307,7 +308,7 @@ class MeshTri(_SimplexMesh):
     def ce_ratios_per_interior_edge(self):
         if self._interior_ce_ratios is None:
             if "edges" not in self.cells:
-                self.create_edges()
+                self.create_facets()
 
             n = self.edges["points"].shape[0]
             ce_ratios = np.bincount(
@@ -426,7 +427,7 @@ class MeshTri(_SimplexMesh):
     @property
     def is_boundary_edge_local(self):
         if self._is_boundary_edge_local is None:
-            self.create_edges()
+            self.create_facets()
         return self._is_boundary_edge_local
 
     is_boundary_facet_local = is_boundary_edge_local
@@ -434,7 +435,7 @@ class MeshTri(_SimplexMesh):
     @property
     def is_boundary_edge(self):
         if self._is_boundary_edge is None:
-            self.create_edges()
+            self.create_facets()
         return self._is_boundary_edge
 
     @property
@@ -468,28 +469,6 @@ class MeshTri(_SimplexMesh):
             self._is_interior_point = self.is_point_used & ~self.is_boundary_point
         return self._is_interior_point
 
-    def create_edges(self):
-        """Set up edge->point and edge->cell relations."""
-        # Reshape into individual edges.
-        # Sort the columns to make it possible for `unique()` to identify
-        # individual edges.
-        s = self.idx_hierarchy.shape
-        a = np.sort(self.idx_hierarchy.reshape(s[0], -1).T)
-        a_unique, inv, cts = unique_rows(a)
-
-        assert np.all(cts < 3), "No edge has more than 2 cells. Are cells listed twice?"
-
-        self._is_boundary_edge_local = (cts[inv] == 1).reshape(s[1:])
-        self._is_boundary_edge = cts == 1
-
-        self.edges = {"points": a_unique}
-
-        # cell->edges relationship
-        self.cells["edges"] = inv.reshape(3, -1).T
-
-        self._edges_cells = None
-        self._edges_cells_idx = None
-
     @property
     def edges_cells(self):
         if self._edges_cells is None:
@@ -502,7 +481,7 @@ class MeshTri(_SimplexMesh):
         manipulation.
         """
         if self.edges is None:
-            self.create_edges()
+            self.create_facets()
 
         # num_edges = len(self.edges["points"])
         # count = np.bincount(self.cells["edges"].flat, minlength=num_edges)
@@ -885,7 +864,7 @@ class MeshTri(_SimplexMesh):
 
         if show_edge_numbers:
             if self.edges is None:
-                self.create_edges()
+                self.create_facets()
             for i, point_ids in enumerate(self.edges["points"]):
                 midpoint = np.sum(self.points[point_ids], axis=0) / 2
                 plt.text(
@@ -940,7 +919,7 @@ class MeshTri(_SimplexMesh):
             ax.add_collection(p)
 
         if self.edges is None:
-            self.create_edges()
+            self.create_facets()
 
         # Get edges, cut off z-component.
         e = self.points[self.edges["points"]][:, :, :2]
@@ -1047,7 +1026,7 @@ class MeshTri(_SimplexMesh):
         plt.axis("equal")
 
         if self.edges is None:
-            self.create_edges()
+            self.create_facets()
 
         # Find the edges that contain the vertex
         edge_gids = np.where((self.edges["points"] == point_id).any(axis=1))[0]

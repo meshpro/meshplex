@@ -3,7 +3,8 @@ import math
 import meshio
 import numpy as np
 
-from .helpers import compute_tri_areas
+from .helpers import compute_tri_areas, unique_rows
+from .exceptions import MeshplexError
 
 __all__ = ["_SimplexMesh"]
 
@@ -423,3 +424,69 @@ class _SimplexMesh:
         # See <http://mathworld.wolfram.com/Incircle.html>.
         # https://en.wikipedia.org/wiki/Tetrahedron#Inradius
         return (self.n - 1) * self.cell_volumes / np.sum(self.facet_areas, axis=0)
+
+    def create_facets(self):
+        """Set up edge->point and edge->cell relations."""
+        if self.n == 3:
+            # Reshape into individual edges.
+            # Sort the columns to make it possible for `unique()` to identify
+            # individual edges.
+            s = self.idx_hierarchy.shape
+            a = np.sort(self.idx_hierarchy.reshape(s[0], -1).T)
+            a_unique, inv, cts = unique_rows(a)
+
+            if np.any(cts >= 3):
+                cts = cts[cts >= 3]
+                num_excess_cells = np.sum(cts >= 3)
+                raise MeshplexError(
+                    f"No edge should have more than two cells, "
+                    "but found {num_excess_cells} such edges. "
+                    "Are cells listed twice?"
+                )
+
+            self._is_boundary_edge_local = (cts[inv] == 1).reshape(s[1:])
+            self._is_boundary_edge = cts == 1
+
+            self.edges = {"points": a_unique}
+
+            # cell->edges relationship
+            self.cells["edges"] = inv.reshape(3, -1).T
+
+            self._edges_cells = None
+            self._edges_cells_idx = None
+        else:
+            assert self.n == 4
+            # Reshape into individual faces, and take the first point per edge. (The face is
+            # fully characterized by it.) Sort the columns to make it possible for
+            # `unique()` to identify individual faces.
+            s = self.idx_hierarchy.shape
+            a = self.idx_hierarchy.reshape([s[0], s[1], s[2] * s[3]]).T
+            a = np.sort(a[:, :, 0])
+
+            # Find the unique faces
+            b = np.ascontiguousarray(a).view(
+                np.dtype((np.void, a.dtype.itemsize * a.shape[1]))
+            )
+            _, idx, inv, cts = np.unique(
+                b, return_index=True, return_inverse=True, return_counts=True
+            )
+
+            # No face has more than 2 cells. This assertion fails, for example, if cells are
+            # listed twice.
+            assert all(cts < 3)
+
+            self.is_boundary_facet_local = (cts[inv] == 1).reshape(s[2:])
+            self.is_boundary_facet = cts == 1
+
+            self.faces = {"points": a[idx]}
+
+            # cell->faces relationship
+            num_cells = len(self.cells["points"])
+            cells_faces = inv.reshape([4, num_cells]).T
+            self.cells["faces"] = cells_faces
+
+            # Store the opposing points too
+            # self.cells["opposing vertex"] = self.cells["points"]
+
+            # save for create_edge_cells
+            self._inv_faces = inv

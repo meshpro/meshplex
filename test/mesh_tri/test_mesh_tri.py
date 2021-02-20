@@ -129,7 +129,7 @@ def test_regular_tri_additional_points():
 
     assert np.array_equal(mesh.cells["points"], [[1, 2, 3]])
 
-    mesh.create_edges()
+    mesh.create_facets()
     assert np.array_equal(mesh.cells["edges"], [[2, 1, 0]])
     assert np.array_equal(mesh.edges["points"], [[1, 2], [1, 3], [2, 3]])
 

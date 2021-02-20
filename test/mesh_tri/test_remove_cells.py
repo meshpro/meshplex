@@ -40,7 +40,7 @@ def get_mesh0():
         ]
     )
     mesh = meshplex.MeshTri(points, cells)
-    mesh.create_edges()
+    mesh.create_facets()
     return mesh
 
 
@@ -156,7 +156,7 @@ def test_reference(mesh0, remove_cells):
 
     # recreate the reduced mesh from scratch
     mesh1 = meshplex.MeshTri(mesh0.points, mesh0.cells["points"])
-    mesh1.create_edges()
+    mesh1.create_facets()
 
     # check against the original
     assert_mesh_equality(mesh0, mesh1)
