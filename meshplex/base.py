@@ -5,7 +5,7 @@ import meshio
 import numpy as np
 
 from .exceptions import MeshplexError
-from .helpers import compute_tri_areas, grp_start_len, unique_rows
+from .helpers import compute_tri_areas, grp_start_len
 
 __all__ = ["_SimplexMesh"]
 
@@ -485,7 +485,7 @@ class _SimplexMesh:
             self.faces = {"points": a_unique}
 
             # cell->faces relationship
-            num_cells = len(self.cells["points"])
+            # num_cells = len(self.cells["points"])
             self.cells["faces"] = inv.reshape([4, -1]).T
 
             # save for create_edge_cells
