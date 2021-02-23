@@ -22,59 +22,13 @@ class MeshTetra(_SimplexMesh):
         self.ce_ratios = self._compute_ce_ratios_geometric()
         # self.ce_ratios = self._compute_ce_ratios_algebraic()
 
-        self.is_boundary_point = None
         self._inv_faces = None
         self.edges = None
-        self.is_boundary_facet = None
-        self.is_boundary_facet_local = None
         self.faces = None
 
         self._cell_centroids = None
 
-    def mark_boundary(self):
-        if "faces" not in self.cells:
-            self.create_cell_face_relationships()
-
-        self.is_boundary_point = np.zeros(len(self.points), dtype=bool)
-        self.is_boundary_point[self.faces["points"][self.is_boundary_facet]] = True
-
-    def create_cell_face_relationships(self):
-        # Reshape into individual faces, and take the first point per edge. (The face is
-        # fully characterized by it.) Sort the columns to make it possible for
-        # `unique()` to identify individual faces.
-        s = self.idx_hierarchy.shape
-        a = self.idx_hierarchy.reshape([s[0], s[1], s[2] * s[3]]).T
-        a = np.sort(a[:, :, 0])
-
-        # Find the unique faces
-        b = np.ascontiguousarray(a).view(
-            np.dtype((np.void, a.dtype.itemsize * a.shape[1]))
-        )
-        _, idx, inv, cts = np.unique(
-            b, return_index=True, return_inverse=True, return_counts=True
-        )
-
-        # No face has more than 2 cells. This assertion fails, for example, if cells are
-        # listed twice.
-        assert all(cts < 3)
-
-        self.is_boundary_facet_local = (cts[inv] == 1).reshape(s[2:])
-        self.is_boundary_facet = cts == 1
-
-        self.faces = {"points": a[idx]}
-
-        # cell->faces relationship
-        num_cells = len(self.cells["points"])
-        cells_faces = inv.reshape([4, num_cells]).T
-        self.cells["faces"] = cells_faces
-
-        # Store the opposing points too
-        self.cells["opposing vertex"] = self.cells["points"]
-
-        # save for create_edge_cells
-        self._inv_faces = inv
-
-    def create_face_edge_relationships(self):
+    def _create_face_edge_relationships(self):
         a = np.vstack(
             [
                 self.faces["points"][:, [1, 2]],
@@ -408,7 +362,7 @@ class MeshTetra(_SimplexMesh):
             # self._compute_ce_ratios_algebraic()
 
         if "faces" not in self.cells:
-            self.create_cell_face_relationships()
+            self.create_facets()
 
         sums = np.bincount(
             self.cells["faces"].T.reshape(-1),
@@ -480,9 +434,9 @@ class MeshTetra(_SimplexMesh):
         from mpl_toolkits.mplot3d import Axes3D
 
         if "faces" not in self.cells:
-            self.create_cell_face_relationships()
+            self.create_facets()
         if "edges" not in self.faces:
-            self.create_face_edge_relationships()
+            self._create_face_edge_relationships()
 
         fig = plt.figure()
         ax = fig.gca(projection=Axes3D.name)

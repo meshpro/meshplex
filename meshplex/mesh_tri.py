@@ -8,8 +8,6 @@ from .helpers import (
     compute_ce_ratios,
     compute_tri_areas,
     compute_triangle_circumcenters,
-    grp_start_len,
-    unique_rows,
 )
 
 __all__ = ["MeshTri"]
@@ -26,17 +24,9 @@ class MeshTri(_SimplexMesh):
         self._reset_point_data()
 
         self._cv_cell_mask = None
-        self.edges = None
         self.subdomains = {}
-        self._is_interior_point = None
-        self._is_boundary_point = None
-        self._is_boundary_edge_local = None
-        self._is_boundary_edge = None
-        self._is_boundary_cell = None
-        self._edges_cells = None
-        self._edges_cells_idx = None
-        self._boundary_edges = None
-        self._interior_edges = None
+        self._facets_cells = None
+        self._facets_cells_idx = None
 
     def _reset_point_data(self):
         """Reset all data that changes when point coordinates changes."""
@@ -59,7 +49,7 @@ class MeshTri(_SimplexMesh):
     def euler_characteristic(self):
         # number of vertices - number of edges + number of faces
         if "edges" not in self.cells:
-            self.create_edges()
+            self.create_facets()
         return (
             self.points.shape[0]
             - self.edges["points"].shape[0]
@@ -76,35 +66,6 @@ class MeshTri(_SimplexMesh):
         if self._ce_ratios is None:
             self._ce_ratios = compute_ce_ratios(self.ei_dot_ej, self.cell_volumes)
         return self._ce_ratios
-
-    def remove_dangling_points(self):
-        """Remove all points which aren't part of an array"""
-        is_part_of_cell = np.zeros(self.points.shape[0], dtype=bool)
-        is_part_of_cell[self.cells["points"].flat] = True
-
-        new_point_idx = np.cumsum(is_part_of_cell) - 1
-
-        self._points = self._points[is_part_of_cell]
-        self.cells["points"] = new_point_idx[self.cells["points"]]
-        self.idx_hierarchy = new_point_idx[self.idx_hierarchy]
-
-        if self._control_volumes is not None:
-            self._control_volumes = self._control_volumes[is_part_of_cell]
-
-        if self._cv_centroids is not None:
-            self._cv_centroids = self._cv_centroids[is_part_of_cell]
-
-        if self.edges is not None:
-            self.edges["points"] = new_point_idx[self.edges["points"]]
-
-        if self._is_interior_point is not None:
-            self._is_interior_point = self._is_interior_point[is_part_of_cell]
-
-        if self._is_boundary_point is not None:
-            self._is_boundary_point = self._is_boundary_point[is_part_of_cell]
-
-        if self._is_point_used is not None:
-            self._is_point_used = self._is_point_used[is_part_of_cell]
 
     def remove_cells(self, remove_array):
         """Remove cells and take care of all the dependent data structures. The input
@@ -134,58 +95,58 @@ class MeshTri(_SimplexMesh):
 
         # handle edges; this is a bit messy
         if "edges" in self.cells:
-            # updating the boundary data is a lot easier with edges_cells
-            if self._edges_cells is None:
-                self._compute_edges_cells()
+            # updating the boundary data is a lot easier with facets_cells
+            if self._facets_cells is None:
+                self._compute_facets_cells()
 
-            # Set edge to is_boundary_edge_local=True if it is adjacent to a removed
+            # Set edge to is_boundary_facet_local=True if it is adjacent to a removed
             # cell.
-            edge_ids = self.cells["edges"][~keep].flatten()
+            facet_ids = self.cells["edges"][~keep].flatten()
             # only consider interior edges
-            edge_ids = edge_ids[self.is_interior_edge[edge_ids]]
-            idx = self.edges_cells_idx[edge_ids]
-            cell_id = self.edges_cells["interior"][1:3, idx].T
-            local_edge_id = self.edges_cells["interior"][3:5, idx].T
-            self._is_boundary_edge_local[local_edge_id, cell_id] = True
+            facet_ids = facet_ids[self.is_interior_facet[facet_ids]]
+            idx = self.facets_cells_idx[facet_ids]
+            cell_id = self.facets_cells["interior"][1:3, idx].T
+            local_edge_id = self.facets_cells["interior"][3:5, idx].T
+            self._is_boundary_facet_local[local_edge_id, cell_id] = True
             # now remove the entries corresponding to the removed cells
-            self._is_boundary_edge_local = self._is_boundary_edge_local[:, keep]
+            self._is_boundary_facet_local = self._is_boundary_facet_local[:, keep]
 
             if self._is_boundary_cell is not None:
                 self._is_boundary_cell[cell_id] = True
                 self._is_boundary_cell = self._is_boundary_cell[keep]
 
-            # update edges_cells
-            keep_b_ec = keep[self.edges_cells["boundary"][1]]
-            keep_i_ec0, keep_i_ec1 = keep[self.edges_cells["interior"][1:3]]
+            # update facets_cells
+            keep_b_ec = keep[self.facets_cells["boundary"][1]]
+            keep_i_ec0, keep_i_ec1 = keep[self.facets_cells["interior"][1:3]]
             # move ec from interior to boundary if exactly one of the two adjacent cells
             # was removed
 
             keep_i_0 = keep_i_ec0 & ~keep_i_ec1
             keep_i_1 = keep_i_ec1 & ~keep_i_ec0
-            self._edges_cells["boundary"] = np.array(
+            self._facets_cells["boundary"] = np.array(
                 [
                     # edge id
                     np.concatenate(
                         [
-                            self._edges_cells["boundary"][0, keep_b_ec],
-                            self._edges_cells["interior"][0, keep_i_0],
-                            self._edges_cells["interior"][0, keep_i_1],
+                            self._facets_cells["boundary"][0, keep_b_ec],
+                            self._facets_cells["interior"][0, keep_i_0],
+                            self._facets_cells["interior"][0, keep_i_1],
                         ]
                     ),
                     # cell id
                     np.concatenate(
                         [
-                            self._edges_cells["boundary"][1, keep_b_ec],
-                            self._edges_cells["interior"][1, keep_i_0],
-                            self._edges_cells["interior"][2, keep_i_1],
+                            self._facets_cells["boundary"][1, keep_b_ec],
+                            self._facets_cells["interior"][1, keep_i_0],
+                            self._facets_cells["interior"][2, keep_i_1],
                         ]
                     ),
                     # local edge id
                     np.concatenate(
                         [
-                            self._edges_cells["boundary"][2, keep_b_ec],
-                            self._edges_cells["interior"][3, keep_i_0],
-                            self._edges_cells["interior"][4, keep_i_1],
+                            self._facets_cells["boundary"][2, keep_b_ec],
+                            self._facets_cells["interior"][3, keep_i_0],
+                            self._facets_cells["interior"][4, keep_i_1],
                         ]
                     ),
                 ]
@@ -194,7 +155,7 @@ class MeshTri(_SimplexMesh):
             keep_i = keep_i_ec0 & keep_i_ec1
 
             # this memory copy isn't too fast
-            self._edges_cells["interior"] = self._edges_cells["interior"][:, keep_i]
+            self._facets_cells["interior"] = self._facets_cells["interior"][:, keep_i]
 
             num_edges_old = len(self.edges["points"])
             adjacent_edges, counts = np.unique(
@@ -202,22 +163,22 @@ class MeshTri(_SimplexMesh):
             )
             # remove edge entirely either if 2 adjacent cells are removed or if it is a
             # boundary edge and 1 adjacent cells are removed
-            is_edge_removed = (counts == 2) | (
-                (counts == 1) & self._is_boundary_edge[adjacent_edges]
+            is_facet_removed = (counts == 2) | (
+                (counts == 1) & self._is_boundary_facet[adjacent_edges]
             )
 
             # set the new boundary edges
-            self._is_boundary_edge[adjacent_edges[~is_edge_removed]] = True
+            self._is_boundary_facet[adjacent_edges[~is_facet_removed]] = True
             # Now actually remove the edges. This includes a reindexing.
-            assert self._is_boundary_edge is not None
-            keep_edges = np.ones(len(self._is_boundary_edge), dtype=bool)
-            keep_edges[adjacent_edges[is_edge_removed]] = False
+            assert self._is_boundary_facet is not None
+            keep_edges = np.ones(len(self._is_boundary_facet), dtype=bool)
+            keep_edges[adjacent_edges[is_facet_removed]] = False
 
             # make sure there is only edges["points"], not edges["cells"] etc.
             assert self.edges is not None
             assert len(self.edges) == 1
             self.edges["points"] = self.edges["points"][keep_edges]
-            self._is_boundary_edge = self._is_boundary_edge[keep_edges]
+            self._is_boundary_facet = self._is_boundary_facet[keep_edges]
 
             # update edge and cell indices
             self.cells["edges"] = self.cells["edges"][keep]
@@ -227,16 +188,16 @@ class MeshTri(_SimplexMesh):
             new_index_cells = np.arange(num_cells_old) - np.cumsum(~keep)
 
             # this takes fairly long
-            ec = self._edges_cells
+            ec = self._facets_cells
             ec["boundary"][0] = new_index_edges[ec["boundary"][0]]
             ec["boundary"][1] = new_index_cells[ec["boundary"][1]]
             ec["interior"][0] = new_index_edges[ec["interior"][0]]
             ec["interior"][1:3] = new_index_cells[ec["interior"][1:3]]
 
             # simply set those to None; their reset is cheap
-            self._edges_cells_idx = None
-            self._boundary_edges = None
-            self._interior_edges = None
+            self._facets_cells_idx = None
+            self._boundary_facets = None
+            self._interior_facets = None
 
         self.cells["points"] = self.cells["points"][keep]
         self.idx_hierarchy = self.idx_hierarchy[..., keep]
@@ -304,10 +265,10 @@ class MeshTri(_SimplexMesh):
         return num_removed
 
     @property
-    def ce_ratios_per_interior_edge(self):
+    def ce_ratios_per_interior_facet(self):
         if self._interior_ce_ratios is None:
             if "edges" not in self.cells:
-                self.create_edges()
+                self.create_facets()
 
             n = self.edges["points"].shape[0]
             ce_ratios = np.bincount(
@@ -316,11 +277,11 @@ class MeshTri(_SimplexMesh):
                 minlength=n,
             )
 
-            self._interior_ce_ratios = ce_ratios[~self._is_boundary_edge]
+            self._interior_ce_ratios = ce_ratios[~self.is_boundary_facet]
 
             # # sum up from self.ce_ratios
-            # if self._edges_cells is None:
-            #     self._compute_edges_cells()
+            # if self._facets_cells is None:
+            #     self._compute_facets_cells()
 
             # self._interior_ce_ratios = \
             #     np.zeros(self._edges_local[2].shape[0])
@@ -328,7 +289,7 @@ class MeshTri(_SimplexMesh):
             #     # Interior edges = edges with _2_ adjacent cells
             #     idx = [
             #         self._edges_local[2][:, i],
-            #         self._edges_cells["interior"][:, i],
+            #         self._facets_cells["interior"][:, i],
             #         ]
             #     self._interior_ce_ratios += self.ce_ratios[idx]
 
@@ -409,157 +370,6 @@ class MeshTri(_SimplexMesh):
     @property
     def control_volume_centroids(self):
         return self.get_control_volume_centroids()
-
-    def mark_boundary(self):
-        warnings.warn(
-            "mark_boundary() does nothing. "
-            "Boundary entities are computed on the fly."
-        )
-
-    @property
-    def is_boundary_cell(self):
-        if self._is_boundary_cell is None:
-            assert self.is_boundary_edge_local is not None
-            self._is_boundary_cell = np.any(self.is_boundary_edge_local, axis=0)
-        return self._is_boundary_cell
-
-    @property
-    def is_boundary_edge_local(self):
-        if self._is_boundary_edge_local is None:
-            self.create_edges()
-        return self._is_boundary_edge_local
-
-    is_boundary_facet_local = is_boundary_edge_local
-
-    @property
-    def is_boundary_edge(self):
-        if self._is_boundary_edge is None:
-            self.create_edges()
-        return self._is_boundary_edge
-
-    @property
-    def is_interior_edge(self):
-        return ~self._is_boundary_edge
-
-    @property
-    def boundary_edges(self):
-        if self._boundary_edges is None:
-            self._boundary_edges = np.where(self.is_boundary_edge)[0]
-        return self._boundary_edges
-
-    @property
-    def interior_edges(self):
-        if self._interior_edges is None:
-            self._interior_edges = np.where(~self.is_boundary_edge)[0]
-        return self._interior_edges
-
-    @property
-    def is_boundary_point(self):
-        if self._is_boundary_point is None:
-            self._is_boundary_point = np.zeros(len(self.points), dtype=bool)
-            self._is_boundary_point[
-                self.idx_hierarchy[..., self.is_boundary_edge_local]
-            ] = True
-        return self._is_boundary_point
-
-    @property
-    def is_interior_point(self):
-        if self._is_interior_point is None:
-            self._is_interior_point = self.is_point_used & ~self.is_boundary_point
-        return self._is_interior_point
-
-    def create_edges(self):
-        """Set up edge->point and edge->cell relations."""
-        # Reshape into individual edges.
-        # Sort the columns to make it possible for `unique()` to identify
-        # individual edges.
-        s = self.idx_hierarchy.shape
-        a = np.sort(self.idx_hierarchy.reshape(s[0], -1).T)
-        a_unique, inv, cts = unique_rows(a)
-
-        assert np.all(cts < 3), "No edge has more than 2 cells. Are cells listed twice?"
-
-        self._is_boundary_edge_local = (cts[inv] == 1).reshape(s[1:])
-        self._is_boundary_edge = cts == 1
-
-        self.edges = {"points": a_unique}
-
-        # cell->edges relationship
-        self.cells["edges"] = inv.reshape(3, -1).T
-
-        self._edges_cells = None
-        self._edges_cells_idx = None
-
-    @property
-    def edges_cells(self):
-        if self._edges_cells is None:
-            self._compute_edges_cells()
-        return self._edges_cells
-
-    def _compute_edges_cells(self):
-        """This creates edge->cells relations. While it's not necessary for many
-        applications, it sometimes does come in handy, for example for mesh
-        manipulation.
-        """
-        if self.edges is None:
-            self.create_edges()
-
-        # num_edges = len(self.edges["points"])
-        # count = np.bincount(self.cells["edges"].flat, minlength=num_edges)
-
-        # <https://stackoverflow.com/a/50395231/353337>
-        edges_flat = self.cells["edges"].flat
-        idx_sort = np.argsort(edges_flat)
-        sorted_edges = edges_flat[idx_sort]
-        idx_start, count = grp_start_len(sorted_edges)
-
-        # count is redundant with is_boundary/interior_edge
-        assert np.all((count == 1) == self.is_boundary_edge)
-        assert np.all((count == 2) == self.is_interior_edge)
-
-        idx_start_count_1 = idx_start[self.is_boundary_edge]
-        idx_start_count_2 = idx_start[self.is_interior_edge]
-        res1 = idx_sort[idx_start_count_1]
-        res2 = idx_sort[np.array([idx_start_count_2, idx_start_count_2 + 1])]
-
-        edge_id_boundary = sorted_edges[idx_start_count_1]
-        edge_id_interior = sorted_edges[idx_start_count_2]
-
-        # It'd be nicer if we could organize the data differently, e.g., as a structured
-        # array or as a dict. Those possibilities are slower, unfortunately, for some
-        # operations in remove_cells() (and perhaps elsewhere).
-        # <https://github.com/numpy/numpy/issues/17850>
-        self._edges_cells = {
-            # rows:
-            #  0: edge id
-            #  1: cell id
-            #  2: local edge id (0, 1, or 2)
-            "boundary": np.array([edge_id_boundary, res1 // 3, res1 % 3]),
-            # rows:
-            #  0: edge id
-            #  1: cell id 0
-            #  2: cell id 1
-            #  3: local edge id 0 (0, 1, or 2)
-            #  4: local edge id 1 (0, 1, or 2)
-            "interior": np.array([edge_id_interior, *(res2 // 3), *(res2 % 3)]),
-        }
-
-        self._edges_cells_idx = None
-
-    @property
-    def edges_cells_idx(self):
-        if self._edges_cells_idx is None:
-            if self._edges_cells is None:
-                self._compute_edges_cells()
-            assert self.is_boundary_edge is not None
-            # For each edge, store the index into the respective edge array.
-            num_edges = len(self.edges["points"])
-            self._edges_cells_idx = np.empty(num_edges, dtype=int)
-            num_b = np.sum(self.is_boundary_edge)
-            num_i = np.sum(self.is_interior_edge)
-            self._edges_cells_idx[self.edges_cells["boundary"][0]] = np.arange(num_b)
-            self._edges_cells_idx[self.edges_cells["interior"][0]] = np.arange(num_i)
-        return self._edges_cells_idx
 
     @property
     def cell_partitions(self):
@@ -794,7 +604,7 @@ class MeshTri(_SimplexMesh):
         """Number of edges where the Delaunay condition is violated."""
         # Delaunay violations are present exactly on the interior edges where the
         # ce_ratio is negative. Count those.
-        return np.sum(self.ce_ratios_per_interior_edge < 0.0)
+        return np.sum(self.ce_ratios_per_interior_facet < 0.0)
 
     def show(self, *args, fullscreen=False, **kwargs):
         """Show the mesh (see plot())."""
@@ -885,7 +695,7 @@ class MeshTri(_SimplexMesh):
 
         if show_edge_numbers:
             if self.edges is None:
-                self.create_edges()
+                self.create_facets()
             for i, point_ids in enumerate(self.edges["points"]):
                 midpoint = np.sum(self.points[point_ids], axis=0) / 2
                 plt.text(
@@ -940,7 +750,7 @@ class MeshTri(_SimplexMesh):
             ax.add_collection(p)
 
         if self.edges is None:
-            self.create_edges()
+            self.create_facets()
 
         # Get edges, cut off z-component.
         e = self.points[self.edges["points"]][:, :, :2]
@@ -950,15 +760,15 @@ class MeshTri(_SimplexMesh):
             ax.add_collection(line_segments0)
         else:
             # Plot regular edges, mark those with negative ce-ratio red.
-            ce_ratios = self.ce_ratios_per_interior_edge
+            ce_ratios = self.ce_ratios_per_interior_facet
             pos = ce_ratios >= 0
 
             is_pos = np.zeros(len(self.edges["points"]), dtype=bool)
-            is_pos[self.interior_edges[pos]] = True
+            is_pos[self.interior_facets[pos]] = True
 
             # Mark Delaunay-conforming boundary edges
-            is_pos_boundary = self.ce_ratios[self.is_boundary_edge_local] >= 0
-            is_pos[self.boundary_edges[is_pos_boundary]] = True
+            is_pos_boundary = self.ce_ratios[self.is_boundary_facet_local] >= 0
+            is_pos[self.boundary_facets[is_pos_boundary]] = True
 
             line_segments0 = LineCollection(e[is_pos], color=mesh_color)
             ax.add_collection(line_segments0)
@@ -997,7 +807,7 @@ class MeshTri(_SimplexMesh):
             ax.add_collection(line_segments)
 
         if boundary_edge_color:
-            e = self.points[self.edges["points"][self.is_boundary_edge]][:, :, :2]
+            e = self.points[self.edges["points"][self.is_boundary_facet]][:, :, :2]
             line_segments1 = LineCollection(e, color=boundary_edge_color)
             ax.add_collection(line_segments1)
 
@@ -1047,7 +857,7 @@ class MeshTri(_SimplexMesh):
         plt.axis("equal")
 
         if self.edges is None:
-            self.create_edges()
+            self.create_facets()
 
         # Find the edges that contain the vertex
         edge_gids = np.where((self.edges["points"] == point_id).any(axis=1))[0]
@@ -1094,23 +904,23 @@ class MeshTri(_SimplexMesh):
         # Now compute the boundary edges. A little more costly, but we'd have to do that
         # anyway. If all _interior_ coedge/edge ratios are positive, all cells are
         # Delaunay.
-        if np.all(self.ce_ratios[~self.is_boundary_edge_local] > -0.5 * tol):
+        if np.all(self.ce_ratios[~self.is_boundary_facet_local] > -0.5 * tol):
             return num_flips
 
         step = 0
 
-        while np.any(self.ce_ratios_per_interior_edge < -tol):
+        while np.any(self.ce_ratios_per_interior_facet < -tol):
             step += 1
             if step > max_steps:
-                m = np.min(self.ce_ratios_per_interior_edge)
+                m = np.min(self.ce_ratios_per_interior_facet)
                 warnings.warn(
                     f"Maximum number of edge flips reached. Smallest ce-ratio: {m:.3e}."
                 )
                 break
-            is_flip_interior_edge = self.ce_ratios_per_interior_edge < -tol
+            is_flip_interior_edge = self.ce_ratios_per_interior_facet < -tol
 
-            interior_edges_cells = self.edges_cells["interior"][1:3].T
-            adj_cells = interior_edges_cells[is_flip_interior_edge].T
+            interior_facets_cells = self.facets_cells["interior"][1:3].T
+            adj_cells = interior_facets_cells[is_flip_interior_edge].T
 
             # Check if there are cells for which more than one edge needs to be flipped.
             # For those, only flip one edge, namely that with the smaller (more
@@ -1120,26 +930,26 @@ class MeshTri(_SimplexMesh):
             while np.any(num_flips_per_cell > 1):
                 for cell_gid in critical_cell_gids:
                     edge_gids = self.cells["edges"][cell_gid]
-                    is_interior_edge = self.is_interior_edge[edge_gids]
-                    idx = self.edges_cells_idx[edge_gids[is_interior_edge]]
-                    k = np.argmin(self.ce_ratios_per_interior_edge[idx])
+                    is_interior_facet = self.is_interior_facet[edge_gids]
+                    idx = self.facets_cells_idx[edge_gids[is_interior_facet]]
+                    k = np.argmin(self.ce_ratios_per_interior_facet[idx])
                     is_flip_interior_edge[idx] = False
                     is_flip_interior_edge[idx[k]] = True
 
-                adj_cells = interior_edges_cells[is_flip_interior_edge].T
+                adj_cells = interior_facets_cells[is_flip_interior_edge].T
                 cell_gids, num_flips_per_cell = np.unique(adj_cells, return_counts=True)
                 critical_cell_gids = cell_gids[num_flips_per_cell > 1]
 
-            self.flip_interior_edges(is_flip_interior_edge)
+            self.flip_interior_facets(is_flip_interior_edge)
             num_flips += np.sum(is_flip_interior_edge)
 
         return num_flips
 
-    def flip_interior_edges(self, is_flip_interior_edge):
-        edges_cells_flip = self.edges_cells["interior"][:, is_flip_interior_edge]
-        edge_gids = edges_cells_flip[0]
-        adj_cells = edges_cells_flip[1:3]
-        lids = edges_cells_flip[3:5]
+    def flip_interior_facets(self, is_flip_interior_edge):
+        facets_cells_flip = self.facets_cells["interior"][:, is_flip_interior_edge]
+        edge_gids = facets_cells_flip[0]
+        adj_cells = facets_cells_flip[1:3]
+        lids = facets_cells_flip[3:5]
 
         #        3                   3
         #        A                   A
@@ -1199,22 +1009,22 @@ class MeshTri(_SimplexMesh):
         self.cells["edges"][adj_cells[0]] = np.column_stack([e[1], edge_gids, e[0]])
         self.cells["edges"][adj_cells[1]] = np.column_stack([e[2], e[3], edge_gids])
 
-        # update is_boundary_edge_local
+        # update is_boundary_facet_local
         for k in range(3):
-            self.is_boundary_edge_local[k, adj_cells] = self.is_boundary_edge[
+            self.is_boundary_facet_local[k, adj_cells] = self.is_boundary_facet[
                 self.cells["edges"][adj_cells, k]
             ]
 
-        # Update the edge->cells relationship. We need to update edges_cells info for
+        # Update the edge->cells relationship. We need to update facets_cells info for
         # all five edges.
         # First update the flipped edge; it's always interior.
-        idx = self.edges_cells_idx[edge_gids]
+        idx = self.facets_cells_idx[edge_gids]
         # cell ids
-        self.edges_cells["interior"][1, idx] = adj_cells[0]
-        self.edges_cells["interior"][2, idx] = adj_cells[1]
+        self.facets_cells["interior"][1, idx] = adj_cells[0]
+        self.facets_cells["interior"][2, idx] = adj_cells[1]
         # local edge ids; see self.cells["edges"]
-        self.edges_cells["interior"][3, idx] = 1
-        self.edges_cells["interior"][4, idx] = 2
+        self.facets_cells["interior"][3, idx] = 1
+        self.facets_cells["interior"][4, idx] = 2
         #
         # Now handle the four surrounding edges
         conf = [
@@ -1231,48 +1041,48 @@ class MeshTri(_SimplexMesh):
         for edge, prev_adj_idx, new__adj_idx, new_local_edge_index in conf:
             prev_adj = adj_cells[prev_adj_idx]
             new__adj = adj_cells[new__adj_idx]
-            idx = self.edges_cells_idx[edge]
+            idx = self.facets_cells_idx[edge]
             # boundary...
-            is_boundary = self.is_boundary_edge[edge]
+            is_boundary = self.is_boundary_facet[edge]
             idx_bou = idx[is_boundary]
             prev_adjacent = prev_adj[is_boundary]
             new__adjacent = new__adj[is_boundary]
             # The assertion just makes sure we're doing the right thing. It should never
             # trigger.
-            assert np.all(prev_adjacent == self.edges_cells["boundary"][1, idx_bou])
-            self.edges_cells["boundary"][1, idx_bou] = new__adjacent
-            self.edges_cells["boundary"][2, idx_bou] = new_local_edge_index
+            assert np.all(prev_adjacent == self.facets_cells["boundary"][1, idx_bou])
+            self.facets_cells["boundary"][1, idx_bou] = new__adjacent
+            self.facets_cells["boundary"][2, idx_bou] = new_local_edge_index
             # ...or interior?
             prev_adjacent = prev_adj[~is_boundary]
             new__adjacent = new__adj[~is_boundary]
             idx_int = idx[~is_boundary]
             # Interior edges have two neighboring cells in no particular order. Find out
             # if the adj_cell if the flipped edge comes first or second.
-            is_first = prev_adjacent == self.edges_cells["interior"][1, idx_int]
+            is_first = prev_adjacent == self.facets_cells["interior"][1, idx_int]
             # The following is just a safety net. We could as well take ~is_first.
-            is_secnd = prev_adjacent == self.edges_cells["interior"][2, idx_int]
+            is_secnd = prev_adjacent == self.facets_cells["interior"][2, idx_int]
             assert np.all(np.logical_xor(is_first, is_secnd))
             # actually set the data
             idx_first = idx_int[is_first]
-            self.edges_cells["interior"][1, idx_first] = new__adjacent[is_first]
-            self.edges_cells["interior"][3, idx_first] = new_local_edge_index
+            self.facets_cells["interior"][1, idx_first] = new__adjacent[is_first]
+            self.facets_cells["interior"][3, idx_first] = new_local_edge_index
             # likewise for when the cell appears in the second column
             idx_secnd = idx_int[~is_first]
-            self.edges_cells["interior"][2, idx_secnd] = new__adjacent[~is_first]
-            self.edges_cells["interior"][4, idx_secnd] = new_local_edge_index
+            self.facets_cells["interior"][2, idx_secnd] = new__adjacent[~is_first]
+            self.facets_cells["interior"][4, idx_secnd] = new_local_edge_index
 
         # Schedule the cell ids for data updates
         update_cell_ids = np.unique(adj_cells.T.flat)
         # Same for edge ids
         update_edge_gids = self.cells["edges"][update_cell_ids].flat
-        edge_cell_idx = self.edges_cells_idx[update_edge_gids]
-        update_interior_edge_ids = np.unique(
-            edge_cell_idx[self.is_interior_edge[update_edge_gids]]
+        edge_cell_idx = self.facets_cells_idx[update_edge_gids]
+        update_interior_facet_ids = np.unique(
+            edge_cell_idx[self.is_interior_facet[update_edge_gids]]
         )
 
-        self._update_cell_values(update_cell_ids, update_interior_edge_ids)
+        self._update_cell_values(update_cell_ids, update_interior_facet_ids)
 
-    def _update_cell_values(self, cell_ids, interior_edge_ids):
+    def _update_cell_values(self, cell_ids, interior_facet_ids):
         """Updates all sorts of cell information for the given cell IDs."""
         # update idx_hierarchy
         nds = self.cells["points"][cell_ids].T
@@ -1305,37 +1115,37 @@ class MeshTri(_SimplexMesh):
             self._ce_ratios[:, cell_ids] = ce
 
         if self._interior_ce_ratios is not None:
-            self._interior_ce_ratios[interior_edge_ids] = 0.0
-            edge_gids = self.interior_edges[interior_edge_ids]
-            adj_cells = self.edges_cells["interior"][1:3, interior_edge_ids].T
+            self._interior_ce_ratios[interior_facet_ids] = 0.0
+            edge_gids = self.interior_facets[interior_facet_ids]
+            adj_cells = self.facets_cells["interior"][1:3, interior_facet_ids].T
 
-            is_edge = np.array(
+            is_facet = np.array(
                 [
                     self.cells["edges"][adj_cells[:, 0]][:, k] == edge_gids
                     for k in range(3)
                 ]
             )
-            assert np.all(np.sum(is_edge, axis=0) == 1)
+            assert np.all(np.sum(is_facet, axis=0) == 1)
             for k in range(3):
                 self._interior_ce_ratios[
-                    interior_edge_ids[is_edge[k]]
-                ] += self.ce_ratios[k, adj_cells[is_edge[k], 0]]
+                    interior_facet_ids[is_facet[k]]
+                ] += self.ce_ratios[k, adj_cells[is_facet[k], 0]]
 
-            is_edge = np.array(
+            is_facet = np.array(
                 [
                     self.cells["edges"][adj_cells[:, 1]][:, k] == edge_gids
                     for k in range(3)
                 ]
             )
-            assert np.all(np.sum(is_edge, axis=0) == 1)
+            assert np.all(np.sum(is_facet, axis=0) == 1)
             for k in range(3):
                 self._interior_ce_ratios[
-                    interior_edge_ids[is_edge[k]]
-                ] += self.ce_ratios[k, adj_cells[is_edge[k], 1]]
+                    interior_facet_ids[is_facet[k]]
+                ] += self.ce_ratios[k, adj_cells[is_facet[k], 1]]
 
         if self._is_boundary_cell is not None:
             self._is_boundary_cell[cell_ids] = np.any(
-                self.is_boundary_edge_local[:, cell_ids], axis=0
+                self.is_boundary_facet_local[:, cell_ids], axis=0
             )
 
         # TODO update those values

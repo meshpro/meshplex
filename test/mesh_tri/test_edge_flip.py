@@ -28,7 +28,7 @@ def test_flip_simple():
     cells = np.array([[0, 1, 3], [1, 2, 3]])
     mesh = meshplex.MeshTri(points, cells)
 
-    mesh.create_edges()
+    mesh.create_facets()
     assert mesh.num_delaunay_violations() == 1
     assert np.array_equal(
         mesh.edges["points"], [[0, 1], [0, 3], [1, 2], [1, 3], [2, 3]]
@@ -65,7 +65,7 @@ def test_flip_simple_negative_orientation():
     cells = np.array([[0, 3, 1], [1, 3, 2]])
     mesh = meshplex.MeshTri(points, cells)
 
-    mesh.create_edges()
+    mesh.create_facets()
     assert mesh.num_delaunay_violations() == 1
     assert np.array_equal(
         mesh.edges["points"], [[0, 1], [0, 3], [1, 2], [1, 3], [2, 3]]
@@ -102,7 +102,7 @@ def test_flip_simple_opposite_orientation():
     cells = np.array([[0, 1, 3], [1, 3, 2]])
     mesh = meshplex.MeshTri(points, cells)
 
-    mesh.create_edges()
+    mesh.create_facets()
     assert mesh.num_delaunay_violations() == 1
     assert np.array_equal(
         mesh.edges["points"], [[0, 1], [0, 3], [1, 2], [1, 3], [2, 3]]
@@ -126,7 +126,7 @@ def test_flip_delaunay_near_boundary():
     cells = np.array([[0, 1, 2], [0, 2, 3]])
     mesh = meshplex.MeshTri(points, cells)
 
-    mesh.create_edges()
+    mesh.create_facets()
     assert mesh.num_delaunay_violations() == 1
     assert np.array_equal(mesh.cells["points"], [[0, 1, 2], [0, 2, 3]])
     assert np.array_equal(mesh.cells["edges"], [[3, 1, 0], [4, 2, 1]])
@@ -200,7 +200,7 @@ def test_flip_delaunay_near_boundary_preserve_boundary_count():
     cells = np.array([[0, 1, 2], [0, 2, 4], [0, 4, 5], [0, 5, 1], [2, 3, 4]])
     mesh = meshplex.MeshTri(points, cells)
 
-    mesh.create_edges()
+    mesh.create_facets()
     assert mesh.num_delaunay_violations() == 1
 
     is_boundary_point_ref = [False, True, True, True, True, True]
@@ -285,7 +285,7 @@ def test_flip_delaunay():
     # We don't need to check for exact equality with a replicated mesh. The order of the
     # edges will be different, for example. Just make sure the mesh is consistent.
     # mesh1 = meshplex.MeshTri(mesh0.points.copy(), mesh0.cells["points"].copy())
-    # mesh1.create_edges()
+    # mesh1.create_facets()
     # assert_mesh_equality(mesh0, mesh1)
 
 

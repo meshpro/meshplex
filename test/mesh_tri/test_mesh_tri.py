@@ -129,7 +129,7 @@ def test_regular_tri_additional_points():
 
     assert np.array_equal(mesh.cells["points"], [[1, 2, 3]])
 
-    mesh.create_edges()
+    mesh.create_facets()
     assert np.array_equal(mesh.cells["edges"], [[2, 1, 0]])
     assert np.array_equal(mesh.edges["points"], [[1, 2], [1, 3], [2, 3]])
 
@@ -421,7 +421,7 @@ def test_degenerate_small2(h):
     # ce_ratios
     alpha = h - 1.0 / (4 * h)
     beta = 1.0 / (4 * h)
-    assert is_near_equal(mesh.ce_ratios_per_interior_edge, [alpha], tol)
+    assert is_near_equal(mesh.ce_ratios_per_interior_facet, [alpha], tol)
 
     alpha2 = (h - 1.0 / (4 * h)) / 2
     assert is_near_equal(
@@ -454,7 +454,7 @@ def test_rectanglesmall():
 
     tol = 1.0e-14
 
-    assert is_near_equal(mesh.ce_ratios_per_interior_edge, [0.0], tol)
+    assert is_near_equal(mesh.ce_ratios_per_interior_facet, [0.0], tol)
 
     assert is_near_equal(mesh.ce_ratios, [[5.0, 0.05], [0.0, 5.0], [0.05, 0.0]], tol)
     assert is_near_equal(mesh.control_volumes, [2.5, 2.5, 2.5, 2.5], tol)
