@@ -113,6 +113,10 @@ class _SimplexMesh:
         # only used for tetra
         self._zeta = None
 
+        self._is_boundary_facet_local = None
+        self._is_boundary_facet = None
+        self.edges = None
+
     def __repr__(self):
         name = {
             3: "triangle",
@@ -426,27 +430,43 @@ class _SimplexMesh:
         return (self.n - 1) * self.cell_volumes / np.sum(self.facet_areas, axis=0)
 
     def create_facets(self):
-        """Set up edge->point and edge->cell relations."""
+        """Set up facet->point and facet->cell relations."""
+        s = self.idx_hierarchy.shape
+        idx_zero = tuple([0] * (len(s) - 3))
+        idx = self.idx_hierarchy[idx_zero]
+        # Reshape into individual edges.
+        # Reshape into individual faces, and take the first point per edge. (The
+        # face is fully characterized by it.) Sort the columns to make it possible
+        # for `unique()` to identify individual faces.
+        idx = idx.reshape(idx.shape[0], -1)
+
+        a = np.sort(idx.T)
+
+        # exit(1)
+        # a = np.sort(self.idx_hierarchy.reshape(s[0], -1).T)
+        b = np.ascontiguousarray(a).view(
+            np.dtype((np.void, a.dtype.itemsize * a.shape[1]))
+        )
+        # Sort the columns to make it possible for `unique()` to identify
+        # individual edges.
+        # a_unique, inv, cts = unique_rows(a)
+        a_unique, inv, cts = np.unique(b, return_inverse=True, return_counts=True)
+        a_unique = a_unique.view(a.dtype).reshape(-1, a.shape[1])
+
+        if np.any(cts >= 3):
+            cts = cts[cts >= 3]
+            num_excess_cells = np.sum(cts >= 3)
+            raise MeshplexError(
+                "No facet (edge for triangles, face in tetrahedra) "
+                "should have more than two cells, "
+                f"but found {num_excess_cells} such edges. "
+                "Are cells listed twice?"
+            )
+
+        self._is_boundary_facet_local = (cts[inv] == 1).reshape(s[self.n - 2:])
+        self._is_boundary_facet = cts == 1
+
         if self.n == 3:
-            # Reshape into individual edges.
-            # Sort the columns to make it possible for `unique()` to identify
-            # individual edges.
-            s = self.idx_hierarchy.shape
-            a = np.sort(self.idx_hierarchy.reshape(s[0], -1).T)
-            a_unique, inv, cts = unique_rows(a)
-
-            if np.any(cts >= 3):
-                cts = cts[cts >= 3]
-                num_excess_cells = np.sum(cts >= 3)
-                raise MeshplexError(
-                    f"No edge should have more than two cells, "
-                    "but found {num_excess_cells} such edges. "
-                    "Are cells listed twice?"
-                )
-
-            self._is_boundary_edge_local = (cts[inv] == 1).reshape(s[1:])
-            self._is_boundary_edge = cts == 1
-
             self.edges = {"points": a_unique}
 
             # cell->edges relationship
@@ -456,37 +476,23 @@ class _SimplexMesh:
             self._edges_cells_idx = None
         else:
             assert self.n == 4
-            # Reshape into individual faces, and take the first point per edge. (The face is
-            # fully characterized by it.) Sort the columns to make it possible for
-            # `unique()` to identify individual faces.
-            s = self.idx_hierarchy.shape
-            a = self.idx_hierarchy.reshape([s[0], s[1], s[2] * s[3]]).T
-            a = np.sort(a[:, :, 0])
-
-            # Find the unique faces
-            b = np.ascontiguousarray(a).view(
-                np.dtype((np.void, a.dtype.itemsize * a.shape[1]))
-            )
-            _, idx, inv, cts = np.unique(
-                b, return_index=True, return_inverse=True, return_counts=True
-            )
-
-            # No face has more than 2 cells. This assertion fails, for example, if cells are
-            # listed twice.
-            assert all(cts < 3)
-
-            self.is_boundary_facet_local = (cts[inv] == 1).reshape(s[2:])
-            self.is_boundary_facet = cts == 1
-
-            self.faces = {"points": a[idx]}
+            self.faces = {"points": a_unique}
 
             # cell->faces relationship
             num_cells = len(self.cells["points"])
-            cells_faces = inv.reshape([4, num_cells]).T
-            self.cells["faces"] = cells_faces
-
-            # Store the opposing points too
-            # self.cells["opposing vertex"] = self.cells["points"]
+            self.cells["faces"] = inv.reshape([4, -1]).T
 
             # save for create_edge_cells
             self._inv_faces = inv
+
+    @property
+    def is_boundary_facet_local(self):
+        if self._is_boundary_facet_local is None:
+            self.create_facets()
+        return self._is_boundary_facet_local
+
+    @property
+    def is_boundary_facet(self):
+        if self._is_boundary_facet is None:
+            self.create_facets()
+        return self._is_boundary_facet

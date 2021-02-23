@@ -27,12 +27,9 @@ class MeshTri(_SimplexMesh):
         self._reset_point_data()
 
         self._cv_cell_mask = None
-        self.edges = None
         self.subdomains = {}
         self._is_interior_point = None
         self._is_boundary_point = None
-        self._is_boundary_edge_local = None
-        self._is_boundary_edge = None
         self._is_boundary_cell = None
         self._edges_cells = None
         self._edges_cells_idx = None
@@ -55,6 +52,9 @@ class MeshTri(_SimplexMesh):
         self._cvc_cell_mask = None
         self._signed_cell_volumes = None
         self._cell_centroids = None
+
+        self.is_boundary_edge = self.is_boundary_facet
+        self.is_boundary_edge = self.is_boundary_facet_local
 
     @property
     def euler_characteristic(self):
@@ -423,20 +423,6 @@ class MeshTri(_SimplexMesh):
             assert self.is_boundary_edge_local is not None
             self._is_boundary_cell = np.any(self.is_boundary_edge_local, axis=0)
         return self._is_boundary_cell
-
-    @property
-    def is_boundary_edge_local(self):
-        if self._is_boundary_edge_local is None:
-            self.create_facets()
-        return self._is_boundary_edge_local
-
-    is_boundary_facet_local = is_boundary_edge_local
-
-    @property
-    def is_boundary_edge(self):
-        if self._is_boundary_edge is None:
-            self.create_facets()
-        return self._is_boundary_edge
 
     @property
     def is_interior_edge(self):
