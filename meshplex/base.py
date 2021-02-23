@@ -1,10 +1,11 @@
 import math
+import warnings
 
 import meshio
 import numpy as np
 
-from .helpers import compute_tri_areas, unique_rows
 from .exceptions import MeshplexError
+from .helpers import compute_tri_areas, grp_start_len, unique_rows
 
 __all__ = ["_SimplexMesh"]
 
@@ -113,9 +114,14 @@ class _SimplexMesh:
         # only used for tetra
         self._zeta = None
 
-        self._is_boundary_facet_local = None
         self._is_boundary_facet = None
+        self._is_boundary_facet_local = None
         self.edges = None
+        self._boundary_facets = None
+        self._interior_facets = None
+        self._is_interior_point = None
+        self._is_boundary_point = None
+        self._is_boundary_cell = None
 
     def __repr__(self):
         name = {
@@ -301,7 +307,7 @@ class _SimplexMesh:
 
         if subdomain.is_boundary_only:
             # Filter for boundary
-            is_inside = is_inside & self.is_boundary_edge
+            is_inside = is_inside & self.is_boundary_facet
 
         return is_inside
 
@@ -463,7 +469,7 @@ class _SimplexMesh:
                 "Are cells listed twice?"
             )
 
-        self._is_boundary_facet_local = (cts[inv] == 1).reshape(s[self.n - 2:])
+        self._is_boundary_facet_local = (cts[inv] == 1).reshape(s[self.n - 2 :])
         self._is_boundary_facet = cts == 1
 
         if self.n == 3:
@@ -472,8 +478,8 @@ class _SimplexMesh:
             # cell->edges relationship
             self.cells["edges"] = inv.reshape(3, -1).T
 
-            self._edges_cells = None
-            self._edges_cells_idx = None
+            self._facets_cells = None
+            self._facets_cells_idx = None
         else:
             assert self.n == 4
             self.faces = {"points": a_unique}
@@ -496,3 +502,119 @@ class _SimplexMesh:
         if self._is_boundary_facet is None:
             self.create_facets()
         return self._is_boundary_facet
+
+    @property
+    def is_interior_facet(self):
+        return ~self.is_boundary_facet
+
+    @property
+    def is_boundary_cell(self):
+        if self._is_boundary_cell is None:
+            assert self.is_boundary_facet_local is not None
+            self._is_boundary_cell = np.any(self.is_boundary_facet_local, axis=0)
+        return self._is_boundary_cell
+
+    @property
+    def boundary_facets(self):
+        if self._boundary_facets is None:
+            self._boundary_facets = np.where(self.is_boundary_facet)[0]
+        return self._boundary_facets
+
+    @property
+    def interior_facets(self):
+        if self._interior_facets is None:
+            self._interior_facets = np.where(~self.is_boundary_facet)[0]
+        return self._interior_facets
+
+    @property
+    def is_boundary_point(self):
+        if self._is_boundary_point is None:
+            self._is_boundary_point = np.zeros(len(self.points), dtype=bool)
+            self._is_boundary_point[
+                self.idx_hierarchy[..., self.is_boundary_facet_local]
+            ] = True
+        return self._is_boundary_point
+
+    @property
+    def is_interior_point(self):
+        if self._is_interior_point is None:
+            self._is_interior_point = self.is_point_used & ~self.is_boundary_point
+        return self._is_interior_point
+
+    def mark_boundary(self):
+        warnings.warn(
+            "mark_boundary() does nothing. "
+            "Boundary entities are computed on the fly.",
+            DeprecationWarning,
+        )
+
+    @property
+    def facets_cells(self):
+        if self._facets_cells is None:
+            self._compute_facets_cells()
+        return self._facets_cells
+
+    def _compute_facets_cells(self):
+        """This creates edge->cells relations. While it's not necessary for many
+        applications, it sometimes does come in handy, for example for mesh
+        manipulation.
+        """
+        if self.edges is None:
+            self.create_facets()
+
+        # num_edges = len(self.edges["points"])
+        # count = np.bincount(self.cells["edges"].flat, minlength=num_edges)
+
+        # <https://stackoverflow.com/a/50395231/353337>
+        edges_flat = self.cells["edges"].flat
+        idx_sort = np.argsort(edges_flat)
+        sorted_edges = edges_flat[idx_sort]
+        idx_start, count = grp_start_len(sorted_edges)
+
+        # count is redundant with is_boundary/interior_edge
+        assert np.all((count == 1) == self.is_boundary_facet)
+        assert np.all((count == 2) == self.is_interior_facet)
+
+        idx_start_count_1 = idx_start[self.is_boundary_facet]
+        idx_start_count_2 = idx_start[self.is_interior_facet]
+        res1 = idx_sort[idx_start_count_1]
+        res2 = idx_sort[np.array([idx_start_count_2, idx_start_count_2 + 1])]
+
+        edge_id_boundary = sorted_edges[idx_start_count_1]
+        edge_id_interior = sorted_edges[idx_start_count_2]
+
+        # It'd be nicer if we could organize the data differently, e.g., as a structured
+        # array or as a dict. Those possibilities are slower, unfortunately, for some
+        # operations in remove_cells() (and perhaps elsewhere).
+        # <https://github.com/numpy/numpy/issues/17850>
+        self._facets_cells = {
+            # rows:
+            #  0: edge id
+            #  1: cell id
+            #  2: local edge id (0, 1, or 2)
+            "boundary": np.array([edge_id_boundary, res1 // 3, res1 % 3]),
+            # rows:
+            #  0: edge id
+            #  1: cell id 0
+            #  2: cell id 1
+            #  3: local edge id 0 (0, 1, or 2)
+            #  4: local edge id 1 (0, 1, or 2)
+            "interior": np.array([edge_id_interior, *(res2 // 3), *(res2 % 3)]),
+        }
+
+        self._facets_cells_idx = None
+
+    @property
+    def facets_cells_idx(self):
+        if self._facets_cells_idx is None:
+            if self._facets_cells is None:
+                self._compute_facets_cells()
+            assert self.is_boundary_facet is not None
+            # For each edge, store the index into the respective edge array.
+            num_edges = len(self.edges["points"])
+            self._facets_cells_idx = np.empty(num_edges, dtype=int)
+            num_b = np.sum(self.is_boundary_facet)
+            num_i = np.sum(self.is_interior_facet)
+            self._facets_cells_idx[self.facets_cells["boundary"][0]] = np.arange(num_b)
+            self._facets_cells_idx[self.facets_cells["interior"][0]] = np.arange(num_i)
+        return self._facets_cells_idx

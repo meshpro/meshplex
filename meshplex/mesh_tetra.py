@@ -22,21 +22,11 @@ class MeshTetra(_SimplexMesh):
         self.ce_ratios = self._compute_ce_ratios_geometric()
         # self.ce_ratios = self._compute_ce_ratios_algebraic()
 
-        self.is_boundary_point = None
         self._inv_faces = None
         self.edges = None
-        self.is_boundary_facet = None
-        self.is_boundary_facet_local = None
         self.faces = None
 
         self._cell_centroids = None
-
-    def mark_boundary(self):
-        if "faces" not in self.cells:
-            self.create_facets()
-
-        self.is_boundary_point = np.zeros(len(self.points), dtype=bool)
-        self.is_boundary_point[self.faces["points"][self.is_boundary_facet]] = True
 
     def create_face_edge_relationships(self):
         a = np.vstack(

@@ -92,25 +92,25 @@ def test_remove_cells_boundary():
     mesh = get_mesh1()
 
     assert np.all(mesh.is_boundary_point == [True, True, True, True, False])
-    assert np.all(mesh.is_boundary_edge_local[0] == [False, False, False, False])
-    assert np.all(mesh.is_boundary_edge_local[1] == [False, False, False, True])
-    assert np.all(mesh.is_boundary_edge_local[2] == [True, True, True, False])
+    assert np.all(mesh.is_boundary_facet_local[0] == [False, False, False, False])
+    assert np.all(mesh.is_boundary_facet_local[1] == [False, False, False, True])
+    assert np.all(mesh.is_boundary_facet_local[2] == [True, True, True, False])
     assert np.all(
-        mesh.is_boundary_edge == [True, True, False, True, False, True, False, False]
+        mesh.is_boundary_facet == [True, True, False, True, False, True, False, False]
     )
     assert np.all(mesh.is_boundary_cell)
-    assert np.all(mesh.edges_cells_idx == [0, 1, 0, 2, 1, 3, 2, 3])
+    assert np.all(mesh.facets_cells_idx == [0, 1, 0, 2, 1, 3, 2, 3])
     # cell id:
-    assert np.all(mesh.edges_cells["boundary"][1] == [0, 3, 1, 2])
+    assert np.all(mesh.facets_cells["boundary"][1] == [0, 3, 1, 2])
     # local edge:
-    assert np.all(mesh.edges_cells["boundary"][2] == [2, 1, 2, 2])
+    assert np.all(mesh.facets_cells["boundary"][2] == [2, 1, 2, 2])
     # cell id:
     assert np.all(
-        mesh.edges_cells["interior"][1:3].T == [[0, 3], [0, 1], [1, 2], [2, 3]]
+        mesh.facets_cells["interior"][1:3].T == [[0, 3], [0, 1], [1, 2], [2, 3]]
     )
     # local edge:
     assert np.all(
-        mesh.edges_cells["interior"][3:5].T == [[1, 2], [0, 1], [0, 1], [0, 0]]
+        mesh.facets_cells["interior"][3:5].T == [[1, 2], [0, 1], [0, 1], [0, 0]]
     )
 
     # now lets remove some cells
@@ -119,10 +119,12 @@ def test_remove_cells_boundary():
     assert_mesh_consistency(mesh)
 
     assert np.all(mesh.is_boundary_point)
-    assert np.all(mesh.is_boundary_edge_local[0] == [False, False, False])
-    assert np.all(mesh.is_boundary_edge_local[1] == [True, False, True])
-    assert np.all(mesh.is_boundary_edge_local[2] == [True, True, True])
-    assert np.all(mesh.is_boundary_edge == [True, True, True, True, True, False, False])
+    assert np.all(mesh.is_boundary_facet_local[0] == [False, False, False])
+    assert np.all(mesh.is_boundary_facet_local[1] == [True, False, True])
+    assert np.all(mesh.is_boundary_facet_local[2] == [True, True, True])
+    assert np.all(
+        mesh.is_boundary_facet == [True, True, True, True, True, False, False]
+    )
     assert np.all(mesh.is_boundary_cell)
 
 
