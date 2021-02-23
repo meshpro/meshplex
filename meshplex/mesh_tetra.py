@@ -28,7 +28,7 @@ class MeshTetra(_SimplexMesh):
 
         self._cell_centroids = None
 
-    def create_face_edge_relationships(self):
+    def _create_face_edge_relationships(self):
         a = np.vstack(
             [
                 self.faces["points"][:, [1, 2]],
@@ -436,7 +436,7 @@ class MeshTetra(_SimplexMesh):
         if "faces" not in self.cells:
             self.create_facets()
         if "edges" not in self.faces:
-            self.create_face_edge_relationships()
+            self._create_face_edge_relationships()
 
         fig = plt.figure()
         ax = fig.gca(projection=Axes3D.name)
