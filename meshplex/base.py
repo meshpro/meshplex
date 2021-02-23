@@ -618,3 +618,32 @@ class _SimplexMesh:
             self._facets_cells_idx[self.facets_cells["boundary"][0]] = np.arange(num_b)
             self._facets_cells_idx[self.facets_cells["interior"][0]] = np.arange(num_i)
         return self._facets_cells_idx
+
+    def remove_dangling_points(self):
+        """Remove all points which aren't part of an array"""
+        is_part_of_cell = np.zeros(self.points.shape[0], dtype=bool)
+        is_part_of_cell[self.cells["points"].flat] = True
+
+        new_point_idx = np.cumsum(is_part_of_cell) - 1
+
+        self._points = self._points[is_part_of_cell]
+        self.cells["points"] = new_point_idx[self.cells["points"]]
+        self.idx_hierarchy = new_point_idx[self.idx_hierarchy]
+
+        if self._control_volumes is not None:
+            self._control_volumes = self._control_volumes[is_part_of_cell]
+
+        if self._cv_centroids is not None:
+            self._cv_centroids = self._cv_centroids[is_part_of_cell]
+
+        if self.edges is not None:
+            self.edges["points"] = new_point_idx[self.edges["points"]]
+
+        if self._is_interior_point is not None:
+            self._is_interior_point = self._is_interior_point[is_part_of_cell]
+
+        if self._is_boundary_point is not None:
+            self._is_boundary_point = self._is_boundary_point[is_part_of_cell]
+
+        if self._is_point_used is not None:
+            self._is_point_used = self._is_point_used[is_part_of_cell]
