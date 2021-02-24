@@ -5,7 +5,12 @@ import meshio
 import numpy as np
 
 from .exceptions import MeshplexError
-from .helpers import compute_tri_areas, compute_triangle_circumcenters, grp_start_len
+from .helpers import (
+    compute_tri_areas,
+    compute_triangle_circumcenters,
+    grp_start_len,
+    unique_rows,
+)
 
 __all__ = ["_SimplexMesh"]
 
@@ -471,14 +476,23 @@ class _SimplexMesh:
         a_unique = a_unique.view(a.dtype).reshape(-1, a.shape[1])
 
         if np.any(cts >= 3):
+            c = self.cells["points"]
             cts = cts[cts >= 3]
             num_excess_cells = np.sum(cts >= 3)
-            raise MeshplexError(
+
+            msg = (
                 "No facet (edge for triangles, face in tetrahedra) "
                 "should have more than two cells, "
-                f"but found {num_excess_cells} such edges. "
-                "Are cells listed twice?"
+                f"but found {num_excess_cells} such facets."
             )
+
+            # check if cells are identical, list them
+            a, inv, cts = unique_rows(np.sort(self.cells["points"]))
+            if np.any(cts > 1):
+                msg += "\nThe following cell tuples are equal:\n"
+                for multiple_idx in np.where(cts > 1)[0]:
+                    msg += str(np.where(inv == multiple_idx)[0])
+            raise MeshplexError(msg)
 
         self._is_boundary_facet_local = (cts[inv] == 1).reshape(s[self.n - 2 :])
         self._is_boundary_facet = cts == 1
