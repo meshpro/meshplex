@@ -191,21 +191,6 @@ class MeshTetra(_SimplexMesh):
         return ce_ratios
 
     @property
-    def q_radius_ratio(self):
-        """Ratio of incircle and circumcircle ratios times 3. ("Normalized shape
-        ratio".) Is 1 for the equilateral tetrahedron, and is often used a quality
-        measure for the cell.
-        """
-        # There are other sensible possiblities of defining cell quality, e.g.:
-        #   * inradius to longest edge
-        #   * shortest to longest edge
-        #   * minimum dihedral angle
-        #   * ...
-        # See
-        # <http://eidors3d.sourceforge.net/doc/index.html?eidors/meshing/calc_mesh_quality.html>.
-        return 3 * self.cell_inradius / self.cell_circumradius
-
-    @property
     def q_min_sin_dihedral_angles(self):
         """Get the smallest of the sines of the 6 angles between the faces of each
         tetrahedron, times a scaling factor that makes sure the value is 1 for the

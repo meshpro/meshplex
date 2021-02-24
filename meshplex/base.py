@@ -718,3 +718,34 @@ class _SimplexMesh:
         #     / self.cell_volumes
         # )
         return circumradius
+
+    @property
+    def q_radius_ratio(self):
+        """Ratio of incircle and circumcircle ratios times (n-1). ("Normalized shape
+        ratio".) Is 1 for the equilateral simplex, and is often used a quality measure
+        for the cell.
+        """
+        # There are other sensible possiblities of defining cell quality, e.g.:
+        #   * inradius to longest edge
+        #   * shortest to longest edge
+        #   * minimum dihedral angle
+        #   * ...
+        # See
+        # <http://eidors3d.sourceforge.net/doc/index.html?eidors/meshing/calc_mesh_quality.html>.
+        if self.n == 3:
+            # q = 2 * r_in / r_out
+            #   = (-a+b+c) * (+a-b+c) * (+a+b-c) / (a*b*c),
+            #
+            # where r_in is the incircle radius and r_out the circumcircle radius
+            # and a, b, c are the edge lengths.
+            a, b, c = self.edge_lengths
+            return (-a + b + c) * (a - b + c) * (a + b - c) / (a * b * c)
+
+        return (self.n - 1) * self.cell_inradius / self.cell_circumradius
+
+    @property
+    def cell_quality(self):
+        warnings.warn(
+            "Use `q_radius_ratio`. This method will be removed in a future release."
+        )
+        return self.q_radius_ratio

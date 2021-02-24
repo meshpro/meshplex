@@ -382,24 +382,6 @@ class MeshTri(_SimplexMesh):
         return self._cell_partitions
 
     @property
-    def cell_quality(self):
-        warnings.warn(
-            "Use `q_radius_ratio`. This method will be removed in a future release."
-        )
-        return self.q_radius_ratio
-
-    @property
-    def q_radius_ratio(self):
-        """2 * inradius / circumradius (min 0, max 1)"""
-        # q = 2 * r_in / r_out
-        #   = (-a+b+c) * (+a-b+c) * (+a+b-c) / (a*b*c),
-        #
-        # where r_in is the incircle radius and r_out the circumcircle radius
-        # and a, b, c are the edge lengths.
-        a, b, c = self.edge_lengths
-        return (-a + b + c) * (a - b + c) * (a + b - c) / (a * b * c)
-
-    @property
     def angles(self):
         """All angles in the triangle."""
         # The cosines of the angles are the negative dot products of the normalized
