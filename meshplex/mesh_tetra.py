@@ -12,9 +12,6 @@ class MeshTetra(_SimplexMesh):
     def __init__(self, points, cells, sort_cells=False):
         super().__init__(points, cells, sort_cells=sort_cells)
 
-        self._half_edge_coords = None
-        self._ei_dot_ei = None
-        self._ei_dot_ej = None
         self._control_volumes = None
         self.subdomains = {}
 
@@ -24,8 +21,6 @@ class MeshTetra(_SimplexMesh):
         self._inv_faces = None
         self.edges = None
         self.faces = None
-
-        self._cell_centroids = None
 
     def _create_face_edge_relationships(self):
         a = np.vstack(

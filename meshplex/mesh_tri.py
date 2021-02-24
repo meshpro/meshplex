@@ -25,24 +25,16 @@ class MeshTri(_SimplexMesh):
 
         self._cv_cell_mask = None
         self.subdomains = {}
-        self._facets_cells = None
-        self._facets_cells_idx = None
 
     def _reset_point_data(self):
         """Reset all data that changes when point coordinates changes."""
-        self._half_edge_coords = None
-        self._edge_lengths = None
-        self._ei_dot_ei = None
-        self._ei_dot_ej = None
-        self._cell_volumes = None
+        super()._reset_point_data()
         self._ce_ratios = None
         self._interior_ce_ratios = None
         self._control_volumes = None
         self._cell_partitions = None
         self._cv_centroids = None
         self._cvc_cell_mask = None
-        self._signed_cell_volumes = None
-        self._cell_centroids = None
 
     @property
     def euler_characteristic(self):

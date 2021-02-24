@@ -105,15 +105,6 @@ class _SimplexMesh:
 
         self._is_point_used = None
 
-        self._edge_lengths = None
-        self._facet_areas = None
-        self._signed_cell_volumes = None
-        self._cell_volumes = None
-        self._heights = None
-
-        # only used for tetra
-        self._zeta = None
-
         self._is_boundary_facet = None
         self._is_boundary_facet_local = None
         self.edges = None
@@ -122,7 +113,26 @@ class _SimplexMesh:
         self._is_interior_point = None
         self._is_boundary_point = None
         self._is_boundary_cell = None
+
+        self._reset_point_data()
+
+    def _reset_point_data(self):
+        """Reset all data that changes when point coordinates changes."""
+        self._half_edge_coords = None
+        self._ei_dot_ei = None
+        self._ei_dot_ej = None
+        self._cell_centroids = None
+        self._edge_lengths = None
+        self._ei_dot_ei = None
+        self._ei_dot_ej = None
+        self._cell_volumes = None
+        self._signed_cell_volumes = None
         self._cell_circumcenters = None
+        self._facet_areas = None
+        self._heights = None
+
+        # only used for tetra
+        self._zeta = None
 
     def __repr__(self):
         name = {
