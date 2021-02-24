@@ -4,11 +4,7 @@ import warnings
 import numpy as np
 
 from .base import _SimplexMesh
-from .helpers import (
-    compute_ce_ratios,
-    compute_tri_areas,
-    compute_triangle_circumcenters,
-)
+from .helpers import compute_ce_ratios, compute_tri_areas
 
 __all__ = ["MeshTri"]
 
@@ -25,25 +21,16 @@ class MeshTri(_SimplexMesh):
 
         self._cv_cell_mask = None
         self.subdomains = {}
-        self._facets_cells = None
-        self._facets_cells_idx = None
 
     def _reset_point_data(self):
         """Reset all data that changes when point coordinates changes."""
-        self._half_edge_coords = None
-        self._edge_lengths = None
-        self._ei_dot_ei = None
-        self._ei_dot_ej = None
-        self._cell_volumes = None
+        super()._reset_point_data()
         self._ce_ratios = None
-        self._cell_circumcenters = None
         self._interior_ce_ratios = None
         self._control_volumes = None
         self._cell_partitions = None
         self._cv_centroids = None
         self._cvc_cell_mask = None
-        self._signed_cell_volumes = None
-        self._cell_centroids = None
 
     @property
     def euler_characteristic(self):
@@ -381,40 +368,6 @@ class MeshTri(_SimplexMesh):
             #
             self._cell_partitions = self.ei_dot_ei * self.ce_ratios / 4
         return self._cell_partitions
-
-    @property
-    def cell_circumcenters(self):
-        if self._cell_circumcenters is None:
-            point_cells = self.cells["points"].T
-            self._cell_circumcenters = compute_triangle_circumcenters(
-                self.points[point_cells], self.cell_partitions
-            )
-        return self._cell_circumcenters
-
-    @property
-    def cell_circumradius(self):
-        """Get the circumradii of all cells"""
-        # See <http://mathworld.wolfram.com/Circumradius.html> and
-        # <https://en.wikipedia.org/wiki/Cayley%E2%80%93Menger_determinant#Finding_the_circumradius_of_a_simplex>.
-        return np.prod(self.edge_lengths, axis=0) / 4 / self.cell_volumes
-
-    @property
-    def cell_quality(self):
-        warnings.warn(
-            "Use `q_radius_ratio`. This method will be removed in a future release."
-        )
-        return self.q_radius_ratio
-
-    @property
-    def q_radius_ratio(self):
-        """2 * inradius / circumradius (min 0, max 1)"""
-        # q = 2 * r_in / r_out
-        #   = (-a+b+c) * (+a-b+c) * (+a+b-c) / (a*b*c),
-        #
-        # where r_in is the incircle radius and r_out the circumcircle radius
-        # and a, b, c are the edge lengths.
-        a, b, c = self.edge_lengths
-        return (-a + b + c) * (a - b + c) * (a + b - c) / (a * b * c)
 
     @property
     def angles(self):

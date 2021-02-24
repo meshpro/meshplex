@@ -5,7 +5,7 @@ import meshio
 import numpy as np
 
 from .exceptions import MeshplexError
-from .helpers import compute_tri_areas, grp_start_len
+from .helpers import compute_tri_areas, compute_triangle_circumcenters, grp_start_len
 
 __all__ = ["_SimplexMesh"]
 
@@ -105,15 +105,6 @@ class _SimplexMesh:
 
         self._is_point_used = None
 
-        self._edge_lengths = None
-        self._facet_areas = None
-        self._signed_cell_volumes = None
-        self._cell_volumes = None
-        self._heights = None
-
-        # only used for tetra
-        self._zeta = None
-
         self._is_boundary_facet = None
         self._is_boundary_facet_local = None
         self.edges = None
@@ -122,6 +113,26 @@ class _SimplexMesh:
         self._is_interior_point = None
         self._is_boundary_point = None
         self._is_boundary_cell = None
+
+        self._reset_point_data()
+
+    def _reset_point_data(self):
+        """Reset all data that changes when point coordinates changes."""
+        self._half_edge_coords = None
+        self._ei_dot_ei = None
+        self._ei_dot_ej = None
+        self._cell_centroids = None
+        self._edge_lengths = None
+        self._ei_dot_ei = None
+        self._ei_dot_ej = None
+        self._cell_volumes = None
+        self._signed_cell_volumes = None
+        self._cell_circumcenters = None
+        self._facet_areas = None
+        self._heights = None
+
+        # only used for tetra
+        self._zeta = None
 
     def __repr__(self):
         name = {
@@ -647,3 +658,104 @@ class _SimplexMesh:
 
         if self._is_point_used is not None:
             self._is_point_used = self._is_point_used[is_part_of_cell]
+
+    @property
+    def cell_circumcenters(self):
+        """Get the center of the circumsphere of each cell."""
+        if self._cell_circumcenters is None:
+            if self.n == 3:
+                point_cells = self.cells["points"].T
+                self._cell_circumcenters = compute_triangle_circumcenters(
+                    self.points[point_cells], self.cell_partitions
+                )
+            else:
+                assert self.n == 4
+                # Just like for triangular cells, tetrahedron circumcenters are most
+                # easily computed with the quadrilateral coordinates available.
+                # Luckily, we have the circumcenter-face distances (cfd):
+                #
+                #   CC = (
+                #       + cfd[0] * face_area[0] / sum(cfd*face_area) * X[0]
+                #       + cfd[1] * face_area[1] / sum(cfd*face_area) * X[1]
+                #       + cfd[2] * face_area[2] / sum(cfd*face_area) * X[2]
+                #       + cfd[3] * face_area[3] / sum(cfd*face_area) * X[3]
+                #       )
+                #
+                # (Compare with
+                # <https://en.wikipedia.org/wiki/Trilinear_coordinates#Between_Cartesian_and_trilinear_coordinates>.)
+                # Because of
+                #
+                #    cfd = zeta / (24.0 * face_areas) / self.cell_volumes[None]
+                #
+                # we have
+                #
+                #   CC = sum_k (zeta[k] / sum(zeta) * X[k]).
+                #
+                # TODO See <https://math.stackexchange.com/a/2864770/36678> for another
+                #      interesting approach.
+                alpha = self.zeta / np.sum(self.zeta, axis=0)
+
+                self._cell_circumcenters = np.sum(
+                    alpha[None].T * self.points[self.cells["points"]], axis=1
+                )
+        return self._cell_circumcenters
+
+    @property
+    def cell_circumradius(self):
+        """Get the circumradii of all cells"""
+        if self.n == 3:
+            # See <http://mathworld.wolfram.com/Circumradius.html> and
+            # <https://en.wikipedia.org/wiki/Cayley%E2%80%93Menger_determinant#Finding_the_circumradius_of_a_simplex>.
+            return np.prod(self.edge_lengths, axis=0) / 4 / self.cell_volumes
+
+        assert self.n == 4
+        # Just take the distance of the circumcenter to one of the points for now.
+        dist = self.points[self.idx_hierarchy[0, 0, 0]] - self.cell_circumcenters
+        circumradius = np.sqrt(np.einsum("ij,ij->i", dist, dist))
+        # https://en.wikipedia.org/wiki/Tetrahedron#Circumradius
+        #
+        # Compute opposite edge length products
+        # TODO something is wrong here, the expression under the sqrt can be negative
+        # edge_lengths = np.sqrt(self.ei_dot_ei)
+        # aA = edge_lengths[0, 0] * edge_lengths[0, 2]
+        # bB = edge_lengths[0, 1] * edge_lengths[2, 0]
+        # cC = edge_lengths[0, 2] * edge_lengths[2, 1]
+        # circumradius = (
+        #     np.sqrt(
+        #         (aA + bB + cC) * (-aA + bB + cC) * (aA - bB + cC) * (aA + bB - cC)
+        #     )
+        #     / 24
+        #     / self.cell_volumes
+        # )
+        return circumradius
+
+    @property
+    def q_radius_ratio(self):
+        """Ratio of incircle and circumcircle ratios times (n-1). ("Normalized shape
+        ratio".) Is 1 for the equilateral simplex, and is often used a quality measure
+        for the cell.
+        """
+        # There are other sensible possiblities of defining cell quality, e.g.:
+        #   * inradius to longest edge
+        #   * shortest to longest edge
+        #   * minimum dihedral angle
+        #   * ...
+        # See
+        # <http://eidors3d.sourceforge.net/doc/index.html?eidors/meshing/calc_mesh_quality.html>.
+        if self.n == 3:
+            # q = 2 * r_in / r_out
+            #   = (-a+b+c) * (+a-b+c) * (+a+b-c) / (a*b*c),
+            #
+            # where r_in is the incircle radius and r_out the circumcircle radius
+            # and a, b, c are the edge lengths.
+            a, b, c = self.edge_lengths
+            return (-a + b + c) * (a - b + c) * (a + b - c) / (a * b * c)
+
+        return (self.n - 1) * self.cell_inradius / self.cell_circumradius
+
+    @property
+    def cell_quality(self):
+        warnings.warn(
+            "Use `q_radius_ratio`. This method will be removed in a future release."
+        )
+        return self.q_radius_ratio
