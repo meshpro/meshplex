@@ -475,21 +475,16 @@ class _SimplexMesh:
         a_unique, inv, cts = np.unique(b, return_inverse=True, return_counts=True)
         a_unique = a_unique.view(a.dtype).reshape(-1, a.shape[1])
 
-        if np.any(cts >= 3):
-            c = self.cells["points"]
-            cts = cts[cts >= 3]
-            num_excess_cells = np.sum(cts >= 3)
-
+        if np.any(cts > 2):
+            num_weird_edges = np.sum(cts > 2)
             msg = (
-                "No facet (edge for triangles, face in tetrahedra) "
-                "should have more than two cells, "
-                f"but found {num_excess_cells} such facets."
+                f"Found {num_weird_edges} facets with more than two neighboring cells. "
+                "Something is not right."
             )
-
             # check if cells are identical, list them
             a, inv, cts = unique_rows(np.sort(self.cells["points"]))
             if np.any(cts > 1):
-                msg += "\nThe following cell tuples are equal:\n"
+                msg += " The following cells are equal:\n"
                 for multiple_idx in np.where(cts > 1)[0]:
                     msg += str(np.where(inv == multiple_idx)[0])
             raise MeshplexError(msg)
