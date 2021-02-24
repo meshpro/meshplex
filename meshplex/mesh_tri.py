@@ -36,7 +36,6 @@ class MeshTri(_SimplexMesh):
         self._ei_dot_ej = None
         self._cell_volumes = None
         self._ce_ratios = None
-        self._cell_circumcenters = None
         self._interior_ce_ratios = None
         self._control_volumes = None
         self._cell_partitions = None
@@ -381,22 +380,6 @@ class MeshTri(_SimplexMesh):
             #
             self._cell_partitions = self.ei_dot_ei * self.ce_ratios / 4
         return self._cell_partitions
-
-    @property
-    def cell_circumcenters(self):
-        if self._cell_circumcenters is None:
-            point_cells = self.cells["points"].T
-            self._cell_circumcenters = compute_triangle_circumcenters(
-                self.points[point_cells], self.cell_partitions
-            )
-        return self._cell_circumcenters
-
-    @property
-    def cell_circumradius(self):
-        """Get the circumradii of all cells"""
-        # See <http://mathworld.wolfram.com/Circumradius.html> and
-        # <https://en.wikipedia.org/wiki/Cayley%E2%80%93Menger_determinant#Finding_the_circumradius_of_a_simplex>.
-        return np.prod(self.edge_lengths, axis=0) / 4 / self.cell_volumes
 
     @property
     def cell_quality(self):

@@ -16,7 +16,6 @@ class MeshTetra(_SimplexMesh):
         self._ei_dot_ei = None
         self._ei_dot_ej = None
         self._control_volumes = None
-        self._circumcenters = None
         self.subdomains = {}
 
         self.ce_ratios = self._compute_ce_ratios_geometric()
@@ -50,37 +49,6 @@ class MeshTetra(_SimplexMesh):
         num_faces = len(self.faces["points"])
         face_edges = inv.reshape([3, num_faces]).T
         self.faces["edges"] = face_edges
-
-    def _compute_cell_circumcenters(self):
-        """Computes the center of the circumsphere of each cell."""
-        # Just like for triangular cells, tetrahedron circumcenters are most easily
-        # computed with the quadrilateral coordinates available.
-        # Luckily, we have the circumcenter-face distances (cfd):
-        #
-        #   CC = (
-        #       + cfd[0] * face_area[0] / sum(cfd*face_area) * X[0]
-        #       + cfd[1] * face_area[1] / sum(cfd*face_area) * X[1]
-        #       + cfd[2] * face_area[2] / sum(cfd*face_area) * X[2]
-        #       + cfd[3] * face_area[3] / sum(cfd*face_area) * X[3]
-        #       )
-        #
-        # (Compare with
-        # <https://en.wikipedia.org/wiki/Trilinear_coordinates#Between_Cartesian_and_trilinear_coordinates>.)
-        # Because of
-        #
-        #    cfd = zeta / (24.0 * face_areas) / self.cell_volumes[None]
-        #
-        # we have
-        #
-        #   CC = sum_k (zeta[k] / sum(zeta) * X[k]).
-        #
-        # TODO See <https://math.stackexchange.com/a/2864770/36678> for another
-        #      interesting approach.
-        alpha = self.zeta / np.sum(self.zeta, axis=0)
-
-        self._circumcenters = np.sum(
-            alpha[None].T * self.points[self.cells["points"]], axis=1
-        )
 
     # Question:
     # We're looking for an explicit expression for the algebraic c/e ratios. Might it be
@@ -223,34 +191,6 @@ class MeshTetra(_SimplexMesh):
         return ce_ratios
 
     @property
-    def cell_circumcenters(self):
-        if self._circumcenters is None:
-            self._compute_cell_circumcenters()
-        return self._circumcenters
-
-    @property
-    def cell_circumradius(self):
-        # Just take the distance of the circumcenter to one of the points for now.
-        dist = self.points[self.idx_hierarchy[0, 0, 0]] - self.cell_circumcenters
-        circumradius = np.sqrt(np.einsum("ij,ij->i", dist, dist))
-        # https://en.wikipedia.org/wiki/Tetrahedron#Circumradius
-        #
-        # Compute opposite edge length products
-        # TODO something is wrong here, the expression under the sqrt can be negative
-        # edge_lengths = np.sqrt(self.ei_dot_ei)
-        # aA = edge_lengths[0, 0] * edge_lengths[0, 2]
-        # bB = edge_lengths[0, 1] * edge_lengths[2, 0]
-        # cC = edge_lengths[0, 2] * edge_lengths[2, 1]
-        # circumradius = (
-        #     np.sqrt(
-        #         (aA + bB + cC) * (-aA + bB + cC) * (aA - bB + cC) * (aA + bB - cC)
-        #     )
-        #     / 24
-        #     / self.cell_volumes
-        # )
-        return circumradius
-
-    @property
     def q_radius_ratio(self):
         """Ratio of incircle and circumcircle ratios times 3. ("Normalized shape
         ratio".) Is 1 for the equilateral tetrahedron, and is often used a quality
@@ -387,12 +327,9 @@ class MeshTetra(_SimplexMesh):
         # "It is not currently possible to manually set the aspect on 3D axes"
         # plt.axis("equal")
 
-        if self._circumcenters is None:
-            self._compute_cell_circumcenters()
-
         X = self.points
         for cell_id in range(len(self.cells["points"])):
-            cc = self._circumcenters[cell_id]
+            cc = self.cell_circumcenters[cell_id]
             #
             x = X[self.point_face_cells[..., [cell_id]]]
             # TODO replace `self.ei_dot_ei * self.ei_dot_ej` with cell_partitions
@@ -475,7 +412,7 @@ class MeshTetra(_SimplexMesh):
         # circumcenters
         X = self.points
         for cell_id in adj_cell_ids:
-            cc = self._circumcenters[cell_id]
+            cc = self.cell_circumcenters[cell_id]
             #
             x = X[self.point_face_cells[..., [cell_id]]]
             # TODO replace `self.ei_dot_ei * self.ei_dot_ej` with cell_partitions
@@ -500,7 +437,7 @@ class MeshTetra(_SimplexMesh):
                 )
 
         # draw the cell circumcenters
-        cc = self._circumcenters[adj_cell_ids]
+        cc = self.cell_circumcenters[adj_cell_ids]
         ax.plot(cc[:, 0], cc[:, 1], cc[:, 2], "ro")
         return
 
