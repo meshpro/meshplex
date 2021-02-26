@@ -37,7 +37,8 @@ def test_flip_simple():
     assert_mesh_consistency(mesh)
 
     # mesh.show()
-    mesh.flip_until_delaunay()
+    n = mesh.flip_until_delaunay()
+
     assert_mesh_consistency(mesh)
     assert mesh.num_delaunay_violations() == 0
     assert np.array_equal(
@@ -287,6 +288,36 @@ def test_flip_delaunay():
     # mesh1 = meshplex.MeshTri(mesh0.points.copy(), mesh0.cells["points"].copy())
     # mesh1.create_facets()
     # assert_mesh_equality(mesh0, mesh1)
+
+
+def test_flip_into_existing_edge():
+    """For surface meshes, flips could lead to duplicate cells. This test asserts that
+    this won't happen. For context, see
+    <https://github.com/nschloe/optimesh/issues/71#issuecomment-785699560>.
+    """
+    points = np.array(
+        [
+            [0.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [0.5, 0.3, 0.3],
+            [0.5, -0.3, 0.3],
+        ]
+    )
+    cells = np.array(
+        [
+            [1, 2, 0],
+            [2, 3, 0],
+            [3, 1, 0],
+        ]
+    )
+
+    mesh = meshplex.MeshTri(points, cells)
+    ref = mesh.cells["points"].copy()
+    mesh.flip_until_delaunay()
+    # cells used to be
+    # [[2 0 3], [2 3 0], [2 3 1]]
+    # after flip
+    assert np.all(mesh.cells["points"] == ref)
 
 
 if __name__ == "__main__":
