@@ -16,6 +16,10 @@ class MeshTri(_SimplexMesh):
         """Initialization."""
         super().__init__(points, cells, sort_cells=sort_cells)
 
+        # some backwards-compatibility fixes
+        self.create_edges = super().create_facets
+        self.compute_signed_cell_areas = super().compute_signed_cell_volumes
+
         # reset all data that changes when point coordinates change
         self._reset_point_data()
 
