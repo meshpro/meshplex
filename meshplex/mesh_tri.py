@@ -862,18 +862,46 @@ class MeshTri(_SimplexMesh):
 
         step = 0
 
-        while np.any(self.ce_ratios_per_interior_facet < -tol):
+        while True:
             step += 1
+            is_flip_interior_edge = self.ce_ratios_per_interior_facet < -tol
+            if not np.any(is_flip_interior_edge):
+                break
+
             if step > max_steps:
                 m = np.min(self.ce_ratios_per_interior_facet)
                 warnings.warn(
                     f"Maximum number of edge flips reached. Smallest ce-ratio: {m:.3e}."
                 )
                 break
-            is_flip_interior_edge = self.ce_ratios_per_interior_facet < -tol
 
+            # For surface meshes, flipped edges can end up in edges that already exist.
+            # (See, e.g.,
+            # <https://github.com/nschloe/optimesh/issues/71#issuecomment-785699560>.)
+            # Check this first and prevent it.
             interior_facets_cells = self.facets_cells["interior"][1:3].T
             adj_cells = interior_facets_cells[is_flip_interior_edge].T
+            lids = self.facets_cells["interior"][3:5, is_flip_interior_edge]
+            flipped_edges = np.sort(
+                np.array(
+                    [
+                        self.cells["points"][adj_cells[0], lids[0]],
+                        self.cells["points"][adj_cells[1], lids[1]],
+                    ]
+                ).T,
+                axis=1,
+            )
+            flipped_edge_exists = np.array(
+                [
+                    np.any(np.all(edge == self.edges["points"], axis=1))
+                    for edge in flipped_edges
+                ]
+            )
+            # don't flip edges if they'd end up in an existing edge
+            is_flip_interior_edge[is_flip_interior_edge] = ~flipped_edge_exists
+
+            if not np.any(is_flip_interior_edge):
+                break
 
             # Check if there are cells for which more than one edge needs to be flipped.
             # For those, only flip one edge, namely that with the smaller (more
@@ -893,6 +921,7 @@ class MeshTri(_SimplexMesh):
                 cell_gids, num_flips_per_cell = np.unique(adj_cells, return_counts=True)
                 critical_cell_gids = cell_gids[num_flips_per_cell > 1]
 
+            # actually perform the flips
             self.flip_interior_facets(is_flip_interior_edge)
             num_flips += np.sum(is_flip_interior_edge)
 
