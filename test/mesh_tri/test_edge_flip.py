@@ -37,7 +37,8 @@ def test_flip_simple():
     assert_mesh_consistency(mesh)
 
     # mesh.show()
-    n = mesh.flip_until_delaunay()
+    num_flips = mesh.flip_until_delaunay()
+    assert num_flips == 1
 
     assert_mesh_consistency(mesh)
     assert mesh.num_delaunay_violations() == 0
