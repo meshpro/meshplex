@@ -5,7 +5,11 @@ import pytest
 
 import meshplex
 
-from .helpers import assert_mesh_consistency, assert_mesh_equality, compute_all_entities
+from .mesh_tri.helpers import (
+    assert_mesh_consistency,
+    assert_mesh_equality,
+    compute_all_entities,
+)
 
 
 def get_mesh0():
@@ -60,7 +64,7 @@ def get_mesh1():
 
 def get_mesh2():
     this_dir = pathlib.Path(__file__).resolve().parent
-    mesh0 = meshplex.read(this_dir / ".." / "meshes" / "pacman.vtk")
+    mesh0 = meshplex.read(this_dir / "meshes" / "pacman.vtk")
     return meshplex.MeshTri(mesh0.points[:, :2], mesh0.cells["points"])
 
 
@@ -162,6 +166,15 @@ def test_reference(mesh0, remove_cells):
 
     # check against the original
     assert_mesh_equality(mesh0, mesh1)
+
+
+def test_remove_duplicate():
+    points = np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]])
+    cells = np.array([[0, 2, 3], [0, 1, 2], [0, 2, 1]])
+    mesh = meshplex.MeshTri(points, cells)
+    n = mesh.remove_duplicate_cells()
+    assert n == 1
+    assert np.all(mesh.cells["points"] == np.array([[0, 2, 3], [0, 1, 2]]))
 
 
 if __name__ == "__main__":
