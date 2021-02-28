@@ -169,6 +169,23 @@ def test_reference(mesh0, remove_cells):
 
 
 def test_remove_duplicate():
+    # lines
+    points = np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]])
+    cells = np.array([[0, 2, 3], [0, 1, 2], [0, 2, 1]])
+    mesh = meshplex.MeshTri(points, cells)
+    n = mesh.remove_duplicate_cells()
+    assert n == 1
+    assert np.all(mesh.cells["points"] == np.array([[0, 2, 3], [0, 1, 2]]))
+
+    # triangle
+    points = np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]])
+    cells = np.array([[0, 2, 3], [0, 1, 2], [0, 2, 1]])
+    mesh = meshplex.MeshTri(points, cells)
+    n = mesh.remove_duplicate_cells()
+    assert n == 1
+    assert np.all(mesh.cells["points"] == np.array([[0, 2, 3], [0, 1, 2]]))
+
+    # tetrahedra
     points = np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]])
     cells = np.array([[0, 2, 3], [0, 1, 2], [0, 2, 1]])
     mesh = meshplex.MeshTri(points, cells)

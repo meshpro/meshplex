@@ -1,12 +1,12 @@
 import numpy as np
 
-from .base import _SimplexMesh
-from .helpers import compute_tri_areas, compute_triangle_circumcenters
+from ._helpers import compute_tri_areas, compute_triangle_circumcenters
+from ._mesh import Mesh
 
 __all__ = ["MeshTetra"]
 
 
-class MeshTetra(_SimplexMesh):
+class MeshTetra(Mesh):
     """Class for handling tetrahedral meshes."""
 
     def __init__(self, points, cells, sort_cells=False):

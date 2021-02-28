@@ -4,18 +4,18 @@ import warnings
 import meshio
 import numpy as np
 
-from .exceptions import MeshplexError
-from .helpers import (
+from ._exceptions import MeshplexError
+from ._helpers import (
     compute_tri_areas,
     compute_triangle_circumcenters,
     grp_start_len,
     unique_rows,
 )
 
-__all__ = ["_SimplexMesh"]
+__all__ = ["Mesh"]
 
 
-class _SimplexMesh:
+class Mesh:
     def __init__(self, points, cells, sort_cells=False):
         if sort_cells:
             # Sort cells, first every row, then the rows themselves. This helps in many

@@ -3,13 +3,13 @@ import warnings
 
 import numpy as np
 
-from .base import _SimplexMesh
-from .helpers import compute_ce_ratios, compute_tri_areas
+from ._helpers import compute_ce_ratios, compute_tri_areas
+from ._mesh import Mesh
 
 __all__ = ["MeshTri"]
 
 
-class MeshTri(_SimplexMesh):
+class MeshTri(Mesh):
     """Class for handling triangular meshes."""
 
     def __init__(self, points, cells, sort_cells=False):
