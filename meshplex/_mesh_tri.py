@@ -29,7 +29,6 @@ class MeshTri(Mesh):
     def _reset_point_data(self):
         """Reset all data that changes when point coordinates changes."""
         super()._reset_point_data()
-        self._interior_ce_ratios = None
         self._cv_centroids = None
         self._cvc_cell_mask = None
 
@@ -48,43 +47,6 @@ class MeshTri(Mesh):
     def genus(self):
         # https://math.stackexchange.com/a/85164/36678
         return 1 - self.euler_characteristic / 2
-
-    @property
-    def ce_ratios(self):
-        if self._ce_ratios is None:
-            self._ce_ratios = compute_ce_ratios(self.ei_dot_ej, self.cell_volumes)
-        return self._ce_ratios
-
-    @property
-    def ce_ratios_per_interior_facet(self):
-        if self._interior_ce_ratios is None:
-            if "edges" not in self.cells:
-                self.create_facets()
-
-            n = self.edges["points"].shape[0]
-            ce_ratios = np.bincount(
-                self.cells["edges"].reshape(-1),
-                self.ce_ratios.T.reshape(-1),
-                minlength=n,
-            )
-
-            self._interior_ce_ratios = ce_ratios[~self.is_boundary_facet]
-
-            # # sum up from self.ce_ratios
-            # if self._facets_cells is None:
-            #     self._compute_facets_cells()
-
-            # self._interior_ce_ratios = \
-            #     np.zeros(self._edges_local[2].shape[0])
-            # for i in [0, 1]:
-            #     # Interior edges = edges with _2_ adjacent cells
-            #     idx = [
-            #         self._edges_local[2][:, i],
-            #         self._facets_cells["interior"][:, i],
-            #         ]
-            #     self._interior_ce_ratios += self.ce_ratios[idx]
-
-        return self._interior_ce_ratios
 
     def get_control_volume_centroids(self, cell_mask=None):
         """
@@ -302,7 +264,7 @@ class MeshTri(Mesh):
         point-based, the curl will be cell-based. The approximation is based on
 
         .. math::
-            n\\cdot curl(F) = \\lim_{A\\to 0} |A|^{-1} <\\int_{dGamma}, F> dr;
+            n\\cdot curl(F) = \\lim_{A\\to 0} |A|^{-1} \\rangle\\int_{dGamma}, F\\rangledr;
 
         see https://en.wikipedia.org/wiki/Curl_(mathematics). Actually, to approximate
         the integral, one would only need the projection of the vector field onto the
@@ -328,12 +290,6 @@ class MeshTri(Mesh):
         #
         curl = z * (0.5 * sum_edge_dot_A / self.cell_volumes ** 2)[..., None]
         return curl
-
-    def num_delaunay_violations(self):
-        """Number of edges where the Delaunay condition is violated."""
-        # Delaunay violations are present exactly on the interior edges where the
-        # ce_ratio is negative. Count those.
-        return np.sum(self.ce_ratios_per_interior_facet < 0.0)
 
     def show(self, *args, fullscreen=False, **kwargs):
         """Show the mesh (see plot())."""
