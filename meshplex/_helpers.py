@@ -192,3 +192,14 @@ def compute_triangle_circumcenters(X, cell_partitions):
 
     a = X * alpha[..., None]
     return a[0] + a[1] + a[2]
+
+
+def _dot(a, n):
+    """Dot product, preserve the leading n dimensions."""
+    # einsum is faster if the tail survives, e.g., ijk,ijk->jk.
+    # <https://gist.github.com/nschloe/8bc015cc1a9e5c56374945ddd711df7b>
+    # TODO reorganize the data?
+    assert n <= len(a.shape)
+    # Would use -1 as second argument, but <https://github.com/numpy/numpy/issues/18519>
+    b = a.reshape(*a.shape[:n], np.prod(a.shape[n:]).astype(int))
+    return np.einsum("...i,...i->...", b, b)

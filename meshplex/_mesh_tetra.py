@@ -12,7 +12,6 @@ class MeshTetra(Mesh):
     def __init__(self, points, cells, sort_cells=False):
         super().__init__(points, cells, sort_cells=sort_cells)
 
-        self._control_volumes = None
         self.subdomains = {}
 
         self.ce_ratios = self._compute_ce_ratios_geometric()
@@ -245,33 +244,6 @@ class MeshTetra(Mesh):
         )
         alpha = np.sqrt(2) / 12  # normalization factor
         return self.cell_volumes / rms ** 3 / alpha
-
-    @property
-    def control_volumes(self):
-        """Compute the control volumes of all points in the mesh."""
-        if self._control_volumes is None:
-            #   1/3. * (0.5 * edge_length) * covolume
-            # = 1/6 * edge_length**2 * ce_ratio_edge_ratio
-            v = self.ei_dot_ei * self.ce_ratios / 6
-            # Explicitly sum up contributions per cell first. Makes np.add.at faster.
-            # For every point k (range(4)), check for which edges k appears in local_idx,
-            # and sum() up the v's from there.
-            vals = np.array(
-                [
-                    v[0, 2] + v[1, 1] + v[2, 3] + v[0, 1] + v[1, 3] + v[2, 2],
-                    v[0, 3] + v[1, 2] + v[2, 0] + v[0, 2] + v[1, 0] + v[2, 3],
-                    v[0, 0] + v[1, 3] + v[2, 1] + v[0, 3] + v[1, 1] + v[2, 0],
-                    v[0, 1] + v[1, 0] + v[2, 2] + v[0, 0] + v[1, 2] + v[2, 1],
-                ]
-            ).T
-            #
-            self._control_volumes = np.bincount(
-                self.cells["points"].reshape(-1),
-                vals.reshape(-1),
-                minlength=len(self.points),
-            )
-
-        return self._control_volumes
 
     def num_delaunay_violations(self):
         # Delaunay violations are present exactly on the interior faces where the sum of

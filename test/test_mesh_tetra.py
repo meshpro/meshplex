@@ -99,8 +99,6 @@ def test_regular_tet0(a):
     # cell quality
     assert is_near_equal(mesh.q_radius_ratio, [1.0], tol)
 
-    mesh.mark_boundary()
-
     assert is_near_equal(mesh.cell_barycenters, mesh.cell_centroids, tol)
     assert is_near_equal(mesh.cell_barycenters, [[0.0, 0.0, a * np.sqrt(6) / 12]], tol)
 
