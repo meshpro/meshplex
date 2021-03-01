@@ -137,6 +137,8 @@ class Mesh:
         self._cell_circumcenters = None
         self._facet_areas = None
         self._heights = None
+        self._ce_ratios = None
+        self._cell_partitions = None
 
         # only used for tetra
         self._zeta = None

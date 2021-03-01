@@ -29,10 +29,8 @@ class MeshTri(Mesh):
     def _reset_point_data(self):
         """Reset all data that changes when point coordinates changes."""
         super()._reset_point_data()
-        self._ce_ratios = None
         self._interior_ce_ratios = None
         self._control_volumes = None
-        self._cell_partitions = None
         self._cv_centroids = None
         self._cvc_cell_mask = None
 
