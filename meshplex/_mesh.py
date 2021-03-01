@@ -377,7 +377,6 @@ class Mesh:
 
             if subdomain.is_boundary_only:
                 # Filter boundary
-                self.mark_boundary()
                 is_inside = is_inside & self.is_boundary_point
 
         self.subdomains[subdomain] = {"vertices": is_inside}
@@ -563,13 +562,6 @@ class Mesh:
         if self._is_interior_point is None:
             self._is_interior_point = self.is_point_used & ~self.is_boundary_point
         return self._is_interior_point
-
-    def mark_boundary(self):
-        warnings.warn(
-            "mark_boundary() does nothing. "
-            "Boundary entities are computed on the fly.",
-            DeprecationWarning,
-        )
 
     @property
     def facets_cells(self):
