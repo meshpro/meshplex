@@ -18,7 +18,7 @@ def test_pacman():
     # which has curl (0, 0, 1).
     A = np.array([[-0.5 * coord[1], 0.5 * coord[0], 0.0] for coord in mesh.points])
     # Compute the curl numerically.
-    B = mesh.compute_curl(A)
+    B = mesh.compute_ncurl(A)
 
     # mesh.write(
     #     'curl.vtu',

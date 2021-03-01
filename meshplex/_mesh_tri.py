@@ -13,24 +13,11 @@ class MeshTri(Mesh):
     """Class for handling triangular meshes."""
 
     def __init__(self, points, cells, sort_cells=False):
-        """Initialization."""
         super().__init__(points, cells, sort_cells=sort_cells)
 
         # some backwards-compatibility fixes
         self.create_edges = super().create_facets
         self.compute_signed_cell_areas = super().compute_signed_cell_volumes
-
-        # reset all data that changes when point coordinates change
-        self._reset_point_data()
-
-        self._cv_cell_mask = None
-        self.subdomains = {}
-
-    def _reset_point_data(self):
-        """Reset all data that changes when point coordinates changes."""
-        super()._reset_point_data()
-        self._cv_centroids = None
-        self._cvc_cell_mask = None
 
     @property
     def euler_characteristic(self):
@@ -48,65 +35,6 @@ class MeshTri(Mesh):
         # https://math.stackexchange.com/a/85164/36678
         return 1 - self.euler_characteristic / 2
 
-    def get_control_volume_centroids(self, cell_mask=None):
-        """
-        The centroid of any volume V is given by
-
-        .. math::
-          c = \\int_V x / \\int_V 1.
-
-        The denominator is the control volume. The numerator can be computed by making
-        use of the fact that the control volume around any vertex is composed of right
-        triangles, two for each adjacent cell.
-
-        Optionally disregard the contributions from particular cells. This is useful,
-        for example, for temporarily disregarding flat cells on the boundary when
-        performing Lloyd mesh optimization.
-        """
-        if cell_mask is None:
-            cell_mask = np.zeros(self.cell_partitions.shape[1], dtype=bool)
-
-        if self._cv_centroids is None or np.any(cell_mask != self._cvc_cell_mask):
-            _, v = self._compute_integral_x()
-            v = v[:, :, ~cell_mask, :]
-
-            # Again, make use of the fact that edge k is opposite of point k in every
-            # cell. Adding the arrays first makes the work for bincount lighter.
-            ids = self.cells["points"][~cell_mask].T
-            vals = np.array([v[1, 1] + v[0, 2], v[1, 2] + v[0, 0], v[1, 0] + v[0, 1]])
-            # add it all up
-            n = len(self.points)
-            self._cv_centroids = np.array(
-                [
-                    np.bincount(ids.reshape(-1), vals[..., k].reshape(-1), minlength=n)
-                    for k in range(vals.shape[-1])
-                ]
-            ).T
-
-            # Divide by the control volume
-            cv = self.get_control_volumes(cell_mask=cell_mask)
-            # self._cv_centroids /= np.where(cv > 0.0, cv, 1.0)
-            self._cv_centroids = (self._cv_centroids.T / cv).T
-            self._cvc_cell_mask = cell_mask
-            assert np.all(cell_mask == self._cv_cell_mask)
-
-        return self._cv_centroids
-
-    @property
-    def control_volume_centroids(self):
-        return self.get_control_volume_centroids()
-
-    @property
-    def cell_partitions(self):
-        if self._cell_partitions is None:
-            # Compute the control volume contributions. Note that
-            #
-            #   0.5 * (0.5 * edge_length) * covolume
-            # = 0.25 * edge_length ** 2 * ce_ratio_edge_ratio
-            #
-            self._cell_partitions = self.ei_dot_ei * self.ce_ratios / 4
-        return self._cell_partitions
-
     @property
     def angles(self):
         """All angles in the triangle."""
@@ -121,30 +49,6 @@ class MeshTri(Mesh):
             ]
         )
         return np.arccos(-normalized_ei_dot_ej)
-
-    def _compute_integral_x(self):
-        # Computes the integral of x,
-        #
-        #   \\int_V x,
-        #
-        # over all atomic "triangles", i.e., areas cornered by a point, an edge
-        # midpoint, and a circumcenter.
-
-        # The integral of any linear function over a triangle is the average of the
-        # values of the function in each of the three corners, times the area of the
-        # triangle.
-        right_triangle_vols = self.cell_partitions
-
-        point_edges = self.idx_hierarchy
-
-        corner = self.points[point_edges]
-        edge_midpoints = 0.5 * (corner[0] + corner[1])
-        cc = self.cell_circumcenters
-
-        average = (corner + edge_midpoints[None] + cc[None, None]) / 3.0
-
-        contribs = right_triangle_vols[None, :, :, None] * average
-        return point_edges, contribs
 
     # def _compute_surface_areas(self, cell_ids):
     #     # For each edge, one half of the the edge goes to each of the end points. Used
@@ -259,12 +163,12 @@ class MeshTri(Mesh):
     #
     #         return gradient
 
-    def compute_curl(self, vector_field):
-        """Computes the curl of a vector field over the mesh. While the vector field is
-        point-based, the curl will be cell-based. The approximation is based on
+    def compute_ncurl(self, vector_field):
+        """Computes the n.dot.curl of a vector field over the mesh. While the vector
+        field is point-based, the curl will be cell-based. The approximation is based on
 
         .. math::
-            n\\cdot curl(F) = \\lim_{A\\to 0} |A|^{-1} \\rangle\\int_{dGamma}, F\\rangledr;
+            n\\cdot curl(F) = \\lim_{A\\to 0} |A|^{-1} \\rangle\\int_{dGamma}, F\\rangle dr;
 
         see https://en.wikipedia.org/wiki/Curl_(mathematics). Actually, to approximate
         the integral, one would only need the projection of the vector field onto the
@@ -870,4 +774,3 @@ class MeshTri(Mesh):
         self._cell_partitions = None
         self._cv_centroids = None
         self._signed_cell_volumes = None
-        self.subdomains = {}

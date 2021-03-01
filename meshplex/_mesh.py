@@ -124,6 +124,8 @@ class Mesh:
         self._is_boundary_point = None
         self._is_boundary_cell = None
 
+        self.subdomains = {}
+
         self._reset_point_data()
 
     def _reset_point_data(self):
@@ -144,6 +146,10 @@ class Mesh:
         self._cell_partitions = None
         self._control_volumes = None
         self._interior_ce_ratios = None
+
+        self._cv_centroids = None
+        self._cvc_cell_mask = None
+        self._cv_cell_mask = None
 
         # only used for tetra
         self._zeta = None
@@ -1241,3 +1247,90 @@ class Mesh:
             self.circumcenter_face_distances.reshape(-1),
         )
         return np.sum(sums < 0.0)
+
+    @property
+    def cell_partitions(self):
+        if self._cell_partitions is None:
+            assert self.n == 3
+            # Compute the control volume contributions. Note that
+            #
+            #   0.5 * (0.5 * edge_length) * covolume
+            # = 0.25 * edge_length ** 2 * ce_ratio_edge_ratio
+            #
+            self._cell_partitions = self.ei_dot_ei * self.ce_ratios / 4
+        return self._cell_partitions
+
+    def get_control_volume_centroids(self, cell_mask=None):
+        """The centroid of any volume V is given by
+
+        .. math::
+          c = \\int_V x / \\int_V 1.
+
+        The denominator is the control volume. The numerator can be computed by making
+        use of the fact that the control volume around any vertex is composed of right
+        triangles, two for each adjacent cell.
+
+        Optionally disregard the contributions from particular cells. This is useful,
+        for example, for temporarily disregarding flat cells on the boundary when
+        performing Lloyd mesh optimization.
+        """
+        assert self.n == 3
+
+        if cell_mask is None:
+            cell_mask = np.zeros(self.cell_partitions.shape[1], dtype=bool)
+
+        if self._cv_centroids is None or np.any(cell_mask != self._cvc_cell_mask):
+            _, v = self._compute_integral_x()
+            v = v[:, :, ~cell_mask, :]
+
+            # Again, make use of the fact that edge k is opposite of point k in every
+            # cell. Adding the arrays first makes the work for bincount lighter.
+            ids = self.cells["points"][~cell_mask].T
+            vals = np.array([v[1, 1] + v[0, 2], v[1, 2] + v[0, 0], v[1, 0] + v[0, 1]])
+            # add it all up
+            n = len(self.points)
+            self._cv_centroids = np.array(
+                [
+                    np.bincount(ids.reshape(-1), vals[..., k].reshape(-1), minlength=n)
+                    for k in range(vals.shape[-1])
+                ]
+            ).T
+
+            # Divide by the control volume
+            cv = self.get_control_volumes(cell_mask=cell_mask)
+            # self._cv_centroids /= np.where(cv > 0.0, cv, 1.0)
+            self._cv_centroids = (self._cv_centroids.T / cv).T
+            self._cvc_cell_mask = cell_mask
+            assert np.all(cell_mask == self._cv_cell_mask)
+
+        return self._cv_centroids
+
+    @property
+    def control_volume_centroids(self):
+        assert self.n == 3
+        return self.get_control_volume_centroids()
+
+    def _compute_integral_x(self):
+        # Computes the integral of x,
+        #
+        #   \\int_V x,
+        #
+        # over all atomic "triangles", i.e., areas cornered by a point, an edge
+        # midpoint, and a circumcenter.
+
+        # The integral of any linear function over a triangle is the average of the
+        # values of the function in each of the three corners, times the area of the
+        # triangle.
+        assert self.n == 3
+        right_triangle_vols = self.cell_partitions
+
+        point_edges = self.idx_hierarchy
+
+        corner = self.points[point_edges]
+        edge_midpoints = 0.5 * (corner[0] + corner[1])
+        cc = self.cell_circumcenters
+
+        average = (corner + edge_midpoints[None] + cc[None, None]) / 3.0
+
+        contribs = right_triangle_vols[None, :, :, None] * average
+        return point_edges, contribs

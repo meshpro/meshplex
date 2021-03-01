@@ -15,8 +15,8 @@ def run(mesh, volume, convol_norms, ce_ratio_norms, cellvol_norms, tol=1.0e-12):
     norm_inf = np.linalg.norm(mesh.cell_volumes, ord=np.Inf)
     assert is_near_equal(cellvol_norms, [norm2, norm_inf], tol)
 
-    # If everything is Delaunay and the boundary elements aren't flat, the
-    # volume of the domain is given by
+    # If everything is Delaunay and the boundary elements aren't flat, the volume of the
+    # domain is given by
     #   1/n * edge_lengths * ce_ratios.
     # Unfortunately, this isn't always the case.
     # ```
@@ -30,8 +30,7 @@ def run(mesh, volume, convol_norms, ce_ratio_norms, cellvol_norms, tol=1.0e-12):
     alpha_inf = max(abs(mesh.ce_ratios).flat)
     assert is_near_equal(ce_ratio_norms, [alpha2, alpha_inf], tol)
 
-    # Check the volume by summing over the absolute value of the control
-    # volumes.
+    # Check the volume by summing over the absolute value of the control volumes.
     vol = fsum(mesh.control_volumes)
     assert abs(volume - vol) < tol * volume
     # Check control volume norms.

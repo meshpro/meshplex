@@ -12,9 +12,6 @@ class MeshTetra(Mesh):
     def __init__(self, points, cells, sort_cells=False):
         super().__init__(points, cells, sort_cells=sort_cells)
 
-        self.subdomains = {}
-
-        self._inv_faces = None
         self.faces = None
 
     def _create_face_edge_relationships(self):
