@@ -30,7 +30,6 @@ class MeshTri(Mesh):
         """Reset all data that changes when point coordinates changes."""
         super()._reset_point_data()
         self._interior_ce_ratios = None
-        self._control_volumes = None
         self._cv_centroids = None
         self._cvc_cell_mask = None
 
@@ -86,34 +85,6 @@ class MeshTri(Mesh):
             #     self._interior_ce_ratios += self.ce_ratios[idx]
 
         return self._interior_ce_ratios
-
-    def get_control_volumes(self, cell_mask=None):
-        """The control volumes around each vertex. Optionally disregard the
-        contributions from particular cells. This is useful, for example, for
-        temporarily disregarding flat cells on the boundary when performing Lloyd mesh
-        optimization.
-        """
-        if cell_mask is None:
-            cell_mask = np.zeros(self.cell_partitions.shape[1], dtype=bool)
-
-        if self._control_volumes is None or np.any(cell_mask != self._cv_cell_mask):
-            # Summing up the arrays first makes the work on bincount a bit lighter.
-            v = self.cell_partitions[:, ~cell_mask]
-            vals = np.array([v[1] + v[2], v[2] + v[0], v[0] + v[1]])
-            # sum all the vals into self._control_volumes at ids
-            self.cells["points"][~cell_mask].T.reshape(-1)
-            self._control_volumes = np.bincount(
-                self.cells["points"][~cell_mask].T.reshape(-1),
-                weights=vals.reshape(-1),
-                minlength=len(self.points),
-            )
-            self._cv_cell_mask = cell_mask
-        return self._control_volumes
-
-    @property
-    def control_volumes(self):
-        """The control volumes around each vertex."""
-        return self.get_control_volumes()
 
     def get_control_volume_centroids(self, cell_mask=None):
         """

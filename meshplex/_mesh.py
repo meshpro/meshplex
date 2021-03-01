@@ -6,6 +6,7 @@ import numpy as np
 
 from ._exceptions import MeshplexError
 from ._helpers import (
+    _dot,
     compute_tri_areas,
     compute_triangle_circumcenters,
     grp_start_len,
@@ -17,6 +18,9 @@ __all__ = ["Mesh"]
 
 class Mesh:
     def __init__(self, points, cells, sort_cells=False):
+        points = np.asarray(points)
+        cells = np.asarray(cells)
+
         if sort_cells:
             # Sort cells, first every row, then the rows themselves. This helps in many
             # downstream applications, e.g., when constructing linear systems with the
@@ -28,8 +32,6 @@ class Mesh:
             cells = np.sort(cells, axis=1)
             cells = cells[cells[:, 0].argsort()]
 
-        points = np.asarray(points)
-        cells = np.asarray(cells)
         # assert len(points.shape) <= 2, f"Illegal point coordinates shape {points.shape}"
         assert len(cells.shape) == 2, f"Illegal cells shape {cells.shape}"
         self.n = cells.shape[1]
@@ -139,6 +141,7 @@ class Mesh:
         self._heights = None
         self._ce_ratios = None
         self._cell_partitions = None
+        self._control_volumes = None
 
         # only used for tetra
         self._zeta = None
@@ -182,14 +185,7 @@ class Mesh:
     @property
     def ei_dot_ei(self):
         if self._ei_dot_ei is None:
-            # einsum is faster if the tail survives, e.g., ijk,ijk->jk.
-            # <https://gist.github.com/nschloe/8bc015cc1a9e5c56374945ddd711df7b>
-            # TODO reorganize the data?
-            # TODO if the dimensionality of the points is 0 (e.g., MeshLine), then this
-            # is wrong
-            self._ei_dot_ei = np.einsum(
-                "...k, ...k->...", self.half_edge_coords, self.half_edge_coords
-            )
+            self._ei_dot_ei = _dot(self.half_edge_coords, self.n - 1)
         return self._ei_dot_ei
 
     @property
@@ -986,3 +982,62 @@ class Mesh:
             remove |= rem
 
         return self.remove_cells(remove)
+
+    def get_control_volumes(self, cell_mask=None):
+        """The control volumes around each vertex. Optionally disregard the
+        contributions from particular cells. This is useful, for example, for
+        temporarily disregarding flat cells on the boundary when performing Lloyd mesh
+        optimization.
+        """
+        assert self.n == 3
+        if cell_mask is None:
+            cell_mask = np.zeros(self.cell_partitions.shape[1], dtype=bool)
+
+        if self._control_volumes is None or np.any(cell_mask != self._cv_cell_mask):
+            # Summing up the arrays first makes the work on bincount a bit lighter.
+            v = self.cell_partitions[:, ~cell_mask]
+            vals = np.array([v[1] + v[2], v[2] + v[0], v[0] + v[1]])
+            # sum all the vals into self._control_volumes at ids
+            self.cells["points"][~cell_mask].T.reshape(-1)
+            self._control_volumes = np.bincount(
+                self.cells["points"][~cell_mask].T.reshape(-1),
+                weights=vals.reshape(-1),
+                minlength=len(self.points),
+            )
+            self._cv_cell_mask = cell_mask
+        return self._control_volumes
+
+    @property
+    def control_volumes(self):
+        """The control volumes around each vertex."""
+        if self._control_volumes is None:
+            if self.n == 2:
+                self._control_volumes = np.zeros(len(self.points), dtype=float)
+                for k, node_ids in enumerate(self.cells["points"]):
+                    self._control_volumes[node_ids] += 0.5 * self.cell_volumes[k]
+            elif self.n == 3:
+                return self.get_control_volumes()
+            else:
+                assert self.n == 4
+                #   1/3. * (0.5 * edge_length) * covolume
+                # = 1/6 * edge_length**2 * ce_ratio_edge_ratio
+                v = self.ei_dot_ei * self.ce_ratios / 6
+                # Explicitly sum up contributions per cell first. Makes np.add.at
+                # faster.  For every point k (range(4)), check for which edges k appears
+                # in local_idx, and sum() up the v's from there.
+                vals = np.array(
+                    [
+                        v[0, 2] + v[1, 1] + v[2, 3] + v[0, 1] + v[1, 3] + v[2, 2],
+                        v[0, 3] + v[1, 2] + v[2, 0] + v[0, 2] + v[1, 0] + v[2, 3],
+                        v[0, 0] + v[1, 3] + v[2, 1] + v[0, 3] + v[1, 1] + v[2, 0],
+                        v[0, 1] + v[1, 0] + v[2, 2] + v[0, 0] + v[1, 2] + v[2, 1],
+                    ]
+                ).T
+                #
+                self._control_volumes = np.bincount(
+                    self.cells["points"].reshape(-1),
+                    vals.reshape(-1),
+                    minlength=len(self.points),
+                )
+
+        return self._control_volumes
