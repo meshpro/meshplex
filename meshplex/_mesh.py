@@ -30,10 +30,10 @@ class Mesh:
 
         points = np.asarray(points)
         cells = np.asarray(cells)
-        assert len(points.shape) == 2, f"Illegal point coordinates shape {points.shape}"
+        # assert len(points.shape) <= 2, f"Illegal point coordinates shape {points.shape}"
         assert len(cells.shape) == 2, f"Illegal cells shape {cells.shape}"
         self.n = cells.shape[1]
-        assert self.n in [3, 4], f"Illegal cells shape {cells.shape}"
+        assert self.n in [2, 3, 4], f"Illegal cells shape {cells.shape}"
 
         # Assert that all vertices are used.
         # If there are vertices which do not appear in the cells list, this
@@ -56,7 +56,9 @@ class Mesh:
         self.cells = {"points": np.asarray(cells)}
         nds = self.cells["points"].T
 
-        if cells.shape[1] == 3:
+        if cells.shape[1] == 2:
+            self.local_idx = np.array([0, 1])
+        elif cells.shape[1] == 3:
             # Create the idx_hierarchy (points->edges->cells), i.e., the value of
             # `self.idx_hierarchy[0, 2, 27]` is the index of the point of cell 27, edge
             # 2, point 0. The shape of `self.idx_hierarchy` is `(2, 3, n)`, where `n` is
@@ -181,6 +183,8 @@ class Mesh:
             # einsum is faster if the tail survives, e.g., ijk,ijk->jk.
             # <https://gist.github.com/nschloe/8bc015cc1a9e5c56374945ddd711df7b>
             # TODO reorganize the data?
+            # TODO if the dimensionality of the points is 0 (e.g., MeshLine), then this
+            # is wrong
             self._ei_dot_ei = np.einsum(
                 "...k, ...k->...", self.half_edge_coords, self.half_edge_coords
             )
@@ -422,7 +426,9 @@ class Mesh:
     @property
     def cell_volumes(self):
         if self._cell_volumes is None:
-            if self.n == 3:
+            if self.n == 2:
+                self._cell_volumes = self.edge_lengths
+            elif self.n == 3:
                 self._cell_volumes = compute_tri_areas(self.ei_dot_ej)
             else:
                 assert self.n == 4
@@ -464,7 +470,6 @@ class Mesh:
 
         a = np.sort(idx.T)
 
-        # exit(1)
         # a = np.sort(self.idx_hierarchy.reshape(s[0], -1).T)
         b = np.ascontiguousarray(a).view(
             np.dtype((np.void, a.dtype.itemsize * a.shape[1]))
