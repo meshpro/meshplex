@@ -5,7 +5,7 @@ class MeshLine:
     """Class for handling line segment "meshes"."""
 
     def __init__(self, points, cells):
-        self.points = points
+        self.points = np.asarray(points)
 
         num_cells = len(cells)
         self.cells = np.empty(num_cells, dtype=np.dtype([("nodes", (int, 2))]))
@@ -37,7 +37,6 @@ class MeshLine:
         assert abs(alpha) < 1.0e-6
 
     def show_vertex_function(self, u):
-        """"""
-        from matplotlib import pyplot as plt
+        import matplotlib.pyplot as plt
 
         plt.plot(self.points, u)

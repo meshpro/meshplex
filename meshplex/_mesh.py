@@ -4,18 +4,18 @@ import warnings
 import meshio
 import numpy as np
 
-from .exceptions import MeshplexError
-from .helpers import (
+from ._exceptions import MeshplexError
+from ._helpers import (
     compute_tri_areas,
     compute_triangle_circumcenters,
     grp_start_len,
     unique_rows,
 )
 
-__all__ = ["_SimplexMesh"]
+__all__ = ["Mesh"]
 
 
-class _SimplexMesh:
+class Mesh:
     def __init__(self, points, cells, sort_cells=False):
         if sort_cells:
             # Sort cells, first every row, then the rows themselves. This helps in many
@@ -30,10 +30,10 @@ class _SimplexMesh:
 
         points = np.asarray(points)
         cells = np.asarray(cells)
-        assert len(points.shape) == 2, f"Illegal point coordinates shape {points.shape}"
+        # assert len(points.shape) <= 2, f"Illegal point coordinates shape {points.shape}"
         assert len(cells.shape) == 2, f"Illegal cells shape {cells.shape}"
         self.n = cells.shape[1]
-        assert self.n in [3, 4], f"Illegal cells shape {cells.shape}"
+        assert self.n in [2, 3, 4], f"Illegal cells shape {cells.shape}"
 
         # Assert that all vertices are used.
         # If there are vertices which do not appear in the cells list, this
@@ -56,7 +56,9 @@ class _SimplexMesh:
         self.cells = {"points": np.asarray(cells)}
         nds = self.cells["points"].T
 
-        if cells.shape[1] == 3:
+        if cells.shape[1] == 2:
+            self.local_idx = np.array([0, 1])
+        elif cells.shape[1] == 3:
             # Create the idx_hierarchy (points->edges->cells), i.e., the value of
             # `self.idx_hierarchy[0, 2, 27]` is the index of the point of cell 27, edge
             # 2, point 0. The shape of `self.idx_hierarchy` is `(2, 3, n)`, where `n` is
@@ -135,6 +137,8 @@ class _SimplexMesh:
         self._cell_circumcenters = None
         self._facet_areas = None
         self._heights = None
+        self._ce_ratios = None
+        self._cell_partitions = None
 
         # only used for tetra
         self._zeta = None
@@ -181,6 +185,8 @@ class _SimplexMesh:
             # einsum is faster if the tail survives, e.g., ijk,ijk->jk.
             # <https://gist.github.com/nschloe/8bc015cc1a9e5c56374945ddd711df7b>
             # TODO reorganize the data?
+            # TODO if the dimensionality of the points is 0 (e.g., MeshLine), then this
+            # is wrong
             self._ei_dot_ei = np.einsum(
                 "...k, ...k->...", self.half_edge_coords, self.half_edge_coords
             )
@@ -422,7 +428,9 @@ class _SimplexMesh:
     @property
     def cell_volumes(self):
         if self._cell_volumes is None:
-            if self.n == 3:
+            if self.n == 2:
+                self._cell_volumes = self.edge_lengths
+            elif self.n == 3:
                 self._cell_volumes = compute_tri_areas(self.ei_dot_ej)
             else:
                 assert self.n == 4
@@ -464,7 +472,6 @@ class _SimplexMesh:
 
         a = np.sort(idx.T)
 
-        # exit(1)
         # a = np.sort(self.idx_hierarchy.reshape(s[0], -1).T)
         b = np.ascontiguousarray(a).view(
             np.dtype((np.void, a.dtype.itemsize * a.shape[1]))
@@ -768,3 +775,214 @@ class _SimplexMesh:
             "Use `q_radius_ratio`. This method will be removed in a future release."
         )
         return self.q_radius_ratio
+
+    def remove_cells(self, remove_array):
+        """Remove cells and take care of all the dependent data structures. The input
+        argument `remove_array` can be a boolean array or a list of indices.
+        """
+        # Although this method doesn't compute anything new, the reorganization of the
+        # data structure is fairly expensive. This is mostly due to the fact that mask
+        # copies like `a[mask]` take long if `a` is large, even if `mask` is True almost
+        # everywhere.
+        # Keep an eye on <https://stackoverflow.com/q/65035280/353337> for possible
+        # workarounds.
+        remove_array = np.asarray(remove_array)
+        if len(remove_array) == 0:
+            return 0
+
+        if remove_array.dtype == int:
+            keep = np.ones(len(self.cells["points"]), dtype=bool)
+            keep[remove_array] = False
+        else:
+            assert remove_array.dtype == bool
+            keep = ~remove_array
+
+        assert len(keep) == len(self.cells["points"]), "Wrong length of index array."
+
+        if np.all(keep):
+            return 0
+
+        # handle edges; this is a bit messy
+        if "edges" in self.cells:
+            # updating the boundary data is a lot easier with facets_cells
+            if self._facets_cells is None:
+                self._compute_facets_cells()
+
+            # Set edge to is_boundary_facet_local=True if it is adjacent to a removed
+            # cell.
+            facet_ids = self.cells["edges"][~keep].flatten()
+            # only consider interior edges
+            facet_ids = facet_ids[self.is_interior_facet[facet_ids]]
+            idx = self.facets_cells_idx[facet_ids]
+            cell_id = self.facets_cells["interior"][1:3, idx].T
+            local_edge_id = self.facets_cells["interior"][3:5, idx].T
+            self._is_boundary_facet_local[local_edge_id, cell_id] = True
+            # now remove the entries corresponding to the removed cells
+            self._is_boundary_facet_local = self._is_boundary_facet_local[:, keep]
+
+            if self._is_boundary_cell is not None:
+                self._is_boundary_cell[cell_id] = True
+                self._is_boundary_cell = self._is_boundary_cell[keep]
+
+            # update facets_cells
+            keep_b_ec = keep[self.facets_cells["boundary"][1]]
+            keep_i_ec0, keep_i_ec1 = keep[self.facets_cells["interior"][1:3]]
+            # move ec from interior to boundary if exactly one of the two adjacent cells
+            # was removed
+
+            keep_i_0 = keep_i_ec0 & ~keep_i_ec1
+            keep_i_1 = keep_i_ec1 & ~keep_i_ec0
+            self._facets_cells["boundary"] = np.array(
+                [
+                    # edge id
+                    np.concatenate(
+                        [
+                            self._facets_cells["boundary"][0, keep_b_ec],
+                            self._facets_cells["interior"][0, keep_i_0],
+                            self._facets_cells["interior"][0, keep_i_1],
+                        ]
+                    ),
+                    # cell id
+                    np.concatenate(
+                        [
+                            self._facets_cells["boundary"][1, keep_b_ec],
+                            self._facets_cells["interior"][1, keep_i_0],
+                            self._facets_cells["interior"][2, keep_i_1],
+                        ]
+                    ),
+                    # local edge id
+                    np.concatenate(
+                        [
+                            self._facets_cells["boundary"][2, keep_b_ec],
+                            self._facets_cells["interior"][3, keep_i_0],
+                            self._facets_cells["interior"][4, keep_i_1],
+                        ]
+                    ),
+                ]
+            )
+
+            keep_i = keep_i_ec0 & keep_i_ec1
+
+            # this memory copy isn't too fast
+            self._facets_cells["interior"] = self._facets_cells["interior"][:, keep_i]
+
+            num_edges_old = len(self.edges["points"])
+            adjacent_edges, counts = np.unique(
+                self.cells["edges"][~keep].flat, return_counts=True
+            )
+            # remove edge entirely either if 2 adjacent cells are removed or if it is a
+            # boundary edge and 1 adjacent cells are removed
+            is_facet_removed = (counts == 2) | (
+                (counts == 1) & self._is_boundary_facet[adjacent_edges]
+            )
+
+            # set the new boundary edges
+            self._is_boundary_facet[adjacent_edges[~is_facet_removed]] = True
+            # Now actually remove the edges. This includes a reindexing.
+            assert self._is_boundary_facet is not None
+            keep_edges = np.ones(len(self._is_boundary_facet), dtype=bool)
+            keep_edges[adjacent_edges[is_facet_removed]] = False
+
+            # make sure there is only edges["points"], not edges["cells"] etc.
+            assert self.edges is not None
+            assert len(self.edges) == 1
+            self.edges["points"] = self.edges["points"][keep_edges]
+            self._is_boundary_facet = self._is_boundary_facet[keep_edges]
+
+            # update edge and cell indices
+            self.cells["edges"] = self.cells["edges"][keep]
+            new_index_edges = np.arange(num_edges_old) - np.cumsum(~keep_edges)
+            self.cells["edges"] = new_index_edges[self.cells["edges"]]
+            num_cells_old = len(self.cells["points"])
+            new_index_cells = np.arange(num_cells_old) - np.cumsum(~keep)
+
+            # this takes fairly long
+            ec = self._facets_cells
+            ec["boundary"][0] = new_index_edges[ec["boundary"][0]]
+            ec["boundary"][1] = new_index_cells[ec["boundary"][1]]
+            ec["interior"][0] = new_index_edges[ec["interior"][0]]
+            ec["interior"][1:3] = new_index_cells[ec["interior"][1:3]]
+
+            # simply set those to None; their reset is cheap
+            self._facets_cells_idx = None
+            self._boundary_facets = None
+            self._interior_facets = None
+
+        self.cells["points"] = self.cells["points"][keep]
+        self.idx_hierarchy = self.idx_hierarchy[..., keep]
+
+        if self._cell_volumes is not None:
+            self._cell_volumes = self._cell_volumes[keep]
+
+        if self._ce_ratios is not None:
+            self._ce_ratios = self._ce_ratios[:, keep]
+
+        if self._half_edge_coords is not None:
+            self._half_edge_coords = self._half_edge_coords[:, keep]
+
+        if self._ei_dot_ej is not None:
+            self._ei_dot_ej = self._ei_dot_ej[:, keep]
+
+        if self._ei_dot_ei is not None:
+            self._ei_dot_ei = self._ei_dot_ei[:, keep]
+
+        if self._cell_centroids is not None:
+            self._cell_centroids = self._cell_centroids[keep]
+
+        if self._cell_circumcenters is not None:
+            self._cell_circumcenters = self._cell_circumcenters[keep]
+
+        if self._cell_partitions is not None:
+            self._cell_partitions = self._cell_partitions[:, keep]
+
+        if self._signed_cell_volumes is not None:
+            self._signed_cell_volumes = self._signed_cell_volumes[keep]
+
+        # TODO These could also be updated, but let's implement it when needed
+        self._interior_ce_ratios = None
+        self._control_volumes = None
+        self._cv_cell_mask = None
+        self._cv_centroids = None
+        self._cvc_cell_mask = None
+        self._is_point_used = None
+        self._is_interior_point = None
+        self._is_boundary_point = None
+
+        return np.sum(~keep)
+
+    def remove_boundary_cells(self, criterion):
+        """Helper method for removing cells along the boundary.
+        The input criterion is a boolean array of length `sum(mesh.is_boundary_cell)`.
+
+        This helps, for example, in the following scenario.
+        When points are moving around, flip_until_delaunay() makes sure the mesh remains
+        a Delaunay mesh. This does not work on boundaries where very flat cells can
+        still occur or cells may even 'invert'. (The interior point moves outside.) In
+        this case, the boundary cell can be removed, and the newly outward node is made
+        a boundary node."""
+        num_removed = 0
+        while True:
+            crit = criterion(self.is_boundary_cell)
+            if np.all(~crit):
+                break
+            idx = self.is_boundary_cell.copy()
+            idx[idx] = crit
+            n = self.remove_cells(idx)
+            num_removed += n
+            if n == 0:
+                break
+        return num_removed
+
+    def remove_duplicate_cells(self):
+        sorted_cells = np.sort(self.cells["points"])
+        _, inv, cts = unique_rows(sorted_cells)
+
+        remove = np.zeros(len(self.cells["points"]), dtype=bool)
+        for k in np.where(cts > 1)[0]:
+            rem = inv == k
+            # don't remove first occurence
+            first_idx = np.where(rem)[0][0]
+            rem[first_idx] = False
+            remove |= rem
+
+        return self.remove_cells(remove)

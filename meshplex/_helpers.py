@@ -2,7 +2,7 @@ import math
 
 import numpy as np
 
-from .exceptions import MeshplexError
+from ._exceptions import MeshplexError
 
 
 def get_signed_simplex_volumes(cells, pts):
