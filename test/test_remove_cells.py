@@ -180,18 +180,20 @@ def test_remove_duplicate():
     # triangle
     points = np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]])
     cells = np.array([[0, 2, 3], [0, 1, 2], [0, 2, 1]])
-    mesh = meshplex.MeshTri(points, cells)
+    mesh = meshplex.Mesh(points, cells)
     n = mesh.remove_duplicate_cells()
     assert n == 1
     assert np.all(mesh.cells["points"] == np.array([[0, 2, 3], [0, 1, 2]]))
 
-    # # tetrahedra
-    # points = np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]])
-    # cells = np.array([[0, 2, 3], [0, 1, 2], [0, 2, 1]])
-    # mesh = meshplex.MeshTri(points, cells)
-    # n = mesh.remove_duplicate_cells()
-    # assert n == 1
-    # assert np.all(mesh.cells["points"] == np.array([[0, 2, 3], [0, 1, 2]]))
+    # tetrahedra
+    points = np.array(
+        [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
+    )
+    cells = np.array([[0, 1, 2, 3], [3, 1, 2, 0]])
+    mesh = meshplex.Mesh(points, cells)
+    n = mesh.remove_duplicate_cells()
+    assert n == 1
+    assert np.all(mesh.cells["points"] == np.array([[0, 1, 2, 3]]))
 
 
 if __name__ == "__main__":
