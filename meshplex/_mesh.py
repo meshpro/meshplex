@@ -60,7 +60,7 @@ class Mesh:
         nds = self.cells["points"].T
 
         if cells.shape[1] == 2:
-            self.local_idx = np.array([0, 1])
+            self.local_idx = np.array([[0], [1]]).T
         elif cells.shape[1] == 3:
             # Create the idx_hierarchy (points->edges->cells), i.e., the value of
             # `self.idx_hierarchy[0, 2, 27]` is the index of the point of cell 27, edge
@@ -156,6 +156,7 @@ class Mesh:
 
     def __repr__(self):
         name = {
+            2: "line",
             3: "triangle",
             4: "tetra",
         }[self.cells["points"].shape[1]]
@@ -468,7 +469,7 @@ class Mesh:
         idx_zero = tuple([0] * (len(s) - 3))
         idx = self.idx_hierarchy[idx_zero]
         # Reshape into individual edges.
-        # Reshape into individual faces, and take the first point per edge. (The
+        # Reshape into individual facets, and take the first point per edge. (The
         # face is fully characterized by it.) Sort the columns to make it possible
         # for `unique()` to identify individual faces.
         idx = idx.reshape(idx.shape[0], -1)
@@ -502,22 +503,21 @@ class Mesh:
         self._is_boundary_facet_local = (cts[inv] == 1).reshape(s[self.n - 2 :])
         self._is_boundary_facet = cts == 1
 
-        if self.n == 3:
-            self.edges = {"points": a_unique}
+        self.facets = {"points": a_unique}
+        # cell->facets relationship
+        self.cells["facets"] = inv.reshape(self.n, -1).T
 
-            # cell->edges relationship
-            self.cells["edges"] = inv.reshape(3, -1).T
+        if self.n == 2:
+            pass
+        elif self.n == 3:
+            self.edges = self.facets
+            self.cells["edges"] = self.cells["facets"]
 
             self._facets_cells = None
             self._facets_cells_idx = None
         else:
             assert self.n == 4
-            self.faces = {"points": a_unique}
-
-            # cell->faces relationship
-            # num_cells = len(self.cells["points"])
-            self.cells["faces"] = inv.reshape([4, -1]).T
-
+            self.faces = self.facets
             # save for create_edge_cells
             self._inv_faces = inv
 
@@ -983,6 +983,18 @@ class Mesh:
 
         return self.remove_cells(remove)
 
+    @property
+    def cell_partitions(self):
+        if self._cell_partitions is None:
+            assert self.n == 3
+            # Compute the control volume contributions. Note that
+            #
+            #   0.5 * (0.5 * edge_length) * covolume
+            # = 0.25 * edge_length ** 2 * ce_ratio_edge_ratio
+            #
+            self._cell_partitions = self.ei_dot_ei * self.ce_ratios / 4
+        return self._cell_partitions
+
     def get_control_volumes(self, cell_mask=None):
         """The control volumes around each vertex. Optionally disregard the
         contributions from particular cells. This is useful, for example, for
@@ -1044,8 +1056,11 @@ class Mesh:
 
     @property
     def ce_ratios(self):
+        """The covolume-edgelength ratios."""
         if self._ce_ratios is None:
-            if self.n == 3:
+            if self.n == 2:
+                self._ce_ratios = 1.0 / np.sqrt(self.ei_dot_ei)
+            elif self.n == 3:
                 self._ce_ratios = compute_ce_ratios(self.ei_dot_ej, self.cell_volumes)
             else:
                 assert self.n == 4
@@ -1247,18 +1262,6 @@ class Mesh:
             self.circumcenter_face_distances.reshape(-1),
         )
         return np.sum(sums < 0.0)
-
-    @property
-    def cell_partitions(self):
-        if self._cell_partitions is None:
-            assert self.n == 3
-            # Compute the control volume contributions. Note that
-            #
-            #   0.5 * (0.5 * edge_length) * covolume
-            # = 0.25 * edge_length ** 2 * ce_ratio_edge_ratio
-            #
-            self._cell_partitions = self.ei_dot_ei * self.ce_ratios / 4
-        return self._cell_partitions
 
     def get_control_volume_centroids(self, cell_mask=None):
         """The centroid of any volume V is given by
