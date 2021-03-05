@@ -682,7 +682,10 @@ class Mesh:
     def cell_circumcenters(self):
         """Get the center of the circumsphere of each cell."""
         if self._cell_circumcenters is None:
-            if self.n == 3:
+            if self.n == 2:
+                corner = self.points[self.idx_hierarchy]
+                self._cell_circumcenters = 0.5 * (corner[0] + corner[1])
+            elif self.n == 3:
                 point_cells = self.cells["points"].T
                 self._cell_circumcenters = compute_triangle_circumcenters(
                     self.points[point_cells], self.cell_partitions
@@ -1297,7 +1300,6 @@ class Mesh:
 
     @property
     def control_volume_centroids(self):
-        assert self.n == 3
         return self.get_control_volume_centroids()
 
     def _compute_integral_x(self):
