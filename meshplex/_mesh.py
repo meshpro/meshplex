@@ -7,11 +7,11 @@ import numpy as np
 from ._exceptions import MeshplexError
 from ._helpers import (
     _dot,
-    add_at,
     compute_ce_ratios,
     compute_tri_areas,
     compute_triangle_circumcenters,
     grp_start_len,
+    sum_at,
     unique_rows,
 )
 
@@ -1013,11 +1013,11 @@ class Mesh:
             cell_mask = np.zeros(self.cell_partitions.shape[1], dtype=bool)
 
         if self._control_volumes is None or np.any(cell_mask != self._cv_cell_mask):
-            # Summing up the arrays first makes the work on add_at a bit lighter.
+            # Summing up the arrays first makes the work on sum_at a bit lighter.
             v = self.cell_partitions[:, ~cell_mask]
             vals = np.array([v[1] + v[2], v[2] + v[0], v[0] + v[1]])
             # sum all the vals into self._control_volumes at ids
-            self._control_volumes = add_at(
+            self._control_volumes = sum_at(
                 vals,
                 self.cells["points"][~cell_mask].T,
                 len(self.points),
@@ -1052,7 +1052,7 @@ class Mesh:
                     ]
                 ).T
                 #
-                self._control_volumes = add_at(
+                self._control_volumes = sum_at(
                     vals,
                     self.cells["points"],
                     len(self.points),
@@ -1079,7 +1079,7 @@ class Mesh:
             if "edges" not in self.cells:
                 self.create_facets()
 
-            ce_ratios = add_at(
+            ce_ratios = sum_at(
                 self.ce_ratios.T,
                 self.cells["edges"],
                 self.edges["points"].shape[0],
@@ -1248,7 +1248,7 @@ class Mesh:
             self.create_facets()
 
         num_facets = self.facets["points"].shape[0]
-        sums = add_at(
+        sums = sum_at(
             self.circumcenter_face_distances,
             self.cells["facets"].T,
             num_facets,
@@ -1279,12 +1279,12 @@ class Mesh:
             v = v[:, :, ~cell_mask, :]
 
             # Again, make use of the fact that edge k is opposite of point k in every
-            # cell. Adding the arrays first makes the work for add_at lighter.
+            # cell. Adding the arrays first makes the work for sum_at lighter.
             ids = self.cells["points"][~cell_mask].T
             vals = np.array([v[1, 1] + v[0, 2], v[1, 2] + v[0, 0], v[1, 0] + v[0, 1]])
 
             # add it all up
-            self._cv_centroids = add_at(vals, ids, self.points.shape[0])
+            self._cv_centroids = sum_at(vals, ids, self.points.shape[0])
 
             # Divide by the control volume
             cv = self.get_control_volumes(cell_mask=cell_mask)
