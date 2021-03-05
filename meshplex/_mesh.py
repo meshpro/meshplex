@@ -302,7 +302,9 @@ class Mesh:
     @property
     def facet_areas(self):
         if self._facet_areas is None:
-            if self.n == 3:
+            if self.n == 2:
+                self._facet_areas = np.ones(len(self.facets["points"]))
+            elif self.n == 3:
                 self._facet_areas = self.edge_lengths
             else:
                 assert self.n == 4
