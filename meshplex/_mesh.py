@@ -1258,11 +1258,11 @@ class Mesh:
             self._compute_ce_ratios_geometric()
             # self._compute_ce_ratios_algebraic()
 
-        if "faces" not in self.cells:
+        if "facets" not in self.cells:
             self.create_facets()
 
         sums = np.bincount(
-            self.cells["faces"].T.reshape(-1),
+            self.cells["facets"].T.reshape(-1),
             self.circumcenter_face_distances.reshape(-1),
         )
         return np.sum(sums < 0.0)
