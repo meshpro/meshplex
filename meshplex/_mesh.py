@@ -60,7 +60,7 @@ class Mesh:
         nds = self.cells["points"].T
 
         if cells.shape[1] == 2:
-            self.local_idx = np.array([[0], [1]]).T
+            self.local_idx = np.array([0, 1])
         elif cells.shape[1] == 3:
             # Create the idx_hierarchy (points->edges->cells), i.e., the value of
             # `self.idx_hierarchy[0, 2, 27]` is the index of the point of cell 27, edge
@@ -466,25 +466,29 @@ class Mesh:
     def create_facets(self):
         """Set up facet->point and facet->cell relations."""
         s = self.idx_hierarchy.shape
-        idx_zero = tuple([0] * (len(s) - 3))
-        idx = self.idx_hierarchy[idx_zero]
-        # Reshape into individual edges.
+
+        idx = self.idx_hierarchy
+
         # Reshape into individual facets, and take the first point per edge. (The
         # face is fully characterized by it.) Sort the columns to make it possible
         # for `unique()` to identify individual faces.
-        idx = idx.reshape(idx.shape[0], -1)
 
-        a = np.sort(idx.T)
+        # reshape the last two dimensions into one
+        idx = idx.reshape(*idx.shape[:-2], -1)
 
-        # a = np.sort(self.idx_hierarchy.reshape(s[0], -1).T)
-        b = np.ascontiguousarray(a).view(
-            np.dtype((np.void, a.dtype.itemsize * a.shape[1]))
-        )
-        # Sort the columns to make it possible for `unique()` to identify
-        # individual edges.
-        # a_unique, inv, cts = unique_rows(a)
-        a_unique, inv, cts = np.unique(b, return_inverse=True, return_counts=True)
-        a_unique = a_unique.view(a.dtype).reshape(-1, a.shape[1])
+        if self.n == 4:
+            idx = idx[0]
+        # elif self.n == 5:
+        #     idx = idx[0][0]
+        # ...
+
+        if len(idx.shape) == 1:  # self.n == 2
+            a_unique, inv, cts = np.unique(idx, return_counts=True, return_inverse=True)
+        else:
+            # Sort the columns to make it possible for `unique()` to identify individual
+            # facets.
+            idx = np.sort(idx.T)
+            a_unique, inv, cts = unique_rows(idx)
 
         if np.any(cts > 2):
             num_weird_edges = np.sum(cts > 2)
