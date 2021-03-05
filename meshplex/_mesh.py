@@ -7,6 +7,7 @@ import numpy as np
 from ._exceptions import MeshplexError
 from ._helpers import (
     _dot,
+    add_at,
     compute_ce_ratios,
     compute_tri_areas,
     compute_triangle_circumcenters,
@@ -1077,28 +1078,12 @@ class Mesh:
             if "edges" not in self.cells:
                 self.create_facets()
 
-            n = self.edges["points"].shape[0]
-            ce_ratios = np.bincount(
+            ce_ratios = add_at(
+                (self.edges["points"].shape[0],),
                 self.cells["edges"].reshape(-1),
                 self.ce_ratios.T.reshape(-1),
-                minlength=n,
             )
-
-            self._interior_ce_ratios = ce_ratios[~self.is_boundary_facet]
-
-            # # sum up from self.ce_ratios
-            # if self._facets_cells is None:
-            #     self._compute_facets_cells()
-
-            # self._interior_ce_ratios = \
-            #     np.zeros(self._edges_local[2].shape[0])
-            # for i in [0, 1]:
-            #     # Interior edges = edges with _2_ adjacent cells
-            #     idx = [
-            #         self._edges_local[2][:, i],
-            #         self._facets_cells["interior"][:, i],
-            #         ]
-            #     self._interior_ce_ratios += self.ce_ratios[idx]
+            self._interior_ce_ratios = ce_ratios[self.is_interior_facet]
 
         return self._interior_ce_ratios
 
@@ -1261,11 +1246,13 @@ class Mesh:
         if "facets" not in self.cells:
             self.create_facets()
 
-        sums = np.bincount(
+        num_facets = self.facets["points"].shape[0]
+        sums = add_at(
+            (num_facets,),
             self.cells["facets"].T.reshape(-1),
             self.circumcenter_face_distances.reshape(-1),
         )
-        return np.sum(sums < 0.0)
+        return np.sum(sums[self.is_interior_facet] < 0.0)
 
     def get_control_volume_centroids(self, cell_mask=None):
         """The centroid of any volume V is given by
