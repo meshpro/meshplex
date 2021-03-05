@@ -205,7 +205,7 @@ def _dot(a, n):
     return np.einsum("...i,...i->...", b, b)
 
 
-def add_at(out_shape, idx, vals):
+def add_at(n, idx, vals):
     """A fancy (and correct) way of summing up vals into an array of out_shape according
     to idx. np.add.at is thought out for this, but is really slow. np.bincount is a lot
     faster (https://github.com/numpy/numpy/issues/5922#issuecomment-511477435), but
@@ -214,15 +214,17 @@ def add_at(out_shape, idx, vals):
     vals has to have shape (idx.shape, ...),
     """
     assert len(vals.shape) >= len(idx.shape)
-    n = len(idx.shape)
-    assert idx.shape == vals.shape[:n]
+    m = len(idx.shape)
+    assert idx.shape == vals.shape[:m]
+
+    out_shape = (n, *vals.shape[m:])
 
     idx = idx.reshape(-1)
-    vals = vals.reshape(math.prod(vals.shape[:n]), math.prod(vals.shape[n:]))
+    vals = vals.reshape(math.prod(vals.shape[:m]), math.prod(vals.shape[m:]))
 
     return np.array(
         [
-            np.bincount(idx, weights=vals[:, k], minlength=out_shape[0])
+            np.bincount(idx, weights=vals[:, k], minlength=n)
             for k in range(vals.shape[1])
         ]
     ).T.reshape(out_shape)

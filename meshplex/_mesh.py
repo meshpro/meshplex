@@ -1018,7 +1018,7 @@ class Mesh:
             self.cells["points"][~cell_mask].T.reshape(-1)
 
             self._control_volumes = add_at(
-                (len(self.points),),
+                len(self.points),
                 self.cells["points"][~cell_mask].T,
                 vals,
             )
@@ -1053,7 +1053,7 @@ class Mesh:
                 ).T
                 #
                 self._control_volumes = add_at(
-                    (len(self.points),),
+                    len(self.points),
                     self.cells["points"],
                     vals,
                 )
@@ -1080,7 +1080,7 @@ class Mesh:
                 self.create_facets()
 
             ce_ratios = add_at(
-                (self.edges["points"].shape[0],),
+                self.edges["points"].shape[0],
                 self.cells["edges"],
                 self.ce_ratios.T,
             )
@@ -1249,7 +1249,7 @@ class Mesh:
 
         num_facets = self.facets["points"].shape[0]
         sums = add_at(
-            (num_facets,),
+            num_facets,
             self.cells["facets"].T,
             self.circumcenter_face_distances,
         )
@@ -1284,7 +1284,7 @@ class Mesh:
             vals = np.array([v[1, 1] + v[0, 2], v[1, 2] + v[0, 0], v[1, 0] + v[0, 1]])
 
             # add it all up
-            self._cv_centroids = add_at(self.points.shape, ids, vals)
+            self._cv_centroids = add_at(self.points.shape[0], ids, vals)
 
             # Divide by the control volume
             cv = self.get_control_volumes(cell_mask=cell_mask)
