@@ -1015,12 +1015,10 @@ class Mesh:
             v = self.cell_partitions[:, ~cell_mask]
             vals = np.array([v[1] + v[2], v[2] + v[0], v[0] + v[1]])
             # sum all the vals into self._control_volumes at ids
-            self.cells["points"][~cell_mask].T.reshape(-1)
-
             self._control_volumes = add_at(
-                len(self.points),
-                self.cells["points"][~cell_mask].T,
                 vals,
+                self.cells["points"][~cell_mask].T,
+                len(self.points),
             )
             self._cv_cell_mask = cell_mask
         return self._control_volumes
@@ -1053,9 +1051,9 @@ class Mesh:
                 ).T
                 #
                 self._control_volumes = add_at(
-                    len(self.points),
-                    self.cells["points"],
                     vals,
+                    self.cells["points"],
+                    len(self.points),
                 )
 
         return self._control_volumes
@@ -1080,9 +1078,9 @@ class Mesh:
                 self.create_facets()
 
             ce_ratios = add_at(
-                self.edges["points"].shape[0],
-                self.cells["edges"],
                 self.ce_ratios.T,
+                self.cells["edges"],
+                self.edges["points"].shape[0],
             )
             self._interior_ce_ratios = ce_ratios[self.is_interior_facet]
 
@@ -1249,9 +1247,9 @@ class Mesh:
 
         num_facets = self.facets["points"].shape[0]
         sums = add_at(
-            num_facets,
-            self.cells["facets"].T,
             self.circumcenter_face_distances,
+            self.cells["facets"].T,
+            num_facets,
         )
         return np.sum(sums[self.is_interior_facet] < 0.0)
 
@@ -1284,7 +1282,7 @@ class Mesh:
             vals = np.array([v[1, 1] + v[0, 2], v[1, 2] + v[0, 0], v[1, 0] + v[0, 1]])
 
             # add it all up
-            self._cv_centroids = add_at(self.points.shape[0], ids, vals)
+            self._cv_centroids = add_at(vals, ids, self.points.shape[0])
 
             # Divide by the control volume
             cv = self.get_control_volumes(cell_mask=cell_mask)
