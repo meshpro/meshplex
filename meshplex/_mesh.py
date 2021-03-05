@@ -1011,7 +1011,7 @@ class Mesh:
             cell_mask = np.zeros(self.cell_partitions.shape[1], dtype=bool)
 
         if self._control_volumes is None or np.any(cell_mask != self._cv_cell_mask):
-            # Summing up the arrays first makes the work on bincount a bit lighter.
+            # Summing up the arrays first makes the work on add_at a bit lighter.
             v = self.cell_partitions[:, ~cell_mask]
             vals = np.array([v[1] + v[2], v[2] + v[0], v[0] + v[1]])
             # sum all the vals into self._control_volumes at ids
@@ -1019,8 +1019,8 @@ class Mesh:
 
             self._control_volumes = add_at(
                 (len(self.points),),
-                self.cells["points"][~cell_mask].T.reshape(-1),
-                vals.reshape(-1),
+                self.cells["points"][~cell_mask].T,
+                vals,
             )
             self._cv_cell_mask = cell_mask
         return self._control_volumes
@@ -1054,8 +1054,8 @@ class Mesh:
                 #
                 self._control_volumes = add_at(
                     (len(self.points),),
-                    self.cells["points"].reshape(-1),
-                    vals.reshape(-1),
+                    self.cells["points"],
+                    vals,
                 )
 
         return self._control_volumes
@@ -1081,8 +1081,8 @@ class Mesh:
 
             ce_ratios = add_at(
                 (self.edges["points"].shape[0],),
-                self.cells["edges"].reshape(-1),
-                self.ce_ratios.T.reshape(-1),
+                self.cells["edges"],
+                self.ce_ratios.T,
             )
             self._interior_ce_ratios = ce_ratios[self.is_interior_facet]
 
@@ -1250,8 +1250,8 @@ class Mesh:
         num_facets = self.facets["points"].shape[0]
         sums = add_at(
             (num_facets,),
-            self.cells["facets"].T.reshape(-1),
-            self.circumcenter_face_distances.reshape(-1),
+            self.cells["facets"].T,
+            self.circumcenter_face_distances,
         )
         return np.sum(sums[self.is_interior_facet] < 0.0)
 
@@ -1279,7 +1279,7 @@ class Mesh:
             v = v[:, :, ~cell_mask, :]
 
             # Again, make use of the fact that edge k is opposite of point k in every
-            # cell. Adding the arrays first makes the work for bincount lighter.
+            # cell. Adding the arrays first makes the work for add_at lighter.
             ids = self.cells["points"][~cell_mask].T
             vals = np.array([v[1, 1] + v[0, 2], v[1, 2] + v[0, 0], v[1, 0] + v[0, 1]])
 
