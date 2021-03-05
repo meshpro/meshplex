@@ -210,11 +210,19 @@ def add_at(out_shape, idx, vals):
     to idx. np.add.at is thought out for this, but is really slow. np.bincount is a lot
     faster (https://github.com/numpy/numpy/issues/5922#issuecomment-511477435), but
     doesn't handle dimensionality. This function does.
+
+    vals has to have shape (idx.shape, ...),
     """
-    vals = vals.reshape(vals.shape[0], -1)
+    assert len(vals.shape) >= len(idx.shape)
+    n = len(idx.shape)
+    assert idx.shape == vals.shape[:n]
+
+    idx = idx.reshape(-1)
+    vals = vals.reshape(math.prod(vals.shape[:n]), math.prod(vals.shape[n:]))
+
     return np.array(
         [
             np.bincount(idx, weights=vals[:, k], minlength=out_shape[0])
             for k in range(vals.shape[1])
         ]
-    ).reshape(out_shape)
+    ).T.reshape(out_shape)

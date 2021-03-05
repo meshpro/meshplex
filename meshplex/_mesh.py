@@ -1016,10 +1016,11 @@ class Mesh:
             vals = np.array([v[1] + v[2], v[2] + v[0], v[0] + v[1]])
             # sum all the vals into self._control_volumes at ids
             self.cells["points"][~cell_mask].T.reshape(-1)
-            self._control_volumes = np.bincount(
+
+            self._control_volumes = add_at(
+                (len(self.points),),
                 self.cells["points"][~cell_mask].T.reshape(-1),
-                weights=vals.reshape(-1),
-                minlength=len(self.points),
+                vals.reshape(-1),
             )
             self._cv_cell_mask = cell_mask
         return self._control_volumes
@@ -1051,10 +1052,10 @@ class Mesh:
                     ]
                 ).T
                 #
-                self._control_volumes = np.bincount(
+                self._control_volumes = add_at(
+                    (len(self.points),),
                     self.cells["points"].reshape(-1),
                     vals.reshape(-1),
-                    minlength=len(self.points),
                 )
 
         return self._control_volumes
@@ -1281,14 +1282,9 @@ class Mesh:
             # cell. Adding the arrays first makes the work for bincount lighter.
             ids = self.cells["points"][~cell_mask].T
             vals = np.array([v[1, 1] + v[0, 2], v[1, 2] + v[0, 0], v[1, 0] + v[0, 1]])
+
             # add it all up
-            n = len(self.points)
-            self._cv_centroids = np.array(
-                [
-                    np.bincount(ids.reshape(-1), vals[..., k].reshape(-1), minlength=n)
-                    for k in range(vals.shape[-1])
-                ]
-            ).T
+            self._cv_centroids = add_at(self.points.shape, ids, vals)
 
             # Divide by the control volume
             cv = self.get_control_volumes(cell_mask=cell_mask)
