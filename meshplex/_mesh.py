@@ -11,6 +11,7 @@ from ._helpers import (
     compute_tri_areas,
     compute_triangle_circumcenters,
     grp_start_len,
+    sum_at,
     unique_rows,
 )
 
@@ -156,6 +157,7 @@ class Mesh:
 
     def __repr__(self):
         name = {
+            2: "line",
             3: "triangle",
             4: "tetra",
         }[self.cells["points"].shape[1]]
@@ -300,7 +302,9 @@ class Mesh:
     @property
     def facet_areas(self):
         if self._facet_areas is None:
-            if self.n == 3:
+            if self.n == 2:
+                self._facet_areas = np.ones(len(self.facets["points"]))
+            elif self.n == 3:
                 self._facet_areas = self.edge_lengths
             else:
                 assert self.n == 4
@@ -465,25 +469,29 @@ class Mesh:
     def create_facets(self):
         """Set up facet->point and facet->cell relations."""
         s = self.idx_hierarchy.shape
-        idx_zero = tuple([0] * (len(s) - 3))
-        idx = self.idx_hierarchy[idx_zero]
-        # Reshape into individual edges.
-        # Reshape into individual faces, and take the first point per edge. (The
+
+        idx = self.idx_hierarchy
+
+        # Reshape into individual facets, and take the first point per edge. (The
         # face is fully characterized by it.) Sort the columns to make it possible
         # for `unique()` to identify individual faces.
-        idx = idx.reshape(idx.shape[0], -1)
 
-        a = np.sort(idx.T)
+        # reshape the last two dimensions into one
+        idx = idx.reshape(*idx.shape[:-2], -1)
 
-        # a = np.sort(self.idx_hierarchy.reshape(s[0], -1).T)
-        b = np.ascontiguousarray(a).view(
-            np.dtype((np.void, a.dtype.itemsize * a.shape[1]))
-        )
-        # Sort the columns to make it possible for `unique()` to identify
-        # individual edges.
-        # a_unique, inv, cts = unique_rows(a)
-        a_unique, inv, cts = np.unique(b, return_inverse=True, return_counts=True)
-        a_unique = a_unique.view(a.dtype).reshape(-1, a.shape[1])
+        if self.n == 4:
+            idx = idx[0]
+        # elif self.n == 5:
+        #     idx = idx[0][0]
+        # ...
+
+        if len(idx.shape) == 1:  # self.n == 2
+            a_unique, inv, cts = np.unique(idx, return_counts=True, return_inverse=True)
+        else:
+            # Sort the columns to make it possible for `unique()` to identify individual
+            # facets.
+            idx = np.sort(idx.T)
+            a_unique, inv, cts = unique_rows(idx)
 
         if np.any(cts > 2):
             num_weird_edges = np.sum(cts > 2)
@@ -502,22 +510,21 @@ class Mesh:
         self._is_boundary_facet_local = (cts[inv] == 1).reshape(s[self.n - 2 :])
         self._is_boundary_facet = cts == 1
 
-        if self.n == 3:
-            self.edges = {"points": a_unique}
+        self.facets = {"points": a_unique}
+        # cell->facets relationship
+        self.cells["facets"] = inv.reshape(self.n, -1).T
 
-            # cell->edges relationship
-            self.cells["edges"] = inv.reshape(3, -1).T
+        if self.n == 2:
+            pass
+        elif self.n == 3:
+            self.edges = self.facets
+            self.cells["edges"] = self.cells["facets"]
 
             self._facets_cells = None
             self._facets_cells_idx = None
         else:
             assert self.n == 4
-            self.faces = {"points": a_unique}
-
-            # cell->faces relationship
-            # num_cells = len(self.cells["points"])
-            self.cells["faces"] = inv.reshape([4, -1]).T
-
+            self.faces = self.facets
             # save for create_edge_cells
             self._inv_faces = inv
 
@@ -675,7 +682,10 @@ class Mesh:
     def cell_circumcenters(self):
         """Get the center of the circumsphere of each cell."""
         if self._cell_circumcenters is None:
-            if self.n == 3:
+            if self.n == 2:
+                corner = self.points[self.idx_hierarchy]
+                self._cell_circumcenters = 0.5 * (corner[0] + corner[1])
+            elif self.n == 3:
                 point_cells = self.cells["points"].T
                 self._cell_circumcenters = compute_triangle_circumcenters(
                     self.points[point_cells], self.cell_partitions
@@ -983,27 +993,56 @@ class Mesh:
 
         return self.remove_cells(remove)
 
+    @property
+    def cell_partitions(self):
+        """Each simplex can be subdivided into parts that a closest to each corner.
+        This method gives those parts, like ce_ratios associated with each edge.
+        """
+        if self._cell_partitions is None:
+            # The volume of the pyramid is
+            #
+            # edge_length ** 2 / 2 * covolume / edgelength / (n-1)
+            # = edgelength / 2 * covolume / (n - 1)
+            self._cell_partitions = self.ei_dot_ei / 2 * self.ce_ratios / (self.n - 1)
+        return self._cell_partitions
+
     def get_control_volumes(self, cell_mask=None):
         """The control volumes around each vertex. Optionally disregard the
         contributions from particular cells. This is useful, for example, for
         temporarily disregarding flat cells on the boundary when performing Lloyd mesh
         optimization.
         """
-        assert self.n == 3
         if cell_mask is None:
-            cell_mask = np.zeros(self.cell_partitions.shape[1], dtype=bool)
+            cell_mask = np.zeros(self.cells["points"].shape[0], dtype=bool)
 
         if self._control_volumes is None or np.any(cell_mask != self._cv_cell_mask):
-            # Summing up the arrays first makes the work on bincount a bit lighter.
-            v = self.cell_partitions[:, ~cell_mask]
-            vals = np.array([v[1] + v[2], v[2] + v[0], v[0] + v[1]])
+            v = self.cell_partitions[..., ~cell_mask]
+
+            # Explicitly sum up contributions per cell first. Makes sum_at faster.
+            if self.n == 2:
+                v = np.array([v, v])
+            elif self.n == 3:
+                v = np.array([v[1] + v[2], v[2] + v[0], v[0] + v[1]])
+            else:
+                assert self.n == 4
+                # For every point k (range(4)), check for which edges k appears in
+                # local_idx, and sum() up the v's from there.
+                v = np.array(
+                    [
+                        v[0, 2] + v[1, 1] + v[2, 3] + v[0, 1] + v[1, 3] + v[2, 2],
+                        v[0, 3] + v[1, 2] + v[2, 0] + v[0, 2] + v[1, 0] + v[2, 3],
+                        v[0, 0] + v[1, 3] + v[2, 1] + v[0, 3] + v[1, 1] + v[2, 0],
+                        v[0, 1] + v[1, 0] + v[2, 2] + v[0, 0] + v[1, 2] + v[2, 1],
+                    ]
+                )
+
             # sum all the vals into self._control_volumes at ids
-            self.cells["points"][~cell_mask].T.reshape(-1)
-            self._control_volumes = np.bincount(
-                self.cells["points"][~cell_mask].T.reshape(-1),
-                weights=vals.reshape(-1),
-                minlength=len(self.points),
+            self._control_volumes = sum_at(
+                v,
+                self.cells["points"][~cell_mask].T,
+                len(self.points),
             )
+
             self._cv_cell_mask = cell_mask
         return self._control_volumes
 
@@ -1011,41 +1050,17 @@ class Mesh:
     def control_volumes(self):
         """The control volumes around each vertex."""
         if self._control_volumes is None:
-            if self.n == 2:
-                self._control_volumes = np.zeros(len(self.points), dtype=float)
-                for k, node_ids in enumerate(self.cells["points"]):
-                    self._control_volumes[node_ids] += 0.5 * self.cell_volumes[k]
-            elif self.n == 3:
-                return self.get_control_volumes()
-            else:
-                assert self.n == 4
-                #   1/3. * (0.5 * edge_length) * covolume
-                # = 1/6 * edge_length**2 * ce_ratio_edge_ratio
-                v = self.ei_dot_ei * self.ce_ratios / 6
-                # Explicitly sum up contributions per cell first. Makes np.add.at
-                # faster.  For every point k (range(4)), check for which edges k appears
-                # in local_idx, and sum() up the v's from there.
-                vals = np.array(
-                    [
-                        v[0, 2] + v[1, 1] + v[2, 3] + v[0, 1] + v[1, 3] + v[2, 2],
-                        v[0, 3] + v[1, 2] + v[2, 0] + v[0, 2] + v[1, 0] + v[2, 3],
-                        v[0, 0] + v[1, 3] + v[2, 1] + v[0, 3] + v[1, 1] + v[2, 0],
-                        v[0, 1] + v[1, 0] + v[2, 2] + v[0, 0] + v[1, 2] + v[2, 1],
-                    ]
-                ).T
-                #
-                self._control_volumes = np.bincount(
-                    self.cells["points"].reshape(-1),
-                    vals.reshape(-1),
-                    minlength=len(self.points),
-                )
+            return self.get_control_volumes()
 
         return self._control_volumes
 
     @property
     def ce_ratios(self):
+        """The covolume-edgelength ratios."""
         if self._ce_ratios is None:
-            if self.n == 3:
+            if self.n == 2:
+                self._ce_ratios = 1.0 / np.sqrt(self.ei_dot_ei)
+            elif self.n == 3:
                 self._ce_ratios = compute_ce_ratios(self.ei_dot_ej, self.cell_volumes)
             else:
                 assert self.n == 4
@@ -1058,28 +1073,12 @@ class Mesh:
             if "edges" not in self.cells:
                 self.create_facets()
 
-            n = self.edges["points"].shape[0]
-            ce_ratios = np.bincount(
-                self.cells["edges"].reshape(-1),
-                self.ce_ratios.T.reshape(-1),
-                minlength=n,
+            ce_ratios = sum_at(
+                self.ce_ratios.T,
+                self.cells["edges"],
+                self.edges["points"].shape[0],
             )
-
-            self._interior_ce_ratios = ce_ratios[~self.is_boundary_facet]
-
-            # # sum up from self.ce_ratios
-            # if self._facets_cells is None:
-            #     self._compute_facets_cells()
-
-            # self._interior_ce_ratios = \
-            #     np.zeros(self._edges_local[2].shape[0])
-            # for i in [0, 1]:
-            #     # Interior edges = edges with _2_ adjacent cells
-            #     idx = [
-            #         self._edges_local[2][:, i],
-            #         self._facets_cells["interior"][:, i],
-            #         ]
-            #     self._interior_ce_ratios += self.ce_ratios[idx]
+            self._interior_ce_ratios = ce_ratios[self.is_interior_facet]
 
         return self._interior_ce_ratios
 
@@ -1239,26 +1238,16 @@ class Mesh:
             self._compute_ce_ratios_geometric()
             # self._compute_ce_ratios_algebraic()
 
-        if "faces" not in self.cells:
+        if "facets" not in self.cells:
             self.create_facets()
 
-        sums = np.bincount(
-            self.cells["faces"].T.reshape(-1),
-            self.circumcenter_face_distances.reshape(-1),
+        num_facets = self.facets["points"].shape[0]
+        sums = sum_at(
+            self.circumcenter_face_distances,
+            self.cells["facets"].T,
+            num_facets,
         )
-        return np.sum(sums < 0.0)
-
-    @property
-    def cell_partitions(self):
-        if self._cell_partitions is None:
-            assert self.n == 3
-            # Compute the control volume contributions. Note that
-            #
-            #   0.5 * (0.5 * edge_length) * covolume
-            # = 0.25 * edge_length ** 2 * ce_ratio_edge_ratio
-            #
-            self._cell_partitions = self.ei_dot_ei * self.ce_ratios / 4
-        return self._cell_partitions
+        return np.sum(sums[self.is_interior_facet] < 0.0)
 
     def get_control_volume_centroids(self, cell_mask=None):
         """The centroid of any volume V is given by
@@ -1284,17 +1273,12 @@ class Mesh:
             v = v[:, :, ~cell_mask, :]
 
             # Again, make use of the fact that edge k is opposite of point k in every
-            # cell. Adding the arrays first makes the work for bincount lighter.
+            # cell. Adding the arrays first makes the work for sum_at lighter.
             ids = self.cells["points"][~cell_mask].T
             vals = np.array([v[1, 1] + v[0, 2], v[1, 2] + v[0, 0], v[1, 0] + v[0, 1]])
+
             # add it all up
-            n = len(self.points)
-            self._cv_centroids = np.array(
-                [
-                    np.bincount(ids.reshape(-1), vals[..., k].reshape(-1), minlength=n)
-                    for k in range(vals.shape[-1])
-                ]
-            ).T
+            self._cv_centroids = sum_at(vals, ids, self.points.shape[0])
 
             # Divide by the control volume
             cv = self.get_control_volumes(cell_mask=cell_mask)
@@ -1307,7 +1291,6 @@ class Mesh:
 
     @property
     def control_volume_centroids(self):
-        assert self.n == 3
         return self.get_control_volume_centroids()
 
     def _compute_integral_x(self):

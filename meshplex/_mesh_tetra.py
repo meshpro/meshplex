@@ -157,7 +157,7 @@ class MeshTetra(Mesh):
         from matplotlib import pyplot as plt
         from mpl_toolkits.mplot3d import Axes3D
 
-        if "faces" not in self.cells:
+        if "facets" not in self.cells:
             self.create_facets()
         if "edges" not in self.faces:
             self._create_face_edge_relationships()
@@ -172,8 +172,8 @@ class MeshTetra(Mesh):
         # find all cells with the faces
         # https://stackoverflow.com/a/38481969/353337
         adj_cell_ids = np.where(
-            np.in1d(self.cells["faces"], adj_face_ids)
-            .reshape(self.cells["faces"].shape)
+            np.in1d(self.cells["facets"], adj_face_ids)
+            .reshape(self.cells["facets"].shape)
             .any(axis=1)
         )[0]
 
@@ -182,7 +182,7 @@ class MeshTetra(Mesh):
             [
                 adj_edge_id
                 for adj_cell_id in adj_cell_ids
-                for face_id in self.cells["faces"][adj_cell_id]
+                for face_id in self.cells["facets"][adj_cell_id]
                 for adj_edge_id in self.faces["edges"][face_id]
             ]
         )
