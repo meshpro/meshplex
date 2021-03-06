@@ -995,14 +995,26 @@ class Mesh:
 
     @property
     def cell_partitions(self):
+        """Each simplex can be subdivided into parts that a closest to each corner.
+        This method gives those parts, like ce_ratios associated with each edge.
+        """
         if self._cell_partitions is None:
-            assert self.n == 3
-            # Compute the control volume contributions. Note that
-            #
-            #   0.5 * (0.5 * edge_length) * covolume
-            # = 0.25 * edge_length ** 2 * ce_ratio_edge_ratio
-            #
-            self._cell_partitions = self.ei_dot_ei * self.ce_ratios / 4
+            if self.n == 2:
+                # edge_lengths2 = np.sqrt(self.ei_dot_ei) / 2
+                # self._cell_partitions = np.array([edge_lengths2, edge_lengths2])
+                self._cell_partitions = self.ei_dot_ei * self.ce_ratios / 2
+            elif self.n == 3:
+                # Compute the control volume contributions. Note that
+                #
+                #   0.5 * (0.5 * edge_length) * covolume
+                # = 0.25 * edge_length ** 2 * ce_ratio_edge_ratio
+                #
+                self._cell_partitions = self.ei_dot_ei * self.ce_ratios / 4
+            else:
+                assert self.n == 4
+                #   1/3. * (0.5 * edge_length) * covolume
+                # = 1/6 * edge_length**2 * ce_ratio_edge_ratio
+                self._cell_partitions = self.ei_dot_ei * self.ce_ratios / 6
         return self._cell_partitions
 
     def get_control_volumes(self, cell_mask=None):
@@ -1011,20 +1023,37 @@ class Mesh:
         temporarily disregarding flat cells on the boundary when performing Lloyd mesh
         optimization.
         """
-        assert self.n == 3
         if cell_mask is None:
-            cell_mask = np.zeros(self.cell_partitions.shape[1], dtype=bool)
+            cell_mask = np.zeros(self.cells["points"].shape[0], dtype=bool)
 
         if self._control_volumes is None or np.any(cell_mask != self._cv_cell_mask):
-            # Summing up the arrays first makes the work on sum_at a bit lighter.
-            v = self.cell_partitions[:, ~cell_mask]
-            vals = np.array([v[1] + v[2], v[2] + v[0], v[0] + v[1]])
+            v = self.cell_partitions[..., ~cell_mask]
+
+            # Explicitly sum up contributions per cell first. Makes sum_at faster.
+            if self.n == 2:
+                v = np.array([v, v])
+            elif self.n == 3:
+                v = np.array([v[1] + v[2], v[2] + v[0], v[0] + v[1]])
+            else:
+                assert self.n == 4
+                # For every point k (range(4)), check for which edges k appears in
+                # local_idx, and sum() up the v's from there.
+                v = np.array(
+                    [
+                        v[0, 2] + v[1, 1] + v[2, 3] + v[0, 1] + v[1, 3] + v[2, 2],
+                        v[0, 3] + v[1, 2] + v[2, 0] + v[0, 2] + v[1, 0] + v[2, 3],
+                        v[0, 0] + v[1, 3] + v[2, 1] + v[0, 3] + v[1, 1] + v[2, 0],
+                        v[0, 1] + v[1, 0] + v[2, 2] + v[0, 0] + v[1, 2] + v[2, 1],
+                    ]
+                )
+
             # sum all the vals into self._control_volumes at ids
             self._control_volumes = sum_at(
-                vals,
+                v,
                 self.cells["points"][~cell_mask].T,
                 len(self.points),
             )
+
             self._cv_cell_mask = cell_mask
         return self._control_volumes
 
@@ -1032,34 +1061,7 @@ class Mesh:
     def control_volumes(self):
         """The control volumes around each vertex."""
         if self._control_volumes is None:
-            if self.n == 2:
-                self._control_volumes = np.zeros(len(self.points), dtype=float)
-                for k, node_ids in enumerate(self.cells["points"]):
-                    self._control_volumes[node_ids] += 0.5 * self.cell_volumes[k]
-            elif self.n == 3:
-                return self.get_control_volumes()
-            else:
-                assert self.n == 4
-                #   1/3. * (0.5 * edge_length) * covolume
-                # = 1/6 * edge_length**2 * ce_ratio_edge_ratio
-                v = self.ei_dot_ei * self.ce_ratios / 6
-                # Explicitly sum up contributions per cell first. Makes np.add.at
-                # faster.  For every point k (range(4)), check for which edges k appears
-                # in local_idx, and sum() up the v's from there.
-                vals = np.array(
-                    [
-                        v[0, 2] + v[1, 1] + v[2, 3] + v[0, 1] + v[1, 3] + v[2, 2],
-                        v[0, 3] + v[1, 2] + v[2, 0] + v[0, 2] + v[1, 0] + v[2, 3],
-                        v[0, 0] + v[1, 3] + v[2, 1] + v[0, 3] + v[1, 1] + v[2, 0],
-                        v[0, 1] + v[1, 0] + v[2, 2] + v[0, 0] + v[1, 2] + v[2, 1],
-                    ]
-                ).T
-                #
-                self._control_volumes = sum_at(
-                    vals,
-                    self.cells["points"],
-                    len(self.points),
-                )
+            return self.get_control_volumes()
 
         return self._control_volumes
 
