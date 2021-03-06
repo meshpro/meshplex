@@ -999,22 +999,11 @@ class Mesh:
         This method gives those parts, like ce_ratios associated with each edge.
         """
         if self._cell_partitions is None:
-            if self.n == 2:
-                # edge_lengths2 = np.sqrt(self.ei_dot_ei) / 2
-                # self._cell_partitions = np.array([edge_lengths2, edge_lengths2])
-                self._cell_partitions = self.ei_dot_ei * self.ce_ratios / 2
-            elif self.n == 3:
-                # Compute the control volume contributions. Note that
-                #
-                #   0.5 * (0.5 * edge_length) * covolume
-                # = 0.25 * edge_length ** 2 * ce_ratio_edge_ratio
-                #
-                self._cell_partitions = self.ei_dot_ei * self.ce_ratios / 4
-            else:
-                assert self.n == 4
-                #   1/3. * (0.5 * edge_length) * covolume
-                # = 1/6 * edge_length**2 * ce_ratio_edge_ratio
-                self._cell_partitions = self.ei_dot_ei * self.ce_ratios / 6
+            # The volume of the pyramid is
+            #
+            # edge_length ** 2 / 2 * covolume / edgelength / (n-1)
+            # = edgelength / 2 * covolume / (n - 1)
+            self._cell_partitions = self.ei_dot_ei / 2 * self.ce_ratios / (self.n - 1)
         return self._cell_partitions
 
     def get_control_volumes(self, cell_mask=None):
