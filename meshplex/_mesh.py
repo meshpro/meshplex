@@ -214,7 +214,7 @@ class Mesh:
             # <https://gist.github.com/nschloe/d9c1d872a3ab8b47ff22d97d103be266>.
         return self._ei_dot_ej
 
-    def compute_centroids(self, idx=slice(None)):
+    def compute_cell_centroids(self, idx=slice(None)):
         return np.sum(self.points[self.cells["points"][idx]], axis=1) / self.n
 
     @property
@@ -222,7 +222,7 @@ class Mesh:
         """The centroids (barycenters, midpoints of the circumcircles) of all
         simplices."""
         if self._cell_centroids is None:
-            self._cell_centroids = self.compute_centroids()
+            self._cell_centroids = self.compute_cell_centroids()
         return self._cell_centroids
 
     @property
