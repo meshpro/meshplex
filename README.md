@@ -8,6 +8,7 @@
 [![GitHub stars](https://img.shields.io/github/stars/nschloe/meshplex.svg?style=flat-square&logo=github&label=Stars&logoColor=white)](https://github.com/nschloe/meshplex)
 [![PyPi downloads](https://img.shields.io/pypi/dm/meshplex.svg?style=flat-square)](https://pypistats.org/packages/meshplex)
 
+[![Discord](https://img.shields.io/static/v1?logo=discord&label=chat&message=on%20discord&color=7289da&style=flat-square)](https://discord.gg/hnTJ5MRX2Y)
 [![Documentation Status](https://readthedocs.org/projects/meshplex/badge?style=flat-square&version=latest)](https://readthedocs.org/projects/meshplex/?badge=latest)
 
 [![gh-actions](https://img.shields.io/github/workflow/status/nschloe/meshplex/ci?style=flat-square)](https://github.com/nschloe/meshplex/actions?query=workflow%3Aci)

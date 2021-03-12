@@ -19,6 +19,9 @@ class MeshTri(Mesh):
         self.create_edges = super().create_facets
         self.compute_signed_cell_areas = super().compute_signed_cell_volumes
 
+        self.boundary_edges = super().boundary_facets
+        self.is_boundary_edge = super().is_boundary_facet
+
     @property
     def euler_characteristic(self):
         # number of vertices - number of edges + number of faces
