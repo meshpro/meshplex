@@ -315,7 +315,7 @@ class Mesh:
     def get_vertex_mask(self, subdomain=None):
         if subdomain is None:
             # https://stackoverflow.com/a/42392791/353337
-            return np.s_[:]
+            return slice(None)
         if subdomain not in self.subdomains:
             self._mark_vertices(subdomain)
         return self.subdomains[subdomain]["vertices"]
@@ -324,7 +324,7 @@ class Mesh:
         """Get faces which are fully in subdomain."""
         if subdomain is None:
             # https://stackoverflow.com/a/42392791/353337
-            return np.s_[:]
+            return slice(None)
 
         if subdomain not in self.subdomains:
             self._mark_vertices(subdomain)
@@ -345,7 +345,7 @@ class Mesh:
         """Get faces which are fully in subdomain."""
         if subdomain is None:
             # https://stackoverflow.com/a/42392791/353337
-            return np.s_[:]
+            return slice(None)
 
         if subdomain not in self.subdomains:
             self._mark_vertices(subdomain)
@@ -366,7 +366,7 @@ class Mesh:
     def get_cell_mask(self, subdomain=None):
         if subdomain is None:
             # https://stackoverflow.com/a/42392791/353337
-            return np.s_[:]
+            return slice(None)
 
         if subdomain.is_boundary_only:
             # There are no boundary cells
