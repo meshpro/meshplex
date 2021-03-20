@@ -3,6 +3,7 @@ import warnings
 
 import meshio
 import numpy as np
+import npx
 
 from ._exceptions import MeshplexError
 from ._helpers import (
@@ -11,7 +12,6 @@ from ._helpers import (
     compute_tri_areas,
     compute_triangle_circumcenters,
     grp_start_len,
-    sum_at,
     unique_rows,
 )
 
@@ -1037,7 +1037,7 @@ class Mesh:
                 )
 
             # sum all the vals into self._control_volumes at ids
-            self._control_volumes = sum_at(
+            self._control_volumes = npx.sum_at(
                 v,
                 self.cells["points"][~cell_mask].T,
                 len(self.points),
@@ -1073,7 +1073,7 @@ class Mesh:
             if "edges" not in self.cells:
                 self.create_facets()
 
-            ce_ratios = sum_at(
+            ce_ratios = npx.sum_at(
                 self.ce_ratios.T,
                 self.cells["edges"],
                 self.edges["points"].shape[0],
@@ -1242,7 +1242,7 @@ class Mesh:
             self.create_facets()
 
         num_facets = self.facets["points"].shape[0]
-        sums = sum_at(
+        sums = npx.sum_at(
             self.circumcenter_face_distances,
             self.cells["facets"].T,
             num_facets,
@@ -1278,7 +1278,7 @@ class Mesh:
             vals = np.array([v[1, 1] + v[0, 2], v[1, 2] + v[0, 0], v[1, 0] + v[0, 1]])
 
             # add it all up
-            self._cv_centroids = sum_at(vals, ids, self.points.shape[0])
+            self._cv_centroids = npx.sum_at(vals, ids, self.points.shape[0])
 
             # Divide by the control volume
             cv = self.get_control_volumes(cell_mask=cell_mask)
