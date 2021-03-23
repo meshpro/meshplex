@@ -103,17 +103,6 @@ class Mesh:
         # shape need to be added up into points (e.g., equation system rhs).
         self.idx_hierarchy = nds[self.local_idx]
 
-        # The inverted local index.
-        # This array specifies for each of the three points which edge endpoints
-        # correspond to it. For triangles, the above local_idx should give
-        #
-        #    [[(1, 1), (0, 2)], [(0, 0), (1, 2)], [(1, 0), (0, 1)]]
-        #
-        self.local_idx_inv = [
-            [tuple(i) for i in zip(*np.where(self.local_idx == k))]
-            for k in range(self.n)
-        ]
-
         self._is_point_used = None
 
         self._is_boundary_facet = None
