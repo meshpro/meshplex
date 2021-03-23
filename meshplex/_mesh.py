@@ -2,8 +2,8 @@ import math
 import warnings
 
 import meshio
-import numpy as np
 import npx
+import numpy as np
 
 from ._exceptions import MeshplexError
 from ._helpers import (
@@ -12,7 +12,6 @@ from ._helpers import (
     compute_tri_areas,
     compute_triangle_circumcenters,
     grp_start_len,
-    unique_rows,
 )
 
 __all__ = ["Mesh"]
@@ -480,7 +479,9 @@ class Mesh:
             # Sort the columns to make it possible for `unique()` to identify individual
             # facets.
             idx = np.sort(idx.T)
-            a_unique, inv, cts = unique_rows(idx)
+            a_unique, inv, cts = npx.unique_rows(
+                idx, return_inverse=True, return_counts=True
+            )
 
         if np.any(cts > 2):
             num_weird_edges = np.sum(cts > 2)
@@ -489,7 +490,9 @@ class Mesh:
                 "Something is not right."
             )
             # check if cells are identical, list them
-            a, inv, cts = unique_rows(np.sort(self.cells["points"]))
+            a, inv, cts = npx.unique_rows(
+                np.sort(self.cells["points"]), return_inverse=True, return_counts=True
+            )
             if np.any(cts > 1):
                 msg += " The following cells are equal:\n"
                 for multiple_idx in np.where(cts > 1)[0]:
@@ -970,7 +973,9 @@ class Mesh:
 
     def remove_duplicate_cells(self):
         sorted_cells = np.sort(self.cells["points"])
-        _, inv, cts = unique_rows(sorted_cells)
+        _, inv, cts = npx.unique_rows(
+            sorted_cells, return_inverse=True, return_counts=True
+        )
 
         remove = np.zeros(len(self.cells["points"]), dtype=bool)
         for k in np.where(cts > 1)[0]:

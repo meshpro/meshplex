@@ -28,15 +28,6 @@ def grp_start_len(a):
     return idx[:-1], np.diff(idx)
 
 
-def unique_rows(a):
-    # The numpy alternative `np.unique(a, axis=0)` is slow; cf.
-    # <https://github.com/numpy/numpy/issues/11136>.
-    b = np.ascontiguousarray(a).view(np.dtype((np.void, a.dtype.itemsize * a.shape[1])))
-    a_unique, inv, cts = np.unique(b, return_inverse=True, return_counts=True)
-    a_unique = a_unique.view(a.dtype).reshape(-1, a.shape[1])
-    return a_unique, inv, cts
-
-
 def compute_tri_areas(ei_dot_ej):
     # The alternative
     # ```
