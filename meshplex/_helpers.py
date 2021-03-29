@@ -28,15 +28,6 @@ def grp_start_len(a):
     return idx[:-1], np.diff(idx)
 
 
-def unique_rows(a):
-    # The numpy alternative `np.unique(a, axis=0)` is slow; cf.
-    # <https://github.com/numpy/numpy/issues/11136>.
-    b = np.ascontiguousarray(a).view(np.dtype((np.void, a.dtype.itemsize * a.shape[1])))
-    a_unique, inv, cts = np.unique(b, return_inverse=True, return_counts=True)
-    a_unique = a_unique.view(a.dtype).reshape(-1, a.shape[1])
-    return a_unique, inv, cts
-
-
 def compute_tri_areas(ei_dot_ej):
     # The alternative
     # ```
@@ -203,28 +194,3 @@ def _dot(a, n):
     # Would use -1 as second argument, but <https://github.com/numpy/numpy/issues/18519>
     b = a.reshape(*a.shape[:n], np.prod(a.shape[n:]).astype(int))
     return np.einsum("...i,...i->...", b, b)
-
-
-def sum_at(a, idx, minlength):
-    """A fancy (and correct) way of summing up vals into an array of out_shape according
-    to idx. np.add.at is thought out for this, but is really slow. np.bincount is a lot
-    faster (https://github.com/numpy/numpy/issues/5922#issuecomment-511477435), but
-    doesn't handle dimensionality. This function does.
-
-    vals has to have shape (idx.shape, ...),
-    """
-    assert len(a.shape) >= len(idx.shape)
-    m = len(idx.shape)
-    assert idx.shape == a.shape[:m]
-
-    out_shape = (minlength, *a.shape[m:])
-
-    idx = idx.reshape(-1)
-    a = a.reshape(np.prod(a.shape[:m]).astype(int), np.prod(a.shape[m:]).astype(int))
-
-    return np.array(
-        [
-            np.bincount(idx, weights=a[:, k], minlength=minlength)
-            for k in range(a.shape[1])
-        ]
-    ).T.reshape(out_shape)

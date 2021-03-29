@@ -2,6 +2,7 @@ import math
 import warnings
 
 import meshio
+import npx
 import numpy as np
 
 from ._exceptions import MeshplexError
@@ -11,8 +12,6 @@ from ._helpers import (
     compute_tri_areas,
     compute_triangle_circumcenters,
     grp_start_len,
-    sum_at,
-    unique_rows,
 )
 
 __all__ = ["Mesh"]
@@ -102,17 +101,6 @@ class Mesh:
         # Map idx back to the points. This is useful if quantities which are in idx
         # shape need to be added up into points (e.g., equation system rhs).
         self.idx_hierarchy = nds[self.local_idx]
-
-        # The inverted local index.
-        # This array specifies for each of the three points which edge endpoints
-        # correspond to it. For triangles, the above local_idx should give
-        #
-        #    [[(1, 1), (0, 2)], [(0, 0), (1, 2)], [(1, 0), (0, 1)]]
-        #
-        self.local_idx_inv = [
-            [tuple(i) for i in zip(*np.where(self.local_idx == k))]
-            for k in range(self.n)
-        ]
 
         self._is_point_used = None
 
@@ -315,7 +303,7 @@ class Mesh:
     def get_vertex_mask(self, subdomain=None):
         if subdomain is None:
             # https://stackoverflow.com/a/42392791/353337
-            return np.s_[:]
+            return slice(None)
         if subdomain not in self.subdomains:
             self._mark_vertices(subdomain)
         return self.subdomains[subdomain]["vertices"]
@@ -324,7 +312,7 @@ class Mesh:
         """Get faces which are fully in subdomain."""
         if subdomain is None:
             # https://stackoverflow.com/a/42392791/353337
-            return np.s_[:]
+            return slice(None)
 
         if subdomain not in self.subdomains:
             self._mark_vertices(subdomain)
@@ -345,7 +333,7 @@ class Mesh:
         """Get faces which are fully in subdomain."""
         if subdomain is None:
             # https://stackoverflow.com/a/42392791/353337
-            return np.s_[:]
+            return slice(None)
 
         if subdomain not in self.subdomains:
             self._mark_vertices(subdomain)
@@ -366,7 +354,7 @@ class Mesh:
     def get_cell_mask(self, subdomain=None):
         if subdomain is None:
             # https://stackoverflow.com/a/42392791/353337
-            return np.s_[:]
+            return slice(None)
 
         if subdomain.is_boundary_only:
             # There are no boundary cells
@@ -491,7 +479,9 @@ class Mesh:
             # Sort the columns to make it possible for `unique()` to identify individual
             # facets.
             idx = np.sort(idx.T)
-            a_unique, inv, cts = unique_rows(idx)
+            a_unique, inv, cts = npx.unique_rows(
+                idx, return_inverse=True, return_counts=True
+            )
 
         if np.any(cts > 2):
             num_weird_edges = np.sum(cts > 2)
@@ -500,7 +490,9 @@ class Mesh:
                 "Something is not right."
             )
             # check if cells are identical, list them
-            a, inv, cts = unique_rows(np.sort(self.cells["points"]))
+            a, inv, cts = npx.unique_rows(
+                np.sort(self.cells["points"]), return_inverse=True, return_counts=True
+            )
             if np.any(cts > 1):
                 msg += " The following cells are equal:\n"
                 for multiple_idx in np.where(cts > 1)[0]:
@@ -981,7 +973,9 @@ class Mesh:
 
     def remove_duplicate_cells(self):
         sorted_cells = np.sort(self.cells["points"])
-        _, inv, cts = unique_rows(sorted_cells)
+        _, inv, cts = npx.unique_rows(
+            sorted_cells, return_inverse=True, return_counts=True
+        )
 
         remove = np.zeros(len(self.cells["points"]), dtype=bool)
         for k in np.where(cts > 1)[0]:
@@ -1037,7 +1031,7 @@ class Mesh:
                 )
 
             # sum all the vals into self._control_volumes at ids
-            self._control_volumes = sum_at(
+            self._control_volumes = npx.sum_at(
                 v,
                 self.cells["points"][~cell_mask].T,
                 len(self.points),
@@ -1073,7 +1067,7 @@ class Mesh:
             if "edges" not in self.cells:
                 self.create_facets()
 
-            ce_ratios = sum_at(
+            ce_ratios = npx.sum_at(
                 self.ce_ratios.T,
                 self.cells["edges"],
                 self.edges["points"].shape[0],
@@ -1242,7 +1236,7 @@ class Mesh:
             self.create_facets()
 
         num_facets = self.facets["points"].shape[0]
-        sums = sum_at(
+        sums = npx.sum_at(
             self.circumcenter_face_distances,
             self.cells["facets"].T,
             num_facets,
@@ -1278,7 +1272,7 @@ class Mesh:
             vals = np.array([v[1, 1] + v[0, 2], v[1, 2] + v[0, 0], v[1, 0] + v[0, 1]])
 
             # add it all up
-            self._cv_centroids = sum_at(vals, ids, self.points.shape[0])
+            self._cv_centroids = npx.sum_at(vals, ids, self.points.shape[0])
 
             # Divide by the control volume
             cv = self.get_control_volumes(cell_mask=cell_mask)
