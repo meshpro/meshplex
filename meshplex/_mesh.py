@@ -57,50 +57,19 @@ class Mesh:
         self._points.setflags(write=False)
 
         self.cells = {"points": np.asarray(cells)}
-        nds = self.cells["points"].T
 
-        if cells.shape[1] == 2:
-            self.local_idx = np.array([0, 1])
-        elif cells.shape[1] == 3:
-            # Create the idx_hierarchy (points->edges->cells), i.e., the value of
-            # `self.idx_hierarchy[0, 2, 27]` is the index of the point of cell 27, edge
-            # 2, point 0. The shape of `self.idx_hierarchy` is `(2, 3, n)`, where `n` is
-            # the number of cells. Make sure that the k-th edge is opposite of the k-th
-            # point in the triangle.
-            self.local_idx = np.array([[1, 2], [2, 0], [0, 1]]).T
-        else:
-            assert cells.shape[1] == 4
-            # Arrange the point_face_cells such that point k is opposite of face k in
-            # each cell.
-            idx = np.array([[1, 2, 3], [2, 3, 0], [3, 0, 1], [0, 1, 2]]).T
-            self.point_face_cells = nds[idx]
-
-            # Arrange the idx_hierarchy (point->edge->face->cells) such that
-            #
-            #   * point k is opposite of edge k in each face,
-            #   * duplicate edges are in the same spot of the each of the faces,
-            #   * all points are in domino order ([1, 2], [2, 3], [3, 1]),
-            #   * the same edges are easy to find:
-            #      - edge 0: face+1, edge 2
-            #      - edge 1: face+2, edge 1
-            #      - edge 2: face+3, edge 0
-            #   * opposite edges are easy to find, too:
-            #      - edge 0  <-->  (face+2, edge 0)  equals  (face+3, edge 2)
-            #      - edge 1  <-->  (face+1, edge 1)  equals  (face+3, edge 1)
-            #      - edge 2  <-->  (face+1, edge 0)  equals  (face+2, edge 2)
-            #
-            self.local_idx = np.array(
-                [
-                    [[2, 3], [3, 1], [1, 2]],
-                    [[3, 0], [0, 2], [2, 3]],
-                    [[0, 1], [1, 3], [3, 0]],
-                    [[1, 2], [2, 0], [0, 1]],
-                ]
-            ).T
-
-        # Map idx back to the points. This is useful if quantities which are in idx
-        # shape need to be added up into points (e.g., equation system rhs).
-        self.idx_hierarchy = nds[self.local_idx]
+        # Initialize the idx hierarchy. The first entry, idx[0], is the cells->points
+        # relationship, shape [3, numcells] for triangles and [4, numcells] for
+        # tetrahedra. idx[1] is the (half-)facet->points to relationship, shape [2, 3,
+        # numcells] for triangles and [3, 4, numcells] for tetrahedra, for example. The
+        # indexing is chosen such the point idx[0][k] is opposite of the facet idx[1][:,
+        # k]. This indexing keeps going until idx[-1] is of shape [2, 3, ..., numcells].
+        self.idx = [self.cells["points"].T]
+        for _ in range(self.n - 2):
+            m = len(self.idx[-1])
+            r = np.arange(m)
+            k = np.array([np.roll(r, -i) for i in range(1, m)])
+            self.idx.append(self.idx[-1][k])
 
         self._is_point_used = None
 
@@ -176,7 +145,7 @@ class Mesh:
     @property
     def half_edge_coords(self):
         if self._half_edge_coords is None:
-            p = self.points[self.idx_hierarchy]
+            p = self.points[self.idx[-1]]
             self._half_edge_coords = p[1] - p[0]
         return self._half_edge_coords
 
@@ -456,32 +425,16 @@ class Mesh:
 
     def create_facets(self):
         """Set up facet->point and facet->cell relations."""
-        s = self.idx_hierarchy.shape
-
-        idx = self.idx_hierarchy
-
-        # Reshape into individual facets, and take the first point per edge. (The
-        # face is fully characterized by it.) Sort the columns to make it possible
-        # for `unique()` to identify individual faces.
-
         # reshape the last two dimensions into one
-        idx = idx.reshape(*idx.shape[:-2], -1)
+        idx = self.idx[1]
+        idx = idx.reshape(idx.shape[0], -1)
 
-        if self.n == 4:
-            idx = idx[0]
-        # elif self.n == 5:
-        #     idx = idx[0][0]
-        # ...
-
-        if len(idx.shape) == 1:  # self.n == 2
-            a_unique, inv, cts = np.unique(idx, return_counts=True, return_inverse=True)
-        else:
-            # Sort the columns to make it possible for `unique()` to identify individual
-            # facets.
-            idx = np.sort(idx.T)
-            a_unique, inv, cts = npx.unique_rows(
-                idx, return_inverse=True, return_counts=True
-            )
+        # Sort the columns to make it possible for `unique()` to identify individual
+        # facets.
+        idx = np.sort(idx.T, axis=1)
+        a_unique, inv, cts = npx.unique_rows(
+            idx, return_inverse=True, return_counts=True
+        )
 
         if np.any(cts > 2):
             num_weird_edges = np.sum(cts > 2)
@@ -499,6 +452,7 @@ class Mesh:
                     msg += str(np.where(inv == multiple_idx)[0])
             raise MeshplexError(msg)
 
+        s = self.idx[1].shape
         self._is_boundary_facet_local = (cts[inv] == 1).reshape(s[self.n - 2 :])
         self._is_boundary_facet = cts == 1
 
