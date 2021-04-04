@@ -109,8 +109,7 @@ class MeshTetra(Mesh):
         from matplotlib import pyplot as plt
         from mpl_toolkits.mplot3d import Axes3D
 
-        fig = plt.figure()
-        ax = fig.gca(projection=Axes3D.name)
+        ax = plt.axes(projection=Axes3D.name)
         # "It is not currently possible to manually set the aspect on 3D axes"
         # plt.axis("equal")
 
@@ -162,8 +161,7 @@ class MeshTetra(Mesh):
         if "edges" not in self.faces:
             self._create_face_edge_relationships()
 
-        fig = plt.figure()
-        ax = fig.gca(projection=Axes3D.name)
+        ax = plt.axes(projection=Axes3D.name)
         # "It is not currently possible to manually set the aspect on 3D axes"
         # plt.axis("equal")
 
