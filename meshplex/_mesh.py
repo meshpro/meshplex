@@ -601,7 +601,8 @@ class Mesh:
 
         self._points = self._points[is_part_of_cell]
         self.cells["points"] = new_point_idx[self.cells["points"]]
-        self.idx_hierarchy = new_point_idx[self.idx_hierarchy]
+        for k in range(len(self.idx)):
+            self.idx[k] = new_point_idx[self.idx[k]]
 
         if self._control_volumes is not None:
             self._control_volumes = self._control_volumes[is_part_of_cell]
