@@ -61,7 +61,7 @@ def assert_mesh_consistency(mesh):
     print(mesh.cells)
     assert np.all(mesh.is_boundary_cell == ref_cells)
     ref_points = np.zeros(len(mesh.points), dtype=bool)
-    ref_points[mesh.idx_hierarchy[..., mesh.is_boundary_facet_local]] = True
+    ref_points[mesh.idx[1][:, mesh.is_boundary_facet_local]] = True
     assert np.all(mesh.is_boundary_point == ref_points)
 
     assert len(mesh.control_volumes) == len(mesh.points)

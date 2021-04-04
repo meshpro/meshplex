@@ -332,7 +332,7 @@ class Mesh:
         if subdomain not in self.subdomains:
             self._mark_vertices(subdomain)
 
-        is_in = self.subdomains[subdomain]["vertices"][self.idx_hierarchy]
+        is_in = self.subdomains[subdomain]["vertices"][self.idx[-1]]
         # Take `all()` over all axes except the last one (cell_ids).
         n = len(is_in.shape)
         return np.all(is_in, axis=tuple(range(n - 1)))
@@ -512,9 +512,7 @@ class Mesh:
     def is_boundary_point(self):
         if self._is_boundary_point is None:
             self._is_boundary_point = np.zeros(len(self.points), dtype=bool)
-            self._is_boundary_point[
-                self.idx_hierarchy[..., self.is_boundary_facet_local]
-            ] = True
+            self._is_boundary_point[self.idx[1][:, self.is_boundary_facet_local]] = True
         return self._is_boundary_point
 
     @property
@@ -1254,7 +1252,7 @@ class Mesh:
         assert self.n == 3
         right_triangle_vols = self.cell_partitions
 
-        point_edges = self.idx_hierarchy
+        point_edges = self.idx[-1]
 
         corner = self.points[point_edges]
         edge_midpoints = 0.5 * (corner[0] + corner[1])

@@ -180,7 +180,7 @@ class MeshTri(Mesh):
         # Compute the projection of A on the edge at each edge midpoint. Take the
         # average of `vector_field` at the endpoints to get the approximate value at the
         # edge midpoint.
-        A = 0.5 * np.sum(vector_field[self.idx_hierarchy], axis=0)
+        A = 0.5 * np.sum(vector_field[self.idx[-1]], axis=0)
         # sum of <edge, A> for all three edges
         sum_edge_dot_A = np.einsum("ijk, ijk->j", self.half_edge_coords, A)
 
@@ -680,14 +680,18 @@ class MeshTri(Mesh):
 
     def _update_cell_values(self, cell_ids, interior_facet_ids):
         """Updates all sorts of cell information for the given cell IDs."""
-        # update idx_hierarchy
-        nds = self.cells["points"][cell_ids].T
-        self.idx_hierarchy[..., cell_ids] = nds[self.local_idx]
+        # update idx
+        self.idx[0][:, cell_ids] = self.cells["points"][cell_ids].T
+        for j in range(1, self.n - 1):
+            m = len(self.idx[-1])
+            r = np.arange(m)
+            k = np.array([np.roll(r, -i) for i in range(1, m)])
+            self.idx[j][..., cell_ids] = self.idx[j - 1][k, ..., cell_ids]
 
         # update self.half_edge_coords
         self.half_edge_coords[:, cell_ids, :] = np.moveaxis(
-            self.points[self.idx_hierarchy[1, ..., cell_ids]]
-            - self.points[self.idx_hierarchy[0, ..., cell_ids]],
+            self.points[self.idx[-1][1, ..., cell_ids]]
+            - self.points[self.idx[-1][0, ..., cell_ids]],
             0,
             1,
         )
