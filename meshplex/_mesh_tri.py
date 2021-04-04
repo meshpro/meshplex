@@ -210,7 +210,7 @@ class MeshTri(Mesh):
         plt.show()
         plt.close()
 
-    def save(self, filename, *args, **kwargs):
+    def savefig(self, filename, *args, **kwargs):
         """Save the mesh to a file."""
         _, file_extension = os.path.splitext(filename)
         if file_extension in [".png", ".svg"]:
