@@ -443,7 +443,7 @@ class Mesh:
                 "Something is not right."
             )
             # check if cells are identical, list them
-            a, inv, cts = npx.unique_rows(
+            _, inv, cts = npx.unique_rows(
                 np.sort(self.cells["points"]), return_inverse=True, return_counts=True
             )
             if np.any(cts > 1):
@@ -452,8 +452,7 @@ class Mesh:
                     msg += str(np.where(inv == multiple_idx)[0])
             raise MeshplexError(msg)
 
-        s = self.idx[1].shape
-        self._is_boundary_facet_local = (cts[inv] == 1).reshape(s[self.n - 2 :])
+        self._is_boundary_facet_local = (cts[inv] == 1).reshape(self.idx[0].shape)
         self._is_boundary_facet = cts == 1
 
         self.facets = {"points": a_unique}
@@ -678,7 +677,7 @@ class Mesh:
 
         assert self.n == 4
         # Just take the distance of the circumcenter to one of the points for now.
-        dist = self.points[self.idx_hierarchy[0, 0, 0]] - self.cell_circumcenters
+        dist = self.points[self.idx[0][0]] - self.cell_circumcenters
         circumradius = np.sqrt(np.einsum("ij,ij->i", dist, dist))
         # https://en.wikipedia.org/wiki/Tetrahedron#Circumradius
         #

@@ -118,7 +118,7 @@ class MeshTetra(Mesh):
         for cell_id in range(len(self.cells["points"])):
             cc = self.cell_circumcenters[cell_id]
             #
-            x = X[self.point_face_cells[..., [cell_id]]]
+            x = X[self.idx[1][..., [cell_id]]]
             # TODO replace `self.ei_dot_ei * self.ei_dot_ej` with cell_partitions
             face_ccs = compute_triangle_circumcenters(
                 x, self.ei_dot_ei * self.ei_dot_ej
@@ -201,7 +201,7 @@ class MeshTetra(Mesh):
         for cell_id in adj_cell_ids:
             cc = self.cell_circumcenters[cell_id]
             #
-            x = X[self.point_face_cells[..., [cell_id]]]
+            x = X[self.idx[1][..., [cell_id]]]
             # TODO replace `self.ei_dot_ei * self.ei_dot_ej` with cell_partitions
             face_ccs = compute_triangle_circumcenters(
                 x, self.ei_dot_ei * self.ei_dot_ej
@@ -329,7 +329,7 @@ class MeshTetra(Mesh):
             )
 
         if face_circumcenter_rgba is not None:
-            x = self.points[self.point_face_cells[..., [cell_id]]]
+            x = self.points[self.idx[1][..., [cell_id]]]
             # TODO replace `self.ei_dot_ei * self.ei_dot_ej` with cell_partitions
             face_ccs = compute_triangle_circumcenters(
                 x, self.ei_dot_ei * self.ei_dot_ej
@@ -339,14 +339,14 @@ class MeshTetra(Mesh):
 
         if control_volume_boundaries_rgba:
             cell_cc = self.cell_circumcenters[cell_id]
-            x = self.points[self.point_face_cells[..., [cell_id]]]
+            x = self.points[self.idx[1][..., [cell_id]]]
             # TODO replace `self.ei_dot_ei * self.ei_dot_ej` with cell_partitions
             face_ccs = compute_triangle_circumcenters(
                 x, self.ei_dot_ei * self.ei_dot_ej
             )[:, 0, :]
             for face, face_cc in zip(range(4), face_ccs):
                 for edge in range(3):
-                    k0, k1 = self.idx_hierarchy[:, edge, face, cell_id]
+                    k0, k1 = self.idx[-1][:, edge, face, cell_id]
                     edge_midpoint = 0.5 * (self.points[k0] + self.points[k1])
 
                     points = vtk.vtkPoints()
