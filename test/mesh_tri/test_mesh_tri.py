@@ -47,8 +47,6 @@ def test_unit_triangle(cells_dtype):
 
     tol = 1.0e-14
 
-    assert (mesh.local_idx.T == [[1, 2], [2, 0], [0, 1]]).all()
-
     # ce_ratios
     assert is_near_equal(mesh.ce_ratios.T, [0.0, 0.5, 0.5], tol)
 
@@ -100,10 +98,10 @@ def test_unit_triangle(cells_dtype):
 
     # save
     _, filename = tempfile.mkstemp(suffix=".png")
-    mesh.save(filename)
+    mesh.savefig(filename)
     os.remove(filename)
     _, filename = tempfile.mkstemp(suffix=".vtk")
-    mesh.save(filename)
+    mesh.savefig(filename)
     os.remove(filename)
 
 
@@ -673,7 +671,7 @@ def test_flat_boundary():
     assert np.abs(mesh.control_volumes[4] - ref_area) < 1.0e-12
 
     cv = np.zeros(X.shape[0])
-    for edges, ce_ratios in zip(mesh.idx_hierarchy.T, mesh.ce_ratios.T):
+    for edges, ce_ratios in zip(mesh.idx[1].T, mesh.ce_ratios.T):
         for i, ce in zip(edges, ce_ratios):
             ei = mesh.points[i[1]] - mesh.points[i[0]]
             cv[i] += 0.25 * ce * np.dot(ei, ei)

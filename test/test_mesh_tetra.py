@@ -35,14 +35,6 @@ def test_regular_tet0(a):
     mesh.show()
     mesh.show_edge(0)
 
-    ref_local_idx = [
-        [[2, 3], [3, 1], [1, 2]],
-        [[3, 0], [0, 2], [2, 3]],
-        [[0, 1], [1, 3], [3, 0]],
-        [[1, 2], [2, 0], [0, 1]],
-    ]
-    assert (mesh.local_idx.T == ref_local_idx).all()
-
     tol = 1.0e-14
 
     z = a / np.sqrt(24.0)

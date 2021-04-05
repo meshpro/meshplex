@@ -57,50 +57,19 @@ class Mesh:
         self._points.setflags(write=False)
 
         self.cells = {"points": np.asarray(cells)}
-        nds = self.cells["points"].T
 
-        if cells.shape[1] == 2:
-            self.local_idx = np.array([0, 1])
-        elif cells.shape[1] == 3:
-            # Create the idx_hierarchy (points->edges->cells), i.e., the value of
-            # `self.idx_hierarchy[0, 2, 27]` is the index of the point of cell 27, edge
-            # 2, point 0. The shape of `self.idx_hierarchy` is `(2, 3, n)`, where `n` is
-            # the number of cells. Make sure that the k-th edge is opposite of the k-th
-            # point in the triangle.
-            self.local_idx = np.array([[1, 2], [2, 0], [0, 1]]).T
-        else:
-            assert cells.shape[1] == 4
-            # Arrange the point_face_cells such that point k is opposite of face k in
-            # each cell.
-            idx = np.array([[1, 2, 3], [2, 3, 0], [3, 0, 1], [0, 1, 2]]).T
-            self.point_face_cells = nds[idx]
-
-            # Arrange the idx_hierarchy (point->edge->face->cells) such that
-            #
-            #   * point k is opposite of edge k in each face,
-            #   * duplicate edges are in the same spot of the each of the faces,
-            #   * all points are in domino order ([1, 2], [2, 3], [3, 1]),
-            #   * the same edges are easy to find:
-            #      - edge 0: face+1, edge 2
-            #      - edge 1: face+2, edge 1
-            #      - edge 2: face+3, edge 0
-            #   * opposite edges are easy to find, too:
-            #      - edge 0  <-->  (face+2, edge 0)  equals  (face+3, edge 2)
-            #      - edge 1  <-->  (face+1, edge 1)  equals  (face+3, edge 1)
-            #      - edge 2  <-->  (face+1, edge 0)  equals  (face+2, edge 2)
-            #
-            self.local_idx = np.array(
-                [
-                    [[2, 3], [3, 1], [1, 2]],
-                    [[3, 0], [0, 2], [2, 3]],
-                    [[0, 1], [1, 3], [3, 0]],
-                    [[1, 2], [2, 0], [0, 1]],
-                ]
-            ).T
-
-        # Map idx back to the points. This is useful if quantities which are in idx
-        # shape need to be added up into points (e.g., equation system rhs).
-        self.idx_hierarchy = nds[self.local_idx]
+        # Initialize the idx hierarchy. The first entry, idx[0], is the cells->points
+        # relationship, shape [3, numcells] for triangles and [4, numcells] for
+        # tetrahedra. idx[1] is the (half-)facet->points to relationship, shape [2, 3,
+        # numcells] for triangles and [3, 4, numcells] for tetrahedra, for example. The
+        # indexing is chosen such the point idx[0][k] is opposite of the facet idx[1][:,
+        # k]. This indexing keeps going until idx[-1] is of shape [2, 3, ..., numcells].
+        self.idx = [self.cells["points"].T]
+        for _ in range(1, self.n - 1):
+            m = len(self.idx[-1])
+            r = np.arange(m)
+            k = np.array([np.roll(r, -i) for i in range(1, m)])
+            self.idx.append(self.idx[-1][k])
 
         self._is_point_used = None
 
@@ -176,7 +145,7 @@ class Mesh:
     @property
     def half_edge_coords(self):
         if self._half_edge_coords is None:
-            p = self.points[self.idx_hierarchy]
+            p = self.points[self.idx[-1]]
             self._half_edge_coords = p[1] - p[0]
         return self._half_edge_coords
 
@@ -319,7 +288,7 @@ class Mesh:
 
         # A face is inside if all its edges are in.
         # An edge is inside if all its points are in.
-        is_in = self.subdomains[subdomain]["vertices"][self.idx_hierarchy]
+        is_in = self.subdomains[subdomain]["vertices"][self.idx[-1]]
         # Take `all()` over the first index
         is_inside = np.all(is_in, axis=tuple(range(1)))
 
@@ -340,7 +309,7 @@ class Mesh:
 
         # A face is inside if all its edges are in.
         # An edge is inside if all its points are in.
-        is_in = self.subdomains[subdomain]["vertices"][self.idx_hierarchy]
+        is_in = self.subdomains[subdomain]["vertices"][self.idx[-1]]
         # Take `all()` over all axes except the last two (face_ids, cell_ids).
         n = len(is_in.shape)
         is_inside = np.all(is_in, axis=tuple(range(n - 2)))
@@ -363,7 +332,7 @@ class Mesh:
         if subdomain not in self.subdomains:
             self._mark_vertices(subdomain)
 
-        is_in = self.subdomains[subdomain]["vertices"][self.idx_hierarchy]
+        is_in = self.subdomains[subdomain]["vertices"][self.idx[-1]]
         # Take `all()` over all axes except the last one (cell_ids).
         n = len(is_in.shape)
         return np.all(is_in, axis=tuple(range(n - 1)))
@@ -456,32 +425,16 @@ class Mesh:
 
     def create_facets(self):
         """Set up facet->point and facet->cell relations."""
-        s = self.idx_hierarchy.shape
-
-        idx = self.idx_hierarchy
-
-        # Reshape into individual facets, and take the first point per edge. (The
-        # face is fully characterized by it.) Sort the columns to make it possible
-        # for `unique()` to identify individual faces.
-
+        idx = self.idx[1]
         # reshape the last two dimensions into one
-        idx = idx.reshape(*idx.shape[:-2], -1)
+        idx = idx.reshape(idx.shape[0], -1)
 
-        if self.n == 4:
-            idx = idx[0]
-        # elif self.n == 5:
-        #     idx = idx[0][0]
-        # ...
-
-        if len(idx.shape) == 1:  # self.n == 2
-            a_unique, inv, cts = np.unique(idx, return_counts=True, return_inverse=True)
-        else:
-            # Sort the columns to make it possible for `unique()` to identify individual
-            # facets.
-            idx = np.sort(idx.T)
-            a_unique, inv, cts = npx.unique_rows(
-                idx, return_inverse=True, return_counts=True
-            )
+        # Sort the columns to make it possible for `unique()` to identify individual
+        # facets.
+        idx = np.sort(idx.T, axis=1)
+        a_unique, inv, cts = npx.unique_rows(
+            idx, return_inverse=True, return_counts=True
+        )
 
         if np.any(cts > 2):
             num_weird_edges = np.sum(cts > 2)
@@ -490,7 +443,7 @@ class Mesh:
                 "Something is not right."
             )
             # check if cells are identical, list them
-            a, inv, cts = npx.unique_rows(
+            _, inv, cts = npx.unique_rows(
                 np.sort(self.cells["points"]), return_inverse=True, return_counts=True
             )
             if np.any(cts > 1):
@@ -499,7 +452,7 @@ class Mesh:
                     msg += str(np.where(inv == multiple_idx)[0])
             raise MeshplexError(msg)
 
-        self._is_boundary_facet_local = (cts[inv] == 1).reshape(s[self.n - 2 :])
+        self._is_boundary_facet_local = (cts[inv] == 1).reshape(self.idx[0].shape)
         self._is_boundary_facet = cts == 1
 
         self.facets = {"points": a_unique}
@@ -559,9 +512,7 @@ class Mesh:
     def is_boundary_point(self):
         if self._is_boundary_point is None:
             self._is_boundary_point = np.zeros(len(self.points), dtype=bool)
-            self._is_boundary_point[
-                self.idx_hierarchy[..., self.is_boundary_facet_local]
-            ] = True
+            self._is_boundary_point[self.idx[1][:, self.is_boundary_facet_local]] = True
         return self._is_boundary_point
 
     @property
@@ -650,7 +601,8 @@ class Mesh:
 
         self._points = self._points[is_part_of_cell]
         self.cells["points"] = new_point_idx[self.cells["points"]]
-        self.idx_hierarchy = new_point_idx[self.idx_hierarchy]
+        for k in range(len(self.idx)):
+            self.idx[k] = new_point_idx[self.idx[k]]
 
         if self._control_volumes is not None:
             self._control_volumes = self._control_volumes[is_part_of_cell]
@@ -675,7 +627,7 @@ class Mesh:
         """Get the center of the circumsphere of each cell."""
         if self._cell_circumcenters is None:
             if self.n == 2:
-                corner = self.points[self.idx_hierarchy]
+                corner = self.points[self.idx[-1]]
                 self._cell_circumcenters = 0.5 * (corner[0] + corner[1])
             elif self.n == 3:
                 point_cells = self.cells["points"].T
@@ -724,7 +676,7 @@ class Mesh:
 
         assert self.n == 4
         # Just take the distance of the circumcenter to one of the points for now.
-        dist = self.points[self.idx_hierarchy[0, 0, 0]] - self.cell_circumcenters
+        dist = self.points[self.idx[0][0]] - self.cell_circumcenters
         circumradius = np.sqrt(np.einsum("ij,ij->i", dist, dist))
         # https://en.wikipedia.org/wiki/Tetrahedron#Circumradius
         #
@@ -907,7 +859,9 @@ class Mesh:
             self._interior_facets = None
 
         self.cells["points"] = self.cells["points"][keep]
-        self.idx_hierarchy = self.idx_hierarchy[..., keep]
+
+        for k in range(len(self.idx)):
+            self.idx[k] = self.idx[k][..., keep]
 
         if self._cell_volumes is not None:
             self._cell_volumes = self._cell_volumes[keep]
@@ -1085,8 +1039,8 @@ class Mesh:
     # def _compute_ce_ratios_algebraic(self):
     #     # Precompute edges.
     #     half_edges = (
-    #         self.points[self.idx_hierarchy[1]]
-    #         - self.points[self.idx_hierarchy[0]]
+    #         self.points[self.idx[-1][1]]
+    #         - self.points[self.idx[-1][0]]
     #     )
 
     #     # Build the equation system:
@@ -1301,7 +1255,7 @@ class Mesh:
         assert self.n == 3
         right_triangle_vols = self.cell_partitions
 
-        point_edges = self.idx_hierarchy
+        point_edges = self.idx[-1]
 
         corner = self.points[point_edges]
         edge_midpoints = 0.5 * (corner[0] + corner[1])
