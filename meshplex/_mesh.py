@@ -288,7 +288,7 @@ class Mesh:
 
         # A face is inside if all its edges are in.
         # An edge is inside if all its points are in.
-        is_in = self.subdomains[subdomain]["vertices"][self.idx_hierarchy]
+        is_in = self.subdomains[subdomain]["vertices"][self.idx[-1]]
         # Take `all()` over the first index
         is_inside = np.all(is_in, axis=tuple(range(1)))
 
@@ -309,7 +309,7 @@ class Mesh:
 
         # A face is inside if all its edges are in.
         # An edge is inside if all its points are in.
-        is_in = self.subdomains[subdomain]["vertices"][self.idx_hierarchy]
+        is_in = self.subdomains[subdomain]["vertices"][self.idx[-1]]
         # Take `all()` over all axes except the last two (face_ids, cell_ids).
         n = len(is_in.shape)
         is_inside = np.all(is_in, axis=tuple(range(n - 2)))
@@ -425,8 +425,8 @@ class Mesh:
 
     def create_facets(self):
         """Set up facet->point and facet->cell relations."""
-        # reshape the last two dimensions into one
         idx = self.idx[1]
+        # reshape the last two dimensions into one
         idx = idx.reshape(idx.shape[0], -1)
 
         # Sort the columns to make it possible for `unique()` to identify individual
@@ -627,7 +627,7 @@ class Mesh:
         """Get the center of the circumsphere of each cell."""
         if self._cell_circumcenters is None:
             if self.n == 2:
-                corner = self.points[self.idx_hierarchy]
+                corner = self.points[self.idx[-1]]
                 self._cell_circumcenters = 0.5 * (corner[0] + corner[1])
             elif self.n == 3:
                 point_cells = self.cells["points"].T
@@ -1039,8 +1039,8 @@ class Mesh:
     # def _compute_ce_ratios_algebraic(self):
     #     # Precompute edges.
     #     half_edges = (
-    #         self.points[self.idx_hierarchy[1]]
-    #         - self.points[self.idx_hierarchy[0]]
+    #         self.points[self.idx[-1][1]]
+    #         - self.points[self.idx[-1][0]]
     #     )
 
     #     # Build the equation system:
