@@ -65,7 +65,7 @@ class Mesh:
         # indexing is chosen such the point idx[0][k] is opposite of the facet idx[1][:,
         # k]. This indexing keeps going until idx[-1] is of shape [2, 3, ..., numcells].
         self.idx = [self.cells["points"].T]
-        for _ in range(self.n - 2):
+        for _ in range(1, self.n - 1):
             m = len(self.idx[-1])
             r = np.arange(m)
             k = np.array([np.roll(r, -i) for i in range(1, m)])
@@ -859,7 +859,9 @@ class Mesh:
             self._interior_facets = None
 
         self.cells["points"] = self.cells["points"][keep]
-        self.idx_hierarchy = self.idx_hierarchy[..., keep]
+
+        for k in range(len(self.idx)):
+            self.idx[k] = self.idx[k][..., keep]
 
         if self._cell_volumes is not None:
             self._cell_volumes = self._cell_volumes[keep]
