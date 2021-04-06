@@ -190,7 +190,6 @@ class MeshTetra(Mesh):
 
         # connect the face circumcenters with the corresponding cell
         # circumcenters
-        X = self.points
         for cell_id in adj_cell_ids:
             cc = self.cell_circumcenters[cell_id]
             face_ccs = self._circumcenters[-2]
