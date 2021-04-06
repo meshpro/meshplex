@@ -106,9 +106,6 @@ class Mesh:
         self._cvc_cell_mask = None
         self._cv_cell_mask = None
 
-        # only used for tetra
-        self._zeta = None
-
     def __repr__(self):
         name = {
             2: "line",
@@ -368,18 +365,6 @@ class Mesh:
             cp1 = np.concatenate([cp, np.ones(cp.shape[:-1] + (1,))], axis=-1)
             out = np.linalg.det(cp1) / math.factorial(n)
         return out
-
-    @property
-    def zeta(self):
-        assert self.n == 4
-        ee = self.ei_dot_ej
-        self._zeta = (
-            -ee[2, [1, 2, 3, 0]] * ee[1] * ee[2]
-            - ee[1, [2, 3, 0, 1]] * ee[2] * ee[0]
-            - ee[0, [3, 0, 1, 2]] * ee[0] * ee[1]
-            + ee[0] * ee[1] * ee[2]
-        )
-        return self._zeta
 
     def _compute_volumes(self):
         """Computes the volumes of all edges, facets, cells etc. in the mesh. It starts
@@ -659,44 +644,6 @@ class Mesh:
         """Get the center of the circumsphere of each cell."""
         if self._circumcenters is None:
             self._compute_volumes()
-            # if self.n == 2:
-            #     corner = self.points[self.idx[-1]]
-            #     self._cell_circumcenters = 0.5 * (corner[0] + corner[1])
-            # elif self.n == 3:
-            #     point_cells = self.cells["points"].T
-            #     self._cell_circumcenters = compute_triangle_circumcenters(
-            #         self.points[point_cells], self.cell_partitions
-            #     )
-            # else:
-            #     assert self.n == 4
-            #     # Just like for triangular cells, tetrahedron circumcenters are most
-            #     # easily computed with the quadrilateral coordinates available.
-            #     # Luckily, we have the circumcenter-face distances (cfd):
-            #     #
-            #     #   CC = (
-            #     #       + cfd[0] * face_area[0] / sum(cfd*face_area) * X[0]
-            #     #       + cfd[1] * face_area[1] / sum(cfd*face_area) * X[1]
-            #     #       + cfd[2] * face_area[2] / sum(cfd*face_area) * X[2]
-            #     #       + cfd[3] * face_area[3] / sum(cfd*face_area) * X[3]
-            #     #       )
-            #     #
-            #     # (Compare with
-            #     # <https://en.wikipedia.org/wiki/Trilinear_coordinates#Between_Cartesian_and_trilinear_coordinates>.)
-            #     # Because of
-            #     #
-            #     #    cfd = zeta / (24.0 * face_areas) / self.cell_volumes[None]
-            #     #
-            #     # we have
-            #     #
-            #     #   CC = sum_k (zeta[k] / sum(zeta) * X[k]).
-            #     #
-            #     # TODO See <https://math.stackexchange.com/a/2864770/36678> for another
-            #     #      interesting approach.
-            #     alpha = self.zeta / np.sum(self.zeta, axis=0)
-
-            #     self._cell_circumcenters = np.sum(
-            #         alpha[None].T * self.points[self.cells["points"]], axis=1
-            #     )
         return self._circumcenters[-1]
 
     @property
@@ -1185,6 +1132,14 @@ class Mesh:
         # face_ce_ratios = -self.ei_dot_ej * 0.25 / face_areas[None]
         face_ce_ratios_div_face_areas = -self.ei_dot_ej / alpha
 
+        ee = self.ei_dot_ej
+        zeta = (
+            -ee[2, [1, 2, 3, 0]] * ee[1] * ee[2]
+            - ee[1, [2, 3, 0, 1]] * ee[2] * ee[0]
+            - ee[0, [3, 0, 1, 2]] * ee[0] * ee[1]
+            + ee[0] * ee[1] * ee[2]
+        )
+
         #
         # self.circumcenter_face_distances =
         #    zeta / (24.0 * face_areas) / self.cell_volumes[None]
@@ -1193,13 +1148,13 @@ class Mesh:
         #
         # so
         ce_ratios = (
-            self.zeta / 48.0 * face_ce_ratios_div_face_areas / self.cell_volumes[None]
+            zeta / 48.0 * face_ce_ratios_div_face_areas / self.cell_volumes[None]
         )
 
         # Distances of the cell circumcenter to the faces.
         face_areas = 0.5 * np.sqrt(alpha)
         self.circumcenter_face_distances = (
-            self.zeta / (24.0 * face_areas) / self.cell_volumes[None]
+            zeta / (24.0 * face_areas) / self.cell_volumes[None]
         )
 
         return ce_ratios
