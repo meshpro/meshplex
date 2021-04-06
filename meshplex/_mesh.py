@@ -6,13 +6,7 @@ import npx
 import numpy as np
 
 from ._exceptions import MeshplexError
-from ._helpers import (
-    _dot,
-    _multiply,
-    compute_ce_ratios,
-    compute_triangle_circumcenters,
-    grp_start_len,
-)
+from ._helpers import _dot, _multiply, compute_ce_ratios, grp_start_len
 
 __all__ = ["Mesh"]
 
@@ -91,12 +85,12 @@ class Mesh:
         self._ei_dot_ei = None
         self._ei_dot_ej = None
         self._cell_centroids = None
-        self._edge_lengths = None
         self._ei_dot_ei = None
         self._ei_dot_ej = None
         self._volumes = None
         self._signed_cell_volumes = None
-        self._cell_circumcenters = None
+        self._circumcenters = None
+        self._circumradii2 = None
         self._heights = None
         self._ce_ratios = None
         self._cell_partitions = None
@@ -106,9 +100,6 @@ class Mesh:
         self._cv_centroids = None
         self._cvc_cell_mask = None
         self._cv_cell_mask = None
-
-        # only used for tetra
-        self._zeta = None
 
     def __repr__(self):
         name = {
@@ -180,8 +171,11 @@ class Mesh:
             self._cell_centroids = self.compute_cell_centroids()
         return self._cell_centroids
 
+    cell_barycenters = cell_centroids
+
     @property
-    def heights(self):
+    def cell_heights(self):
+        # TODO remove or get from _compute_things()
         if self._heights is None:
             # compute the distance between the base (n-1)-simplex and the left-over
             # point
@@ -203,11 +197,6 @@ class Mesh:
             self._heights = np.sqrt(1 / np.sum(np.linalg.solve(ATA, e), axis=-1))
 
         return self._heights
-
-    @property
-    def cell_barycenters(self):
-        """See cell_centroids."""
-        return self.cell_centroids
 
     @property
     def is_point_used(self):
@@ -250,9 +239,9 @@ class Mesh:
 
     @property
     def edge_lengths(self):
-        if self._edge_lengths is None:
-            self._edge_lengths = np.sqrt(self.ei_dot_ei)
-        return self._edge_lengths
+        if self._volumes is None:
+            self._compute_things()
+        return self._volumes[0]
 
     @property
     def facet_areas(self):
@@ -260,7 +249,7 @@ class Mesh:
             return np.ones(len(self.facets["points"]))
 
         if self._volumes is None:
-            self._compute_volumes()
+            self._compute_things()
 
         return self._volumes[-2]
 
@@ -372,19 +361,7 @@ class Mesh:
             out = np.linalg.det(cp1) / math.factorial(n)
         return out
 
-    @property
-    def zeta(self):
-        assert self.n == 4
-        ee = self.ei_dot_ej
-        self._zeta = (
-            -ee[2, [1, 2, 3, 0]] * ee[1] * ee[2]
-            - ee[1, [2, 3, 0, 1]] * ee[2] * ee[0]
-            - ee[0, [3, 0, 1, 2]] * ee[0] * ee[1]
-            + ee[0] * ee[1] * ee[2]
-        )
-        return self._zeta
-
-    def _compute_volumes(self):
+    def _compute_things(self):
         """Computes the volumes of all edges, facets, cells etc. in the mesh. It starts
         off by computing the (squared) edge lengths, then complements the edge with one
         vertex to form face. It computes an orthogonal basis of the face (with modified
@@ -394,32 +371,55 @@ class Mesh:
         """
         e = self.points[self.idx[-1]]
         e0 = e[0]
-        orthogonal_basis = np.array([e[1] - e0])
+        diff = e[1] - e[0]
+        orthogonal_basis = np.array([diff])
+
         volumes2 = [_dot(orthogonal_basis[0], self.n - 1)]
+        self._circumcenters = [0.5 * (e[0] + e[1])]
+
+        self._circumradii2 = [0.25 * _dot(diff, self.n - 1)]
+
         norms2 = np.array(volumes2)
-        for kk, i in enumerate(self.idx[:-1][::-1]):
+        for kk, idx in enumerate(self.idx[:-1][::-1]):
             # Pick side any index at will.
             # <https://gist.github.com/nschloe/3922801e200cf82aec2fb53c89e1c578> shows
             # that it doesn't make a difference which point-facet combination we choose.
-            k = 0
-            e0 = e0[k]
-            v = self.points[i[k]] - e0
+            k0 = 0
+            e0 = e0[k0]
+            p0 = self.points[idx[k0]]
+            v = p0 - e0
             # modified gram-schmidt
-            for w, norm2 in zip(orthogonal_basis[:, k], norms2[:, k]):
+            for w, norm2 in zip(orthogonal_basis[:, k0], norms2[:, k0]):
                 alpha = np.einsum("...k,...k->...", w, v) / norm2
                 v -= _multiply(w, alpha, self.n - 2 - kk)
 
-            orthogonal_basis = np.row_stack([orthogonal_basis[:, k], [v]])
+            orthogonal_basis = np.row_stack([orthogonal_basis[:, k0], [v]])
             vv = np.einsum("...k,...k->...", v, v)
-            norms2 = np.row_stack([norms2[:, k], [vv]])
+
+            norms2 = np.row_stack([norms2[:, k0], [vv]])
+
+            # The squared volume is the squared volume of the face times the squared
+            # height divided by (n+1) ** 2.
             volumes2.append(volumes2[-1][0] * vv / (kk + 2) ** 2)
+
+            # circumcenter, squared circumradius
+            # <https://math.stackexchange.com/a/4064749/36678>
+            c = self._circumcenters[-1][k0]
+            cr2 = self._circumradii2[-1][k0]
+            #
+            p0c2 = _dot(p0 - c, self.n - 2 - kk)
+            sigma = 0.5 * (p0c2 - cr2) / vv
+            lmbda2 = sigma ** 2 * vv
+            #
+            self._circumradii2.append(lmbda2 + cr2)
+            self._circumcenters.append(c + _multiply(v, sigma, self.n - 2 - kk))
 
         self._volumes = [np.sqrt(v2) for v2 in volumes2]
 
     @property
     def cell_volumes(self):
         if self._volumes is None:
-            self._compute_volumes()
+            self._compute_things()
         return self._volumes[-1]
 
     @property
@@ -484,8 +484,6 @@ class Mesh:
         else:
             assert self.n == 4
             self.faces = self.facets
-            # save for create_edge_cells
-            self._inv_faces = inv
 
     @property
     def is_boundary_facet_local(self):
@@ -639,75 +637,16 @@ class Mesh:
     @property
     def cell_circumcenters(self):
         """Get the center of the circumsphere of each cell."""
-        if self._cell_circumcenters is None:
-            if self.n == 2:
-                corner = self.points[self.idx[-1]]
-                self._cell_circumcenters = 0.5 * (corner[0] + corner[1])
-            elif self.n == 3:
-                point_cells = self.cells["points"].T
-                self._cell_circumcenters = compute_triangle_circumcenters(
-                    self.points[point_cells], self.cell_partitions
-                )
-            else:
-                assert self.n == 4
-                # Just like for triangular cells, tetrahedron circumcenters are most
-                # easily computed with the quadrilateral coordinates available.
-                # Luckily, we have the circumcenter-face distances (cfd):
-                #
-                #   CC = (
-                #       + cfd[0] * face_area[0] / sum(cfd*face_area) * X[0]
-                #       + cfd[1] * face_area[1] / sum(cfd*face_area) * X[1]
-                #       + cfd[2] * face_area[2] / sum(cfd*face_area) * X[2]
-                #       + cfd[3] * face_area[3] / sum(cfd*face_area) * X[3]
-                #       )
-                #
-                # (Compare with
-                # <https://en.wikipedia.org/wiki/Trilinear_coordinates#Between_Cartesian_and_trilinear_coordinates>.)
-                # Because of
-                #
-                #    cfd = zeta / (24.0 * face_areas) / self.cell_volumes[None]
-                #
-                # we have
-                #
-                #   CC = sum_k (zeta[k] / sum(zeta) * X[k]).
-                #
-                # TODO See <https://math.stackexchange.com/a/2864770/36678> for another
-                #      interesting approach.
-                alpha = self.zeta / np.sum(self.zeta, axis=0)
-
-                self._cell_circumcenters = np.sum(
-                    alpha[None].T * self.points[self.cells["points"]], axis=1
-                )
-        return self._cell_circumcenters
+        if self._circumcenters is None:
+            self._compute_things()
+        return self._circumcenters[-1]
 
     @property
     def cell_circumradius(self):
         """Get the circumradii of all cells"""
-        if self.n == 3:
-            # See <http://mathworld.wolfram.com/Circumradius.html> and
-            # <https://en.wikipedia.org/wiki/Cayley%E2%80%93Menger_determinant#Finding_the_circumradius_of_a_simplex>.
-            return np.prod(self.edge_lengths, axis=0) / 4 / self.cell_volumes
-
-        assert self.n == 4
-        # Just take the distance of the circumcenter to one of the points for now.
-        dist = self.points[self.idx[0][0]] - self.cell_circumcenters
-        circumradius = np.sqrt(np.einsum("ij,ij->i", dist, dist))
-        # https://en.wikipedia.org/wiki/Tetrahedron#Circumradius
-        #
-        # Compute opposite edge length products
-        # TODO something is wrong here, the expression under the sqrt can be negative
-        # edge_lengths = np.sqrt(self.ei_dot_ei)
-        # aA = edge_lengths[0, 0] * edge_lengths[0, 2]
-        # bB = edge_lengths[0, 1] * edge_lengths[2, 0]
-        # cC = edge_lengths[0, 2] * edge_lengths[2, 1]
-        # circumradius = (
-        #     np.sqrt(
-        #         (aA + bB + cC) * (-aA + bB + cC) * (aA - bB + cC) * (aA + bB - cC)
-        #     )
-        #     / 24
-        #     / self.cell_volumes
-        # )
-        return circumradius
+        if self._circumradii2 is None:
+            self._compute_things()
+        return np.sqrt(self._circumradii2[-1])
 
     @property
     def q_radius_ratio(self):
@@ -896,8 +835,9 @@ class Mesh:
         if self._cell_centroids is not None:
             self._cell_centroids = self._cell_centroids[keep]
 
-        if self._cell_circumcenters is not None:
-            self._cell_circumcenters = self._cell_circumcenters[keep]
+        if self._circumcenters is not None:
+            for k in range(len(self._circumcenters)):
+                self._circumcenters[k] = self._circumcenters[k][..., keep, :]
 
         if self._cell_partitions is not None:
             self._cell_partitions = self._cell_partitions[:, keep]
@@ -1076,7 +1016,6 @@ class Mesh:
     #     # TODO cell_volumes
     #     self.cell_volumes = np.random.rand(2951)
     #     rhs = edge_dot_edge * self.cell_volumes
-    #     exit(1)
 
     #     # Solve all k-by-k systems at once ("broadcast"). (`k` is the number of edges
     #     # per simplex here.)
@@ -1166,6 +1105,14 @@ class Mesh:
         # face_ce_ratios = -self.ei_dot_ej * 0.25 / face_areas[None]
         face_ce_ratios_div_face_areas = -self.ei_dot_ej / alpha
 
+        ee = self.ei_dot_ej
+        zeta = (
+            -ee[2, [1, 2, 3, 0]] * ee[1] * ee[2]
+            - ee[1, [2, 3, 0, 1]] * ee[2] * ee[0]
+            - ee[0, [3, 0, 1, 2]] * ee[0] * ee[1]
+            + ee[0] * ee[1] * ee[2]
+        )
+
         #
         # self.circumcenter_face_distances =
         #    zeta / (24.0 * face_areas) / self.cell_volumes[None]
@@ -1174,13 +1121,13 @@ class Mesh:
         #
         # so
         ce_ratios = (
-            self.zeta / 48.0 * face_ce_ratios_div_face_areas / self.cell_volumes[None]
+            zeta / 48.0 * face_ce_ratios_div_face_areas / self.cell_volumes[None]
         )
 
         # Distances of the cell circumcenter to the faces.
         face_areas = 0.5 * np.sqrt(alpha)
         self.circumcenter_face_distances = (
-            self.zeta / (24.0 * face_areas) / self.cell_volumes[None]
+            zeta / (24.0 * face_areas) / self.cell_volumes[None]
         )
 
         return ce_ratios

@@ -40,7 +40,7 @@ mesh = meshplex.MeshTri(points, cells)
 # triangle volumes, heights
 print(mesh.cell_volumes)
 print(mesh.signed_cell_volumes)
-print(mesh.heights)
+print(mesh.cell_heights)
 
 # circumcenters, centroids, incenters
 print(mesh.cell_circumcenters)
