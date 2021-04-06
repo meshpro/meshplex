@@ -194,3 +194,15 @@ def _dot(a, n):
     # Would use -1 as second argument, but <https://github.com/numpy/numpy/issues/18519>
     b = a.reshape(*a.shape[:n], np.prod(a.shape[n:]).astype(int))
     return np.einsum("...i,...i->...", b, b)
+
+
+def _multiply(a, b, n):
+    """Multiply the along the first n dimensions of a and b. For example,
+    a.shape == (5,6,3), b.shape == (5, 6), n = 2, will return an array c of a.shape with
+    c[i,j,k] = a[i,j,k] * b[i,j].
+    """
+    aa = a.reshape(np.prod(a.shape[:n]), *a.shape[n:])
+    bb = b.reshape(np.prod(b.shape[:n]), *b.shape[n:])
+    cc = (aa.T * bb).T
+    c = cc.reshape(*a.shape)
+    return c

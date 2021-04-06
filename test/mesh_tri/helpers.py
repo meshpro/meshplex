@@ -106,7 +106,7 @@ def compute_all_entities(mesh):
     assert mesh._half_edge_coords is not None
     assert mesh._ei_dot_ei is not None
     assert mesh._ei_dot_ej is not None
-    assert mesh._cell_volumes is not None
+    assert mesh._volumes is not None
     assert mesh._ce_ratios is not None
     assert mesh._cell_circumcenters is not None
     assert mesh._interior_ce_ratios is not None
