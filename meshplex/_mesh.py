@@ -390,6 +390,13 @@ class Mesh:
         return self._zeta
 
     def _compute_volumes(self):
+        """Computes the volumes of all edges, facets, cells etc. in the mesh. It starts
+        off by computing the (squared) edge lengths, then complements the edge with one
+        vertex to form face. It computes an orthogonal basis of the face (with modified
+        Gram-Schmidt), and from that gets the height of all faces. From this, the area
+        of the face is computed. Then, it complements again to form the 3-simplex,
+        again forms an orthogonal basis with Gram-Schmidt, and so on.
+        """
         e = self.points[self.idx[-1]]
         e0 = e[0]
         orthogonal_basis = np.array([e[1] - e0])
