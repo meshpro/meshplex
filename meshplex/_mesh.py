@@ -6,13 +6,7 @@ import npx
 import numpy as np
 
 from ._exceptions import MeshplexError
-from ._helpers import (
-    _dot,
-    _multiply,
-    compute_ce_ratios,
-    compute_triangle_circumcenters,
-    grp_start_len,
-)
+from ._helpers import _dot, _multiply, compute_ce_ratios, grp_start_len
 
 __all__ = ["Mesh"]
 
@@ -96,6 +90,7 @@ class Mesh:
         self._volumes = None
         self._signed_cell_volumes = None
         self._circumcenters = None
+        self._circumradii2 = None
         self._heights = None
         self._ce_ratios = None
         self._cell_partitions = None
@@ -649,31 +644,9 @@ class Mesh:
     @property
     def cell_circumradius(self):
         """Get the circumradii of all cells"""
-        if self.n == 3:
-            # See <http://mathworld.wolfram.com/Circumradius.html> and
-            # <https://en.wikipedia.org/wiki/Cayley%E2%80%93Menger_determinant#Finding_the_circumradius_of_a_simplex>.
-            return np.prod(self.edge_lengths, axis=0) / 4 / self.cell_volumes
-
-        assert self.n == 4
-        # Just take the distance of the circumcenter to one of the points for now.
-        dist = self.points[self.idx[0][0]] - self.cell_circumcenters
-        circumradius = np.sqrt(np.einsum("ij,ij->i", dist, dist))
-        # https://en.wikipedia.org/wiki/Tetrahedron#Circumradius
-        #
-        # Compute opposite edge length products
-        # TODO something is wrong here, the expression under the sqrt can be negative
-        # edge_lengths = np.sqrt(self.ei_dot_ei)
-        # aA = edge_lengths[0, 0] * edge_lengths[0, 2]
-        # bB = edge_lengths[0, 1] * edge_lengths[2, 0]
-        # cC = edge_lengths[0, 2] * edge_lengths[2, 1]
-        # circumradius = (
-        #     np.sqrt(
-        #         (aA + bB + cC) * (-aA + bB + cC) * (aA - bB + cC) * (aA + bB - cC)
-        #     )
-        #     / 24
-        #     / self.cell_volumes
-        # )
-        return circumradius
+        if self._circumradii2 is None:
+            self._compute_volumes()
+        return np.sqrt(self._circumradii2[-1])
 
     @property
     def q_radius_ratio(self):

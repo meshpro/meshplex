@@ -11,6 +11,10 @@ def test_circumcenters_line():
     ref = [0.5, 2.0, 3.5]
     assert np.all(np.abs(mesh.cell_circumcenters - ref) < np.abs(ref) * 1.0e-13)
 
+    print(mesh.cell_circumradius)
+    ref = [0.5, 1.0, 0.5]
+    assert np.all(np.abs(mesh.cell_circumradius - ref) < np.abs(ref) * 1.0e-13)
+
 
 def test_circumcenters_tri():
     # two triangles in 5D
@@ -28,6 +32,10 @@ def test_circumcenters_tri():
         np.abs(mesh.cell_circumcenters - ref) < np.abs(ref) * 1.0e-13 + 1.0e-13
     )
 
+    print(mesh.cell_circumradius)
+    ref = [np.sqrt(2) / 2, np.sqrt(2) / 2]
+    assert np.all(np.abs(mesh.cell_circumradius - ref) < np.abs(ref) * 1.0e-13)
+
 
 def test_circumcenters_tetra():
     points = [
@@ -42,6 +50,10 @@ def test_circumcenters_tetra():
     ref = [[0.5, 0.5, 0.5]]
     print(mesh.cell_circumcenters)
     assert np.all(np.abs(mesh.cell_circumcenters - ref) < np.abs(ref) * 1.0e-13)
+
+    print(mesh.cell_circumradius)
+    ref = [np.sqrt(3) / 2]
+    assert np.all(np.abs(mesh.cell_circumradius - ref) < np.abs(ref) * 1.0e-13)
 
 
 def test_circumcenters_simplex5():
@@ -58,6 +70,10 @@ def test_circumcenters_simplex5():
     ref = [[0.5, 0.5, 0.5, 0.5]]
     print(mesh.cell_circumcenters)
     assert np.all(np.abs(mesh.cell_circumcenters - ref) < np.abs(ref) * 1.0e-13)
+
+    print(mesh.cell_circumradius)
+    ref = [1.0]
+    assert np.all(np.abs(mesh.cell_circumradius - ref) < np.abs(ref) * 1.0e-13)
 
 
 if __name__ == "__main__":
