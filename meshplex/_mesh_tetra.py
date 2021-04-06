@@ -1,6 +1,6 @@
 import numpy as np
 
-from ._helpers import compute_tri_areas, compute_triangle_circumcenters
+from ._helpers import compute_triangle_circumcenters
 from ._mesh import Mesh
 
 __all__ = ["MeshTetra"]
@@ -44,7 +44,7 @@ class MeshTetra(Mesh):
         equilateral tetrahedron.
         """
         # https://math.stackexchange.com/a/49340/36678
-        fa = compute_tri_areas(self.ei_dot_ej)
+        fa = self._volumes[-2]
 
         el2 = self.ei_dot_ei
         a = el2[0][0]

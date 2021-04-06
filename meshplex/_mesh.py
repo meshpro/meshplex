@@ -10,7 +10,6 @@ from ._helpers import (
     _dot,
     _multiply,
     compute_ce_ratios,
-    compute_tri_areas,
     compute_triangle_circumcenters,
     grp_start_len,
 )
