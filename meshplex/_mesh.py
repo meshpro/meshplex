@@ -98,7 +98,6 @@ class Mesh:
         self._volumes = None
         self._signed_cell_volumes = None
         self._cell_circumcenters = None
-        self._facet_areas = None
         self._heights = None
         self._ce_ratios = None
         self._cell_partitions = None
@@ -258,16 +257,13 @@ class Mesh:
 
     @property
     def facet_areas(self):
-        if self._facet_areas is None:
-            if self.n == 2:
-                self._facet_areas = np.ones(len(self.facets["points"]))
-            elif self.n == 3:
-                self._facet_areas = self.edge_lengths
-            else:
-                assert self.n == 4
-                self._facet_areas = compute_tri_areas(self.ei_dot_ej)
+        if self.n == 2:
+            return np.ones(len(self.facets["points"]))
 
-        return self._facet_areas
+        if self._volumes is None:
+            self._compute_volumes()
+
+        return self._volumes[-2]
 
     def get_vertex_mask(self, subdomain=None):
         if subdomain is None:
