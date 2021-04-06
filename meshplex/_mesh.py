@@ -424,21 +424,7 @@ class Mesh:
     @property
     def cell_volumes(self):
         if self._volumes is None:
-            # if self.n == 2:
-            #     self._cell_volumes = self.edge_lengths
-            # elif self.n == 3:
-            #     self._cell_volumes = compute_tri_areas(self.ei_dot_ej)
-            # else:
-            #     assert self.n == 4
-            #     # sum(self.circumcenter_face_distances * face_areas / 3) = cell_volumes
-            #     # =>
-            #     # cell_volumes = np.sqrt(sum(zeta / 72))
-            #     self._cell_volumes = np.sqrt(np.sum(self.zeta, axis=0) / 72.0)
             self._compute_volumes()
-
-        # For higher-dimensional volumes, check out the Cayley-Menger determinant
-        # <http://mathworld.wolfram.com/Cayley-MengerDeterminant.html> or the
-        # computation via heights.
         return self._volumes[-1]
 
     @property
