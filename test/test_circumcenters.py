@@ -23,8 +23,9 @@ def test_circumcenters_tri():
     cells = [[0, 1, 2], [0, 3, 2]]
     mesh = meshplex.Mesh(points, cells)
 
-    ref = [[0.5, 0.0, 0.0, 0.0, 0.0], [0.5, 0.0, 0.0, 0.0, 0.0]]
-    assert np.all(np.abs(mesh.cell_circumcenters - ref) < np.abs(ref) * 1.0e-13)
+    ref = [[0.5, 0.5, 0.0, 0.0, 0.0], [0.5, 0.5, 0.0, 0.0, 0.0]]
+    assert np.all(np.abs(mesh.cell_circumcenters - ref) < np.abs(ref) * 1.0e-13 +
+            1.0e-13)
 
 
 def test_circumcenters_tetra():
@@ -37,7 +38,7 @@ def test_circumcenters_tetra():
     cells = [[0, 1, 2, 3]]
     mesh = meshplex.Mesh(points, cells)
 
-    ref = [[0.0, 0.0, 0.0]]
+    ref = [[0.5, 0.5, 0.5]]
     print(mesh.cell_circumcenters)
     assert np.all(np.abs(mesh.cell_circumcenters - ref) < np.abs(ref) * 1.0e-13)
 
@@ -53,7 +54,7 @@ def test_circumcenters_simplex5():
     cells = [[0, 1, 2, 3, 4]]
     mesh = meshplex.Mesh(points, cells)
 
-    ref = [[0.0, 0.0, 0.0, 0.0]]
+    ref = [[0.5, 0.5, 0.5, 0.5]]
     print(mesh.cell_circumcenters)
     assert np.all(np.abs(mesh.cell_circumcenters - ref) < np.abs(ref) * 1.0e-13)
 

@@ -95,7 +95,7 @@ class Mesh:
         self._ei_dot_ej = None
         self._volumes = None
         self._signed_cell_volumes = None
-        self._cell_circumcenters = None
+        self._circumcenters = None
         self._heights = None
         self._ce_ratios = None
         self._cell_partitions = None
@@ -182,7 +182,7 @@ class Mesh:
     cell_barycenters = cell_centroids
 
     @property
-    def heights(self):
+    def cell_heights(self):
         # TODO remove or get from _compute_volumes()
         if self._heights is None:
             # compute the distance between the base (n-1)-simplex and the left-over
@@ -391,25 +391,48 @@ class Mesh:
         """
         e = self.points[self.idx[-1]]
         e0 = e[0]
-        orthogonal_basis = np.array([e[1] - e0])
+        diff = e[1] - e[0]
+        orthogonal_basis = np.array([diff])
+
         volumes2 = [_dot(orthogonal_basis[0], self.n - 1)]
+        self._circumcenters = [0.5 * (e[0] + e[1])]
+
+        self._circumradii2 = [0.25 * _dot(diff, self.n - 1)]
+
         norms2 = np.array(volumes2)
-        for kk, i in enumerate(self.idx[:-1][::-1]):
+        for kk, idx in enumerate(self.idx[:-1][::-1]):
             # Pick side any index at will.
             # <https://gist.github.com/nschloe/3922801e200cf82aec2fb53c89e1c578> shows
             # that it doesn't make a difference which point-facet combination we choose.
-            k = 0
-            e0 = e0[k]
-            v = self.points[i[k]] - e0
+            k0 = 0
+            e0 = e0[k0]
+            p0 = self.points[idx[k0]]
+            v = p0 - e0
             # modified gram-schmidt
-            for w, norm2 in zip(orthogonal_basis[:, k], norms2[:, k]):
+            for w, norm2 in zip(orthogonal_basis[:, k0], norms2[:, k0]):
                 alpha = np.einsum("...k,...k->...", w, v) / norm2
                 v -= _multiply(w, alpha, self.n - 2 - kk)
 
-            orthogonal_basis = np.row_stack([orthogonal_basis[:, k], [v]])
+            orthogonal_basis = np.row_stack([orthogonal_basis[:, k0], [v]])
             vv = np.einsum("...k,...k->...", v, v)
-            norms2 = np.row_stack([norms2[:, k], [vv]])
+
+            norms2 = np.row_stack([norms2[:, k0], [vv]])
+
+            # The squared volume is the squared volume of the face times the squared
+            # height divided by (n+1) ** 2.
             volumes2.append(volumes2[-1][0] * vv / (kk + 2) ** 2)
+
+            # circumcenter, squared circumradius
+            h = np.sqrt(vv)
+            c = self._circumcenters[-1][k0]
+            cr2 = self._circumradii2[-1][k0]
+            #
+            p0c2 = _dot(p0 - c, self.n - 2 - kk)
+            lmbda = 0.5 * (p0c2 - cr2) / h
+            #
+            self._circumradii2.append(lmbda ** 2 + cr2)
+            beta = lmbda / np.sqrt(vv)
+            self._circumcenters.append(c + _multiply(v, beta, self.n - 2 - kk))
 
         self._volumes = [np.sqrt(v2) for v2 in volumes2]
 
@@ -634,46 +657,47 @@ class Mesh:
     @property
     def cell_circumcenters(self):
         """Get the center of the circumsphere of each cell."""
-        if self._cell_circumcenters is None:
-            if self.n == 2:
-                corner = self.points[self.idx[-1]]
-                self._cell_circumcenters = 0.5 * (corner[0] + corner[1])
-            elif self.n == 3:
-                point_cells = self.cells["points"].T
-                self._cell_circumcenters = compute_triangle_circumcenters(
-                    self.points[point_cells], self.cell_partitions
-                )
-            else:
-                assert self.n == 4
-                # Just like for triangular cells, tetrahedron circumcenters are most
-                # easily computed with the quadrilateral coordinates available.
-                # Luckily, we have the circumcenter-face distances (cfd):
-                #
-                #   CC = (
-                #       + cfd[0] * face_area[0] / sum(cfd*face_area) * X[0]
-                #       + cfd[1] * face_area[1] / sum(cfd*face_area) * X[1]
-                #       + cfd[2] * face_area[2] / sum(cfd*face_area) * X[2]
-                #       + cfd[3] * face_area[3] / sum(cfd*face_area) * X[3]
-                #       )
-                #
-                # (Compare with
-                # <https://en.wikipedia.org/wiki/Trilinear_coordinates#Between_Cartesian_and_trilinear_coordinates>.)
-                # Because of
-                #
-                #    cfd = zeta / (24.0 * face_areas) / self.cell_volumes[None]
-                #
-                # we have
-                #
-                #   CC = sum_k (zeta[k] / sum(zeta) * X[k]).
-                #
-                # TODO See <https://math.stackexchange.com/a/2864770/36678> for another
-                #      interesting approach.
-                alpha = self.zeta / np.sum(self.zeta, axis=0)
+        if self._circumcenters is None:
+            self._compute_volumes()
+            # if self.n == 2:
+            #     corner = self.points[self.idx[-1]]
+            #     self._cell_circumcenters = 0.5 * (corner[0] + corner[1])
+            # elif self.n == 3:
+            #     point_cells = self.cells["points"].T
+            #     self._cell_circumcenters = compute_triangle_circumcenters(
+            #         self.points[point_cells], self.cell_partitions
+            #     )
+            # else:
+            #     assert self.n == 4
+            #     # Just like for triangular cells, tetrahedron circumcenters are most
+            #     # easily computed with the quadrilateral coordinates available.
+            #     # Luckily, we have the circumcenter-face distances (cfd):
+            #     #
+            #     #   CC = (
+            #     #       + cfd[0] * face_area[0] / sum(cfd*face_area) * X[0]
+            #     #       + cfd[1] * face_area[1] / sum(cfd*face_area) * X[1]
+            #     #       + cfd[2] * face_area[2] / sum(cfd*face_area) * X[2]
+            #     #       + cfd[3] * face_area[3] / sum(cfd*face_area) * X[3]
+            #     #       )
+            #     #
+            #     # (Compare with
+            #     # <https://en.wikipedia.org/wiki/Trilinear_coordinates#Between_Cartesian_and_trilinear_coordinates>.)
+            #     # Because of
+            #     #
+            #     #    cfd = zeta / (24.0 * face_areas) / self.cell_volumes[None]
+            #     #
+            #     # we have
+            #     #
+            #     #   CC = sum_k (zeta[k] / sum(zeta) * X[k]).
+            #     #
+            #     # TODO See <https://math.stackexchange.com/a/2864770/36678> for another
+            #     #      interesting approach.
+            #     alpha = self.zeta / np.sum(self.zeta, axis=0)
 
-                self._cell_circumcenters = np.sum(
-                    alpha[None].T * self.points[self.cells["points"]], axis=1
-                )
-        return self._cell_circumcenters
+            #     self._cell_circumcenters = np.sum(
+            #         alpha[None].T * self.points[self.cells["points"]], axis=1
+            #     )
+        return self._circumcenters[-1]
 
     @property
     def cell_circumradius(self):
@@ -891,8 +915,9 @@ class Mesh:
         if self._cell_centroids is not None:
             self._cell_centroids = self._cell_centroids[keep]
 
-        if self._cell_circumcenters is not None:
-            self._cell_circumcenters = self._cell_circumcenters[keep]
+        if self._circumcenters is not None:
+            for k in range(len(self._circumcenters)):
+                self._circumcenters[k] = self._circumcenters[k][..., keep, :]
 
         if self._cell_partitions is not None:
             self._cell_partitions = self._cell_partitions[:, keep]
@@ -1071,7 +1096,6 @@ class Mesh:
     #     # TODO cell_volumes
     #     self.cell_volumes = np.random.rand(2951)
     #     rhs = edge_dot_edge * self.cell_volumes
-    #     exit(1)
 
     #     # Solve all k-by-k systems at once ("broadcast"). (`k` is the number of edges
     #     # per simplex here.)

@@ -22,7 +22,7 @@ def test_heights_tri():
             [1.0, math.sqrt(0.5), 1.0],
         ]
     ).T
-    assert np.all(np.abs(mesh.heights - ref) < np.abs(ref) * 1.0e-13)
+    assert np.all(np.abs(mesh.cell_heights - ref) < np.abs(ref) * 1.0e-13)
 
 
 def test_heights_tetra():
@@ -41,7 +41,7 @@ def test_heights_tetra():
             [math.sqrt(1 / 3), 1.0, 1.0, 1.0],
         ]
     ).T
-    assert np.all(np.abs(mesh.heights - ref) < np.abs(ref) * 1.0e-13)
+    assert np.all(np.abs(mesh.cell_heights - ref) < np.abs(ref) * 1.0e-13)
 
 
 if __name__ == "__main__":
