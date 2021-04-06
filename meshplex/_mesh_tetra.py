@@ -1,6 +1,5 @@
 import numpy as np
 
-from ._helpers import compute_triangle_circumcenters
 from ._mesh import Mesh
 
 __all__ = ["MeshTetra"]
@@ -113,15 +112,11 @@ class MeshTetra(Mesh):
         # "It is not currently possible to manually set the aspect on 3D axes"
         # plt.axis("equal")
 
-        X = self.points
         for cell_id in range(len(self.cells["points"])):
             cc = self.cell_circumcenters[cell_id]
             #
-            x = X[self.idx[1][..., [cell_id]]]
-            # TODO replace `self.ei_dot_ei * self.ei_dot_ej` with cell_partitions
-            face_ccs = compute_triangle_circumcenters(
-                x, self.ei_dot_ei * self.ei_dot_ej
-            )
+            face_ccs = self._circumcenters[-2]
+
             # draw the face circumcenters
             ax.plot(
                 face_ccs[..., 0].flatten(),
@@ -198,12 +193,7 @@ class MeshTetra(Mesh):
         X = self.points
         for cell_id in adj_cell_ids:
             cc = self.cell_circumcenters[cell_id]
-            #
-            x = X[self.idx[1][..., [cell_id]]]
-            # TODO replace `self.ei_dot_ei * self.ei_dot_ej` with cell_partitions
-            face_ccs = compute_triangle_circumcenters(
-                x, self.ei_dot_ei * self.ei_dot_ej
-            )
+            face_ccs = self._circumcenters[-2]
             # draw the face circumcenters
             ax.plot(
                 face_ccs[..., 0].flatten(),
@@ -224,7 +214,6 @@ class MeshTetra(Mesh):
         # draw the cell circumcenters
         cc = self.cell_circumcenters[adj_cell_ids]
         ax.plot(cc[:, 0], cc[:, 1], cc[:, 2], "ro")
-        return
 
     def show_cell(
         self,
@@ -327,21 +316,13 @@ class MeshTetra(Mesh):
             )
 
         if face_circumcenter_rgba is not None:
-            x = self.points[self.idx[1][..., [cell_id]]]
-            # TODO replace `self.ei_dot_ei * self.ei_dot_ej` with cell_partitions
-            face_ccs = compute_triangle_circumcenters(
-                x, self.ei_dot_ei * self.ei_dot_ej
-            )[:, 0, :]
+            face_ccs = self._circumcenters[-2][:, 0]
             for f in face_ccs:
                 renderer.AddActor(get_sphere_actor(f, r, face_circumcenter_rgba))
 
         if control_volume_boundaries_rgba:
             cell_cc = self.cell_circumcenters[cell_id]
-            x = self.points[self.idx[1][..., [cell_id]]]
-            # TODO replace `self.ei_dot_ei * self.ei_dot_ej` with cell_partitions
-            face_ccs = compute_triangle_circumcenters(
-                x, self.ei_dot_ei * self.ei_dot_ej
-            )[:, 0, :]
+            face_ccs = self._circumcenters[-2][:, 0]
             for face, face_cc in zip(range(4), face_ccs):
                 for edge in range(3):
                     k0, k1 = self.idx[-1][:, edge, face, cell_id]
