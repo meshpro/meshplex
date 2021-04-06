@@ -423,16 +423,16 @@ class Mesh:
             volumes2.append(volumes2[-1][0] * vv / (kk + 2) ** 2)
 
             # circumcenter, squared circumradius
-            h = np.sqrt(vv)
+            # <https://math.stackexchange.com/a/4064749/36678>
             c = self._circumcenters[-1][k0]
             cr2 = self._circumradii2[-1][k0]
             #
             p0c2 = _dot(p0 - c, self.n - 2 - kk)
-            lmbda = 0.5 * (p0c2 - cr2) / h
+            sigma = 0.5 * (p0c2 - cr2) / vv
+            lmbda2 = sigma ** 2 * vv
             #
-            self._circumradii2.append(lmbda ** 2 + cr2)
-            beta = lmbda / np.sqrt(vv)
-            self._circumcenters.append(c + _multiply(v, beta, self.n - 2 - kk))
+            self._circumradii2.append(lmbda2 + cr2)
+            self._circumcenters.append(c + _multiply(v, sigma, self.n - 2 - kk))
 
         self._volumes = [np.sqrt(v2) for v2 in volumes2]
 
