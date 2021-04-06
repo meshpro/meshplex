@@ -88,8 +88,7 @@ class MeshTri(Mesh):
     #            https://doi.org/10.1002/nme.2187.
     #         '''
     #         if self.cell_circumcenters is None:
-    #             X = self.points[self.cells['points']]
-    #             self.cell_circumcenters = self.compute_triangle_circumcenters(X)
+    #             self.cell_circumcenters = self._circumcenters[-1]
     #
     #         if 'cells' not in self.edges:
     #             self.edges['cells'] = self.compute_edge_cells()

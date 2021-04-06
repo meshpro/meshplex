@@ -123,68 +123,6 @@ def compute_ce_ratios(ei_dot_ej, tri_areas):
     return -ei_dot_ej * 0.25 / tri_areas[None]
 
 
-def compute_triangle_circumcenters(X, cell_partitions):
-    """Computes the circumcenters of all given triangles."""
-    # The input argument are the dot products
-    #
-    #   <e1, e2>
-    #   <e2, e0>
-    #   <e0, e1>
-    #
-    # of the edges
-    #
-    #   e0: x1->x2,
-    #   e1: x2->x0,
-    #   e2: x0->x1.
-    #
-    # Note that edge e_i is opposite of node i and the edges add up to 0.
-
-    # The trilinear coordinates of the circumcenter are
-    #
-    #   cos(alpha0) : cos(alpha1) : cos(alpha2)
-    #
-    # where alpha_k is the angle at point k, opposite of edge k. The Cartesian
-    # coordinates are (see
-    # <https://en.wikipedia.org/wiki/Trilinear_coordinates#Between_Cartesian_and_trilinear_coordinates>)
-    #
-    #     C = sum_i ||e_i|| * cos(alpha_i) / beta * P_i
-    #
-    # with
-    #
-    #     beta = sum ||e_i|| * cos(alpha_i)
-    #
-    # Incidentally, the cosines are
-    #
-    #    cos(alpha0) = <e1, e2> / ||e1|| / ||e2||,
-    #
-    # so in total
-    #
-    #    C = <e_0, e0> <e1, e2> / sum_i (<e_i, e_i> <e{i+1}, e{i+2}>) P0
-    #      + ... P1
-    #      + ... P2.
-    #
-    # Note that the circumcenter in barycentric coordinates is barycentric coordinates
-    # of the circumcenter are
-    #
-    #   a^2 (b^2 + c^2 - a^2) : b^2 (c^2 + a^2 - b^2) : c^2 (a^2 + b^2 - c^2).
-    #
-    # (<https://en.wikipedia.org/wiki/Circumscribed_circle#Barycentric_coordinates>).
-    # The terms in brackets are ei_dot_ej (scaled by a fixed factor).
-    #
-    # This is, up to scaling by cell_volume, cells_partition. Take this instead of
-    # `alpha = ei_dot_ei * ei_dot_ej`,
-    #
-    # Perhaps it's possible to cache the ei_dot_ei * ei_dot_ej product. (It's used
-    # elsewhere, too. See the triangle area computation or cells_partition.)
-    # alpha = ei_dot_ei * ei_dot_ej
-    alpha = cell_partitions.copy()
-    alpha_sum = alpha[0] + alpha[1] + alpha[2]
-    alpha /= alpha_sum[None]
-
-    a = X * alpha[..., None]
-    return a[0] + a[1] + a[2]
-
-
 def _dot(a, n):
     """Dot product, preserve the leading n dimensions."""
     # einsum is faster if the tail survives, e.g., ijk,ijk->jk.
