@@ -14,7 +14,7 @@ def test_mesh_line():
     assert np.all(np.abs(mesh.cell_volumes - ref) < np.abs(ref) * 1.0e-13)
 
 
-def test_heights_tri():
+def test_vol_tri():
     # two triangles in 5D
     points = [
         [0.0, 0.0, 0.0, 0.0, 0.0],
@@ -23,14 +23,13 @@ def test_heights_tri():
         [0.0, 1.0, 0.0, 0.0, 0.0],
     ]
     cells = [[0, 1, 2], [0, 3, 2]]
-    mesh = meshplex.MeshTri(points, cells)
+    mesh = meshplex.Mesh(points, cells)
 
     ref = [0.5, 0.5]
     assert np.all(np.abs(mesh.cell_volumes - ref) < np.abs(ref) * 1.0e-13)
 
 
-def test_heights_tetra():
-    # two triangles in 5D
+def test_vol_tetra():
     points = [
         [0.0, 0.0, 0.0],
         [1.0, 0.0, 0.0],
@@ -38,13 +37,29 @@ def test_heights_tetra():
         [0.0, 0.0, 1.0],
     ]
     cells = [[0, 1, 2, 3]]
-    mesh = meshplex.MeshTri(points, cells)
+    mesh = meshplex.Mesh(points, cells)
 
     ref = [1 / 6]
     print(mesh.cell_volumes)
     assert np.all(np.abs(mesh.cell_volumes - ref) < np.abs(ref) * 1.0e-13)
 
 
+def test_vol_simplex5():
+    points = [
+        [0.0, 0.0, 0.0, 0.0],
+        [1.0, 0.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0, 0.0],
+        [0.0, 0.0, 1.0, 0.0],
+        [0.0, 0.0, 0.0, 1.0],
+    ]
+    cells = [[0, 1, 2, 3, 4]]
+    mesh = meshplex.Mesh(points, cells)
+
+    ref = [1 / 24]
+    print(mesh.cell_volumes)
+    assert np.all(np.abs(mesh.cell_volumes - ref) < np.abs(ref) * 1.0e-13)
+
+
 if __name__ == "__main__":
-    # test_heights_tri()
-    test_heights_tetra()
+    # test_vol_tri()
+    test_vol_tetra()

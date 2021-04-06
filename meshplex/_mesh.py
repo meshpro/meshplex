@@ -8,6 +8,7 @@ import numpy as np
 from ._exceptions import MeshplexError
 from ._helpers import (
     _dot,
+    _multiply,
     compute_ce_ratios,
     compute_tri_areas,
     compute_triangle_circumcenters,
@@ -36,7 +37,6 @@ class Mesh:
         # assert len(points.shape) <= 2, f"Illegal point coordinates shape {points.shape}"
         assert len(cells.shape) == 2, f"Illegal cells shape {cells.shape}"
         self.n = cells.shape[1]
-        assert self.n in [2, 3, 4], f"Illegal cells shape {cells.shape}"
 
         # Assert that all vertices are used.
         # If there are vertices which do not appear in the cells list, this
@@ -95,7 +95,7 @@ class Mesh:
         self._edge_lengths = None
         self._ei_dot_ei = None
         self._ei_dot_ej = None
-        self._cell_volumes = None
+        self._volumes = None
         self._signed_cell_volumes = None
         self._cell_circumcenters = None
         self._facet_areas = None
@@ -389,24 +389,50 @@ class Mesh:
         )
         return self._zeta
 
+    def _compute_volumes(self):
+        e = self.points[self.idx[-1]]
+        e0 = e[0]
+        orthogonal_basis = np.array([e[1] - e0])
+        volumes2 = [_dot(orthogonal_basis[0], self.n - 1)]
+        norms2 = np.array(volumes2)
+        for kk, i in enumerate(self.idx[:-1][::-1]):
+            # Pick side any index at will.
+            # <https://gist.github.com/nschloe/3922801e200cf82aec2fb53c89e1c578> shows
+            # that it doesn't make a difference which point-facet combination we choose.
+            k = 0
+            e0 = e0[k]
+            v = self.points[i[k]] - e0
+            # modified gram-schmidt
+            for w, norm2 in zip(orthogonal_basis[:, k], norms2[:, k]):
+                alpha = np.einsum("...k,...k->...", w, v) / norm2
+                v -= _multiply(w, alpha, self.n - 2 - kk)
+
+            orthogonal_basis = np.row_stack([orthogonal_basis[:, k], [v]])
+            vv = np.einsum("...k,...k->...", v, v)
+            norms2 = np.row_stack([norms2[:, k], [vv]])
+            volumes2.append(volumes2[-1][0] * vv / (kk + 2) ** 2)
+
+        self._volumes = [np.sqrt(v2) for v2 in volumes2]
+
     @property
     def cell_volumes(self):
-        if self._cell_volumes is None:
-            if self.n == 2:
-                self._cell_volumes = self.edge_lengths
-            elif self.n == 3:
-                self._cell_volumes = compute_tri_areas(self.ei_dot_ej)
-            else:
-                assert self.n == 4
-                # sum(self.circumcenter_face_distances * face_areas / 3) = cell_volumes
-                # =>
-                # cell_volumes = np.sqrt(sum(zeta / 72))
-                self._cell_volumes = np.sqrt(np.sum(self.zeta, axis=0) / 72.0)
+        if self._volumes is None:
+            # if self.n == 2:
+            #     self._cell_volumes = self.edge_lengths
+            # elif self.n == 3:
+            #     self._cell_volumes = compute_tri_areas(self.ei_dot_ej)
+            # else:
+            #     assert self.n == 4
+            #     # sum(self.circumcenter_face_distances * face_areas / 3) = cell_volumes
+            #     # =>
+            #     # cell_volumes = np.sqrt(sum(zeta / 72))
+            #     self._cell_volumes = np.sqrt(np.sum(self.zeta, axis=0) / 72.0)
+            self._compute_volumes()
 
         # For higher-dimensional volumes, check out the Cayley-Menger determinant
         # <http://mathworld.wolfram.com/Cayley-MengerDeterminant.html> or the
         # computation via heights.
-        return self._cell_volumes
+        return self._volumes[-1]
 
     @property
     def cell_incenters(self):
@@ -863,8 +889,9 @@ class Mesh:
         for k in range(len(self.idx)):
             self.idx[k] = self.idx[k][..., keep]
 
-        if self._cell_volumes is not None:
-            self._cell_volumes = self._cell_volumes[keep]
+        if self._volumes is not None:
+            for k in range(len(self._volumes)):
+                self._volumes[k] = self._volumes[k][..., keep]
 
         if self._ce_ratios is not None:
             self._ce_ratios = self._ce_ratios[:, keep]
