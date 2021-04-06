@@ -91,7 +91,6 @@ class Mesh:
         self._ei_dot_ei = None
         self._ei_dot_ej = None
         self._cell_centroids = None
-        self._edge_lengths = None
         self._ei_dot_ei = None
         self._ei_dot_ej = None
         self._volumes = None
@@ -180,8 +179,11 @@ class Mesh:
             self._cell_centroids = self.compute_cell_centroids()
         return self._cell_centroids
 
+    cell_barycenters = cell_centroids
+
     @property
     def heights(self):
+        # TODO remove or get from _compute_volumes()
         if self._heights is None:
             # compute the distance between the base (n-1)-simplex and the left-over
             # point
@@ -203,11 +205,6 @@ class Mesh:
             self._heights = np.sqrt(1 / np.sum(np.linalg.solve(ATA, e), axis=-1))
 
         return self._heights
-
-    @property
-    def cell_barycenters(self):
-        """See cell_centroids."""
-        return self.cell_centroids
 
     @property
     def is_point_used(self):
@@ -250,9 +247,9 @@ class Mesh:
 
     @property
     def edge_lengths(self):
-        if self._edge_lengths is None:
-            self._edge_lengths = np.sqrt(self.ei_dot_ei)
-        return self._edge_lengths
+        if self._volumes is None:
+            self._compute_volumes()
+        return self._volumes[0]
 
     @property
     def facet_areas(self):
@@ -484,8 +481,6 @@ class Mesh:
         else:
             assert self.n == 4
             self.faces = self.facets
-            # save for create_edge_cells
-            self._inv_faces = inv
 
     @property
     def is_boundary_facet_local(self):
