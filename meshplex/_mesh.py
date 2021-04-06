@@ -175,7 +175,7 @@ class Mesh:
 
     @property
     def cell_heights(self):
-        # TODO remove or get from _compute_volumes()
+        # TODO remove or get from _compute_things()
         if self._heights is None:
             # compute the distance between the base (n-1)-simplex and the left-over
             # point
@@ -240,7 +240,7 @@ class Mesh:
     @property
     def edge_lengths(self):
         if self._volumes is None:
-            self._compute_volumes()
+            self._compute_things()
         return self._volumes[0]
 
     @property
@@ -249,7 +249,7 @@ class Mesh:
             return np.ones(len(self.facets["points"]))
 
         if self._volumes is None:
-            self._compute_volumes()
+            self._compute_things()
 
         return self._volumes[-2]
 
@@ -361,7 +361,7 @@ class Mesh:
             out = np.linalg.det(cp1) / math.factorial(n)
         return out
 
-    def _compute_volumes(self):
+    def _compute_things(self):
         """Computes the volumes of all edges, facets, cells etc. in the mesh. It starts
         off by computing the (squared) edge lengths, then complements the edge with one
         vertex to form face. It computes an orthogonal basis of the face (with modified
@@ -419,7 +419,7 @@ class Mesh:
     @property
     def cell_volumes(self):
         if self._volumes is None:
-            self._compute_volumes()
+            self._compute_things()
         return self._volumes[-1]
 
     @property
@@ -638,14 +638,14 @@ class Mesh:
     def cell_circumcenters(self):
         """Get the center of the circumsphere of each cell."""
         if self._circumcenters is None:
-            self._compute_volumes()
+            self._compute_things()
         return self._circumcenters[-1]
 
     @property
     def cell_circumradius(self):
         """Get the circumradii of all cells"""
         if self._circumradii2 is None:
-            self._compute_volumes()
+            self._compute_things()
         return np.sqrt(self._circumradii2[-1])
 
     @property
