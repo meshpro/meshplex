@@ -969,31 +969,6 @@ class Mesh:
                 len(self.points),
             )
 
-            # # Explicitly sum up contributions per cell first. Makes sum_at faster.
-            # if self.n == 2:
-            #     v = np.array([v, v])
-            # elif self.n == 3:
-            #     v = np.array([v[1] + v[2], v[2] + v[0], v[0] + v[1]])
-            # else:
-            #     assert self.n == 4
-            #     # For every point k (range(4)), check for which edges k appears in
-            #     # local_idx, and sum() up the v's from there.
-            #     v = np.array(
-            #         [
-            #             v[0, 2] + v[1, 1] + v[2, 3] + v[0, 1] + v[1, 3] + v[2, 2],
-            #             v[0, 3] + v[1, 2] + v[2, 0] + v[0, 2] + v[1, 0] + v[2, 3],
-            #             v[0, 0] + v[1, 3] + v[2, 1] + v[0, 3] + v[1, 1] + v[2, 0],
-            #             v[0, 1] + v[1, 0] + v[2, 2] + v[0, 0] + v[1, 2] + v[2, 1],
-            #         ]
-            #     )
-
-            # # sum all the vals into self._control_volumes at ids
-            # self._control_volumes = npx.sum_at(
-            #     v,
-            #     self.cells["points"][~cell_mask].T,
-            #     len(self.points),
-            # )
-
             self._cv_cell_mask = idx
         return self._control_volumes
 
