@@ -175,7 +175,7 @@ class Mesh:
 
     @property
     def cell_heights(self):
-        # TODO remove or get from _compute_things()
+        # TODO remove or get from _compute_cell_values()
         if self._heights is None:
             # compute the distance between the base (n-1)-simplex and the left-over
             # point
@@ -345,7 +345,7 @@ class Mesh:
             out = np.linalg.det(cp1) / math.factorial(n)
         return out
 
-    def _compute_things(self):
+    def _compute_cell_values(self):
         """Computes the volumes of all edges, facets, cells etc. in the mesh. It starts
         off by computing the (squared) edge lengths, then complements the edge with one
         vertex to form face. It computes an orthogonal basis of the face (with modified
@@ -438,7 +438,7 @@ class Mesh:
     @property
     def edge_lengths(self):
         if self._volumes is None:
-            self._compute_things()
+            self._compute_cell_values()
         return self._volumes[0]
 
     @property
@@ -447,14 +447,14 @@ class Mesh:
             return np.ones(len(self.facets["points"]))
 
         if self._volumes is None:
-            self._compute_things()
+            self._compute_cell_values()
 
         return self._volumes[-2]
 
     @property
     def cell_volumes(self):
         if self._volumes is None:
-            self._compute_things()
+            self._compute_cell_values()
         return self._volumes[-1]
 
     @property
@@ -673,14 +673,14 @@ class Mesh:
     def cell_circumcenters(self):
         """Get the center of the circumsphere of each cell."""
         if self._circumcenters is None:
-            self._compute_things()
+            self._compute_cell_values()
         return self._circumcenters[-1]
 
     @property
     def cell_circumradius(self):
         """Get the circumradii of all cells"""
         if self._circumradii2 is None:
-            self._compute_things()
+            self._compute_cell_values()
         return np.sqrt(self._circumradii2[-1])
 
     @property
@@ -941,7 +941,7 @@ class Mesh:
         This method gives those parts, like ce_ratios associated with each edge.
         """
         if self._partitions is None:
-            self._compute_things()
+            self._compute_cell_values()
         return self._partitions[-1]
 
     def get_control_volumes(self, idx=slice(None)):
@@ -994,7 +994,7 @@ class Mesh:
         # fastest is via those.
         if self._ce_ratios is None:
             if self._partitions is None:
-                self._compute_things()
+                self._compute_cell_values()
 
             self._ce_ratios = (
                 self._partitions[-1][0] / self.ei_dot_ei * 2 * (self.n - 1)
@@ -1020,7 +1020,7 @@ class Mesh:
     @property
     def circumcenter_face_distances(self):
         if self._circumcenter_facet_distances is None:
-            self._compute_things()
+            self._compute_cell_values()
         return self._circumcenter_facet_distances
 
     def num_delaunay_violations(self):
@@ -1068,7 +1068,7 @@ class Mesh:
 
         if self._cv_centroids is None or np.any(idx != self._cvc_cell_mask):
             if self._integral_x is None:
-                self._compute_things()
+                self._compute_cell_values()
 
             # TODO this can be improved by first summing up all components per cell
             integral_p = npx.sum_at(
