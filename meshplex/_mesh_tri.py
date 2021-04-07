@@ -403,7 +403,7 @@ class MeshTri(Mesh):
             ax.add_collection(line_segments1)
 
         if control_volume_centroid_color is not None:
-            centroids = self.get_control_volume_centroids(cell_mask=cell_mask)
+            centroids = self.get_control_volume_centroids(idx=cell_mask)
             ax.plot(
                 centroids[:, 0],
                 centroids[:, 1],

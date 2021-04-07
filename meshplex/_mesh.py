@@ -412,7 +412,6 @@ class Mesh:
             # don't use sqrt(lmbda2) here; lmbda can be negative
             lmbda = sigma * np.sqrt(vv)
             vols = self._partitions[-1] * lmbda / (kk + 2)
-
             # Sum up the contributions according to how self.idx is constructed.
             roll = np.array([np.roll(np.arange(kk + 3), -i) for i in range(1, kk + 3)])
             vols = npx.sum_at(vols, roll, kk + 3)
@@ -1235,7 +1234,7 @@ class Mesh:
         #
         # over all atomic "triangles", i.e., areas cornered by a point, an edge
         # midpoint, and a circumcenter.
-
+        #
         # The integral of any linear function over a triangle is the average of the
         # values of the function in each of the three corners, times the area of the
         # triangle.
