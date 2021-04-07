@@ -2,7 +2,6 @@ import numpy as np
 
 import meshplex
 
-
 # def test_line():
 #     X = np.array([0.0, 0.1, 0.4, 1.0])
 #     cells = np.array([[0, 1], [1, 2], [2, 3]])
