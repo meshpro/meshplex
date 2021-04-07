@@ -95,6 +95,7 @@ class Mesh:
         self._partitions = None
         self._control_volumes = None
         self._interior_ce_ratios = None
+        self._circumcenter_facet_distances = None
 
         self._cv_centroids = None
         self._cvc_cell_mask = None
@@ -364,6 +365,7 @@ class Mesh:
 
         dd = _dot(diff, self.n - 1)
         self._circumradii2 = [0.25 * dd]
+        lmbda = 0.5 * np.sqrt(dd)
 
         self._partitions = [0.5 * np.sqrt(np.array([dd, dd]))]
 
@@ -420,6 +422,7 @@ class Mesh:
             self._partitions.append(vols)
 
         self._volumes = [np.sqrt(v2) for v2 in volumes2]
+        self._circumcenter_facet_distances = lmbda
 
         # The integral of x,
         #
@@ -1039,111 +1042,117 @@ class Mesh:
 
     #     return ce_ratios
 
-    def _compute_ce_ratios_geometric(self):
-        # For triangles, the covolume/edgelength ratios are
-        #
-        #   [1]   ce_ratios = -<ei, ej> / cell_volume / 4;
-        #
-        # for tetrahedra, is somewhat more tricky. This is the reference expression:
-        #
-        # ce_ratios = (
-        #     2 * _my_dot(x0_cross_x1, x2)**2 -
-        #     _my_dot(
-        #         x0_cross_x1 + x1_cross_x2 + x2_cross_x0,
-        #         x0_cross_x1 * x2_dot_x2[..., None] +
-        #         x1_cross_x2 * x0_dot_x0[..., None] +
-        #         x2_cross_x0 * x1_dot_x1[..., None]
-        #     )) / (12.0 * face_areas)
-        #
-        # Tedious simplification steps (with the help of
-        # <https://github.com/nschloe/brute_simplify>) lead to
-        #
-        #   zeta = (
-        #       + ei_dot_ej[0, 2] * ei_dot_ej[3, 5] * ei_dot_ej[5, 4]
-        #       + ei_dot_ej[0, 1] * ei_dot_ej[3, 5] * ei_dot_ej[3, 4]
-        #       + ei_dot_ej[1, 2] * ei_dot_ej[3, 4] * ei_dot_ej[4, 5]
-        #       + self.ei_dot_ej[0] * self.ei_dot_ej[1] * self.ei_dot_ej[2]
-        #       ).
-        #
-        # for the face [1, 2, 3] (with edges [3, 4, 5]), where points and edges are
-        # ordered like
-        #
-        #                        3
-        #                        ^
-        #                       /|\
-        #                      / | \
-        #                     /  \  \
-        #                    /    \  \
-        #                   /      |  \
-        #                  /       |   \
-        #                 /        \    \
-        #                /         4\    \
-        #               /            |    \
-        #              /2            |     \5
-        #             /              \      \
-        #            /                \      \
-        #           /            _____|       \
-        #          /        ____/     2\_      \
-        #         /    ____/1            \_     \
-        #        /____/                    \_    \
-        #       /________                   3\_   \
-        #      0         \__________           \___\
-        #                        0  \______________\\
-        #                                            1
-        #
-        # This is not a too obvious extension of -<ei, ej> in [1]. However, consider the
-        # fact that this contains all pairwise dot-products of edges not part of the
-        # respective face (<e0, e1>, <e1, e2>, <e2, e0>), each of them weighted with
-        # dot-products of edges in the respective face.
-        #
-        # Note that, to retrieve the covolume-edge ratio, one divides by
-        #
-        #       alpha = (
-        #           + ei_dot_ej[3, 5] * ei_dot_ej[5, 4]
-        #           + ei_dot_ej[3, 5] * ei_dot_ej[3, 4]
-        #           + ei_dot_ej[3, 4] * ei_dot_ej[4, 5]
-        #           )
-        #
-        # (which is the square of the face area). It's funny that there should be no
-        # further simplification in zeta/alpha, but nothing has been found here yet.
-        #
+    # def _compute_ce_ratios_geometric(self):
+    #     # For triangles, the covolume/edgelength ratios are
+    #     #
+    #     #   [1]   ce_ratios = -<ei, ej> / cell_volume / 4;
+    #     #
+    #     # for tetrahedra, is somewhat more tricky. This is the reference expression:
+    #     #
+    #     # ce_ratios = (
+    #     #     2 * _my_dot(x0_cross_x1, x2)**2 -
+    #     #     _my_dot(
+    #     #         x0_cross_x1 + x1_cross_x2 + x2_cross_x0,
+    #     #         x0_cross_x1 * x2_dot_x2[..., None] +
+    #     #         x1_cross_x2 * x0_dot_x0[..., None] +
+    #     #         x2_cross_x0 * x1_dot_x1[..., None]
+    #     #     )) / (12.0 * face_areas)
+    #     #
+    #     # Tedious simplification steps (with the help of
+    #     # <https://github.com/nschloe/brute_simplify>) lead to
+    #     #
+    #     #   zeta = (
+    #     #       + ei_dot_ej[0, 2] * ei_dot_ej[3, 5] * ei_dot_ej[5, 4]
+    #     #       + ei_dot_ej[0, 1] * ei_dot_ej[3, 5] * ei_dot_ej[3, 4]
+    #     #       + ei_dot_ej[1, 2] * ei_dot_ej[3, 4] * ei_dot_ej[4, 5]
+    #     #       + self.ei_dot_ej[0] * self.ei_dot_ej[1] * self.ei_dot_ej[2]
+    #     #       ).
+    #     #
+    #     # for the face [1, 2, 3] (with edges [3, 4, 5]), where points and edges are
+    #     # ordered like
+    #     #
+    #     #                        3
+    #     #                        ^
+    #     #                       /|\
+    #     #                      / | \
+    #     #                     /  \  \
+    #     #                    /    \  \
+    #     #                   /      |  \
+    #     #                  /       |   \
+    #     #                 /        \    \
+    #     #                /         4\    \
+    #     #               /            |    \
+    #     #              /2            |     \5
+    #     #             /              \      \
+    #     #            /                \      \
+    #     #           /            _____|       \
+    #     #          /        ____/     2\_      \
+    #     #         /    ____/1            \_     \
+    #     #        /____/                    \_    \
+    #     #       /________                   3\_   \
+    #     #      0         \__________           \___\
+    #     #                        0  \______________\\
+    #     #                                            1
+    #     #
+    #     # This is not a too obvious extension of -<ei, ej> in [1]. However, consider the
+    #     # fact that this contains all pairwise dot-products of edges not part of the
+    #     # respective face (<e0, e1>, <e1, e2>, <e2, e0>), each of them weighted with
+    #     # dot-products of edges in the respective face.
+    #     #
+    #     # Note that, to retrieve the covolume-edge ratio, one divides by
+    #     #
+    #     #       alpha = (
+    #     #           + ei_dot_ej[3, 5] * ei_dot_ej[5, 4]
+    #     #           + ei_dot_ej[3, 5] * ei_dot_ej[3, 4]
+    #     #           + ei_dot_ej[3, 4] * ei_dot_ej[4, 5]
+    #     #           )
+    #     #
+    #     # (which is the square of the face area). It's funny that there should be no
+    #     # further simplification in zeta/alpha, but nothing has been found here yet.
+    #     #
 
-        # From base.py, but spelled out here since we can avoid one sqrt when computing
-        # the c/e ratios for the faces.
-        alpha = (
-            +self.ei_dot_ej[2] * self.ei_dot_ej[0]
-            + self.ei_dot_ej[0] * self.ei_dot_ej[1]
-            + self.ei_dot_ej[1] * self.ei_dot_ej[2]
-        )
-        # face_ce_ratios = -self.ei_dot_ej * 0.25 / face_areas[None]
-        face_ce_ratios_div_face_areas = -self.ei_dot_ej / alpha
+    #     # From base.py, but spelled out here since we can avoid one sqrt when computing
+    #     # the c/e ratios for the faces.
+    #     alpha = (
+    #         +self.ei_dot_ej[2] * self.ei_dot_ej[0]
+    #         + self.ei_dot_ej[0] * self.ei_dot_ej[1]
+    #         + self.ei_dot_ej[1] * self.ei_dot_ej[2]
+    #     )
+    #     # face_ce_ratios = -self.ei_dot_ej * 0.25 / face_areas[None]
+    #     face_ce_ratios_div_face_areas = -self.ei_dot_ej / alpha
 
-        ee = self.ei_dot_ej
-        zeta = (
-            -ee[2, [1, 2, 3, 0]] * ee[1] * ee[2]
-            - ee[1, [2, 3, 0, 1]] * ee[2] * ee[0]
-            - ee[0, [3, 0, 1, 2]] * ee[0] * ee[1]
-            + ee[0] * ee[1] * ee[2]
-        )
+    #     ee = self.ei_dot_ej
+    #     zeta = (
+    #         -ee[2, [1, 2, 3, 0]] * ee[1] * ee[2]
+    #         - ee[1, [2, 3, 0, 1]] * ee[2] * ee[0]
+    #         - ee[0, [3, 0, 1, 2]] * ee[0] * ee[1]
+    #         + ee[0] * ee[1] * ee[2]
+    #     )
 
-        #
-        # self.circumcenter_face_distances =
-        #    zeta / (24.0 * face_areas) / self.cell_volumes[None]
-        # ce_ratios = \
-        #     0.5 * face_ce_ratios * self.circumcenter_face_distances[None],
-        #
-        # so
-        ce_ratios = (
-            zeta / 48.0 * face_ce_ratios_div_face_areas / self.cell_volumes[None]
-        )
+    #     #
+    #     # self.circumcenter_face_distances =
+    #     #    zeta / (24.0 * face_areas) / self.cell_volumes[None]
+    #     # ce_ratios = \
+    #     #     0.5 * face_ce_ratios * self.circumcenter_face_distances[None],
+    #     #
+    #     # so
+    #     ce_ratios = (
+    #         zeta / 48.0 * face_ce_ratios_div_face_areas / self.cell_volumes[None]
+    #     )
 
-        # Distances of the cell circumcenter to the faces.
-        face_areas = 0.5 * np.sqrt(alpha)
-        self.circumcenter_face_distances = (
-            zeta / (24.0 * face_areas) / self.cell_volumes[None]
-        )
+    #     # Distances of the cell circumcenter to the faces.
+    #     face_areas = 0.5 * np.sqrt(alpha)
+    #     self.circumcenter_face_distances = (
+    #         zeta / (24.0 * face_areas) / self.cell_volumes[None]
+    #     )
 
-        return ce_ratios
+    #     return ce_ratios
+
+    @property
+    def circumcenter_face_distances(self):
+        if self._circumcenter_facet_distances is None:
+            self._compute_things()
+        return self._circumcenter_facet_distances
 
     def num_delaunay_violations(self):
         """Number of edges where the Delaunay condition is violated."""

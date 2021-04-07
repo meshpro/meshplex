@@ -40,8 +40,6 @@ def test_regular_tet0(a):
     z = a / np.sqrt(24.0)
     assert is_near_equal(mesh.cell_circumcenters, [0.0, 0.0, z], tol)
 
-    # pylint: disable=protected-access
-    mesh._compute_ce_ratios_geometric()
     assert is_near_equal(mesh.circumcenter_face_distances, [z, z, z, z], tol)
 
     # covolume/edge length ratios
