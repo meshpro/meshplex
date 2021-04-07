@@ -30,3 +30,7 @@ def test_show_vertex():
     mesh = meshplex.read(this_dir / ".." / "meshes" / "pacman-optimized.vtk")
     # mesh.plot_vertex(125)
     mesh.show_vertex(125)
+
+
+if __name__ == "__main__":
+    test_show_mesh()

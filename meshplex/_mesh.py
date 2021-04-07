@@ -85,15 +85,14 @@ class Mesh:
         self._ei_dot_ei = None
         self._ei_dot_ej = None
         self._cell_centroids = None
-        self._ei_dot_ei = None
-        self._ei_dot_ej = None
         self._volumes = None
+        self._integral_x = None
         self._signed_cell_volumes = None
         self._circumcenters = None
         self._circumradii2 = None
         self._heights = None
         self._ce_ratios = None
-        self._cell_partitions = None
+        self._partitions = None
         self._control_volumes = None
         self._interior_ce_ratios = None
 
@@ -237,22 +236,6 @@ class Mesh:
             field_data=field_data,
         )
 
-    @property
-    def edge_lengths(self):
-        if self._volumes is None:
-            self._compute_things()
-        return self._volumes[0]
-
-    @property
-    def facet_areas(self):
-        if self.n == 2:
-            return np.ones(len(self.facets["points"]))
-
-        if self._volumes is None:
-            self._compute_things()
-
-        return self._volumes[-2]
-
     def get_vertex_mask(self, subdomain=None):
         if subdomain is None:
             # https://stackoverflow.com/a/42392791/353337
@@ -377,44 +360,93 @@ class Mesh:
         volumes2 = [_dot(orthogonal_basis[0], self.n - 1)]
         self._circumcenters = [0.5 * (e[0] + e[1])]
 
-        self._circumradii2 = [0.25 * _dot(diff, self.n - 1)]
+        sumx = np.array(e + self._circumcenters[-1])
+
+        dd = _dot(diff, self.n - 1)
+        self._circumradii2 = [0.25 * dd]
+
+        self._partitions = [0.5 * np.sqrt(np.array([dd, dd]))]
 
         norms2 = np.array(volumes2)
         for kk, idx in enumerate(self.idx[:-1][::-1]):
-            # Pick side any index at will.
-            # <https://gist.github.com/nschloe/3922801e200cf82aec2fb53c89e1c578> shows
-            # that it doesn't make a difference which point-facet combination we choose.
-            k0 = 0
-            e0 = e0[k0]
-            p0 = self.points[idx[k0]]
+            # Use the orthogonal bases of all sides to get a vector `v` orthogonal to
+            # the side, pointing towards the additional point `p0`.
+            p0 = self.points[idx]
             v = p0 - e0
             # modified gram-schmidt
-            for w, norm2 in zip(orthogonal_basis[:, k0], norms2[:, k0]):
-                alpha = np.einsum("...k,...k->...", w, v) / norm2
-                v -= _multiply(w, alpha, self.n - 2 - kk)
+            for w, ww in zip(orthogonal_basis, norms2):
+                alpha = np.einsum("...k,...k->...", w, v) / ww
+                v -= _multiply(w, alpha, self.n - 1 - kk)
 
-            orthogonal_basis = np.row_stack([orthogonal_basis[:, k0], [v]])
             vv = np.einsum("...k,...k->...", v, v)
 
-            norms2 = np.row_stack([norms2[:, k0], [vv]])
+            # Form the orthogonal basis for the next iteration by choosing one side
+            # `k0`. <https://gist.github.com/nschloe/3922801e200cf82aec2fb53c89e1c578>
+            # shows that it doesn't make a difference which point-facet combination we
+            # choose.
+            k0 = 0
+            e0 = e0[k0]
+            orthogonal_basis = np.row_stack([orthogonal_basis[:, k0], [v[k0]]])
+            norms2 = np.row_stack([norms2[:, k0], [vv[k0]]])
 
             # The squared volume is the squared volume of the face times the squared
             # height divided by (n+1) ** 2.
-            volumes2.append(volumes2[-1][0] * vv / (kk + 2) ** 2)
+            volumes2.append(volumes2[-1][0] * vv[k0] / (kk + 2) ** 2)
+
+            # get the distance to the circumcenter; used in cell partitions and
+            # circumcenter/-radius computation
+            c = self._circumcenters[-1]
+            cr2 = self._circumradii2[-1]
+
+            p0c2 = _dot(p0 - c, self.n - 1 - kk)
+            #
+            sigma = 0.5 * (p0c2 - cr2) / vv
+            lmbda2 = sigma ** 2 * vv
 
             # circumcenter, squared circumradius
             # <https://math.stackexchange.com/a/4064749/36678>
-            c = self._circumcenters[-1][k0]
-            cr2 = self._circumradii2[-1][k0]
             #
-            p0c2 = _dot(p0 - c, self.n - 2 - kk)
-            sigma = 0.5 * (p0c2 - cr2) / vv
-            lmbda2 = sigma ** 2 * vv
-            #
-            self._circumradii2.append(lmbda2 + cr2)
-            self._circumcenters.append(c + _multiply(v, sigma, self.n - 2 - kk))
+            self._circumradii2.append(lmbda2[k0] + cr2[k0])
+            self._circumcenters.append(
+                c[k0] + _multiply(v[k0], sigma[k0], self.n - 2 - kk)
+            )
+
+            sumx += self._circumcenters[-1]
+
+            # cell partitions
+            # don't use sqrt(lmbda2) here; lmbda can be negative
+            lmbda = sigma * np.sqrt(vv)
+            vols = self._partitions[-1] * lmbda / (kk + 2)
+            self._partitions.append(vols)
 
         self._volumes = [np.sqrt(v2) for v2 in volumes2]
+
+        # The integral of x,
+        #
+        #   \\int_V x,
+        #
+        # over all atomic wedges, i.e., areas cornered by a point, an edge midpoint, and
+        # the subsequent circumcenters.
+        # The integral of any linear function over a triangle is the average of the
+        # values of the function in each of the three corners, times the area of the
+        # triangle.
+        self._integral_x = _multiply(sumx, self._partitions[-1] / self.n, self.n)
+
+    @property
+    def edge_lengths(self):
+        if self._volumes is None:
+            self._compute_things()
+        return self._volumes[0]
+
+    @property
+    def facet_areas(self):
+        if self.n == 2:
+            return np.ones(len(self.facets["points"]))
+
+        if self._volumes is None:
+            self._compute_things()
+
+        return self._volumes[-2]
 
     @property
     def cell_volumes(self):
@@ -839,11 +871,15 @@ class Mesh:
             for k in range(len(self._circumcenters)):
                 self._circumcenters[k] = self._circumcenters[k][..., keep, :]
 
-        if self._cell_partitions is not None:
-            self._cell_partitions = self._cell_partitions[:, keep]
+        if self._partitions is not None:
+            for k in range(len(self._partitions)):
+                self._partitions[k] = self._partitions[k][..., keep]
 
         if self._signed_cell_volumes is not None:
             self._signed_cell_volumes = self._signed_cell_volumes[keep]
+
+        if self._integral_x is not None:
+            self._integral_x = self._integral_x[..., keep, :]
 
         # TODO These could also be updated, but let's implement it when needed
         self._interior_ce_ratios = None
@@ -901,52 +937,39 @@ class Mesh:
         """Each simplex can be subdivided into parts that a closest to each corner.
         This method gives those parts, like ce_ratios associated with each edge.
         """
-        if self._cell_partitions is None:
-            # The volume of the pyramid is
-            #
-            # edge_length ** 2 / 2 * covolume / edgelength / (n-1)
-            # = edgelength / 2 * covolume / (n - 1)
-            self._cell_partitions = self.ei_dot_ei / 2 * self.ce_ratios / (self.n - 1)
-        return self._cell_partitions
+        # if self._partitions is None:
+        #     # self._compute_things()
+        #     # The volume of the pyramid is
+        #     #
+        #     # edge_length ** 2 / 2 * covolume / edgelength / (n-1)
+        #     # = edgelength / 2 * covolume / (n - 1)
+        #     # TODO keep this for computing ce_ratios
+        #     self._cell_partitions = self.ei_dot_ei / 2 * self.ce_ratios / (self.n - 1)
+        # return self._cell_partitions
+        if self._partitions is None:
+            self._compute_things()
+        return self._partitions[-1]
 
-    def get_control_volumes(self, cell_mask=None):
+    def get_control_volumes(self, idx=slice(None)):
         """The control volumes around each vertex. Optionally disregard the
         contributions from particular cells. This is useful, for example, for
         temporarily disregarding flat cells on the boundary when performing Lloyd mesh
         optimization.
         """
-        if cell_mask is None:
-            cell_mask = np.zeros(self.cells["points"].shape[0], dtype=bool)
+        if self._control_volumes is None or np.any(idx != self._cv_cell_mask):
+            # Sum up the contributions according to how self.idx is constructed.
+            # roll = np.array([np.roll(np.arange(kk + 3), -i) for i in range(1, kk + 3)])
+            # vols = npx.sum_at(vols, roll, kk + 3)
+            # v = self.cell_partitions[..., idx]
 
-        if self._control_volumes is None or np.any(cell_mask != self._cv_cell_mask):
-            v = self.cell_partitions[..., ~cell_mask]
-
-            # Explicitly sum up contributions per cell first. Makes sum_at faster.
-            if self.n == 2:
-                v = np.array([v, v])
-            elif self.n == 3:
-                v = np.array([v[1] + v[2], v[2] + v[0], v[0] + v[1]])
-            else:
-                assert self.n == 4
-                # For every point k (range(4)), check for which edges k appears in
-                # local_idx, and sum() up the v's from there.
-                v = np.array(
-                    [
-                        v[0, 2] + v[1, 1] + v[2, 3] + v[0, 1] + v[1, 3] + v[2, 2],
-                        v[0, 3] + v[1, 2] + v[2, 0] + v[0, 2] + v[1, 0] + v[2, 3],
-                        v[0, 0] + v[1, 3] + v[2, 1] + v[0, 3] + v[1, 1] + v[2, 0],
-                        v[0, 1] + v[1, 0] + v[2, 2] + v[0, 0] + v[1, 2] + v[2, 1],
-                    ]
-                )
-
-            # sum all the vals into self._control_volumes at ids
+            # TODO this can be improved by first summing up all components per cell
             self._control_volumes = npx.sum_at(
-                v,
-                self.cells["points"][~cell_mask].T,
+                self.cell_partitions[:, idx],
+                self.idx[-1][:, idx],
                 len(self.points),
             )
 
-            self._cv_cell_mask = cell_mask
+            self._cv_cell_mask = idx
         return self._control_volumes
 
     @property
@@ -1159,7 +1182,7 @@ class Mesh:
         )
         return np.sum(sums[self.is_interior_facet] < 0.0)
 
-    def get_control_volume_centroids(self, cell_mask=None):
+    def get_control_volume_centroids(self, idx=slice(None)):
         """The centroid of any volume V is given by
 
         .. math::
@@ -1173,57 +1196,28 @@ class Mesh:
         for example, for temporarily disregarding flat cells on the boundary when
         performing Lloyd mesh optimization.
         """
-        assert self.n == 3
+        assert idx is not None
 
-        if cell_mask is None:
-            cell_mask = np.zeros(self.cell_partitions.shape[1], dtype=bool)
+        if self._cv_centroids is None or np.any(idx != self._cvc_cell_mask):
+            if self._integral_x is None:
+                self._compute_things()
 
-        if self._cv_centroids is None or np.any(cell_mask != self._cvc_cell_mask):
-            _, v = self._compute_integral_x()
-            v = v[:, :, ~cell_mask, :]
-
-            # Again, make use of the fact that edge k is opposite of point k in every
-            # cell. Adding the arrays first makes the work for sum_at lighter.
-            ids = self.cells["points"][~cell_mask].T
-            vals = np.array([v[1, 1] + v[0, 2], v[1, 2] + v[0, 0], v[1, 0] + v[0, 1]])
-
-            # add it all up
-            self._cv_centroids = npx.sum_at(vals, ids, self.points.shape[0])
+            # TODO this can be improved by first summing up all components per cell
+            integral_p = npx.sum_at(
+                self._integral_x[..., idx, :],
+                self.idx[-1][:, idx],
+                len(self.points),
+            )
 
             # Divide by the control volume
-            cv = self.get_control_volumes(cell_mask=cell_mask)
-            # self._cv_centroids /= np.where(cv > 0.0, cv, 1.0)
-            self._cv_centroids = (self._cv_centroids.T / cv).T
-            self._cvc_cell_mask = cell_mask
-            assert np.all(cell_mask == self._cv_cell_mask)
+            cv = self.get_control_volumes(idx)
+            self._cv_centroids = (integral_p.T / cv).T
+
+            self._cvc_cell_mask = idx
+            assert np.all(idx == self._cv_cell_mask)
 
         return self._cv_centroids
 
     @property
     def control_volume_centroids(self):
         return self.get_control_volume_centroids()
-
-    def _compute_integral_x(self):
-        # Computes the integral of x,
-        #
-        #   \\int_V x,
-        #
-        # over all atomic "triangles", i.e., areas cornered by a point, an edge
-        # midpoint, and a circumcenter.
-
-        # The integral of any linear function over a triangle is the average of the
-        # values of the function in each of the three corners, times the area of the
-        # triangle.
-        assert self.n == 3
-        right_triangle_vols = self.cell_partitions
-
-        point_edges = self.idx[-1]
-
-        corner = self.points[point_edges]
-        edge_midpoints = 0.5 * (corner[0] + corner[1])
-        cc = self.cell_circumcenters
-
-        average = (corner + edge_midpoints[None] + cc[None, None]) / 3.0
-
-        contribs = right_triangle_vols[None, :, :, None] * average
-        return point_edges, contribs

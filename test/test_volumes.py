@@ -24,6 +24,7 @@ def test_vol_tri():
     mesh = meshplex.Mesh(points, cells)
 
     ref = [0.5, 0.5]
+    print(mesh.cell_volumes)
     assert np.all(np.abs(mesh.cell_volumes - ref) < np.abs(ref) * 1.0e-13)
 
 

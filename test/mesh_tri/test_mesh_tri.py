@@ -64,6 +64,7 @@ def test_unit_triangle(cells_dtype):
     assert is_near_equal(mesh.cell_barycenters, [1.0 / 3.0, 1.0 / 3.0], tol)
 
     # control volume centroids
+    print(mesh.control_volume_centroids)
     assert is_near_equal(
         mesh.control_volume_centroids,
         [[0.25, 0.25], [2.0 / 3.0, 1.0 / 6.0], [1.0 / 6.0, 2.0 / 3.0]],
@@ -717,7 +718,8 @@ def test_reference_vals_pacman():
     )
     assert_norms(
         mesh.cell_partitions,
-        [3.9152391707837168e01, 8.5089998305597037e-01, 7.3358866064106520e-02],
+        # [3.9152391707837168e01, 8.5089998305597037e-01, 7.3358866064106520e-02],
+        [7.8304783415674336e01, 1.2033542962607897e00, 7.3358866064106479e-02],
         1.0e-12,
     )
     assert_norms(
