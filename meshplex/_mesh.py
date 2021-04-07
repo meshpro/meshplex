@@ -6,7 +6,7 @@ import npx
 import numpy as np
 
 from ._exceptions import MeshplexError
-from ._helpers import _dot, _multiply, compute_ce_ratios, grp_start_len
+from ._helpers import _dot, _multiply, grp_start_len
 
 __all__ = ["Mesh"]
 
@@ -1033,12 +1033,8 @@ class Mesh:
         assert self.n == 4
 
         # Delaunay violations are present exactly on the interior faces where the sum of
-        # the signed distances between face circumcenter and tetrahedron circumcenter is
-        # negative.
-        if self.circumcenter_face_distances is None:
-            self._compute_ce_ratios_geometric()
-            # self._compute_ce_ratios_algebraic()
-
+        # the signed distances between facet circumcenter and adjacent cell circumcenter
+        # is negative.
         if "facets" not in self.cells:
             self.create_facets()
 
