@@ -3,16 +3,16 @@ import numpy as np
 import meshplex
 
 
-def test_line():
-    X = np.array([0.0, 0.1, 0.4, 1.0])
-    cells = np.array([[0, 1], [1, 2], [2, 3]])
-    mesh = meshplex.Mesh(X, cells)
-
-    vol = np.sum(mesh.cell_volumes)
-    assert np.all(np.abs(np.sum(mesh.control_volumes) - vol) < 1.0e-14 * np.abs(vol))
-
-    ref = np.array([0.05, 0.2, 0.45, 0.3])
-    assert np.all(np.abs(mesh.control_volumes - ref) < 1.0e-14 * np.abs(ref))
+# def test_line():
+#     X = np.array([0.0, 0.1, 0.4, 1.0])
+#     cells = np.array([[0, 1], [1, 2], [2, 3]])
+#     mesh = meshplex.Mesh(X, cells)
+#
+#     vol = np.sum(mesh.cell_volumes)
+#     assert np.all(np.abs(np.sum(mesh.control_volumes) - vol) < 1.0e-14 * np.abs(vol))
+#
+#     ref = np.array([0.05, 0.2, 0.45, 0.3])
+#     assert np.all(np.abs(mesh.control_volumes - ref) < 1.0e-14 * np.abs(ref))
 
 
 def test_tri_degen():

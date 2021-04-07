@@ -86,6 +86,7 @@ class Mesh:
         self._ei_dot_ej = None
         self._cell_centroids = None
         self._volumes = None
+        self._integral_x = None
         self._signed_cell_volumes = None
         self._circumcenters = None
         self._circumradii2 = None
@@ -359,6 +360,8 @@ class Mesh:
         volumes2 = [_dot(orthogonal_basis[0], self.n - 1)]
         self._circumcenters = [0.5 * (e[0] + e[1])]
 
+        sumx = np.array(e + self._circumcenters[-1])
+
         dd = _dot(diff, self.n - 1)
         self._circumradii2 = [0.25 * dd]
 
@@ -408,16 +411,26 @@ class Mesh:
                 c[k0] + _multiply(v[k0], sigma[k0], self.n - 2 - kk)
             )
 
+            sumx += self._circumcenters[-1]
+
             # cell partitions
             # don't use sqrt(lmbda2) here; lmbda can be negative
             lmbda = sigma * np.sqrt(vv)
             vols = self._partitions[-1] * lmbda / (kk + 2)
-            # Sum up the contributions according to how self.idx is constructed.
-            roll = np.array([np.roll(np.arange(kk + 3), -i) for i in range(1, kk + 3)])
-            vols = npx.sum_at(vols, roll, kk + 3)
             self._partitions.append(vols)
 
         self._volumes = [np.sqrt(v2) for v2 in volumes2]
+
+        # The integral of x,
+        #
+        #   \\int_V x,
+        #
+        # over all atomic wedges, i.e., areas cornered by a point, an edge midpoint, and
+        # the subsequent circumcenters.
+        # The integral of any linear function over a triangle is the average of the
+        # values of the function in each of the three corners, times the area of the
+        # triangle.
+        self._integral_x = _multiply(sumx, self._partitions[-1] / self.n, self.n)
 
     @property
     def edge_lengths(self):
@@ -941,10 +954,15 @@ class Mesh:
         optimization.
         """
         if self._control_volumes is None or np.any(idx != self._cv_cell_mask):
+            # Sum up the contributions according to how self.idx is constructed.
+            # roll = np.array([np.roll(np.arange(kk + 3), -i) for i in range(1, kk + 3)])
+            # vols = npx.sum_at(vols, roll, kk + 3)
             # v = self.cell_partitions[..., idx]
+
+            # TODO this can be improved by first summing up all components per cell
             self._control_volumes = npx.sum_at(
                 self.cell_partitions[:, idx],
-                self.idx[0][:, idx],
+                self.idx[-1][:, idx],
                 len(self.points),
             )
 
@@ -1203,21 +1221,35 @@ class Mesh:
         assert self.n == 3
 
         if self._cv_centroids is None or np.any(idx != self._cvc_cell_mask):
-            _, v = self._compute_integral_x()
-            v = v[:, :, idx, :]
+            if self._integral_x is None:
+                self._compute_things()
 
-            # Again, make use of the fact that edge k is opposite of point k in every
-            # cell. Adding the arrays first makes the work for sum_at lighter.
-            ids = self.cells["points"][idx].T
-            vals = np.array([v[1, 1] + v[0, 2], v[1, 2] + v[0, 0], v[1, 0] + v[0, 1]])
-
-            # add it all up
-            self._cv_centroids = npx.sum_at(vals, ids, self.points.shape[0])
+            # TODO this can be improved by first summing up all components per cell
+            integral_p = npx.sum_at(
+                self._integral_x[..., idx, :],
+                self.idx[-1][:, idx],
+                len(self.points),
+            )
 
             # Divide by the control volume
-            cv = self.get_control_volumes(idx=idx)
-            # self._cv_centroids /= np.where(cv > 0.0, cv, 1.0)
-            self._cv_centroids = (self._cv_centroids.T / cv).T
+            cv = self.get_control_volumes(idx)
+            self._cv_centroids = (integral_p.T / cv).T
+
+            # _, v = self._compute_integral_x()
+            # v = v[:, :, idx, :]
+
+            # # Again, make use of the fact that edge k is opposite of point k in every
+            # # cell. Adding the arrays first makes the work for sum_at lighter.
+            # ids = self.cells["points"][idx].T
+            # vals = np.array([v[1, 1] + v[0, 2], v[1, 2] + v[0, 0], v[1, 0] + v[0, 1]])
+
+            # # add it all up
+            # self._cv_centroids = npx.sum_at(vals, ids, self.points.shape[0])
+
+            # # Divide by the control volume
+            # cv = self.get_control_volumes(idx=idx)
+            # # self._cv_centroids /= np.where(cv > 0.0, cv, 1.0)
+            # self._cv_centroids = (self._cv_centroids.T / cv).T
             self._cvc_cell_mask = idx
             assert np.all(idx == self._cv_cell_mask)
 
@@ -1227,27 +1259,27 @@ class Mesh:
     def control_volume_centroids(self):
         return self.get_control_volume_centroids()
 
-    def _compute_integral_x(self):
-        # Computes the integral of x,
-        #
-        #   \\int_V x,
-        #
-        # over all atomic "triangles", i.e., areas cornered by a point, an edge
-        # midpoint, and a circumcenter.
-        #
-        # The integral of any linear function over a triangle is the average of the
-        # values of the function in each of the three corners, times the area of the
-        # triangle.
-        assert self.n == 3
-        right_triangle_vols = self.cell_partitions
+    # def _compute_integral_x(self):
+    #     # Computes the integral of x,
+    #     #
+    #     #   \\int_V x,
+    #     #
+    #     # over all atomic "triangles", i.e., areas cornered by a point, an edge
+    #     # midpoint, and a circumcenter.
+    #     #
+    #     # The integral of any linear function over a triangle is the average of the
+    #     # values of the function in each of the three corners, times the area of the
+    #     # triangle.
+    #     assert self.n == 3
+    #     right_triangle_vols = self.cell_partitions
 
-        point_edges = self.idx[-1]
+    #     point_edges = self.idx[-1]
 
-        corner = self.points[point_edges]
-        edge_midpoints = 0.5 * (corner[0] + corner[1])
-        cc = self.cell_circumcenters
+    #     corner = self.points[point_edges]
+    #     edge_midpoints = 0.5 * (corner[0] + corner[1])
+    #     cc = self.cell_circumcenters
 
-        average = (corner + edge_midpoints[None] + cc[None, None]) / 3.0
+    #     average = (corner + edge_midpoints[None] + cc[None, None]) / 3.0
 
-        contribs = right_triangle_vols[None, :, :, None] * average
-        return point_edges, contribs
+    #     contribs = right_triangle_vols[None, :, :, None] * average
+    #     return point_edges, contribs
