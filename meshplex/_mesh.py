@@ -878,6 +878,9 @@ class Mesh:
         if self._signed_cell_volumes is not None:
             self._signed_cell_volumes = self._signed_cell_volumes[keep]
 
+        if self._integral_x is not None:
+            self._integral_x = self._integral_x[..., keep, :]
+
         # TODO These could also be updated, but let's implement it when needed
         self._interior_ce_ratios = None
         self._control_volumes = None
@@ -1218,6 +1221,7 @@ class Mesh:
         for example, for temporarily disregarding flat cells on the boundary when
         performing Lloyd mesh optimization.
         """
+        assert idx is not None
         assert self.n == 3
 
         if self._cv_centroids is None or np.any(idx != self._cvc_cell_mask):

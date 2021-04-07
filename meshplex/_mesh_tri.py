@@ -234,7 +234,7 @@ class MeshTri(Mesh):
         show_point_numbers=False,
         show_edge_numbers=False,
         show_cell_numbers=False,
-        cell_mask=None,
+        cell_mask=slice(None),
         mark_points=None,
         mark_edges=None,
         mark_cells=None,
