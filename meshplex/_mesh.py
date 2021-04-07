@@ -91,7 +91,7 @@ class Mesh:
         self._circumradii2 = None
         self._heights = None
         self._ce_ratios = None
-        self._cell_partitions = None
+        self._partitions = None
         self._control_volumes = None
         self._interior_ce_ratios = None
 
@@ -357,20 +357,15 @@ class Mesh:
         orthogonal_basis = np.array([diff])
 
         volumes2 = [_dot(orthogonal_basis[0], self.n - 1)]
-        print(f"{volumes2[-1].shape = }")
-        print(f"{e.shape = }")
         self._circumcenters = [0.5 * (e[0] + e[1])]
-        print(f"{self._circumcenters[-1].shape = }")
 
         dd = _dot(diff, self.n - 1)
         self._circumradii2 = [0.25 * dd]
-        print(f"{self._circumradii2[-1].shape = }")
 
-        self._cell_partitions2 = [0.25 * np.array([dd, dd])]
+        self._partitions = [0.5 * np.sqrt(np.array([dd, dd]))]
 
         norms2 = np.array(volumes2)
         for kk, idx in enumerate(self.idx[:-1][::-1]):
-            print()
             # Use the orthogonal bases of all sides to get a vector `v` orthogonal to
             # the side, pointing towards the additional point `p0`.
             p0 = self.points[idx]
@@ -400,17 +395,7 @@ class Mesh:
             c = self._circumcenters[-1]
             cr2 = self._circumradii2[-1]
 
-            print(f"{self._circumcenters[-1].shape = }")
-            print(f"{self._circumradii2[-1].shape = }")
-            print(f"{p0.shape = }")
-            print(f"{c.shape = }")
-            # print(f"{(p0 - c).shape = }")
-            print(f"{(p0 - c).shape = }")
-
             p0c2 = _dot(p0 - c, self.n - 1 - kk)
-            print(f"{p0c2.shape = }")
-            print(f"{cr2.shape = }")
-            print(f"{vv.shape = }")
             #
             sigma = 0.5 * (p0c2 - cr2) / vv
             lmbda2 = sigma ** 2 * vv
@@ -419,25 +404,19 @@ class Mesh:
             # <https://math.stackexchange.com/a/4064749/36678>
             #
             self._circumradii2.append(lmbda2[k0] + cr2[k0])
-            print(f"{c.shape = }")
             self._circumcenters.append(
                 c[k0] + _multiply(v[k0], sigma[k0], self.n - 2 - kk)
             )
-            print(f"{self._circumcenters[-1].shape = }")
 
-            # # cell partitions
-            # print(f"{self._cell_partitions2[-1].shape = }")
-            # print(f"{idx.shape = }")
-            # print(f"{np.sum(self._cell_partitions2[-1], axis=0).shape = }")
-            # print(f"{lmbda2.shape = }")
-            # cell_partitions = np.sqrt(self._cell_partitions2[-1])
-            # print(f"{cell_partitions.shape = }")
-            # lmbda = np.sqrt(lmbda2)
-            # exit(1)
-            # self._cell_partitions2.append(
-            #     np.sum(cell_partitions, axis=0)
-            # )
-            # exit(1)
+            # cell partitions
+            # don't use sqrt(lmbda2) here; lmbda can be negative
+            lmbda = sigma * np.sqrt(vv)
+            vols = self._partitions[-1] * lmbda / (kk + 2)
+
+            # Sum up the contributions according to how self.idx is constructed.
+            roll = np.array([np.roll(np.arange(kk + 3), -i) for i in range(1, kk + 3)])
+            vols = npx.sum_at(vols, roll, kk + 3)
+            self._partitions.append(vols)
 
         self._volumes = [np.sqrt(v2) for v2 in volumes2]
 
@@ -880,8 +859,9 @@ class Mesh:
             for k in range(len(self._circumcenters)):
                 self._circumcenters[k] = self._circumcenters[k][..., keep, :]
 
-        if self._cell_partitions is not None:
-            self._cell_partitions = self._cell_partitions[:, keep]
+        if self._partitions is not None:
+            for k in range(len(self._partitions)):
+                self._partitions[k] = self._partitions[k][..., keep]
 
         if self._signed_cell_volumes is not None:
             self._signed_cell_volumes = self._signed_cell_volumes[keep]
@@ -942,55 +922,59 @@ class Mesh:
         """Each simplex can be subdivided into parts that a closest to each corner.
         This method gives those parts, like ce_ratios associated with each edge.
         """
-        if self._cell_partitions is None:
-            # self._compute_things()
-            # The volume of the pyramid is
-            #
-            # edge_length ** 2 / 2 * covolume / edgelength / (n-1)
-            # = edgelength / 2 * covolume / (n - 1)
-            # TODO keep this for computing ce_ratios
-            self._cell_partitions = self.ei_dot_ei / 2 * self.ce_ratios / (self.n - 1)
-        # return np.sqrt(self._cell_partitions2[-1])
-        return self._cell_partitions
+        # if self._partitions is None:
+        #     # self._compute_things()
+        #     # The volume of the pyramid is
+        #     #
+        #     # edge_length ** 2 / 2 * covolume / edgelength / (n-1)
+        #     # = edgelength / 2 * covolume / (n - 1)
+        #     # TODO keep this for computing ce_ratios
+        #     self._cell_partitions = self.ei_dot_ei / 2 * self.ce_ratios / (self.n - 1)
+        # return self._cell_partitions
+        if self._partitions is None:
+            self._compute_things()
+        return self._partitions[-1]
 
-    def get_control_volumes(self, cell_mask=None):
+    def get_control_volumes(self, idx=slice(None)):
         """The control volumes around each vertex. Optionally disregard the
         contributions from particular cells. This is useful, for example, for
         temporarily disregarding flat cells on the boundary when performing Lloyd mesh
         optimization.
         """
-        if cell_mask is None:
-            cell_mask = np.zeros(self.cells["points"].shape[0], dtype=bool)
-
-        if self._control_volumes is None or np.any(cell_mask != self._cv_cell_mask):
-            v = self.cell_partitions[..., ~cell_mask]
-
-            # Explicitly sum up contributions per cell first. Makes sum_at faster.
-            if self.n == 2:
-                v = np.array([v, v])
-            elif self.n == 3:
-                v = np.array([v[1] + v[2], v[2] + v[0], v[0] + v[1]])
-            else:
-                assert self.n == 4
-                # For every point k (range(4)), check for which edges k appears in
-                # local_idx, and sum() up the v's from there.
-                v = np.array(
-                    [
-                        v[0, 2] + v[1, 1] + v[2, 3] + v[0, 1] + v[1, 3] + v[2, 2],
-                        v[0, 3] + v[1, 2] + v[2, 0] + v[0, 2] + v[1, 0] + v[2, 3],
-                        v[0, 0] + v[1, 3] + v[2, 1] + v[0, 3] + v[1, 1] + v[2, 0],
-                        v[0, 1] + v[1, 0] + v[2, 2] + v[0, 0] + v[1, 2] + v[2, 1],
-                    ]
-                )
-
-            # sum all the vals into self._control_volumes at ids
+        if self._control_volumes is None or np.any(idx != self._cv_cell_mask):
+            # v = self.cell_partitions[..., idx]
             self._control_volumes = npx.sum_at(
-                v,
-                self.cells["points"][~cell_mask].T,
+                self.cell_partitions[:, idx],
+                self.idx[0][:, idx],
                 len(self.points),
             )
 
-            self._cv_cell_mask = cell_mask
+            # # Explicitly sum up contributions per cell first. Makes sum_at faster.
+            # if self.n == 2:
+            #     v = np.array([v, v])
+            # elif self.n == 3:
+            #     v = np.array([v[1] + v[2], v[2] + v[0], v[0] + v[1]])
+            # else:
+            #     assert self.n == 4
+            #     # For every point k (range(4)), check for which edges k appears in
+            #     # local_idx, and sum() up the v's from there.
+            #     v = np.array(
+            #         [
+            #             v[0, 2] + v[1, 1] + v[2, 3] + v[0, 1] + v[1, 3] + v[2, 2],
+            #             v[0, 3] + v[1, 2] + v[2, 0] + v[0, 2] + v[1, 0] + v[2, 3],
+            #             v[0, 0] + v[1, 3] + v[2, 1] + v[0, 3] + v[1, 1] + v[2, 0],
+            #             v[0, 1] + v[1, 0] + v[2, 2] + v[0, 0] + v[1, 2] + v[2, 1],
+            #         ]
+            #     )
+
+            # # sum all the vals into self._control_volumes at ids
+            # self._control_volumes = npx.sum_at(
+            #     v,
+            #     self.cells["points"][~cell_mask].T,
+            #     len(self.points),
+            # )
+
+            self._cv_cell_mask = idx
         return self._control_volumes
 
     @property
@@ -1203,7 +1187,7 @@ class Mesh:
         )
         return np.sum(sums[self.is_interior_facet] < 0.0)
 
-    def get_control_volume_centroids(self, cell_mask=None):
+    def get_control_volume_centroids(self, idx=slice(None)):
         """The centroid of any volume V is given by
 
         .. math::
@@ -1219,27 +1203,24 @@ class Mesh:
         """
         assert self.n == 3
 
-        if cell_mask is None:
-            cell_mask = np.zeros(self.cell_partitions.shape[1], dtype=bool)
-
-        if self._cv_centroids is None or np.any(cell_mask != self._cvc_cell_mask):
+        if self._cv_centroids is None or np.any(idx != self._cvc_cell_mask):
             _, v = self._compute_integral_x()
-            v = v[:, :, ~cell_mask, :]
+            v = v[:, :, idx, :]
 
             # Again, make use of the fact that edge k is opposite of point k in every
             # cell. Adding the arrays first makes the work for sum_at lighter.
-            ids = self.cells["points"][~cell_mask].T
+            ids = self.cells["points"][idx].T
             vals = np.array([v[1, 1] + v[0, 2], v[1, 2] + v[0, 0], v[1, 0] + v[0, 1]])
 
             # add it all up
             self._cv_centroids = npx.sum_at(vals, ids, self.points.shape[0])
 
             # Divide by the control volume
-            cv = self.get_control_volumes(cell_mask=cell_mask)
+            cv = self.get_control_volumes(idx=idx)
             # self._cv_centroids /= np.where(cv > 0.0, cv, 1.0)
             self._cv_centroids = (self._cv_centroids.T / cv).T
-            self._cvc_cell_mask = cell_mask
-            assert np.all(cell_mask == self._cv_cell_mask)
+            self._cvc_cell_mask = idx
+            assert np.all(idx == self._cv_cell_mask)
 
         return self._cv_centroids
 
