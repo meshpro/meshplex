@@ -85,8 +85,6 @@ class Mesh:
         self._ei_dot_ei = None
         self._ei_dot_ej = None
         self._cell_centroids = None
-        self._ei_dot_ei = None
-        self._ei_dot_ej = None
         self._volumes = None
         self._signed_cell_volumes = None
         self._circumcenters = None
@@ -237,22 +235,6 @@ class Mesh:
             field_data=field_data,
         )
 
-    @property
-    def edge_lengths(self):
-        if self._volumes is None:
-            self._compute_things()
-        return self._volumes[0]
-
-    @property
-    def facet_areas(self):
-        if self.n == 2:
-            return np.ones(len(self.facets["points"]))
-
-        if self._volumes is None:
-            self._compute_things()
-
-        return self._volumes[-2]
-
     def get_vertex_mask(self, subdomain=None):
         if subdomain is None:
             # https://stackoverflow.com/a/42392791/353337
@@ -375,46 +357,105 @@ class Mesh:
         orthogonal_basis = np.array([diff])
 
         volumes2 = [_dot(orthogonal_basis[0], self.n - 1)]
+        print(f"{volumes2[-1].shape = }")
+        print(f"{e.shape = }")
         self._circumcenters = [0.5 * (e[0] + e[1])]
+        print(f"{self._circumcenters[-1].shape = }")
 
-        self._circumradii2 = [0.25 * _dot(diff, self.n - 1)]
+        dd = _dot(diff, self.n - 1)
+        self._circumradii2 = [0.25 * dd]
+        print(f"{self._circumradii2[-1].shape = }")
+
+        self._cell_partitions2 = [0.25 * np.array([dd, dd])]
 
         norms2 = np.array(volumes2)
         for kk, idx in enumerate(self.idx[:-1][::-1]):
-            # Pick side any index at will.
-            # <https://gist.github.com/nschloe/3922801e200cf82aec2fb53c89e1c578> shows
-            # that it doesn't make a difference which point-facet combination we choose.
-            k0 = 0
-            e0 = e0[k0]
-            p0 = self.points[idx[k0]]
+            print()
+            # Use the orthogonal bases of all sides to get a vector `v` orthogonal to
+            # the side, pointing towards the additional point `p0`.
+            p0 = self.points[idx]
             v = p0 - e0
             # modified gram-schmidt
-            for w, norm2 in zip(orthogonal_basis[:, k0], norms2[:, k0]):
-                alpha = np.einsum("...k,...k->...", w, v) / norm2
-                v -= _multiply(w, alpha, self.n - 2 - kk)
+            for w, ww in zip(orthogonal_basis, norms2):
+                alpha = np.einsum("...k,...k->...", w, v) / ww
+                v -= _multiply(w, alpha, self.n - 1 - kk)
 
-            orthogonal_basis = np.row_stack([orthogonal_basis[:, k0], [v]])
             vv = np.einsum("...k,...k->...", v, v)
 
-            norms2 = np.row_stack([norms2[:, k0], [vv]])
+            # Form the orthogonal basis for the next iteration by choosing one side
+            # `k0`. <https://gist.github.com/nschloe/3922801e200cf82aec2fb53c89e1c578>
+            # shows that it doesn't make a difference which point-facet combination we
+            # choose.
+            k0 = 0
+            e0 = e0[k0]
+            orthogonal_basis = np.row_stack([orthogonal_basis[:, k0], [v[k0]]])
+            norms2 = np.row_stack([norms2[:, k0], [vv[k0]]])
 
             # The squared volume is the squared volume of the face times the squared
             # height divided by (n+1) ** 2.
-            volumes2.append(volumes2[-1][0] * vv / (kk + 2) ** 2)
+            volumes2.append(volumes2[-1][0] * vv[k0] / (kk + 2) ** 2)
+
+            # get the distance to the circumcenter; used in cell partitions and
+            # circumcenter/-radius computation
+            c = self._circumcenters[-1]
+            cr2 = self._circumradii2[-1]
+
+            print(f"{self._circumcenters[-1].shape = }")
+            print(f"{self._circumradii2[-1].shape = }")
+            print(f"{p0.shape = }")
+            print(f"{c.shape = }")
+            # print(f"{(p0 - c).shape = }")
+            print(f"{(p0 - c).shape = }")
+
+            p0c2 = _dot(p0 - c, self.n - 1 - kk)
+            print(f"{p0c2.shape = }")
+            print(f"{cr2.shape = }")
+            print(f"{vv.shape = }")
+            #
+            sigma = 0.5 * (p0c2 - cr2) / vv
+            lmbda2 = sigma ** 2 * vv
 
             # circumcenter, squared circumradius
             # <https://math.stackexchange.com/a/4064749/36678>
-            c = self._circumcenters[-1][k0]
-            cr2 = self._circumradii2[-1][k0]
             #
-            p0c2 = _dot(p0 - c, self.n - 2 - kk)
-            sigma = 0.5 * (p0c2 - cr2) / vv
-            lmbda2 = sigma ** 2 * vv
-            #
-            self._circumradii2.append(lmbda2 + cr2)
-            self._circumcenters.append(c + _multiply(v, sigma, self.n - 2 - kk))
+            self._circumradii2.append(lmbda2[k0] + cr2[k0])
+            print(f"{c.shape = }")
+            self._circumcenters.append(
+                c[k0] + _multiply(v[k0], sigma[k0], self.n - 2 - kk)
+            )
+            print(f"{self._circumcenters[-1].shape = }")
+
+            # # cell partitions
+            # print(f"{self._cell_partitions2[-1].shape = }")
+            # print(f"{idx.shape = }")
+            # print(f"{np.sum(self._cell_partitions2[-1], axis=0).shape = }")
+            # print(f"{lmbda2.shape = }")
+            # cell_partitions = np.sqrt(self._cell_partitions2[-1])
+            # print(f"{cell_partitions.shape = }")
+            # lmbda = np.sqrt(lmbda2)
+            # exit(1)
+            # self._cell_partitions2.append(
+            #     np.sum(cell_partitions, axis=0)
+            # )
+            # exit(1)
 
         self._volumes = [np.sqrt(v2) for v2 in volumes2]
+
+    @property
+    def edge_lengths(self):
+        if self._volumes is None:
+            self._compute_things()
+        return self._volumes[0]
+
+    @property
+    def facet_areas(self):
+        if self.n == 2:
+            return np.ones(len(self.facets["points"]))
+
+        if self._volumes is None:
+            self._compute_things()
+
+        return self._volumes[-2]
 
     @property
     def cell_volumes(self):
@@ -902,11 +943,14 @@ class Mesh:
         This method gives those parts, like ce_ratios associated with each edge.
         """
         if self._cell_partitions is None:
+            # self._compute_things()
             # The volume of the pyramid is
             #
             # edge_length ** 2 / 2 * covolume / edgelength / (n-1)
             # = edgelength / 2 * covolume / (n - 1)
+            # TODO keep this for computing ce_ratios
             self._cell_partitions = self.ei_dot_ei / 2 * self.ce_ratios / (self.n - 1)
+        # return np.sqrt(self._cell_partitions2[-1])
         return self._cell_partitions
 
     def get_control_volumes(self, cell_mask=None):
