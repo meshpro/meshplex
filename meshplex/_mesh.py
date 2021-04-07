@@ -937,15 +937,6 @@ class Mesh:
         """Each simplex can be subdivided into parts that a closest to each corner.
         This method gives those parts, like ce_ratios associated with each edge.
         """
-        # if self._partitions is None:
-        #     # self._compute_things()
-        #     # The volume of the pyramid is
-        #     #
-        #     # edge_length ** 2 / 2 * covolume / edgelength / (n-1)
-        #     # = edgelength / 2 * covolume / (n - 1)
-        #     # TODO keep this for computing ce_ratios
-        #     self._cell_partitions = self.ei_dot_ei / 2 * self.ce_ratios / (self.n - 1)
-        # return self._cell_partitions
         if self._partitions is None:
             self._compute_things()
         return self._partitions[-1]
@@ -983,13 +974,13 @@ class Mesh:
     def ce_ratios(self):
         """The covolume-edgelength ratios."""
         if self._ce_ratios is None:
-            if self.n == 2:
-                self._ce_ratios = 1.0 / np.sqrt(self.ei_dot_ei)
-            elif self.n == 3:
-                self._ce_ratios = compute_ce_ratios(self.ei_dot_ej, self.cell_volumes)
-            else:
-                assert self.n == 4
-                self._ce_ratios = self._compute_ce_ratios_geometric()
+            if self._partitions is None:
+                self._compute_things()
+
+            self._ce_ratios = (
+                self._partitions[-1][0] / self.ei_dot_ei * 2 * (self.n - 1)
+            )
+
         return self._ce_ratios
 
     @property
