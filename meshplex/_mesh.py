@@ -977,7 +977,6 @@ class Mesh:
         """The control volumes around each vertex."""
         if self._control_volumes is None:
             return self.get_control_volumes()
-
         return self._control_volumes
 
     @property
