@@ -792,13 +792,6 @@ class Mesh:
 
         return (self.n - 1) * self.cell_inradius / self.cell_circumradius
 
-    @property
-    def cell_quality(self):
-        warnings.warn(
-            "Use `q_radius_ratio`. This method will be removed in a future release."
-        )
-        return self.q_radius_ratio
-
     def remove_cells(self, remove_array):
         """Remove cells and take care of all the dependent data structures. The input
         argument `remove_array` can be a boolean array or a list of indices.
