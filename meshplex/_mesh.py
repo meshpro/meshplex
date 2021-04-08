@@ -175,27 +175,8 @@ class Mesh:
 
     @property
     def cell_heights(self):
-        # TODO remove or get from _compute_cell_values()
         if self._heights is None:
-            # compute the distance between the base (n-1)-simplex and the left-over
-            # point
-            # See <https://math.stackexchange.com/a/4025438/36678>.
-            cp = self.cells["points"]
-            n = cp.shape[1]
-            base_idx = np.moveaxis(
-                np.array([cp[:, np.arange(n) != k] for k in range(n)]),
-                -1,
-                0,
-            )
-            base = self.points[base_idx]
-            tip = self.points[cp.T]
-
-            A = base - tip
-            assert A.shape == base.shape
-            ATA = np.einsum("i...j,k...j->...ik", A, A)
-            e = np.ones(ATA.shape[:-1])
-            self._heights = np.sqrt(1 / np.sum(np.linalg.solve(ATA, e), axis=-1))
-
+            self._compute_cell_values()
         return self._heights
 
     @property
@@ -417,12 +398,15 @@ class Mesh:
 
             # cell partitions
             # don't use sqrt(lmbda2) here; lmbda can be negative
-            lmbda = sigma * np.sqrt(vv)
+            sqrt_vv = np.sqrt(vv)
+            lmbda = sigma * sqrt_vv
             vols = self._partitions[-1] * lmbda / (kk + 2)
             self._partitions.append(vols)
 
         self._volumes = [np.sqrt(v2) for v2 in volumes2]
         self._circumcenter_facet_distances = lmbda
+
+        self._heights = sqrt_vv
 
         # The integral of x,
         #
