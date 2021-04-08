@@ -1,5 +1,4 @@
 import math
-import warnings
 
 import meshio
 import npx
@@ -414,14 +413,14 @@ class Mesh:
             # alternatives computing the oriented area, but it's fastest with the
             # half-edges.
             x = self.half_edge_coords
-            out = (x[0, idx, 1] * x[2, idx, 0] - x[0, idx, 0] * x[2, idx, 1]) / 2
-        else:
-            # https://en.wikipedia.org/wiki/Simplex#Volume
-            cp = self.points[self.cells["points"]]
-            # append ones
-            cp1 = np.concatenate([cp, np.ones(cp.shape[:-1] + (1,))], axis=-1)
-            out = np.linalg.det(cp1) / math.factorial(n)
-        return out
+            return (x[0, idx, 1] * x[2, idx, 0] - x[0, idx, 0] * x[2, idx, 1]) / 2
+
+        # https://en.wikipedia.org/wiki/Simplex#Volume
+        cp = self.points[self.cells["points"]]
+        # append ones; this appends a column instead of a row as suggested by
+        # wikipedia, but that doesn't change the determinant
+        cp1 = np.concatenate([cp, np.ones(cp.shape[:-1] + (1,))], axis=-1)
+        return np.linalg.det(cp1) / math.factorial(n)
 
     def compute_cell_centroids(self, idx=slice(None)):
         return np.sum(self.points[self.cells["points"][idx]], axis=1) / self.n
@@ -792,13 +791,6 @@ class Mesh:
 
         return (self.n - 1) * self.cell_inradius / self.cell_circumradius
 
-    @property
-    def cell_quality(self):
-        warnings.warn(
-            "Use `q_radius_ratio`. This method will be removed in a future release."
-        )
-        return self.q_radius_ratio
-
     def remove_cells(self, remove_array):
         """Remove cells and take care of all the dependent data structures. The input
         argument `remove_array` can be a boolean array or a list of indices.
@@ -982,7 +974,8 @@ class Mesh:
 
     def remove_boundary_cells(self, criterion):
         """Helper method for removing cells along the boundary.
-        The input criterion is a boolean array of length `sum(mesh.is_boundary_cell)`.
+        The input criterion is a callback that must return an array of length
+        `sum(mesh.is_boundary_cell)`.
 
         This helps, for example, in the following scenario.
         When points are moving around, flip_until_delaunay() makes sure the mesh remains
@@ -991,10 +984,19 @@ class Mesh:
         this case, the boundary cell can be removed, and the newly outward node is made
         a boundary node."""
         num_removed = 0
+        num_boundary_cells = np.sum(self.is_boundary_cell)
         while True:
             crit = criterion(self.is_boundary_cell)
-            if np.all(~crit):
+
+            if ~np.any(crit):
                 break
+
+            if not isinstance(crit, np.ndarray) or crit.shape != (num_boundary_cells,):
+                raise ValueError(
+                    "criterion() callback must return a Boolean NumPy array "
+                    f"of shape {(num_boundary_cells,)}, got {crit.shape}."
+                )
+
             idx = self.is_boundary_cell.copy()
             idx[idx] = crit
             n = self.remove_cells(idx)

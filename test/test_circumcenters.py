@@ -6,7 +6,7 @@ import meshplex
 def test_circumcenters_line():
     pts = [0.0, 1.0, 3.0, 4.0]
     cells = [[0, 1], [1, 2], [2, 3]]
-    mesh = meshplex.MeshLine(pts, cells)
+    mesh = meshplex.Mesh(pts, cells)
     print(mesh.cell_circumcenters)
     ref = [0.5, 2.0, 3.5]
     assert np.all(np.abs(mesh.cell_circumcenters - ref) < np.abs(ref) * 1.0e-13)

@@ -24,7 +24,7 @@ def test_heights_tri():
         [0.0, 1.0, 0.0, 0.0, 0.0],
     ]
     cells = [[0, 1, 2], [0, 3, 2]]
-    mesh = meshplex.MeshTri(points, cells)
+    mesh = meshplex.Mesh(points, cells)
 
     ref = np.array(
         [
@@ -44,7 +44,7 @@ def test_heights_tetra():
         [0.0, 0.0, 1.0],
     ]
     cells = [[0, 1, 2, 3]]
-    mesh = meshplex.MeshTri(points, cells)
+    mesh = meshplex.Mesh(points, cells)
 
     ref = np.array(
         [
