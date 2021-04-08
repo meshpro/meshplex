@@ -92,7 +92,7 @@ class Mesh:
         self._cell_circumradii = None
         self._cell_heights = None
         self._ce_ratios = None
-        self._partitions = None
+        self._cell_partitions = None
         self._control_volumes = None
         self._interior_ce_ratios = None
         self._circumcenter_facet_distances = None
@@ -204,9 +204,9 @@ class Mesh:
         """Each simplex can be subdivided into parts that a closest to each corner.
         This method gives those parts, like ce_ratios associated with each edge.
         """
-        if self._partitions is None:
+        if self._cell_partitions is None:
             self._compute_cell_values()
-        return self._partitions[-1]
+        return self._cell_partitions
 
     @property
     def circumcenter_face_distances(self):
@@ -274,11 +274,11 @@ class Mesh:
         # Since we have detailed cell partitions at hand, though, the easiest and
         # fastest is via those.
         if self._ce_ratios is None:
-            if self._partitions is None:
+            if self._cell_partitions is None:
                 self._compute_cell_values()
 
             self._ce_ratios = (
-                self._partitions[-1][0] / self.ei_dot_ei * 2 * (self.n - 1)
+                self._cell_partitions[0] / self.ei_dot_ei * 2 * (self.n - 1)
             )
 
         return self._ce_ratios
@@ -324,7 +324,7 @@ class Mesh:
 
         sumx = np.array(e + self._circumcenters[-1])
 
-        self._partitions = [0.5 * np.sqrt(np.array([vv, vv]))]
+        partitions = 0.5 * np.sqrt(np.array([vv, vv]))
 
         norms2 = np.array(volumes2)
         for kk, idx in enumerate(self.idx[:-1][::-1]):
@@ -375,14 +375,15 @@ class Mesh:
             # don't use sqrt(lmbda2) here; lmbda can be negative
             sqrt_vv = np.sqrt(vv)
             lmbda = sigma * sqrt_vv
-            vols = self._partitions[-1] * lmbda / (kk + 2)
-            self._partitions.append(vols)
+            partitions *= lmbda / (kk + 2)
 
         self._volumes = [np.sqrt(v2) for v2 in volumes2]
         self._circumcenter_facet_distances = lmbda
 
         self._cell_heights = sqrt_vv
         self._cell_circumradii = np.sqrt(circumradii2)
+
+        self._cell_partitions = partitions
 
         # The integral of x,
         #
@@ -393,7 +394,7 @@ class Mesh:
         # The integral of any linear function over a triangle is the average of the
         # values of the function in each of the three corners, times the area of the
         # triangle.
-        self._integral_x = _multiply(sumx, self._partitions[-1] / self.n, self.n)
+        self._integral_x = _multiply(sumx, partitions / self.n, self.n)
 
     @property
     def signed_cell_volumes(self):
@@ -958,9 +959,8 @@ class Mesh:
             for k in range(len(self._circumcenters)):
                 self._circumcenters[k] = self._circumcenters[k][..., keep, :]
 
-        if self._partitions is not None:
-            for k in range(len(self._partitions)):
-                self._partitions[k] = self._partitions[k][..., keep]
+        if self._cell_partitions is not None:
+            self._cell_partitions = self._cell_partitions[..., keep]
 
         if self._signed_cell_volumes is not None:
             self._signed_cell_volumes = self._signed_cell_volumes[keep]
