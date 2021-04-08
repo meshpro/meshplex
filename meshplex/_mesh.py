@@ -159,6 +159,270 @@ class Mesh:
             # <https://gist.github.com/nschloe/d9c1d872a3ab8b47ff22d97d103be266>.
         return self._ei_dot_ej
 
+    @property
+    def cell_heights(self):
+        if self._cell_heights is None:
+            self._compute_cell_values()
+        return self._cell_heights
+
+    @property
+    def edge_lengths(self):
+        if self._volumes is None:
+            self._compute_cell_values()
+        return self._volumes[0]
+
+    @property
+    def facet_areas(self):
+        if self.n == 2:
+            return np.ones(len(self.facets["points"]))
+        if self._volumes is None:
+            self._compute_cell_values()
+        return self._volumes[-2]
+
+    @property
+    def cell_volumes(self):
+        if self._volumes is None:
+            self._compute_cell_values()
+        return self._volumes[-1]
+
+    @property
+    def cell_circumcenters(self):
+        """Get the center of the circumsphere of each cell."""
+        if self._circumcenters is None:
+            self._compute_cell_values()
+        return self._circumcenters[-1]
+
+    @property
+    def cell_circumradius(self):
+        """Get the circumradii of all cells"""
+        if self._circumradii2 is None:
+            self._compute_cell_values()
+        return np.sqrt(self._circumradii2[-1])
+
+    @property
+    def cell_partitions(self):
+        """Each simplex can be subdivided into parts that a closest to each corner.
+        This method gives those parts, like ce_ratios associated with each edge.
+        """
+        if self._partitions is None:
+            self._compute_cell_values()
+        return self._partitions[-1]
+
+    @property
+    def circumcenter_face_distances(self):
+        if self._circumcenter_facet_distances is None:
+            self._compute_cell_values()
+        return self._circumcenter_facet_distances
+
+    def get_control_volume_centroids(self, idx=slice(None)):
+        """The centroid of any volume V is given by
+
+        .. math::
+          c = \\int_V x / \\int_V 1.
+
+        The denominator is the control volume. The numerator can be computed by making
+        use of the fact that the control volume around any vertex is composed of right
+        triangles, two for each adjacent cell.
+
+        Optionally disregard the contributions from particular cells. This is useful,
+        for example, for temporarily disregarding flat cells on the boundary when
+        performing Lloyd mesh optimization.
+        """
+        assert idx is not None
+
+        if self._cv_centroids is None or np.any(idx != self._cvc_cell_mask):
+            if self._integral_x is None:
+                self._compute_cell_values()
+
+            # TODO this can be improved by first summing up all components per cell
+            integral_p = npx.sum_at(
+                self._integral_x[..., idx, :],
+                self.idx[-1][:, idx],
+                len(self.points),
+            )
+
+            # Divide by the control volume
+            cv = self.get_control_volumes(idx)
+            self._cv_centroids = (integral_p.T / cv).T
+
+            self._cvc_cell_mask = idx
+            assert np.all(idx == self._cv_cell_mask)
+
+        return self._cv_centroids
+
+    @property
+    def control_volume_centroids(self):
+        return self.get_control_volume_centroids()
+
+    @property
+    def ce_ratios(self):
+        """The covolume-edgelength ratios."""
+        # There are many ways for computing the ratio of the covolume and the edge
+        # length. For triangles, for example, there is
+        #
+        #   ce_ratios = -<ei, ej> / cell_volume / 4,
+        #
+        # for tetrahedra,
+        #
+        #   zeta = (
+        #       + ei_dot_ej[0, 2] * ei_dot_ej[3, 5] * ei_dot_ej[5, 4]
+        #       + ei_dot_ej[0, 1] * ei_dot_ej[3, 5] * ei_dot_ej[3, 4]
+        #       + ei_dot_ej[1, 2] * ei_dot_ej[3, 4] * ei_dot_ej[4, 5]
+        #       + self.ei_dot_ej[0] * self.ei_dot_ej[1] * self.ei_dot_ej[2]
+        #       ).
+        #
+        # Since we have detailed cell partitions at hand, though, the easiest and
+        # fastest is via those.
+        if self._ce_ratios is None:
+            if self._partitions is None:
+                self._compute_cell_values()
+
+            self._ce_ratios = (
+                self._partitions[-1][0] / self.ei_dot_ei * 2 * (self.n - 1)
+            )
+
+        return self._ce_ratios
+
+    @property
+    def ce_ratios_per_interior_facet(self):
+        if self._interior_ce_ratios is None:
+            if "edges" not in self.cells:
+                self.create_facets()
+
+            ce_ratios = npx.sum_at(
+                self.ce_ratios.T,
+                self.cells["edges"],
+                self.edges["points"].shape[0],
+            )
+            self._interior_ce_ratios = ce_ratios[self.is_interior_facet]
+
+        return self._interior_ce_ratios
+
+
+    def _compute_cell_values(self):
+        """Computes the volumes of all edges, facets, cells etc. in the mesh. It starts
+        off by computing the (squared) edge lengths, then complements the edge with one
+        vertex to form face. It computes an orthogonal basis of the face (with modified
+        Gram-Schmidt), and from that gets the height of all faces. From this, the area
+        of the face is computed. Then, it complements again to form the 3-simplex,
+        again forms an orthogonal basis with Gram-Schmidt, and so on.
+        """
+        e = self.points[self.idx[-1]]
+        e0 = e[0]
+        diff = e[1] - e[0]
+        self._half_edge_coords = diff
+        orthogonal_basis = np.array([diff])
+
+        self._ei_dot_ei = _dot(self.half_edge_coords, self.n - 1)
+
+        volumes2 = [self._ei_dot_ei]
+        self._circumcenters = [0.5 * (e[0] + e[1])]
+
+        vv = _dot(diff, self.n - 1)
+        self._circumradii2 = [0.25 * vv]
+        sqrt_vv = np.sqrt(vv)
+        lmbda = 0.5 * np.sqrt(vv)
+
+        sumx = np.array(e + self._circumcenters[-1])
+
+        self._partitions = [0.5 * np.sqrt(np.array([vv, vv]))]
+
+        norms2 = np.array(volumes2)
+        for kk, idx in enumerate(self.idx[:-1][::-1]):
+            # Use the orthogonal bases of all sides to get a vector `v` orthogonal to
+            # the side, pointing towards the additional point `p0`.
+            p0 = self.points[idx]
+            v = p0 - e0
+            # modified gram-schmidt
+            for w, ww in zip(orthogonal_basis, norms2):
+                alpha = np.einsum("...k,...k->...", w, v) / ww
+                v -= _multiply(w, alpha, self.n - 1 - kk)
+
+            vv = np.einsum("...k,...k->...", v, v)
+
+            # Form the orthogonal basis for the next iteration by choosing one side
+            # `k0`. <https://gist.github.com/nschloe/3922801e200cf82aec2fb53c89e1c578>
+            # shows that it doesn't make a difference which point-facet combination we
+            # choose.
+            k0 = 0
+            e0 = e0[k0]
+            orthogonal_basis = np.row_stack([orthogonal_basis[:, k0], [v[k0]]])
+            norms2 = np.row_stack([norms2[:, k0], [vv[k0]]])
+
+            # The squared volume is the squared volume of the face times the squared
+            # height divided by (n+1) ** 2.
+            volumes2.append(volumes2[-1][0] * vv[k0] / (kk + 2) ** 2)
+
+            # get the distance to the circumcenter; used in cell partitions and
+            # circumcenter/-radius computation
+            c = self._circumcenters[-1]
+            cr2 = self._circumradii2[-1]
+
+            p0c2 = _dot(p0 - c, self.n - 1 - kk)
+            #
+            sigma = 0.5 * (p0c2 - cr2) / vv
+            lmbda2 = sigma ** 2 * vv
+
+            # circumcenter, squared circumradius
+            # <https://math.stackexchange.com/a/4064749/36678>
+            #
+            self._circumradii2.append(lmbda2[k0] + cr2[k0])
+            self._circumcenters.append(
+                c[k0] + _multiply(v[k0], sigma[k0], self.n - 2 - kk)
+            )
+
+            sumx += self._circumcenters[-1]
+
+            # cell partitions
+            # don't use sqrt(lmbda2) here; lmbda can be negative
+            sqrt_vv = np.sqrt(vv)
+            lmbda = sigma * sqrt_vv
+            vols = self._partitions[-1] * lmbda / (kk + 2)
+            self._partitions.append(vols)
+
+        self._volumes = [np.sqrt(v2) for v2 in volumes2]
+        self._circumcenter_facet_distances = lmbda
+
+        self._cell_heights = sqrt_vv
+
+        # The integral of x,
+        #
+        #   \\int_V x,
+        #
+        # over all atomic wedges, i.e., areas cornered by a point, an edge midpoint, and
+        # the subsequent circumcenters.
+        # The integral of any linear function over a triangle is the average of the
+        # values of the function in each of the three corners, times the area of the
+        # triangle.
+        self._integral_x = _multiply(sumx, self._partitions[-1] / self.n, self.n)
+
+    @property
+    def signed_cell_volumes(self):
+        """Signed volumes of an n-simplex in nD."""
+        if self._signed_cell_volumes is None:
+            self._signed_cell_volumes = self.compute_signed_cell_volumes()
+        return self._signed_cell_volumes
+
+    def compute_signed_cell_volumes(self, idx=slice(None)):
+        n = self.points.shape[1]
+        assert n == self.cells["points"].shape[1] - 1, (
+            "Signed areas only make sense for n-simplices in in nD. "
+            f"Got {n}D points."
+        )
+        if n == 2:
+            # On <https://stackoverflow.com/q/50411583/353337>, we have a number of
+            # alternatives computing the oriented area, but it's fastest with the
+            # half-edges.
+            x = self.half_edge_coords
+            out = (x[0, idx, 1] * x[2, idx, 0] - x[0, idx, 0] * x[2, idx, 1]) / 2
+        else:
+            # https://en.wikipedia.org/wiki/Simplex#Volume
+            cp = self.points[self.cells["points"]]
+            # append ones
+            cp1 = np.concatenate([cp, np.ones(cp.shape[:-1] + (1,))], axis=-1)
+            out = np.linalg.det(cp1) / math.factorial(n)
+        return out
+
     def compute_cell_centroids(self, idx=slice(None)):
         return np.sum(self.points[self.cells["points"][idx]], axis=1) / self.n
 
@@ -173,10 +437,19 @@ class Mesh:
     cell_barycenters = cell_centroids
 
     @property
-    def cell_heights(self):
-        if self._cell_heights is None:
-            self._compute_cell_values()
-        return self._cell_heights
+    def cell_incenters(self):
+        """Get the midpoints of the inspheres."""
+        # https://en.wikipedia.org/wiki/Incenter#Barycentric_coordinates
+        # https://math.stackexchange.com/a/2864770/36678
+        abc = self.facet_areas / np.sum(self.facet_areas, axis=0)
+        return np.einsum("ij,jik->jk", abc, self.points[self.cells["points"]])
+
+    @property
+    def cell_inradius(self):
+        """Get the inradii of all cells"""
+        # See <http://mathworld.wolfram.com/Incircle.html>.
+        # https://en.wikipedia.org/wiki/Tetrahedron#Inradius
+        return (self.n - 1) * self.cell_volumes / np.sum(self.facet_areas, axis=0)
 
     @property
     def is_point_used(self):
@@ -297,167 +570,6 @@ class Mesh:
                 is_inside = is_inside & self.is_boundary_point
 
         self.subdomains[subdomain] = {"vertices": is_inside}
-
-    @property
-    def signed_cell_volumes(self):
-        """Signed volumes of an n-simplex in nD."""
-        if self._signed_cell_volumes is None:
-            self._signed_cell_volumes = self.compute_signed_cell_volumes()
-        return self._signed_cell_volumes
-
-    def compute_signed_cell_volumes(self, idx=slice(None)):
-        n = self.points.shape[1]
-        assert n == self.cells["points"].shape[1] - 1, (
-            "Signed areas only make sense for n-simplices in in nD. "
-            f"Got {n}D points."
-        )
-        if n == 2:
-            # On <https://stackoverflow.com/q/50411583/353337>, we have a number of
-            # alternatives computing the oriented area, but it's fastest with the
-            # half-edges.
-            x = self.half_edge_coords
-            out = (x[0, idx, 1] * x[2, idx, 0] - x[0, idx, 0] * x[2, idx, 1]) / 2
-        else:
-            # https://en.wikipedia.org/wiki/Simplex#Volume
-            cp = self.points[self.cells["points"]]
-            # append ones
-            cp1 = np.concatenate([cp, np.ones(cp.shape[:-1] + (1,))], axis=-1)
-            out = np.linalg.det(cp1) / math.factorial(n)
-        return out
-
-    def _compute_cell_values(self):
-        """Computes the volumes of all edges, facets, cells etc. in the mesh. It starts
-        off by computing the (squared) edge lengths, then complements the edge with one
-        vertex to form face. It computes an orthogonal basis of the face (with modified
-        Gram-Schmidt), and from that gets the height of all faces. From this, the area
-        of the face is computed. Then, it complements again to form the 3-simplex,
-        again forms an orthogonal basis with Gram-Schmidt, and so on.
-        """
-        e = self.points[self.idx[-1]]
-        e0 = e[0]
-        diff = e[1] - e[0]
-        self._half_edge_coords = diff
-        orthogonal_basis = np.array([diff])
-
-        self._ei_dot_ei = _dot(self.half_edge_coords, self.n - 1)
-
-        volumes2 = [self._ei_dot_ei]
-        self._circumcenters = [0.5 * (e[0] + e[1])]
-
-        vv = _dot(diff, self.n - 1)
-        self._circumradii2 = [0.25 * vv]
-        sqrt_vv = np.sqrt(vv)
-        lmbda = 0.5 * np.sqrt(vv)
-
-        sumx = np.array(e + self._circumcenters[-1])
-
-        self._partitions = [0.5 * np.sqrt(np.array([vv, vv]))]
-
-        norms2 = np.array(volumes2)
-        for kk, idx in enumerate(self.idx[:-1][::-1]):
-            # Use the orthogonal bases of all sides to get a vector `v` orthogonal to
-            # the side, pointing towards the additional point `p0`.
-            p0 = self.points[idx]
-            v = p0 - e0
-            # modified gram-schmidt
-            for w, ww in zip(orthogonal_basis, norms2):
-                alpha = np.einsum("...k,...k->...", w, v) / ww
-                v -= _multiply(w, alpha, self.n - 1 - kk)
-
-            vv = np.einsum("...k,...k->...", v, v)
-
-            # Form the orthogonal basis for the next iteration by choosing one side
-            # `k0`. <https://gist.github.com/nschloe/3922801e200cf82aec2fb53c89e1c578>
-            # shows that it doesn't make a difference which point-facet combination we
-            # choose.
-            k0 = 0
-            e0 = e0[k0]
-            orthogonal_basis = np.row_stack([orthogonal_basis[:, k0], [v[k0]]])
-            norms2 = np.row_stack([norms2[:, k0], [vv[k0]]])
-
-            # The squared volume is the squared volume of the face times the squared
-            # height divided by (n+1) ** 2.
-            volumes2.append(volumes2[-1][0] * vv[k0] / (kk + 2) ** 2)
-
-            # get the distance to the circumcenter; used in cell partitions and
-            # circumcenter/-radius computation
-            c = self._circumcenters[-1]
-            cr2 = self._circumradii2[-1]
-
-            p0c2 = _dot(p0 - c, self.n - 1 - kk)
-            #
-            sigma = 0.5 * (p0c2 - cr2) / vv
-            lmbda2 = sigma ** 2 * vv
-
-            # circumcenter, squared circumradius
-            # <https://math.stackexchange.com/a/4064749/36678>
-            #
-            self._circumradii2.append(lmbda2[k0] + cr2[k0])
-            self._circumcenters.append(
-                c[k0] + _multiply(v[k0], sigma[k0], self.n - 2 - kk)
-            )
-
-            sumx += self._circumcenters[-1]
-
-            # cell partitions
-            # don't use sqrt(lmbda2) here; lmbda can be negative
-            sqrt_vv = np.sqrt(vv)
-            lmbda = sigma * sqrt_vv
-            vols = self._partitions[-1] * lmbda / (kk + 2)
-            self._partitions.append(vols)
-
-        self._volumes = [np.sqrt(v2) for v2 in volumes2]
-        self._circumcenter_facet_distances = lmbda
-
-        self._cell_heights = sqrt_vv
-
-        # The integral of x,
-        #
-        #   \\int_V x,
-        #
-        # over all atomic wedges, i.e., areas cornered by a point, an edge midpoint, and
-        # the subsequent circumcenters.
-        # The integral of any linear function over a triangle is the average of the
-        # values of the function in each of the three corners, times the area of the
-        # triangle.
-        self._integral_x = _multiply(sumx, self._partitions[-1] / self.n, self.n)
-
-    @property
-    def edge_lengths(self):
-        if self._volumes is None:
-            self._compute_cell_values()
-        return self._volumes[0]
-
-    @property
-    def facet_areas(self):
-        if self.n == 2:
-            return np.ones(len(self.facets["points"]))
-
-        if self._volumes is None:
-            self._compute_cell_values()
-
-        return self._volumes[-2]
-
-    @property
-    def cell_volumes(self):
-        if self._volumes is None:
-            self._compute_cell_values()
-        return self._volumes[-1]
-
-    @property
-    def cell_incenters(self):
-        """Get the midpoints of the inspheres."""
-        # https://en.wikipedia.org/wiki/Incenter#Barycentric_coordinates
-        # https://math.stackexchange.com/a/2864770/36678
-        abc = self.facet_areas / np.sum(self.facet_areas, axis=0)
-        return np.einsum("ij,jik->jk", abc, self.points[self.cells["points"]])
-
-    @property
-    def cell_inradius(self):
-        """Get the inradii of all cells"""
-        # See <http://mathworld.wolfram.com/Incircle.html>.
-        # https://en.wikipedia.org/wiki/Tetrahedron#Inradius
-        return (self.n - 1) * self.cell_volumes / np.sum(self.facet_areas, axis=0)
 
     def create_facets(self):
         """Set up facet->point and facet->cell relations."""
@@ -655,20 +767,6 @@ class Mesh:
 
         if self._is_point_used is not None:
             self._is_point_used = self._is_point_used[is_part_of_cell]
-
-    @property
-    def cell_circumcenters(self):
-        """Get the center of the circumsphere of each cell."""
-        if self._circumcenters is None:
-            self._compute_cell_values()
-        return self._circumcenters[-1]
-
-    @property
-    def cell_circumradius(self):
-        """Get the circumradii of all cells"""
-        if self._circumradii2 is None:
-            self._compute_cell_values()
-        return np.sqrt(self._circumradii2[-1])
 
     @property
     def q_radius_ratio(self):
@@ -922,15 +1020,6 @@ class Mesh:
 
         return self.remove_cells(remove)
 
-    @property
-    def cell_partitions(self):
-        """Each simplex can be subdivided into parts that a closest to each corner.
-        This method gives those parts, like ce_ratios associated with each edge.
-        """
-        if self._partitions is None:
-            self._compute_cell_values()
-        return self._partitions[-1]
-
     def get_control_volumes(self, idx=slice(None)):
         """The control volumes around each vertex. Optionally disregard the
         contributions from particular cells. This is useful, for example, for
@@ -960,56 +1049,6 @@ class Mesh:
             return self.get_control_volumes()
         return self._control_volumes
 
-    @property
-    def ce_ratios(self):
-        """The covolume-edgelength ratios."""
-        # There are many ways for computing the ratio of the covolume and the edge
-        # length. For triangles, for example, there is
-        #
-        #   ce_ratios = -<ei, ej> / cell_volume / 4,
-        #
-        # for tetrahedra,
-        #
-        #   zeta = (
-        #       + ei_dot_ej[0, 2] * ei_dot_ej[3, 5] * ei_dot_ej[5, 4]
-        #       + ei_dot_ej[0, 1] * ei_dot_ej[3, 5] * ei_dot_ej[3, 4]
-        #       + ei_dot_ej[1, 2] * ei_dot_ej[3, 4] * ei_dot_ej[4, 5]
-        #       + self.ei_dot_ej[0] * self.ei_dot_ej[1] * self.ei_dot_ej[2]
-        #       ).
-        #
-        # Since we have detailed cell partitions at hand, though, the easiest and
-        # fastest is via those.
-        if self._ce_ratios is None:
-            if self._partitions is None:
-                self._compute_cell_values()
-
-            self._ce_ratios = (
-                self._partitions[-1][0] / self.ei_dot_ei * 2 * (self.n - 1)
-            )
-
-        return self._ce_ratios
-
-    @property
-    def ce_ratios_per_interior_facet(self):
-        if self._interior_ce_ratios is None:
-            if "edges" not in self.cells:
-                self.create_facets()
-
-            ce_ratios = npx.sum_at(
-                self.ce_ratios.T,
-                self.cells["edges"],
-                self.edges["points"].shape[0],
-            )
-            self._interior_ce_ratios = ce_ratios[self.is_interior_facet]
-
-        return self._interior_ce_ratios
-
-    @property
-    def circumcenter_face_distances(self):
-        if self._circumcenter_facet_distances is None:
-            self._compute_cell_values()
-        return self._circumcenter_facet_distances
-
     def num_delaunay_violations(self):
         """Number of edges where the Delaunay condition is violated."""
         # Delaunay violations are present exactly on the interior edges where the
@@ -1032,43 +1071,3 @@ class Mesh:
             num_facets,
         )
         return np.sum(sums[self.is_interior_facet] < 0.0)
-
-    def get_control_volume_centroids(self, idx=slice(None)):
-        """The centroid of any volume V is given by
-
-        .. math::
-          c = \\int_V x / \\int_V 1.
-
-        The denominator is the control volume. The numerator can be computed by making
-        use of the fact that the control volume around any vertex is composed of right
-        triangles, two for each adjacent cell.
-
-        Optionally disregard the contributions from particular cells. This is useful,
-        for example, for temporarily disregarding flat cells on the boundary when
-        performing Lloyd mesh optimization.
-        """
-        assert idx is not None
-
-        if self._cv_centroids is None or np.any(idx != self._cvc_cell_mask):
-            if self._integral_x is None:
-                self._compute_cell_values()
-
-            # TODO this can be improved by first summing up all components per cell
-            integral_p = npx.sum_at(
-                self._integral_x[..., idx, :],
-                self.idx[-1][:, idx],
-                len(self.points),
-            )
-
-            # Divide by the control volume
-            cv = self.get_control_volumes(idx)
-            self._cv_centroids = (integral_p.T / cv).T
-
-            self._cvc_cell_mask = idx
-            assert np.all(idx == self._cv_cell_mask)
-
-        return self._cv_centroids
-
-    @property
-    def control_volume_centroids(self):
-        return self.get_control_volume_centroids()
