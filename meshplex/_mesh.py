@@ -89,7 +89,7 @@ class Mesh:
         self._integral_x = None
         self._signed_cell_volumes = None
         self._circumcenters = None
-        self._circumradii2 = None
+        self._cell_circumradii = None
         self._cell_heights = None
         self._ce_ratios = None
         self._partitions = None
@@ -195,9 +195,9 @@ class Mesh:
     @property
     def cell_circumradius(self):
         """Get the circumradii of all cells"""
-        if self._circumradii2 is None:
+        if self._cell_circumradii is None:
             self._compute_cell_values()
-        return np.sqrt(self._circumradii2[-1])
+        return self._cell_circumradii
 
     @property
     def cell_partitions(self):
@@ -298,7 +298,6 @@ class Mesh:
 
         return self._interior_ce_ratios
 
-
     def _compute_cell_values(self):
         """Computes the volumes of all edges, facets, cells etc. in the mesh. It starts
         off by computing the (squared) edge lengths, then complements the edge with one
@@ -319,7 +318,7 @@ class Mesh:
         self._circumcenters = [0.5 * (e[0] + e[1])]
 
         vv = _dot(diff, self.n - 1)
-        self._circumradii2 = [0.25 * vv]
+        circumradii2 = 0.25 * vv
         sqrt_vv = np.sqrt(vv)
         lmbda = 0.5 * np.sqrt(vv)
 
@@ -356,17 +355,16 @@ class Mesh:
             # get the distance to the circumcenter; used in cell partitions and
             # circumcenter/-radius computation
             c = self._circumcenters[-1]
-            cr2 = self._circumradii2[-1]
 
             p0c2 = _dot(p0 - c, self.n - 1 - kk)
             #
-            sigma = 0.5 * (p0c2 - cr2) / vv
+            sigma = 0.5 * (p0c2 - circumradii2) / vv
             lmbda2 = sigma ** 2 * vv
 
             # circumcenter, squared circumradius
             # <https://math.stackexchange.com/a/4064749/36678>
             #
-            self._circumradii2.append(lmbda2[k0] + cr2[k0])
+            circumradii2 = lmbda2[k0] + circumradii2[k0]
             self._circumcenters.append(
                 c[k0] + _multiply(v[k0], sigma[k0], self.n - 2 - kk)
             )
@@ -384,6 +382,7 @@ class Mesh:
         self._circumcenter_facet_distances = lmbda
 
         self._cell_heights = sqrt_vv
+        self._cell_circumradii = np.sqrt(circumradii2)
 
         # The integral of x,
         #
