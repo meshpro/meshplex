@@ -312,6 +312,7 @@ class Mesh:
         orthogonal_basis = np.array([diff])
 
         volumes2 = [_dot(diff, self.n - 1)]
+
         circumcenters = [0.5 * (e[0] + e[1])]
 
         vv = _dot(diff, self.n - 1)
@@ -327,7 +328,7 @@ class Mesh:
         for kk, idx in enumerate(self.idx[:-1][::-1]):
             # Use the orthogonal bases of all sides to get a vector `v` orthogonal to
             # the side, pointing towards the additional point `p0`.
-            p0 = self.points[idx]
+            p0 = self.points[idx][:, mask]
             v = p0 - e0
             # modified gram-schmidt
             for w, ww in zip(orthogonal_basis, norms2):
@@ -372,17 +373,6 @@ class Mesh:
             lmbda = sigma * sqrt_vv
             partitions *= lmbda / (kk + 2)
 
-        self._ei_dot_ei = volumes2[0]
-        self._half_edge_coords = diff
-        self._volumes = [np.sqrt(v2) for v2 in volumes2]
-        self._circumcenter_facet_distances = lmbda
-
-        self._cell_heights = sqrt_vv
-        self._cell_circumradii = np.sqrt(circumradii2)
-        self._circumcenters = circumcenters
-
-        self._cell_partitions = partitions
-
         # The integral of x,
         #
         #   \\int_V x,
@@ -392,7 +382,49 @@ class Mesh:
         # The integral of any linear function over a triangle is the average of the
         # values of the function in each of the three corners, times the area of the
         # triangle.
-        self._integral_x = _multiply(sumx, partitions / self.n, self.n)
+        integral_x = _multiply(sumx, partitions / self.n, self.n)
+
+        if mask == slice(None):
+            # set new values
+            self._ei_dot_ei = volumes2[0]
+            self._half_edge_coords = diff
+            self._volumes = [np.sqrt(v2) for v2 in volumes2]
+            self._circumcenter_facet_distances = lmbda
+            self._cell_heights = sqrt_vv
+            self._cell_circumradii = np.sqrt(circumradii2)
+            self._circumcenters = circumcenters
+            self._cell_partitions = partitions
+            self._integral_x = integral_x
+        else:
+            # update existing values
+            assert self._ei_dot_ei is not None
+            self._ei_dot_ei[:, mask] = volumes2[0]
+
+            assert self._half_edge_coords is not None
+            self._half_edge_coords[:, mask] = diff
+
+            assert self._volumes is not None
+            for k in range(len(self._volumes)):
+                self._volumes[k][..., mask] = np.sqrt(volumes2[k])
+
+            assert self._circumcenter_facet_distances is not None
+            self._circumcenter_facet_distances[..., mask] = lmbda
+
+            assert self._cell_heights is not None
+            self._cell_heights[..., mask] = sqrt_vv
+
+            assert self._cell_circumradii is not None
+            self._cell_circumradii[mask] = np.sqrt(circumradii2)
+
+            assert self._circumcenters is not None
+            for k in range(len(self._circumcenters)):
+                self._circumcenters[k][..., mask, :] = circumcenters[k]
+
+            assert self._cell_partitions is not None
+            self._cell_partitions[..., mask] = partitions
+
+            assert self._integral_x is not None
+            self._integral_x[..., mask, :] = integral_x
 
     @property
     def signed_cell_volumes(self):
