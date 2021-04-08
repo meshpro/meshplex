@@ -700,10 +700,11 @@ class MeshTri(Mesh):
         self.ei_dot_ei[:, cell_ids] = np.einsum("...k,...k->...", e, e)
 
         # update self.ei_dot_ej
-        self._ei_dot_ej[:, cell_ids] = (
-            self.ei_dot_ei[:, cell_ids]
-            - np.sum(self.ei_dot_ei[:, cell_ids], axis=0) / 2
-        )
+        if self._ei_dot_ej is not None:
+            self._ei_dot_ej[:, cell_ids] = (
+                self.ei_dot_ei[:, cell_ids]
+                - np.sum(self.ei_dot_ei[:, cell_ids], axis=0) / 2
+            )
 
         # update cell_volumes, ce_ratios_per_half_edge
         cv = compute_tri_areas(self.ei_dot_ej[:, cell_ids])
