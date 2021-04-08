@@ -33,7 +33,6 @@ def test_tri():
             [0.0, 1.0],
         ]
     )
-
     cells = np.array([[0, 1, 2], [0, 2, 3]])
     mesh = meshplex.Mesh(X, cells)
     mesh.create_facets()
@@ -68,7 +67,6 @@ def test_tetra():
             [0.0, 0.0, 1.0],
         ]
     )
-
     cells = np.array([[0, 1, 2, 3], [0, 1, 2, 4]])
     mesh = meshplex.Mesh(X, cells)
     mesh.create_facets()
@@ -93,3 +91,18 @@ def test_tetra():
         ]
     )
     assert np.all(mesh.cells["facets"] == ref)
+
+
+def test_duplicate_cells():
+    X = np.array(
+        [
+            [0.0, 0.0],
+            [1.0, 0.0],
+            [1.0, 1.0],
+            [0.0, 1.0],
+        ]
+    )
+    cells = np.array([[0, 1, 2], [0, 2, 3], [0, 2, 1]])
+    mesh = meshplex.Mesh(X, cells)
+    with pytest.raises(meshplex.MeshplexError):
+        mesh.create_facets()
