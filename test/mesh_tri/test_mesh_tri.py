@@ -14,6 +14,98 @@ from ..helpers import assert_norms, is_near_equal, run
 this_dir = pathlib.Path(__file__).resolve().parent
 
 
+def test_reference_vals_pacman():
+    mesh = meshplex.read(this_dir / ".." / "meshes" / "pacman.vtk")
+    mesh = meshplex.MeshTri(mesh.points[:, :2], mesh.cells["points"])
+
+    assert_norms(
+        mesh.points,
+        [1.9453332841306219e03, 7.6132317161423188e01, 5.0000000000000000e00],
+        1.0e-15,
+    )
+    assert_norms(
+        mesh.half_edge_coords,
+        [1.4877138083023146e03, 2.3832578720000392e01, 7.4837484405285548e-01],
+        1.0e-15,
+    )
+    assert_norms(
+        mesh.ei_dot_ei,
+        [5.6799180844501529e02, 1.2206206673476814e01, 5.9055343319143572e-01],
+        1.0e-15,
+    )
+    assert_norms(
+        mesh.ei_dot_ej,
+        [2.9062335745029998e02, 6.8564127011300799e00, 4.8848110781654974e-01],
+        1.0e-15,
+    )
+    assert_norms(
+        mesh.cell_partitions,
+        # [3.9152391707837168e01, 8.5089998305597037e-01, 7.3358866064106520e-02],
+        [7.8304783415674336e01, 1.2033542962607897e00, 7.3358866064106479e-02],
+        1.0e-12,
+    )
+    assert_norms(
+        mesh.cell_centroids,
+        [3.5075143737347894e03, 1.0054693678190726e02, 4.9318163228755303e00],
+        1.0e-15,
+    )
+    assert_norms(
+        mesh.edge_lengths,
+        [1.1684016007356104e03, 2.3832578720000388e01, 7.6847474466727639e-01],
+        1.0e-15,
+    )
+    assert_norms(
+        mesh.cell_volumes,
+        [7.3645739331058962e01, 2.6213234038171018e00, 1.3841739494523261e-01],
+        1.0e-15,
+    )
+    assert_norms(
+        mesh.ce_ratios,
+        [8.3424204067445635e02, 1.9474996181417829e01, 1.2976923100235962e00],
+        1.0e-14,
+    )
+    assert_norms(
+        mesh.control_volumes,
+        [7.3645739331058977e01, 3.5961019149066180e00, 2.6638548094154696e-01],
+        1.0e-15,
+    )
+    assert_norms(
+        mesh.control_volume_centroids,
+        [1.9377919293932234e03, 7.5731558672272158e01, 4.8860581654036439e00],
+        1.0e-15,
+    )
+    assert_norms(
+        mesh.signed_cell_volumes,
+        [7.3645739331058977e01, 2.6213234038171014e00, 1.3841739494523259e-01],
+        1.0e-15,
+    )
+    assert_norms(
+        mesh.cell_circumcenters,
+        [3.5133223737062990e03, 1.0076507817714439e02, 5.1440751659588440e00],
+        1.0e-15,
+    )
+    assert_norms(
+        mesh.cell_circumradius,
+        [2.3626166467239324e02, 8.2555845809410222e00, 5.4304737796772495e-01],
+        1.0e-15,
+    )
+    assert_norms(
+        mesh.cell_incenters,
+        [3.5082041232999172e03, 1.0055691115339400e02, 4.9102937590190621e00],
+        1.0e-15,
+    )
+    assert_norms(
+        mesh.cell_inradius,
+        [1.0354407712741667e02, 3.6230231483791537e00, 1.6046047260222687e-01],
+        1.0e-15,
+    )
+    assert_norms(
+        mesh.q_radius_ratio,
+        [7.3380436025970664e02, 2.5652258142828014e01, 9.9998161879336100e-01],
+        1.0e-15,
+    )
+
+
 def _compute_polygon_area(pts):
     # shoelace formula
     return (
@@ -690,99 +782,3 @@ def test_set_points():
 
     mesh2 = meshplex.MeshTri(mesh.points, mesh.cells["points"])
     assert np.all(np.abs(ref - mesh2.cell_volumes) < 1.0e-10)
-
-
-def test_reference_vals_pacman():
-    mesh = meshplex.read(this_dir / ".." / "meshes" / "pacman.vtk")
-    mesh = meshplex.MeshTri(mesh.points[:, :2], mesh.cells["points"])
-
-    assert_norms(
-        mesh.points,
-        [1.9453332841306219e03, 7.6132317161423188e01, 5.0000000000000000e00],
-        1.0e-15,
-    )
-    assert_norms(
-        mesh.half_edge_coords,
-        [1.4877138083023146e03, 2.3832578720000392e01, 7.4837484405285548e-01],
-        1.0e-15,
-    )
-    assert_norms(
-        mesh.ei_dot_ei,
-        [5.6799180844501529e02, 1.2206206673476814e01, 5.9055343319143572e-01],
-        1.0e-15,
-    )
-    assert_norms(
-        mesh.ei_dot_ej,
-        [2.9062335745029998e02, 6.8564127011300799e00, 4.8848110781654974e-01],
-        1.0e-15,
-    )
-    assert_norms(
-        mesh.cell_partitions,
-        # [3.9152391707837168e01, 8.5089998305597037e-01, 7.3358866064106520e-02],
-        [7.8304783415674336e01, 1.2033542962607897e00, 7.3358866064106479e-02],
-        1.0e-12,
-    )
-    assert_norms(
-        mesh.cell_centroids,
-        [3.5075143737347894e03, 1.0054693678190726e02, 4.9318163228755303e00],
-        1.0e-15,
-    )
-    assert_norms(
-        mesh.edge_lengths,
-        [1.1684016007356104e03, 2.3832578720000388e01, 7.6847474466727639e-01],
-        1.0e-15,
-    )
-    assert_norms(
-        mesh.cell_volumes,
-        [7.3645739331058962e01, 2.6213234038171018e00, 1.3841739494523261e-01],
-        1.0e-15,
-    )
-    assert_norms(
-        mesh.ce_ratios,
-        [8.3424204067445635e02, 1.9474996181417829e01, 1.2976923100235962e00],
-        1.0e-14,
-    )
-    assert_norms(
-        mesh.control_volumes,
-        [7.3645739331058977e01, 3.5961019149066180e00, 2.6638548094154696e-01],
-        1.0e-15,
-    )
-    assert_norms(
-        mesh.control_volume_centroids,
-        [1.9377919293932234e03, 7.5731558672272158e01, 4.8860581654036439e00],
-        1.0e-15,
-    )
-    assert_norms(
-        mesh.signed_cell_volumes,
-        [7.3645739331058977e01, 2.6213234038171014e00, 1.3841739494523259e-01],
-        1.0e-15,
-    )
-    assert_norms(
-        mesh.cell_circumcenters,
-        [3.5133223737062990e03, 1.0076507817714439e02, 5.1440751659588440e00],
-        1.0e-15,
-    )
-    assert_norms(
-        mesh.cell_circumradius,
-        [2.3626166467239324e02, 8.2555845809410222e00, 5.4304737796772495e-01],
-        1.0e-15,
-    )
-    assert_norms(
-        mesh.cell_incenters,
-        [3.5082041232999172e03, 1.0055691115339400e02, 4.9102937590190621e00],
-        1.0e-15,
-    )
-    assert_norms(
-        mesh.cell_inradius,
-        [1.0354407712741667e02, 3.6230231483791537e00, 1.6046047260222687e-01],
-        1.0e-15,
-    )
-    assert_norms(
-        mesh.q_radius_ratio,
-        [7.3380436025970664e02, 2.5652258142828014e01, 9.9998161879336100e-01],
-        1.0e-15,
-    )
-
-
-if __name__ == "__main__":
-    test_set_points()

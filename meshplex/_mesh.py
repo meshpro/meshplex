@@ -297,7 +297,7 @@ class Mesh:
 
         return self._interior_ce_ratios
 
-    def _compute_cell_values(self):
+    def _compute_cell_values(self, mask=slice(None)):
         """Computes the volumes of all edges, facets, cells etc. in the mesh. It starts
         off by computing the (squared) edge lengths, then complements the edge with one
         vertex to form face. It computes an orthogonal basis of the face (with modified
@@ -305,23 +305,21 @@ class Mesh:
         of the face is computed. Then, it complements again to form the 3-simplex,
         again forms an orthogonal basis with Gram-Schmidt, and so on.
         """
-        e = self.points[self.idx[-1]]
+        e = self.points[self.idx[-1][..., mask]]
         e0 = e[0]
         diff = e[1] - e[0]
-        self._half_edge_coords = diff
+
         orthogonal_basis = np.array([diff])
 
-        self._ei_dot_ei = _dot(self.half_edge_coords, self.n - 1)
-
-        volumes2 = [self._ei_dot_ei]
-        self._circumcenters = [0.5 * (e[0] + e[1])]
+        volumes2 = [_dot(diff, self.n - 1)]
+        circumcenters = [0.5 * (e[0] + e[1])]
 
         vv = _dot(diff, self.n - 1)
         circumradii2 = 0.25 * vv
         sqrt_vv = np.sqrt(vv)
         lmbda = 0.5 * np.sqrt(vv)
 
-        sumx = np.array(e + self._circumcenters[-1])
+        sumx = np.array(e + circumcenters[-1])
 
         partitions = 0.5 * np.sqrt(np.array([vv, vv]))
 
@@ -353,7 +351,7 @@ class Mesh:
 
             # get the distance to the circumcenter; used in cell partitions and
             # circumcenter/-radius computation
-            c = self._circumcenters[-1]
+            c = circumcenters[-1]
 
             p0c2 = _dot(p0 - c, self.n - 1 - kk)
             #
@@ -364,11 +362,9 @@ class Mesh:
             # <https://math.stackexchange.com/a/4064749/36678>
             #
             circumradii2 = lmbda2[k0] + circumradii2[k0]
-            self._circumcenters.append(
-                c[k0] + _multiply(v[k0], sigma[k0], self.n - 2 - kk)
-            )
+            circumcenters.append(c[k0] + _multiply(v[k0], sigma[k0], self.n - 2 - kk))
 
-            sumx += self._circumcenters[-1]
+            sumx += circumcenters[-1]
 
             # cell partitions
             # don't use sqrt(lmbda2) here; lmbda can be negative
@@ -376,11 +372,14 @@ class Mesh:
             lmbda = sigma * sqrt_vv
             partitions *= lmbda / (kk + 2)
 
+        self._ei_dot_ei = volumes2[0]
+        self._half_edge_coords = diff
         self._volumes = [np.sqrt(v2) for v2 in volumes2]
         self._circumcenter_facet_distances = lmbda
 
         self._cell_heights = sqrt_vv
         self._cell_circumradii = np.sqrt(circumradii2)
+        self._circumcenters = circumcenters
 
         self._cell_partitions = partitions
 
