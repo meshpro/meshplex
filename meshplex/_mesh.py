@@ -90,7 +90,7 @@ class Mesh:
         self._signed_cell_volumes = None
         self._circumcenters = None
         self._circumradii2 = None
-        self._heights = None
+        self._cell_heights = None
         self._ce_ratios = None
         self._partitions = None
         self._control_volumes = None
@@ -175,9 +175,9 @@ class Mesh:
 
     @property
     def cell_heights(self):
-        if self._heights is None:
+        if self._cell_heights is None:
             self._compute_cell_values()
-        return self._heights
+        return self._cell_heights
 
     @property
     def is_point_used(self):
@@ -342,13 +342,14 @@ class Mesh:
         volumes2 = [_dot(orthogonal_basis[0], self.n - 1)]
         self._circumcenters = [0.5 * (e[0] + e[1])]
 
+        vv = _dot(diff, self.n - 1)
+        self._circumradii2 = [0.25 * vv]
+        sqrt_vv = np.sqrt(vv)
+        lmbda = 0.5 * np.sqrt(vv)
+
         sumx = np.array(e + self._circumcenters[-1])
 
-        dd = _dot(diff, self.n - 1)
-        self._circumradii2 = [0.25 * dd]
-        lmbda = 0.5 * np.sqrt(dd)
-
-        self._partitions = [0.5 * np.sqrt(np.array([dd, dd]))]
+        self._partitions = [0.5 * np.sqrt(np.array([vv, vv]))]
 
         norms2 = np.array(volumes2)
         for kk, idx in enumerate(self.idx[:-1][::-1]):
@@ -406,7 +407,7 @@ class Mesh:
         self._volumes = [np.sqrt(v2) for v2 in volumes2]
         self._circumcenter_facet_distances = lmbda
 
-        self._heights = sqrt_vv
+        self._cell_heights = sqrt_vv
 
         # The integral of x,
         #
