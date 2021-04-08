@@ -414,14 +414,14 @@ class Mesh:
             # alternatives computing the oriented area, but it's fastest with the
             # half-edges.
             x = self.half_edge_coords
-            out = (x[0, idx, 1] * x[2, idx, 0] - x[0, idx, 0] * x[2, idx, 1]) / 2
-        else:
-            # https://en.wikipedia.org/wiki/Simplex#Volume
-            cp = self.points[self.cells["points"]]
-            # append ones
-            cp1 = np.concatenate([cp, np.ones(cp.shape[:-1] + (1,))], axis=-1)
-            out = np.linalg.det(cp1) / math.factorial(n)
-        return out
+            return (x[0, idx, 1] * x[2, idx, 0] - x[0, idx, 0] * x[2, idx, 1]) / 2
+
+        # https://en.wikipedia.org/wiki/Simplex#Volume
+        cp = self.points[self.cells["points"]]
+        # append ones; this appends a column instead of a row as suggested by
+        # wikipedia, but that doesn't change the determinant
+        cp1 = np.concatenate([cp, np.ones(cp.shape[:-1] + (1,))], axis=-1)
+        return np.linalg.det(cp1) / math.factorial(n)
 
     def compute_cell_centroids(self, idx=slice(None)):
         return np.sum(self.points[self.cells["points"][idx]], axis=1) / self.n

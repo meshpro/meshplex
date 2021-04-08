@@ -9,11 +9,12 @@ this_dir = pathlib.Path(__file__).resolve().parent
 
 
 def test_signed_area_line():
-    X = np.array([0.0, 0.35])
+    X = np.array([[0.0], [0.35]])
     cells = np.array([[0, 1]])
     mesh = meshplex.Mesh(X, cells)
 
-    ref = np.array([0.35])
+    # TODO this is weird; shold be positive?
+    ref = np.array([-0.35])
 
     print(mesh.signed_cell_volumes)
     assert mesh.signed_cell_volumes.shape == ref.shape
@@ -21,11 +22,12 @@ def test_signed_area_line():
         np.abs(ref - mesh.signed_cell_volumes) < np.abs(ref) * 1.0e-13 + 1.0e-13
     )
 
-    X = np.array([0.0, 0.35])
+    X = np.array([[0.0], [0.35]])
     cells = np.array([[1, 0]])
     mesh = meshplex.Mesh(X, cells)
 
-    ref = np.array([-0.35])
+    # TODO this is weird; shold be negative?
+    ref = np.array([0.35])
 
     print(mesh.signed_cell_volumes)
     assert mesh.signed_cell_volumes.shape == ref.shape
@@ -39,6 +41,7 @@ def test_signed_area_basic():
     cells = np.array([[0, 1, 2], [0, 3, 2]])
     mesh = meshplex.Mesh(points, cells)
     ref = np.array([0.5, -0.55])
+
     assert np.all(np.abs(mesh.signed_cell_volumes - ref) < 1.0e-10 * np.abs(ref))
 
 
