@@ -16,24 +16,24 @@
 [![LGTM](https://img.shields.io/lgtm/grade/python/github/nschloe/meshplex.svg?style=flat-square)](https://lgtm.com/projects/g/nschloe/meshplex)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg?style=flat-square)](https://github.com/psf/black)
 
-Compute all sorts of interesting points, areas, and volumes in triangular and
-tetrahedral meshes, with a focus on efficiency. Useful in many contexts, e.g.,
-finite-element and finite-volume computations.
+Compute all sorts of interesting points, areas, and volumes in simplex (triangle,
+tetrahedral, n-simplex) meshes of any dimension, with a focus on efficiency. Useful in
+many contexts, e.g., finite-element and finite-volume computations.
 
 meshplex is used in [optimesh](https://github.com/nschloe/optimesh) and
 [pyfvm](https://github.com/nschloe/pyfvm).
 
 ### Quickstart
 
-For triangular and tetrahedral meshes, meshplex can compute the following data:
+meshplex can compute the following data:
 ```python
 import numpy
 import meshplex
 
-# create a simple MeshTri instance
+# create a simple Mesh instance
 points = numpy.array([[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]])
 cells = numpy.array([[0, 1, 2]])
-mesh = meshplex.MeshTri(points, cells)
+mesh = meshplex.Mesh(points, cells)
 # or read it from a file
 # mesh = meshplex.read("pacman.vtk")
 
@@ -47,11 +47,10 @@ print(mesh.cell_circumcenters)
 print(mesh.cell_centroids)
 print(mesh.cell_incenters)
 
-# circumradius, inradius, cell quality, angles
+# circumradius, inradius, cell quality
 print(mesh.cell_circumradius)
 print(mesh.cell_inradius)
 print(mesh.q_radius_ratio)  # d * inradius / circumradius (min 0, max 1)
-print(mesh.angles)
 
 # control volumes, centroids
 print(mesh.control_volumes)
@@ -60,17 +59,15 @@ print(mesh.control_volume_centroids)
 # covolume/edge length ratios
 print(mesh.ce_ratios)
 
-# flip edges until the mesh is Delaunay
-mesh.flip_until_delaunay()
+mesh.remove_cells([0, 2, ...])  # removes some cells
 
-# show the mesh
-mesh.show()
 ```
-For triangular meshes, meshplex also has some mesh manipulation routines:
+For triangular meshes (`MeshTri`), meshplex also has some mesh manipulation routines:
 <!--exdown-skip-->
 ```python
+mesh.show()                 # show the mesh
+mesh.angles                 # compute angles
 mesh.flip_until_delaunay()  # flips edges until the mesh is Delaunay
-mesh.remove_cells([0, 2, ...])  # removes some cells
 ```
 
 For a documentation of all classes and functions, see
@@ -148,12 +145,6 @@ pip install meshplex
 ```
 to install.
 
-### Testing
-
-To run the meshplex unit tests, check out this repository and type
-```
-pytest
-```
-
 ### License
-This software is published under the [GPLv3 license](https://www.gnu.org/licenses/gpl-3.0.en.html).
+This software is published under the [GPLv3
+license](https://www.gnu.org/licenses/gpl-3.0.en.html).

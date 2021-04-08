@@ -20,7 +20,7 @@ def test_control_volume_centroids_line():
 def test_control_volume_centroids_tri():
     points = np.array([[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]])
     cells = np.array([[0, 1, 2]])
-    mesh = meshplex.MeshTri(points, cells)
+    mesh = meshplex.Mesh(points, cells)
 
     ref = np.array([[0.25, 0.25], [2.0 / 3.0, 1.0 / 6.0], [1.0 / 6.0, 2.0 / 3.0]])
 

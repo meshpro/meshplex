@@ -43,7 +43,7 @@ def get_mesh0():
             [6, 7, 4],
         ]
     )
-    mesh = meshplex.MeshTri(points, cells)
+    mesh = meshplex.Mesh(points, cells)
     mesh.create_facets()
     return mesh
 
@@ -59,13 +59,13 @@ def get_mesh1():
     #
     points = [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0], [0.5, 0.5]]
     cells = [[0, 1, 4], [1, 2, 4], [2, 3, 4], [0, 4, 3]]
-    return meshplex.MeshTri(points, cells)
+    return meshplex.Mesh(points, cells)
 
 
 def get_mesh2():
     this_dir = pathlib.Path(__file__).resolve().parent
     mesh0 = meshplex.read(this_dir / "meshes" / "pacman.vtk")
-    return meshplex.MeshTri(mesh0.points[:, :2], mesh0.cells["points"])
+    return meshplex.Mesh(mesh0.points[:, :2], mesh0.cells["points"])
 
 
 @pytest.mark.parametrize(
@@ -135,7 +135,7 @@ def test_remove_cells_boundary():
 def test_remove_all():
     points = np.array([[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]])
     cells = [[0, 1, 2]]
-    mesh = meshplex.MeshTri(points, cells)
+    mesh = meshplex.Mesh(points, cells)
     assert np.all(mesh.is_point_used)
 
     mesh.remove_cells([0])
@@ -161,7 +161,7 @@ def test_reference(mesh0, remove_cells):
     assert_mesh_consistency(mesh0)
 
     # recreate the reduced mesh from scratch
-    mesh1 = meshplex.MeshTri(mesh0.points, mesh0.cells["points"])
+    mesh1 = meshplex.Mesh(mesh0.points, mesh0.cells["points"])
     mesh1.create_facets()
 
     # check against the original
