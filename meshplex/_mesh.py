@@ -134,14 +134,13 @@ class Mesh:
     @property
     def half_edge_coords(self):
         if self._half_edge_coords is None:
-            p = self.points[self.idx[-1]]
-            self._half_edge_coords = p[1] - p[0]
+            self._compute_cell_values()
         return self._half_edge_coords
 
     @property
     def ei_dot_ei(self):
         if self._ei_dot_ei is None:
-            self._ei_dot_ei = _dot(self.half_edge_coords, self.n - 1)
+            self._compute_cell_values()
         return self._ei_dot_ei
 
     @property
@@ -337,9 +336,12 @@ class Mesh:
         e = self.points[self.idx[-1]]
         e0 = e[0]
         diff = e[1] - e[0]
+        self._half_edge_coords = diff
         orthogonal_basis = np.array([diff])
 
-        volumes2 = [_dot(orthogonal_basis[0], self.n - 1)]
+        self._ei_dot_ei = _dot(self.half_edge_coords, self.n - 1)
+
+        volumes2 = [self._ei_dot_ei]
         self._circumcenters = [0.5 * (e[0] + e[1])]
 
         vv = _dot(diff, self.n - 1)
