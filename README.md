@@ -59,7 +59,8 @@ print(mesh.control_volume_centroids)
 # covolume/edge length ratios
 print(mesh.ce_ratios)
 
-mesh.remove_cells([0, 2, ...])  # removes some cells
+# removes some cells
+mesh.remove_cells([0])
 ```
 For triangular meshes (`MeshTri`), meshplex also has some mesh manipulation routines:
 <!--exdown-skip-->

@@ -6,7 +6,7 @@ import meshplex
 def test_mesh_line():
     pts = [0.0, 1.0, 3.0, 4.0]
     cells = [[0, 1], [1, 2], [2, 3]]
-    mesh = meshplex.MeshLine(pts, cells)
+    mesh = meshplex.Mesh(pts, cells)
     print(mesh.cell_volumes)
     ref = [1.0, 2.0, 1.0]
     assert np.all(np.abs(mesh.cell_volumes - ref) < np.abs(ref) * 1.0e-13)
