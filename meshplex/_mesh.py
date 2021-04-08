@@ -975,7 +975,8 @@ class Mesh:
 
     def remove_boundary_cells(self, criterion):
         """Helper method for removing cells along the boundary.
-        The input criterion is a boolean array of length `sum(mesh.is_boundary_cell)`.
+        The input criterion is a callback that must return an array of length
+        `sum(mesh.is_boundary_cell)`.
 
         This helps, for example, in the following scenario.
         When points are moving around, flip_until_delaunay() makes sure the mesh remains
@@ -984,10 +985,19 @@ class Mesh:
         this case, the boundary cell can be removed, and the newly outward node is made
         a boundary node."""
         num_removed = 0
+        num_boundary_cells = np.sum(self.is_boundary_cell)
         while True:
             crit = criterion(self.is_boundary_cell)
-            if np.all(~crit):
+
+            if ~np.any(crit):
                 break
+
+            if not isinstance(crit, np.ndarray) or crit.shape != (num_boundary_cells,):
+                raise ValueError(
+                    "criterion() callback must return a Boolean NumPy array "
+                    f"of shape {(num_boundary_cells,)}, got {crit.shape}."
+                )
+
             idx = self.is_boundary_cell.copy()
             idx[idx] = crit
             n = self.remove_cells(idx)

@@ -60,13 +60,12 @@ print(mesh.control_volume_centroids)
 print(mesh.ce_ratios)
 
 mesh.remove_cells([0, 2, ...])  # removes some cells
-
 ```
 For triangular meshes (`MeshTri`), meshplex also has some mesh manipulation routines:
 <!--exdown-skip-->
 ```python
-mesh.show()                 # show the mesh
-mesh.angles                 # compute angles
+mesh.show()  # show the mesh
+mesh.angles  # compute angles
 mesh.flip_until_delaunay()  # flips edges until the mesh is Delaunay
 ```
 

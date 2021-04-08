@@ -132,6 +132,14 @@ def test_remove_cells_boundary():
     assert np.all(mesh.is_boundary_cell)
 
 
+def test_remove_boundary_cell():
+    mesh = get_mesh0()
+    mesh.remove_boundary_cells(
+        lambda ibc: np.all(mesh.cell_centroids[ibc] > 0.5, axis=1)
+    )
+    assert mesh.cells["points"].shape[0] == 5
+
+
 def test_remove_all():
     points = np.array([[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]])
     cells = [[0, 1, 2]]
