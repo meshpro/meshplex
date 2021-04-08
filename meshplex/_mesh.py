@@ -1,5 +1,4 @@
 import math
-import warnings
 
 import meshio
 import npx
