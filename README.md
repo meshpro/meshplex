@@ -59,6 +59,9 @@ print(mesh.control_volume_centroids)
 # covolume/edge length ratios
 print(mesh.ce_ratios)
 
+# count Delaunay violations
+print(mesh.num_delaunay_violations)
+
 # removes some cells
 mesh.remove_cells([0])
 ```
