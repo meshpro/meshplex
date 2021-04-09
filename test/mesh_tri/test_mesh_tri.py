@@ -525,7 +525,6 @@ def test_update_point_coordinates():
     mesh1.points = X2
 
     tol = 1.0e-12
-    assert is_near_equal(mesh1.ei_dot_ej, mesh2.ei_dot_ej, tol)
     assert is_near_equal(mesh1.cell_volumes, mesh2.cell_volumes, tol)
 
 
@@ -709,11 +708,6 @@ def test_reference_vals_pacman():
     assert_norms(
         mesh.ei_dot_ei,
         [5.6799180844501529e02, 1.2206206673476814e01, 5.9055343319143572e-01],
-        1.0e-15,
-    )
-    assert_norms(
-        mesh.ei_dot_ej,
-        [2.9062335745029998e02, 6.8564127011300799e00, 4.8848110781654974e-01],
         1.0e-15,
     )
     assert_norms(

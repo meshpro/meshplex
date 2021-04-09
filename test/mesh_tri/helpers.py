@@ -157,7 +157,6 @@ def assert_mesh_equality(mesh0, mesh1):
     assert np.all(mesh0.is_boundary_cell == mesh1.is_boundary_cell)
 
     assert np.all(np.abs(mesh0.ei_dot_ei - mesh1.ei_dot_ei) < 1.0e-14)
-    assert np.all(np.abs(mesh0.ei_dot_ej - mesh1.ei_dot_ej) < 1.0e-14)
     assert np.all(np.abs(mesh0.cell_volumes - mesh1.cell_volumes) < 1.0e-14)
     assert np.all(np.abs(mesh0.ce_ratios - mesh1.ce_ratios) < 1.0e-14)
     assert np.all(

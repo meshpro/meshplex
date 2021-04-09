@@ -43,11 +43,12 @@ class MeshTri(Mesh):
         # The cosines of the angles are the negative dot products of the normalized
         # edges adjacent to the angle.
         norms = self.edge_lengths
+        ei_dot_ej = self.ei_dot_ei - np.sum(self.ei_dot_ei, axis=0) / 2
         normalized_ei_dot_ej = np.array(
             [
-                self.ei_dot_ej[0] / norms[1] / norms[2],
-                self.ei_dot_ej[1] / norms[2] / norms[0],
-                self.ei_dot_ej[2] / norms[0] / norms[1],
+                ei_dot_ej[0] / norms[1] / norms[2],
+                ei_dot_ej[1] / norms[2] / norms[0],
+                ei_dot_ej[2] / norms[0] / norms[1],
             ]
         )
         return np.arccos(-normalized_ei_dot_ej)
@@ -686,13 +687,6 @@ class MeshTri(Mesh):
 
         # update most of the cell-associated values
         self._compute_cell_values(cell_ids)
-
-        # update self.ei_dot_ej
-        if self._ei_dot_ej is not None:
-            self._ei_dot_ej[:, cell_ids] = (
-                self.ei_dot_ei[:, cell_ids]
-                - np.sum(self.ei_dot_ei[:, cell_ids], axis=0) / 2
-            )
 
         if self._signed_circumcenter_distances is not None:
             self._signed_circumcenter_distances[interior_facet_ids] = 0.0
