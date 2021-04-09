@@ -163,6 +163,7 @@ def test_reference(mesh0, remove_cells):
     # some dummy calls to make sure the respective value are computed before the cell
     # removal and then updated
     compute_all_entities(mesh0)
+
     # now remove some cells
     mesh0.remove_cells(remove_cells)
 

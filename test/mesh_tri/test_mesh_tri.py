@@ -79,7 +79,7 @@ def test_unit_triangle(cells_dtype):
     # circumcenter
     assert is_near_equal(mesh.cell_circumcenters, [[0.5, 0.5]], tol)
 
-    assert mesh.num_delaunay_violations() == 0
+    assert mesh.num_delaunay_violations == 0
 
     assert mesh.genus == 0.5
 
@@ -154,7 +154,7 @@ def test_regular_tri_additional_points():
         [[0.25, 0.25, 0.0], [2.0 / 3.0, 1.0 / 6.0, 0.0], [1.0 / 6.0, 2.0 / 3.0, 0.0]],
         tol,
     )
-    assert mesh.num_delaunay_violations() == 0
+    assert mesh.num_delaunay_violations == 0
 
 
 def test_regular_tri_order():
@@ -185,7 +185,7 @@ def test_regular_tri_order():
         tol,
     )
 
-    assert mesh.num_delaunay_violations() == 0
+    assert mesh.num_delaunay_violations == 0
 
 
 @pytest.mark.parametrize("a", [1.0, 2.0])
@@ -283,7 +283,7 @@ def test_regular_tri2(a):
 #     self.assertAlmostEqual(mesh.centroids[2][1], -41.666, delta=tol)
 #     self.assertAlmostEqual(mesh.centroids[2][2], 0.0, delta=tol)
 
-#     self.assertEqual(mesh.num_delaunay_violations(), 0)
+#     self.assertEqual(mesh.num_delaunay_violations, 0)
 
 
 @pytest.mark.parametrize(
@@ -318,7 +318,7 @@ def test_degenerate_small0b(h):
     # circumcenters
     assert is_near_equal(mesh.cell_circumcenters, [0.5, 0.375, 0.0], tol)
 
-    assert mesh.num_delaunay_violations() == 0
+    assert mesh.num_delaunay_violations == 0
 
 
 # # TODO parametrize with flat boundary correction
@@ -361,7 +361,7 @@ def test_degenerate_small0b(h):
 #     assert is_near_equal(centroids[1], [0.833333, alpha, 0.0], tol)
 #     assert is_near_equal(centroids[2], [0.5, gamma, 0.0], tol)
 
-#     assert mesh.num_delaunay_violations() == 0
+#     assert mesh.num_delaunay_violations == 0
 
 
 @pytest.mark.parametrize("h, a", [(1.0e-3, 0.3)])
@@ -405,7 +405,7 @@ def test_degenerate_small1(h, a):
     # alpha2 = total - alpha0 - alpha1
     # assert is_near_equal(mesh.surface_areas, [alpha0, alpha1, alpha2], tol)
 
-    assert mesh.num_delaunay_violations() == 0
+    assert mesh.num_delaunay_violations == 0
 
 
 @pytest.mark.parametrize("h", [1.0e-2])
@@ -419,7 +419,7 @@ def test_degenerate_small2(h):
     # ce_ratios
     alpha = h - 1.0 / (4 * h)
     beta = 1.0 / (4 * h)
-    assert is_near_equal(mesh.ce_ratios_per_interior_facet, [alpha], tol)
+    assert is_near_equal(mesh.signed_circumcenter_distances, [alpha], tol)
 
     alpha2 = (h - 1.0 / (4 * h)) / 2
     assert is_near_equal(
@@ -439,7 +439,7 @@ def test_degenerate_small2(h):
     # cell volumes
     assert is_near_equal(mesh.cell_volumes, [0.5 * h, 0.5 * h], tol)
 
-    assert mesh.num_delaunay_violations() == 1
+    assert mesh.num_delaunay_violations == 1
 
 
 def test_rectanglesmall():
@@ -452,12 +452,12 @@ def test_rectanglesmall():
 
     tol = 1.0e-14
 
-    assert is_near_equal(mesh.ce_ratios_per_interior_facet, [0.0], tol)
+    assert is_near_equal(mesh.signed_circumcenter_distances, [0.0], tol)
 
     assert is_near_equal(mesh.ce_ratios, [[5.0, 0.05], [0.0, 5.0], [0.05, 0.0]], tol)
     assert is_near_equal(mesh.control_volumes, [2.5, 2.5, 2.5, 2.5], tol)
     assert is_near_equal(mesh.cell_volumes, [5.0, 5.0], tol)
-    assert mesh.num_delaunay_violations() == 0
+    assert mesh.num_delaunay_violations == 0
 
 
 def test_pacman():
@@ -471,7 +471,7 @@ def test_pacman():
         [2.6213234038171014, 0.13841739494523228],
     )
 
-    assert mesh.num_delaunay_violations() == 0
+    assert mesh.num_delaunay_violations == 0
 
 
 def test_shell():
@@ -497,7 +497,7 @@ def test_shell():
     cell_vols = np.sqrt(3.0) / 2.0 * np.ones(4)
     assert is_near_equal(mesh.cell_volumes, cell_vols, tol)
 
-    assert mesh.num_delaunay_violations() == 0
+    assert mesh.num_delaunay_violations == 0
 
 
 def test_sphere():
@@ -509,7 +509,7 @@ def test_sphere():
         [366.3982135866799, 1.7062353589387327],
         [0.72653362732751214, 0.05350373815413411],
     )
-    # assertEqual(mesh.num_delaunay_violations(), 60)
+    # assertEqual(mesh.num_delaunay_violations, 60)
 
 
 def test_update_point_coordinates():
@@ -782,7 +782,3 @@ def test_reference_vals_pacman():
         [7.3380436025970664e02, 2.5652258142828014e01, 9.9998161879336100e-01],
         1.0e-15,
     )
-
-
-if __name__ == "__main__":
-    test_set_points()

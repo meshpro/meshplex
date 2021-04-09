@@ -59,7 +59,7 @@ def setup(n):
     # # move interior points a little bit such that we have edges to flip
     # max_step = np.min(mesh.cell_inradius) / 2
     # mesh.points = mesh.points + max_step * np.random.rand(*mesh.points.shape)
-    # print(mesh.num_delaunay_violations())
+    # print(mesh.num_delaunay_violations)
     return mesh0, mesh1, idx
 
 

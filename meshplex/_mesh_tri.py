@@ -3,7 +3,6 @@ import warnings
 
 import numpy as np
 
-from ._helpers import compute_ce_ratios, compute_tri_areas
 from ._mesh import Mesh
 
 __all__ = ["MeshTri"]
@@ -351,11 +350,8 @@ class MeshTri(Mesh):
             ax.add_collection(line_segments0)
         else:
             # Plot regular edges, mark those with negative ce-ratio red.
-            ce_ratios = self.ce_ratios_per_interior_facet
-            pos = ce_ratios >= 0
-
             is_pos = np.zeros(len(self.edges["points"]), dtype=bool)
-            is_pos[self.interior_facets[pos]] = True
+            is_pos[self.interior_facets[self.signed_circumcenter_distances >= 0]] = True
 
             # Mark Delaunay-conforming boundary edges
             is_pos_boundary = self.ce_ratios[self.is_boundary_facet_local] >= 0
@@ -502,14 +498,15 @@ class MeshTri(Mesh):
 
         while True:
             step += 1
-            is_flip_interior_edge = self.ce_ratios_per_interior_facet < -tol
+            is_flip_interior_edge = self.signed_circumcenter_distances < -tol
             if not np.any(is_flip_interior_edge):
                 break
 
             if step > max_steps:
-                m = np.min(self.ce_ratios_per_interior_facet)
+                m = np.min(self.signed_circumcenter_distances)
                 warnings.warn(
-                    f"Maximum number of edge flips reached. Smallest ce-ratio: {m:.3e}."
+                    "Maximum number of edge flips reached. "
+                    f"Smallest signed circumcenter distance: {m:.3e}."
                 )
                 break
 
@@ -526,7 +523,7 @@ class MeshTri(Mesh):
                     edge_gids = self.cells["edges"][cell_gid]
                     is_interior_facet = self.is_interior_facet[edge_gids]
                     idx = self.facets_cells_idx[edge_gids[is_interior_facet]]
-                    k = np.argmin(self.ce_ratios_per_interior_facet[idx])
+                    k = np.argmin(self.signed_circumcenter_distances[idx])
                     is_flip_interior_edge[idx] = False
                     is_flip_interior_edge[idx[k]] = True
 
@@ -687,17 +684,8 @@ class MeshTri(Mesh):
             k = np.array([np.roll(r, -i) for i in range(1, m)])
             self.idx[j][..., cell_ids] = self.idx[j - 1][..., cell_ids][k]
 
-        # update self.half_edge_coords
-        self.half_edge_coords[:, cell_ids, :] = np.moveaxis(
-            self.points[self.idx[-1][1, ..., cell_ids]]
-            - self.points[self.idx[-1][0, ..., cell_ids]],
-            0,
-            1,
-        )
-
-        # update self.ei_dot_ei
-        e = self.half_edge_coords[:, cell_ids]
-        self.ei_dot_ei[:, cell_ids] = np.einsum("...k,...k->...", e, e)
+        # update most of the cell-associated values
+        self._compute_cell_values(cell_ids)
 
         # update self.ei_dot_ej
         if self._ei_dot_ej is not None:
@@ -706,16 +694,8 @@ class MeshTri(Mesh):
                 - np.sum(self.ei_dot_ei[:, cell_ids], axis=0) / 2
             )
 
-        # update cell_volumes, ce_ratios_per_half_edge
-        cv = compute_tri_areas(self.ei_dot_ej[:, cell_ids])
-        self.cell_volumes[cell_ids] = cv
-
-        if self._ce_ratios is not None:
-            ce = compute_ce_ratios(self.ei_dot_ej[:, cell_ids], cv)
-            self._ce_ratios[:, cell_ids] = ce
-
-        if self._interior_ce_ratios is not None:
-            self._interior_ce_ratios[interior_facet_ids] = 0.0
+        if self._signed_circumcenter_distances is not None:
+            self._signed_circumcenter_distances[interior_facet_ids] = 0.0
             edge_gids = self.interior_facets[interior_facet_ids]
             adj_cells = self.facets_cells["interior"][1:3, interior_facet_ids].T
 
@@ -727,9 +707,9 @@ class MeshTri(Mesh):
             )
             assert np.all(np.sum(is_facet, axis=0) == 1)
             for k in range(3):
-                self._interior_ce_ratios[
+                self._signed_circumcenter_distances[
                     interior_facet_ids[is_facet[k]]
-                ] += self.ce_ratios[k, adj_cells[is_facet[k], 0]]
+                ] += self.signed_circumcenter_distances[k, adj_cells[is_facet[k], 0]]
 
             is_facet = np.array(
                 [
@@ -739,9 +719,9 @@ class MeshTri(Mesh):
             )
             assert np.all(np.sum(is_facet, axis=0) == 1)
             for k in range(3):
-                self._interior_ce_ratios[
+                self._signed_circumcenter_distances[
                     interior_facet_ids[is_facet[k]]
-                ] += self.ce_ratios[k, adj_cells[is_facet[k], 1]]
+                ] += self.signed_circumcenter_distances[k, adj_cells[is_facet[k], 1]]
 
         if self._is_boundary_cell is not None:
             self._is_boundary_cell[cell_ids] = np.any(
@@ -749,10 +729,4 @@ class MeshTri(Mesh):
             )
 
         # TODO update those values
-        self._cell_centroids = None
-        self._edge_lengths = None
-        self._cell_circumcenters = None
-        self._control_volumes = None
-        self._cell_partitions = None
-        self._cv_centroids = None
         self._signed_cell_volumes = None

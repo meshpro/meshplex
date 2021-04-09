@@ -29,7 +29,7 @@ def test_flip_simple():
     mesh = meshplex.MeshTri(points, cells)
 
     mesh.create_facets()
-    assert mesh.num_delaunay_violations() == 1
+    assert mesh.num_delaunay_violations == 1
     assert np.array_equal(
         mesh.edges["points"], [[0, 1], [0, 3], [1, 2], [1, 3], [2, 3]]
     )
@@ -41,7 +41,7 @@ def test_flip_simple():
     assert num_flips == 1
 
     assert_mesh_consistency(mesh)
-    assert mesh.num_delaunay_violations() == 0
+    assert mesh.num_delaunay_violations == 0
     assert np.array_equal(
         mesh.edges["points"], [[0, 1], [0, 3], [1, 2], [0, 2], [2, 3]]
     )
@@ -68,7 +68,7 @@ def test_flip_simple_negative_orientation():
     mesh = meshplex.MeshTri(points, cells)
 
     mesh.create_facets()
-    assert mesh.num_delaunay_violations() == 1
+    assert mesh.num_delaunay_violations == 1
     assert np.array_equal(
         mesh.edges["points"], [[0, 1], [0, 3], [1, 2], [1, 3], [2, 3]]
     )
@@ -78,7 +78,7 @@ def test_flip_simple_negative_orientation():
     # mesh.show()
     mesh.flip_until_delaunay()
     assert_mesh_consistency(mesh)
-    assert mesh.num_delaunay_violations() == 0
+    assert mesh.num_delaunay_violations == 0
     assert np.array_equal(
         mesh.edges["points"], [[0, 1], [0, 3], [1, 2], [0, 2], [2, 3]]
     )
@@ -105,7 +105,7 @@ def test_flip_simple_opposite_orientation():
     mesh = meshplex.MeshTri(points, cells)
 
     mesh.create_facets()
-    assert mesh.num_delaunay_violations() == 1
+    assert mesh.num_delaunay_violations == 1
     assert np.array_equal(
         mesh.edges["points"], [[0, 1], [0, 3], [1, 2], [1, 3], [2, 3]]
     )
@@ -115,7 +115,7 @@ def test_flip_simple_opposite_orientation():
     # mesh.show()
     mesh.flip_until_delaunay()
     assert_mesh_consistency(mesh)
-    assert mesh.num_delaunay_violations() == 0
+    assert mesh.num_delaunay_violations == 0
     assert np.array_equal(
         mesh.edges["points"], [[0, 1], [0, 3], [1, 2], [0, 2], [2, 3]]
     )
@@ -129,14 +129,14 @@ def test_flip_delaunay_near_boundary():
     mesh = meshplex.MeshTri(points, cells)
 
     mesh.create_facets()
-    assert mesh.num_delaunay_violations() == 1
+    assert mesh.num_delaunay_violations == 1
     assert np.array_equal(mesh.cells["points"], [[0, 1, 2], [0, 2, 3]])
     assert np.array_equal(mesh.cells["edges"], [[3, 1, 0], [4, 2, 1]])
 
     mesh.flip_until_delaunay()
 
     assert_mesh_consistency(mesh)
-    assert mesh.num_delaunay_violations() == 0
+    assert mesh.num_delaunay_violations == 0
     assert np.array_equal(mesh.cells["points"], [[1, 2, 3], [1, 3, 0]])
     assert np.array_equal(mesh.cells["edges"], [[4, 1, 3], [2, 0, 1]])
 
@@ -145,10 +145,10 @@ def test_flip_same_edge_twice():
     points = np.array([[0.0, +0.0], [0.5, -0.1], [1.0, +0.0], [0.5, +0.1]])
     cells = np.array([[0, 1, 2], [0, 2, 3]])
     mesh = meshplex.MeshTri(points, cells)
-    assert mesh.num_delaunay_violations() == 1
+    assert mesh.num_delaunay_violations == 1
 
     mesh.flip_until_delaunay()
-    assert mesh.num_delaunay_violations() == 0
+    assert mesh.num_delaunay_violations == 0
 
     mesh.show(
         mark_cells=mesh.is_boundary_cell,
@@ -160,10 +160,10 @@ def test_flip_same_edge_twice():
 
     new_points = np.array([[0.0, +0.0], [0.1, -0.5], [0.2, +0.0], [0.1, +0.5]])
     mesh.points = new_points
-    assert mesh.num_delaunay_violations() == 1
+    assert mesh.num_delaunay_violations == 1
 
     mesh.flip_until_delaunay()
-    assert mesh.num_delaunay_violations() == 0
+    assert mesh.num_delaunay_violations == 0
     mesh.show()
     # mesh.plot()
 
@@ -176,10 +176,10 @@ def test_flip_two_edges():
     points = np.array([[r * np.cos(a), r * np.sin(a), 0.0] for a, r in zip(alpha, R)])
     cells = np.array([[1, 3, 5], [0, 1, 5], [1, 2, 3], [3, 4, 5]])
     mesh = meshplex.MeshTri(points, cells)
-    assert mesh.num_delaunay_violations() == 2
+    assert mesh.num_delaunay_violations == 2
 
     mesh.flip_until_delaunay()
-    assert mesh.num_delaunay_violations() == 0
+    assert mesh.num_delaunay_violations == 0
 
     mesh.show(show_point_numbers=True)
     assert np.array_equal(
@@ -203,7 +203,7 @@ def test_flip_delaunay_near_boundary_preserve_boundary_count():
     mesh = meshplex.MeshTri(points, cells)
 
     mesh.create_facets()
-    assert mesh.num_delaunay_violations() == 1
+    assert mesh.num_delaunay_violations == 1
 
     is_boundary_point_ref = [False, True, True, True, True, True]
     assert np.array_equal(mesh.is_boundary_point, is_boundary_point_ref)
@@ -275,10 +275,10 @@ def test_flip_delaunay():
     mesh0 = meshplex.MeshTri(mesh0.points[:, :2], mesh0.get_cells_type("triangle"))
     compute_all_entities(mesh0)
 
-    assert mesh0.num_delaunay_violations() == 16
+    assert mesh0.num_delaunay_violations == 16
 
     mesh0.flip_until_delaunay()
-    assert mesh0.num_delaunay_violations() == 0
+    assert mesh0.num_delaunay_violations == 0
 
     assert_mesh_consistency(mesh0)
 

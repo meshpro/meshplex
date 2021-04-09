@@ -93,7 +93,7 @@ class Mesh:
         self._ce_ratios = None
         self._cell_partitions = None
         self._control_volumes = None
-        self._interior_ce_ratios = None
+        self._signed_circumcenter_distances = None
         self._circumcenter_facet_distances = None
 
         self._cv_centroids = None
@@ -208,7 +208,7 @@ class Mesh:
         return self._cell_partitions
 
     @property
-    def circumcenter_face_distances(self):
+    def circumcenter_facet_distances(self):
         if self._circumcenter_facet_distances is None:
             self._compute_cell_values()
         return self._circumcenter_facet_distances
@@ -283,21 +283,20 @@ class Mesh:
         return self._ce_ratios
 
     @property
-    def ce_ratios_per_interior_facet(self):
-        if self._interior_ce_ratios is None:
-            if "edges" not in self.cells:
+    def signed_circumcenter_distances(self):
+        if self._signed_circumcenter_distances is None:
+            if "facets" not in self.cells:
                 self.create_facets()
 
-            ce_ratios = npx.sum_at(
-                self.ce_ratios.T,
-                self.cells["edges"],
-                self.edges["points"].shape[0],
-            )
-            self._interior_ce_ratios = ce_ratios[self.is_interior_facet]
+            self._signed_circumcenter_distances = npx.sum_at(
+                self.circumcenter_facet_distances.T,
+                self.cells["facets"],
+                self.facets["points"].shape[0],
+            )[self.is_interior_facet]
 
-        return self._interior_ce_ratios
+        return self._signed_circumcenter_distances
 
-    def _compute_cell_values(self):
+    def _compute_cell_values(self, mask=slice(None)):
         """Computes the volumes of all edges, facets, cells etc. in the mesh. It starts
         off by computing the (squared) edge lengths, then complements the edge with one
         vertex to form face. It computes an orthogonal basis of the face (with modified
@@ -305,23 +304,22 @@ class Mesh:
         of the face is computed. Then, it complements again to form the 3-simplex,
         again forms an orthogonal basis with Gram-Schmidt, and so on.
         """
-        e = self.points[self.idx[-1]]
+        e = self.points[self.idx[-1][..., mask]]
         e0 = e[0]
         diff = e[1] - e[0]
-        self._half_edge_coords = diff
+
         orthogonal_basis = np.array([diff])
 
-        self._ei_dot_ei = _dot(self.half_edge_coords, self.n - 1)
+        volumes2 = [_dot(diff, self.n - 1)]
 
-        volumes2 = [self._ei_dot_ei]
-        self._circumcenters = [0.5 * (e[0] + e[1])]
+        circumcenters = [0.5 * (e[0] + e[1])]
 
         vv = _dot(diff, self.n - 1)
         circumradii2 = 0.25 * vv
         sqrt_vv = np.sqrt(vv)
         lmbda = 0.5 * np.sqrt(vv)
 
-        sumx = np.array(e + self._circumcenters[-1])
+        sumx = np.array(e + circumcenters[-1])
 
         partitions = 0.5 * np.sqrt(np.array([vv, vv]))
 
@@ -329,7 +327,7 @@ class Mesh:
         for kk, idx in enumerate(self.idx[:-1][::-1]):
             # Use the orthogonal bases of all sides to get a vector `v` orthogonal to
             # the side, pointing towards the additional point `p0`.
-            p0 = self.points[idx]
+            p0 = self.points[idx][:, mask]
             v = p0 - e0
             # modified gram-schmidt
             for w, ww in zip(orthogonal_basis, norms2):
@@ -353,7 +351,7 @@ class Mesh:
 
             # get the distance to the circumcenter; used in cell partitions and
             # circumcenter/-radius computation
-            c = self._circumcenters[-1]
+            c = circumcenters[-1]
 
             p0c2 = _dot(p0 - c, self.n - 1 - kk)
             #
@@ -364,25 +362,15 @@ class Mesh:
             # <https://math.stackexchange.com/a/4064749/36678>
             #
             circumradii2 = lmbda2[k0] + circumradii2[k0]
-            self._circumcenters.append(
-                c[k0] + _multiply(v[k0], sigma[k0], self.n - 2 - kk)
-            )
+            circumcenters.append(c[k0] + _multiply(v[k0], sigma[k0], self.n - 2 - kk))
 
-            sumx += self._circumcenters[-1]
+            sumx += circumcenters[-1]
 
             # cell partitions
             # don't use sqrt(lmbda2) here; lmbda can be negative
             sqrt_vv = np.sqrt(vv)
             lmbda = sigma * sqrt_vv
             partitions *= lmbda / (kk + 2)
-
-        self._volumes = [np.sqrt(v2) for v2 in volumes2]
-        self._circumcenter_facet_distances = lmbda
-
-        self._cell_heights = sqrt_vv
-        self._cell_circumradii = np.sqrt(circumradii2)
-
-        self._cell_partitions = partitions
 
         # The integral of x,
         #
@@ -393,7 +381,52 @@ class Mesh:
         # The integral of any linear function over a triangle is the average of the
         # values of the function in each of the three corners, times the area of the
         # triangle.
-        self._integral_x = _multiply(sumx, partitions / self.n, self.n)
+        integral_x = _multiply(sumx, partitions / self.n, self.n)
+
+        if np.all(mask == slice(None)):
+            # set new values
+            self._ei_dot_ei = volumes2[0]
+            self._half_edge_coords = diff
+            self._volumes = [np.sqrt(v2) for v2 in volumes2]
+            self._circumcenter_facet_distances = lmbda
+            self._cell_heights = sqrt_vv
+            self._cell_circumradii = np.sqrt(circumradii2)
+            self._circumcenters = circumcenters
+            self._cell_partitions = partitions
+            self._integral_x = integral_x
+        else:
+            # update existing values
+            assert self._ei_dot_ei is not None
+            self._ei_dot_ei[:, mask] = volumes2[0]
+
+            assert self._half_edge_coords is not None
+            self._half_edge_coords[:, mask] = diff
+
+            assert self._volumes is not None
+            for k in range(len(self._volumes)):
+                self._volumes[k][..., mask] = np.sqrt(volumes2[k])
+
+            assert self._circumcenter_facet_distances is not None
+            self._circumcenter_facet_distances[..., mask] = lmbda
+
+            assert self._cell_heights is not None
+            self._cell_heights[..., mask] = sqrt_vv
+
+            assert self._cell_circumradii is not None
+            self._cell_circumradii[mask] = np.sqrt(circumradii2)
+
+            assert self._circumcenters is not None
+            for k in range(len(self._circumcenters)):
+                self._circumcenters[k][..., mask, :] = circumcenters[k]
+
+            assert self._cell_partitions is not None
+            self._cell_partitions[..., mask] = partitions
+
+            assert self._integral_x is not None
+            self._integral_x[..., mask, :] = integral_x
+
+        # TODO don't remove on update
+        self._signed_circumcenter_distances = None
 
     @property
     def signed_cell_volumes(self):
@@ -817,21 +850,21 @@ class Mesh:
         if np.all(keep):
             return 0
 
-        # handle edges; this is a bit messy
-        if "edges" in self.cells:
+        # handle facet; this is a bit messy
+        if "facets" in self.cells:
             # updating the boundary data is a lot easier with facets_cells
             if self._facets_cells is None:
                 self._compute_facets_cells()
 
-            # Set edge to is_boundary_facet_local=True if it is adjacent to a removed
+            # Set facet to is_boundary_facet_local=True if it is adjacent to a removed
             # cell.
-            facet_ids = self.cells["edges"][~keep].flatten()
-            # only consider interior edges
+            facet_ids = self.cells["facets"][~keep].flatten()
+            # only consider interior facets
             facet_ids = facet_ids[self.is_interior_facet[facet_ids]]
             idx = self.facets_cells_idx[facet_ids]
             cell_id = self.facets_cells["interior"][1:3, idx].T
-            local_edge_id = self.facets_cells["interior"][3:5, idx].T
-            self._is_boundary_facet_local[local_edge_id, cell_id] = True
+            local_facet_id = self.facets_cells["interior"][3:5, idx].T
+            self._is_boundary_facet_local[local_facet_id, cell_id] = True
             # now remove the entries corresponding to the removed cells
             self._is_boundary_facet_local = self._is_boundary_facet_local[:, keep]
 
@@ -849,7 +882,7 @@ class Mesh:
             keep_i_1 = keep_i_ec1 & ~keep_i_ec0
             self._facets_cells["boundary"] = np.array(
                 [
-                    # edge id
+                    # facet id
                     np.concatenate(
                         [
                             self._facets_cells["boundary"][0, keep_b_ec],
@@ -865,7 +898,7 @@ class Mesh:
                             self._facets_cells["interior"][2, keep_i_1],
                         ]
                     ),
-                    # local edge id
+                    # local facet id
                     np.concatenate(
                         [
                             self._facets_cells["boundary"][2, keep_b_ec],
@@ -881,41 +914,41 @@ class Mesh:
             # this memory copy isn't too fast
             self._facets_cells["interior"] = self._facets_cells["interior"][:, keep_i]
 
-            num_edges_old = len(self.edges["points"])
-            adjacent_edges, counts = np.unique(
-                self.cells["edges"][~keep].flat, return_counts=True
+            num_facets_old = len(self.facets["points"])
+            adjacent_facets, counts = np.unique(
+                self.cells["facets"][~keep].flat, return_counts=True
             )
-            # remove edge entirely either if 2 adjacent cells are removed or if it is a
-            # boundary edge and 1 adjacent cells are removed
+            # remove facet entirely either if 2 adjacent cells are removed or if it is a
+            # boundary facet and 1 adjacent cells are removed
             is_facet_removed = (counts == 2) | (
-                (counts == 1) & self._is_boundary_facet[adjacent_edges]
+                (counts == 1) & self._is_boundary_facet[adjacent_facets]
             )
 
-            # set the new boundary edges
-            self._is_boundary_facet[adjacent_edges[~is_facet_removed]] = True
-            # Now actually remove the edges. This includes a reindexing.
+            # set the new boundary facet
+            self._is_boundary_facet[adjacent_facets[~is_facet_removed]] = True
+            # Now actually remove the facets. This includes a reindexing.
             assert self._is_boundary_facet is not None
-            keep_edges = np.ones(len(self._is_boundary_facet), dtype=bool)
-            keep_edges[adjacent_edges[is_facet_removed]] = False
+            keep_facets = np.ones(len(self._is_boundary_facet), dtype=bool)
+            keep_facets[adjacent_facets[is_facet_removed]] = False
 
-            # make sure there is only edges["points"], not edges["cells"] etc.
-            assert self.edges is not None
-            assert len(self.edges) == 1
-            self.edges["points"] = self.edges["points"][keep_edges]
-            self._is_boundary_facet = self._is_boundary_facet[keep_edges]
+            # make sure there is only facets["points"], not facets["cells"] etc.
+            assert self.facets is not None
+            assert len(self.facets) == 1
+            self.facets["points"] = self.facets["points"][keep_facets]
+            self._is_boundary_facet = self._is_boundary_facet[keep_facets]
 
-            # update edge and cell indices
-            self.cells["edges"] = self.cells["edges"][keep]
-            new_index_edges = np.arange(num_edges_old) - np.cumsum(~keep_edges)
-            self.cells["edges"] = new_index_edges[self.cells["edges"]]
+            # update facet and cell indices
+            self.cells["facets"] = self.cells["facets"][keep]
+            new_index_facets = np.arange(num_facets_old) - np.cumsum(~keep_facets)
+            self.cells["facets"] = new_index_facets[self.cells["facets"]]
             num_cells_old = len(self.cells["points"])
             new_index_cells = np.arange(num_cells_old) - np.cumsum(~keep)
 
             # this takes fairly long
             ec = self._facets_cells
-            ec["boundary"][0] = new_index_edges[ec["boundary"][0]]
+            ec["boundary"][0] = new_index_facets[ec["boundary"][0]]
             ec["boundary"][1] = new_index_cells[ec["boundary"][1]]
-            ec["interior"][0] = new_index_edges[ec["interior"][0]]
+            ec["interior"][0] = new_index_facets[ec["interior"][0]]
             ec["interior"][1:3] = new_index_cells[ec["interior"][1:3]]
 
             # simply set those to None; their reset is cheap
@@ -960,8 +993,13 @@ class Mesh:
         if self._integral_x is not None:
             self._integral_x = self._integral_x[..., keep, :]
 
+        if self._circumcenter_facet_distances is not None:
+            self._circumcenter_facet_distances = self._circumcenter_facet_distances[
+                ..., keep
+            ]
+
         # TODO These could also be updated, but let's implement it when needed
-        self._interior_ce_ratios = None
+        self._signed_circumcenter_distances = None
         self._control_volumes = None
         self._cv_cell_mask = None
         self._cv_centroids = None
@@ -1050,25 +1088,9 @@ class Mesh:
             return self.get_control_volumes()
         return self._control_volumes
 
+    @property
     def num_delaunay_violations(self):
-        """Number of edges where the Delaunay condition is violated."""
-        # Delaunay violations are present exactly on the interior edges where the
-        # ce_ratio is negative. Count those.
-        if self.n == 3:
-            return np.sum(self.ce_ratios_per_interior_facet < 0.0)
-
-        assert self.n == 4
-
-        # Delaunay violations are present exactly on the interior faces where the sum of
-        # the signed distances between facet circumcenter and adjacent cell circumcenter
-        # is negative.
-        if "facets" not in self.cells:
-            self.create_facets()
-
-        num_facets = self.facets["points"].shape[0]
-        sums = npx.sum_at(
-            self.circumcenter_face_distances,
-            self.cells["facets"].T,
-            num_facets,
-        )
-        return np.sum(sums[self.is_interior_facet] < 0.0)
+        """Number of interior facets where the Delaunay condition is violated."""
+        # Delaunay violations are present exactly on the interior facets where the
+        # signed circumcenter distance is negative. Count those.
+        return np.sum(self.signed_circumcenter_distances < 0.0)
