@@ -1,8 +1,10 @@
 import math
+from typing import Optional
 
 import meshio
 import npx
 import numpy as np
+from numpy.typing import ArrayLike
 
 from ._exceptions import MeshplexError
 from ._helpers import _dot, _multiply, grp_start_len
@@ -11,7 +13,7 @@ __all__ = ["Mesh"]
 
 
 class Mesh:
-    def __init__(self, points, cells, sort_cells=False):
+    def __init__(self, points, cells, sort_cells: bool = False):
         points = np.asarray(points)
         cells = np.asarray(cells)
 
@@ -116,14 +118,14 @@ class Mesh:
         return self._points
 
     @points.setter
-    def points(self, new_points):
+    def points(self, new_points: ArrayLike):
         new_points = np.asarray(new_points)
         assert new_points.shape == self._points.shape
         self._points = new_points
         # reset all computed values
         self._reset_point_data()
 
-    def set_points(self, new_points, idx=slice(None)):
+    def set_points(self, new_points: ArrayLike, idx=slice(None)):
         self.points.setflags(write=True)
         self.points[idx] = new_points
         self.points.setflags(write=False)
@@ -478,7 +480,13 @@ class Mesh:
             self._is_point_used[self.cells["points"]] = True
         return self._is_point_used
 
-    def write(self, filename, point_data=None, cell_data=None, field_data=None):
+    def write(
+        self,
+        filename: str,
+        point_data: Optional[dict[str, ArrayLike]] = None,
+        cell_data=None,
+        field_data=None,
+    ):
         if self.points.shape[1] == 2:
             n = len(self.points)
             a = np.ascontiguousarray(np.column_stack([self.points, np.zeros(n)]))
@@ -493,14 +501,13 @@ class Mesh:
             ), "Only triangles/tetrahedra supported"
             cell_type = "tetra"
 
-        meshio.write_points_cells(
-            filename,
+        meshio.Mesh(
             a,
             {cell_type: self.cells["points"]},
             point_data=point_data,
             cell_data=cell_data,
             field_data=field_data,
-        )
+        ).write(filename)
 
     def get_vertex_mask(self, subdomain=None):
         if subdomain is None:
@@ -804,7 +811,7 @@ class Mesh:
 
         return (self.n - 1) * self.cell_inradius / self.cell_circumradius
 
-    def remove_cells(self, remove_array):
+    def remove_cells(self, remove_array: ArrayLike):
         """Remove cells and take care of all the dependent data structures. The input
         argument `remove_array` can be a boolean array or a list of indices.
         """
