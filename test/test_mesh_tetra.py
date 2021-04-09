@@ -368,7 +368,7 @@ def test_arrow3d():
         [np.sqrt(0.45), 0.45],
     )
 
-    assert mesh.num_delaunay_violations() == 2
+    assert mesh.num_delaunay_violations == 2
 
 
 def test_tetrahedron():

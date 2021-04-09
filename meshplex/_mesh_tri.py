@@ -687,17 +687,8 @@ class MeshTri(Mesh):
             k = np.array([np.roll(r, -i) for i in range(1, m)])
             self.idx[j][..., cell_ids] = self.idx[j - 1][..., cell_ids][k]
 
-        # update self.half_edge_coords
-        self.half_edge_coords[:, cell_ids, :] = np.moveaxis(
-            self.points[self.idx[-1][1, ..., cell_ids]]
-            - self.points[self.idx[-1][0, ..., cell_ids]],
-            0,
-            1,
-        )
-
-        # update self.ei_dot_ei
-        e = self.half_edge_coords[:, cell_ids]
-        self.ei_dot_ei[:, cell_ids] = np.einsum("...k,...k->...", e, e)
+        # update most of the cell-associated values
+        self._compute_cell_values(cell_ids)
 
         # update self.ei_dot_ej
         if self._ei_dot_ej is not None:
@@ -705,14 +696,6 @@ class MeshTri(Mesh):
                 self.ei_dot_ei[:, cell_ids]
                 - np.sum(self.ei_dot_ei[:, cell_ids], axis=0) / 2
             )
-
-        # update cell_volumes, ce_ratios_per_half_edge
-        cv = compute_tri_areas(self.ei_dot_ej[:, cell_ids])
-        self.cell_volumes[cell_ids] = cv
-
-        if self._ce_ratios is not None:
-            ce = compute_ce_ratios(self.ei_dot_ej[:, cell_ids], cv)
-            self._ce_ratios[:, cell_ids] = ce
 
         if self._interior_ce_ratios is not None:
             self._interior_ce_ratios[interior_facet_ids] = 0.0
@@ -749,10 +732,4 @@ class MeshTri(Mesh):
             )
 
         # TODO update those values
-        self._cell_centroids = None
-        self._edge_lengths = None
-        self._cell_circumcenters = None
-        self._control_volumes = None
-        self._cell_partitions = None
-        self._cv_centroids = None
         self._signed_cell_volumes = None

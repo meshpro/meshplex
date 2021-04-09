@@ -10,7 +10,7 @@ def test_io_2d():
     vertices, cells = meshzoo.rectangle_tri((0.0, 0.0), (1.0, 1.0), 2)
     mesh = meshplex.MeshTri(vertices, cells)
     # mesh = meshplex.read('pacman.vtu')
-    assert mesh.num_delaunay_violations() == 0
+    assert mesh.num_delaunay_violations == 0
 
     # mesh.show(show_axes=False, boundary_edge_color="g")
     # mesh.show_vertex(0)
@@ -29,7 +29,7 @@ def test_io_2d():
 #             )
 #     mesh = meshplex.MeshTetra(vertices, cells)
 
-#     self.assertEqual(mesh.num_delaunay_violations(), 0)
+#     self.assertEqual(mesh.num_delaunay_violations, 0)
 
 #     # mesh.show_control_volume(0)
 #     # mesh.show_edge(0)

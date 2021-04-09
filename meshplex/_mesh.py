@@ -384,7 +384,7 @@ class Mesh:
         # triangle.
         integral_x = _multiply(sumx, partitions / self.n, self.n)
 
-        if mask == slice(None):
+        if np.all(mask == slice(None)):
             # set new values
             self._ei_dot_ei = volumes2[0]
             self._half_edge_coords = diff
@@ -1081,6 +1081,7 @@ class Mesh:
             return self.get_control_volumes()
         return self._control_volumes
 
+    @property
     def num_delaunay_violations(self):
         """Number of edges where the Delaunay condition is violated."""
         # Delaunay violations are present exactly on the interior edges where the
