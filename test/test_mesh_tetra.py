@@ -40,7 +40,7 @@ def test_regular_tet0(a):
     z = a / np.sqrt(24.0)
     assert is_near_equal(mesh.cell_circumcenters, [0.0, 0.0, z], tol)
 
-    assert is_near_equal(mesh.circumcenter_face_distances, [z, z, z, z], tol)
+    assert is_near_equal(mesh.circumcenter_facet_distances, [z, z, z, z], tol)
 
     # covolume/edge length ratios
     # alpha = a / 12.0 / np.sqrt(2)
@@ -171,7 +171,7 @@ def test_unit_tetrahedron_geometric(a):
     )
 
     assert is_near_equal(
-        mesh.circumcenter_face_distances.T,
+        mesh.circumcenter_facet_distances.T,
         [-0.5 / np.sqrt(3) * a, 0.5 * a, 0.5 * a, 0.5 * a],
         tol,
     )
@@ -226,7 +226,7 @@ def test_regular_tet1_geometric_order():
     )
 
     assert is_near_equal(
-        mesh.circumcenter_face_distances.T,
+        mesh.circumcenter_facet_distances.T,
         [0.5 * a, -0.5 / np.sqrt(3) * a, 0.5 * a, 0.5 * a],
         tol,
     )

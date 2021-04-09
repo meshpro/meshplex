@@ -18,7 +18,7 @@ def assert_mesh_consistency(mesh):
     assert not np.any(mesh.is_boundary_facet[mesh.facets_cells["interior"][0]])
 
     for edge_id, cell_id, local_edge_id in mesh.facets_cells["boundary"].T:
-        assert edge_id == mesh.cells["edges"][cell_id][local_edge_id]
+        assert edge_id == mesh.cells["facets"][cell_id][local_edge_id]
 
     for (
         edge_id,
@@ -27,8 +27,8 @@ def assert_mesh_consistency(mesh):
         local_edge_id0,
         local_edge_id1,
     ) in mesh.facets_cells["interior"].T:
-        assert edge_id == mesh.cells["edges"][cell_id0][local_edge_id0]
-        assert edge_id == mesh.cells["edges"][cell_id1][local_edge_id1]
+        assert edge_id == mesh.cells["facets"][cell_id0][local_edge_id0]
+        assert edge_id == mesh.cells["facets"][cell_id1][local_edge_id1]
 
     # check consistency of facets_cells_idx with facets_cells
     for edge_id, idx in enumerate(mesh.facets_cells_idx):
@@ -38,7 +38,7 @@ def assert_mesh_consistency(mesh):
             assert edge_id == mesh.facets_cells["interior"][0, idx]
 
     # Assert facets_cells integrity
-    for cell_gid, edge_gids in enumerate(mesh.cells["edges"]):
+    for cell_gid, edge_gids in enumerate(mesh.cells["facets"]):
         for edge_gid in edge_gids:
             idx = mesh.facets_cells_idx[edge_gid]
             if mesh.is_boundary_facet[edge_gid]:
@@ -48,7 +48,7 @@ def assert_mesh_consistency(mesh):
 
     # make sure the edges are opposite of the points
     for cell_gid, (point_ids, edge_ids) in enumerate(
-        zip(mesh.cells["points"], mesh.cells["edges"])
+        zip(mesh.cells["points"], mesh.cells["facets"])
     ):
         for k in range(len(point_ids)):
             assert set(point_ids) == set(

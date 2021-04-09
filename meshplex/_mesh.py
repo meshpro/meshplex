@@ -208,7 +208,7 @@ class Mesh:
         return self._cell_partitions
 
     @property
-    def circumcenter_face_distances(self):
+    def circumcenter_facet_distances(self):
         if self._circumcenter_facet_distances is None:
             self._compute_cell_values()
         return self._circumcenter_facet_distances
@@ -289,7 +289,7 @@ class Mesh:
                 self.create_facets()
 
             self._signed_circumcenter_distances = npx.sum_at(
-                self.circumcenter_face_distances.T,
+                self.circumcenter_facet_distances.T,
                 self.cells["facets"],
                 self.facets["points"].shape[0],
             )[self.is_interior_facet]
@@ -850,21 +850,21 @@ class Mesh:
         if np.all(keep):
             return 0
 
-        # handle edges; this is a bit messy
-        if "edges" in self.cells:
+        # handle facet; this is a bit messy
+        if "facets" in self.cells:
             # updating the boundary data is a lot easier with facets_cells
             if self._facets_cells is None:
                 self._compute_facets_cells()
 
-            # Set edge to is_boundary_facet_local=True if it is adjacent to a removed
+            # Set facet to is_boundary_facet_local=True if it is adjacent to a removed
             # cell.
-            facet_ids = self.cells["edges"][~keep].flatten()
-            # only consider interior edges
+            facet_ids = self.cells["facets"][~keep].flatten()
+            # only consider interior facets
             facet_ids = facet_ids[self.is_interior_facet[facet_ids]]
             idx = self.facets_cells_idx[facet_ids]
             cell_id = self.facets_cells["interior"][1:3, idx].T
-            local_edge_id = self.facets_cells["interior"][3:5, idx].T
-            self._is_boundary_facet_local[local_edge_id, cell_id] = True
+            local_facet_id = self.facets_cells["interior"][3:5, idx].T
+            self._is_boundary_facet_local[local_facet_id, cell_id] = True
             # now remove the entries corresponding to the removed cells
             self._is_boundary_facet_local = self._is_boundary_facet_local[:, keep]
 
@@ -882,7 +882,7 @@ class Mesh:
             keep_i_1 = keep_i_ec1 & ~keep_i_ec0
             self._facets_cells["boundary"] = np.array(
                 [
-                    # edge id
+                    # facet id
                     np.concatenate(
                         [
                             self._facets_cells["boundary"][0, keep_b_ec],
@@ -898,7 +898,7 @@ class Mesh:
                             self._facets_cells["interior"][2, keep_i_1],
                         ]
                     ),
-                    # local edge id
+                    # local facet id
                     np.concatenate(
                         [
                             self._facets_cells["boundary"][2, keep_b_ec],
@@ -914,41 +914,41 @@ class Mesh:
             # this memory copy isn't too fast
             self._facets_cells["interior"] = self._facets_cells["interior"][:, keep_i]
 
-            num_edges_old = len(self.edges["points"])
-            adjacent_edges, counts = np.unique(
-                self.cells["edges"][~keep].flat, return_counts=True
+            num_facets_old = len(self.facets["points"])
+            adjacent_facets, counts = np.unique(
+                self.cells["facets"][~keep].flat, return_counts=True
             )
-            # remove edge entirely either if 2 adjacent cells are removed or if it is a
-            # boundary edge and 1 adjacent cells are removed
+            # remove facet entirely either if 2 adjacent cells are removed or if it is a
+            # boundary facet and 1 adjacent cells are removed
             is_facet_removed = (counts == 2) | (
-                (counts == 1) & self._is_boundary_facet[adjacent_edges]
+                (counts == 1) & self._is_boundary_facet[adjacent_facets]
             )
 
-            # set the new boundary edges
-            self._is_boundary_facet[adjacent_edges[~is_facet_removed]] = True
-            # Now actually remove the edges. This includes a reindexing.
+            # set the new boundary facet
+            self._is_boundary_facet[adjacent_facets[~is_facet_removed]] = True
+            # Now actually remove the facets. This includes a reindexing.
             assert self._is_boundary_facet is not None
-            keep_edges = np.ones(len(self._is_boundary_facet), dtype=bool)
-            keep_edges[adjacent_edges[is_facet_removed]] = False
+            keep_facets = np.ones(len(self._is_boundary_facet), dtype=bool)
+            keep_facets[adjacent_facets[is_facet_removed]] = False
 
-            # make sure there is only edges["points"], not edges["cells"] etc.
-            assert self.edges is not None
-            assert len(self.edges) == 1
-            self.edges["points"] = self.edges["points"][keep_edges]
-            self._is_boundary_facet = self._is_boundary_facet[keep_edges]
+            # make sure there is only facets["points"], not facets["cells"] etc.
+            assert self.facets is not None
+            assert len(self.facets) == 1
+            self.facets["points"] = self.facets["points"][keep_facets]
+            self._is_boundary_facet = self._is_boundary_facet[keep_facets]
 
-            # update edge and cell indices
-            self.cells["edges"] = self.cells["edges"][keep]
-            new_index_edges = np.arange(num_edges_old) - np.cumsum(~keep_edges)
-            self.cells["edges"] = new_index_edges[self.cells["edges"]]
+            # update facet and cell indices
+            self.cells["facets"] = self.cells["facets"][keep]
+            new_index_facets = np.arange(num_facets_old) - np.cumsum(~keep_facets)
+            self.cells["facets"] = new_index_facets[self.cells["facets"]]
             num_cells_old = len(self.cells["points"])
             new_index_cells = np.arange(num_cells_old) - np.cumsum(~keep)
 
             # this takes fairly long
             ec = self._facets_cells
-            ec["boundary"][0] = new_index_edges[ec["boundary"][0]]
+            ec["boundary"][0] = new_index_facets[ec["boundary"][0]]
             ec["boundary"][1] = new_index_cells[ec["boundary"][1]]
-            ec["interior"][0] = new_index_edges[ec["interior"][0]]
+            ec["interior"][0] = new_index_facets[ec["interior"][0]]
             ec["interior"][1:3] = new_index_cells[ec["interior"][1:3]]
 
             # simply set those to None; their reset is cheap
@@ -993,8 +993,13 @@ class Mesh:
         if self._integral_x is not None:
             self._integral_x = self._integral_x[..., keep, :]
 
+        if self._circumcenter_facet_distances is not None:
+            self._circumcenter_facet_distances = self._circumcenter_facet_distances[
+                ..., keep
+            ]
+
         # TODO These could also be updated, but let's implement it when needed
-        self._interior_ce_ratios = None
+        self._signed_circumcenter_distances = None
         self._control_volumes = None
         self._cv_cell_mask = None
         self._cv_centroids = None
