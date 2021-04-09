@@ -483,7 +483,7 @@ class Mesh:
     def write(
         self,
         filename: str,
-        point_data: Optional[dict[str, ArrayLike]] = None,
+        point_data= None,
         cell_data=None,
         field_data=None,
     ):
