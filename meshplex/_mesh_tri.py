@@ -53,30 +53,6 @@ class MeshTri(Mesh):
         )
         return np.arccos(-normalized_ei_dot_ej)
 
-    # def _compute_surface_areas(self, cell_ids):
-    #     # For each edge, one half of the the edge goes to each of the end points. Used
-    #     # for Neumann boundary conditions if on the boundary of the mesh and transition
-    #     # conditions if in the interior.
-    #     #
-    #     # Each of the three edges may contribute to the surface areas of all three
-    #     # vertices. Here, only the two adjacent points receive a contribution, but other
-    #     # approaches, may contribute to all three points.
-    #     cn = self.cells["points"][cell_ids]
-    #     ids = np.stack([cn, cn, cn], axis=1)
-
-    #     half_el = 0.5 * self.edge_lengths[..., cell_ids]
-    #     zero = np.zeros([half_el.shape[1]])
-    #     vals = np.stack(
-    #         [
-    #             np.column_stack([zero, half_el[0], half_el[0]]),
-    #             np.column_stack([half_el[1], zero, half_el[1]]),
-    #             np.column_stack([half_el[2], half_el[2], zero]),
-    #         ],
-    #         axis=1,
-    #     )
-
-    #     return ids, vals
-
     #     def compute_gradient(self, u):
     #         '''Computes an approximation to the gradient :math:`\\nabla u` of a
     #         given scalar valued function :math:`u`, defined in the points.
