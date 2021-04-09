@@ -82,7 +82,6 @@ class Mesh:
         """Reset all data that changes when point coordinates changes."""
         self._half_edge_coords = None
         self._ei_dot_ei = None
-        self._ei_dot_ej = None
         self._cell_centroids = None
         self._volumes = None
         self._integral_x = None
@@ -141,22 +140,6 @@ class Mesh:
         if self._ei_dot_ei is None:
             self._compute_cell_values()
         return self._ei_dot_ei
-
-    @property
-    def ei_dot_ej(self):
-        if self._ei_dot_ej is None:
-            self._ei_dot_ej = self.ei_dot_ei - np.sum(self.ei_dot_ei, axis=0) / 2
-            # An alternative is
-            # ```
-            # self._ei_dot_ej = np.einsum(
-            #     "...k, ...k->...",
-            #     self.half_edge_coords[[1, 2, 0]],
-            #     self.half_edge_coords[[2, 0, 1]],
-            # )
-            # ```
-            # but this is slower, cf.
-            # <https://gist.github.com/nschloe/d9c1d872a3ab8b47ff22d97d103be266>.
-        return self._ei_dot_ej
 
     @property
     def cell_heights(self):
@@ -970,9 +953,6 @@ class Mesh:
 
         if self._half_edge_coords is not None:
             self._half_edge_coords = self._half_edge_coords[:, keep]
-
-        if self._ei_dot_ej is not None:
-            self._ei_dot_ej = self._ei_dot_ej[:, keep]
 
         if self._ei_dot_ei is not None:
             self._ei_dot_ei = self._ei_dot_ei[:, keep]
