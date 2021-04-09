@@ -688,14 +688,24 @@ class MeshTri(Mesh):
         # update most of the cell-associated values
         self._compute_cell_values(cell_ids)
 
+        if self._signed_cell_volumes is not None:
+            self._signed_cell_volumes[:, cell_ids] = self.compute_signed_cell_volumes(
+                cell_ids
+            )
+
+        if self._is_boundary_cell is not None:
+            self._is_boundary_cell[cell_ids] = np.any(
+                self.is_boundary_facet_local[:, cell_ids], axis=0
+            )
+
         if self._signed_circumcenter_distances is not None:
             self._signed_circumcenter_distances[interior_facet_ids] = 0.0
-            edge_gids = self.interior_facets[interior_facet_ids]
+            facet_gids = self.interior_facets[interior_facet_ids]
             adj_cells = self.facets_cells["interior"][1:3, interior_facet_ids].T
 
             is_facet = np.array(
                 [
-                    self.cells["edges"][adj_cells[:, 0]][:, k] == edge_gids
+                    self.cells["facets"][adj_cells[:, 0]][:, k] == facet_gids
                     for k in range(3)
                 ]
             )
@@ -707,7 +717,7 @@ class MeshTri(Mesh):
 
             is_facet = np.array(
                 [
-                    self.cells["edges"][adj_cells[:, 1]][:, k] == edge_gids
+                    self.cells["facets"][adj_cells[:, 1]][:, k] == facet_gids
                     for k in range(3)
                 ]
             )
@@ -716,11 +726,3 @@ class MeshTri(Mesh):
                 self._signed_circumcenter_distances[
                     interior_facet_ids[is_facet[k]]
                 ] += self.signed_circumcenter_distances[k, adj_cells[is_facet[k], 1]]
-
-        if self._is_boundary_cell is not None:
-            self._is_boundary_cell[cell_ids] = np.any(
-                self.is_boundary_facet_local[:, cell_ids], axis=0
-            )
-
-        # TODO update those values
-        self._signed_cell_volumes = None

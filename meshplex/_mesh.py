@@ -408,9 +408,6 @@ class Mesh:
             assert self._integral_x is not None
             self._integral_x[..., mask, :] = integral_x
 
-        # TODO don't remove on update
-        self._signed_circumcenter_distances = None
-
     @property
     def signed_cell_volumes(self):
         """Signed volumes of an n-simplex in nD."""
