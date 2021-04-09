@@ -665,7 +665,7 @@ class MeshTri(Mesh):
         self._compute_cell_values(cell_ids)
 
         if self._signed_cell_volumes is not None:
-            self._signed_cell_volumes[:, cell_ids] = self.compute_signed_cell_volumes(
+            self._signed_cell_volumes[cell_ids] = self.compute_signed_cell_volumes(
                 cell_ids
             )
 
@@ -689,7 +689,7 @@ class MeshTri(Mesh):
             for k in range(3):
                 self._signed_circumcenter_distances[
                     interior_facet_ids[is_facet[k]]
-                ] += self.signed_circumcenter_distances[k, adj_cells[is_facet[k], 0]]
+                ] += self._circumcenter_facet_distances[k, adj_cells[is_facet[k], 0]]
 
             is_facet = np.array(
                 [
@@ -701,4 +701,4 @@ class MeshTri(Mesh):
             for k in range(3):
                 self._signed_circumcenter_distances[
                     interior_facet_ids[is_facet[k]]
-                ] += self.signed_circumcenter_distances[k, adj_cells[is_facet[k], 1]]
+                ] += self._circumcenter_facet_distances[k, adj_cells[is_facet[k], 1]]
