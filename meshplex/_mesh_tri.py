@@ -53,30 +53,6 @@ class MeshTri(Mesh):
         )
         return np.arccos(-normalized_ei_dot_ej)
 
-    # def _compute_surface_areas(self, cell_ids):
-    #     # For each edge, one half of the the edge goes to each of the end points. Used
-    #     # for Neumann boundary conditions if on the boundary of the mesh and transition
-    #     # conditions if in the interior.
-    #     #
-    #     # Each of the three edges may contribute to the surface areas of all three
-    #     # vertices. Here, only the two adjacent points receive a contribution, but other
-    #     # approaches, may contribute to all three points.
-    #     cn = self.cells["points"][cell_ids]
-    #     ids = np.stack([cn, cn, cn], axis=1)
-
-    #     half_el = 0.5 * self.edge_lengths[..., cell_ids]
-    #     zero = np.zeros([half_el.shape[1]])
-    #     vals = np.stack(
-    #         [
-    #             np.column_stack([zero, half_el[0], half_el[0]]),
-    #             np.column_stack([half_el[1], zero, half_el[1]]),
-    #             np.column_stack([half_el[2], half_el[2], zero]),
-    #         ],
-    #         axis=1,
-    #     )
-
-    #     return ids, vals
-
     #     def compute_gradient(self, u):
     #         '''Computes an approximation to the gradient :math:`\\nabla u` of a
     #         given scalar valued function :math:`u`, defined in the points.
@@ -688,39 +664,41 @@ class MeshTri(Mesh):
         # update most of the cell-associated values
         self._compute_cell_values(cell_ids)
 
-        if self._signed_circumcenter_distances is not None:
-            self._signed_circumcenter_distances[interior_facet_ids] = 0.0
-            edge_gids = self.interior_facets[interior_facet_ids]
-            adj_cells = self.facets_cells["interior"][1:3, interior_facet_ids].T
-
-            is_facet = np.array(
-                [
-                    self.cells["edges"][adj_cells[:, 0]][:, k] == edge_gids
-                    for k in range(3)
-                ]
+        if self._signed_cell_volumes is not None:
+            self._signed_cell_volumes[cell_ids] = self.compute_signed_cell_volumes(
+                cell_ids
             )
-            assert np.all(np.sum(is_facet, axis=0) == 1)
-            for k in range(3):
-                self._signed_circumcenter_distances[
-                    interior_facet_ids[is_facet[k]]
-                ] += self.signed_circumcenter_distances[k, adj_cells[is_facet[k], 0]]
-
-            is_facet = np.array(
-                [
-                    self.cells["edges"][adj_cells[:, 1]][:, k] == edge_gids
-                    for k in range(3)
-                ]
-            )
-            assert np.all(np.sum(is_facet, axis=0) == 1)
-            for k in range(3):
-                self._signed_circumcenter_distances[
-                    interior_facet_ids[is_facet[k]]
-                ] += self.signed_circumcenter_distances[k, adj_cells[is_facet[k], 1]]
 
         if self._is_boundary_cell is not None:
             self._is_boundary_cell[cell_ids] = np.any(
                 self.is_boundary_facet_local[:, cell_ids], axis=0
             )
 
-        # TODO update those values
-        self._signed_cell_volumes = None
+        if self._signed_circumcenter_distances is not None:
+            self._signed_circumcenter_distances[interior_facet_ids] = 0.0
+            facet_gids = self.interior_facets[interior_facet_ids]
+            adj_cells = self.facets_cells["interior"][1:3, interior_facet_ids].T
+
+            is_facet = np.array(
+                [
+                    self.cells["facets"][adj_cells[:, 0]][:, k] == facet_gids
+                    for k in range(3)
+                ]
+            )
+            assert np.all(np.sum(is_facet, axis=0) == 1)
+            for k in range(3):
+                self._signed_circumcenter_distances[
+                    interior_facet_ids[is_facet[k]]
+                ] += self._circumcenter_facet_distances[k, adj_cells[is_facet[k], 0]]
+
+            is_facet = np.array(
+                [
+                    self.cells["facets"][adj_cells[:, 1]][:, k] == facet_gids
+                    for k in range(3)
+                ]
+            )
+            assert np.all(np.sum(is_facet, axis=0) == 1)
+            for k in range(3):
+                self._signed_circumcenter_distances[
+                    interior_facet_ids[is_facet[k]]
+                ] += self._circumcenter_facet_distances[k, adj_cells[is_facet[k], 1]]
