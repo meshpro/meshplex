@@ -1,5 +1,4 @@
 import math
-from typing import Optional
 
 import meshio
 import npx
@@ -483,7 +482,7 @@ class Mesh:
     def write(
         self,
         filename: str,
-        point_data= None,
+        point_data=None,
         cell_data=None,
         field_data=None,
     ):
