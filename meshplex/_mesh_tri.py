@@ -350,11 +350,8 @@ class MeshTri(Mesh):
             ax.add_collection(line_segments0)
         else:
             # Plot regular edges, mark those with negative ce-ratio red.
-            ce_ratios = self.ce_ratios_per_interior_facet
-            pos = ce_ratios >= 0
-
             is_pos = np.zeros(len(self.edges["points"]), dtype=bool)
-            is_pos[self.interior_facets[pos]] = True
+            is_pos[self.interior_facets[self.signed_circumcenter_distances >= 0]] = True
 
             # Mark Delaunay-conforming boundary edges
             is_pos_boundary = self.ce_ratios[self.is_boundary_facet_local] >= 0
