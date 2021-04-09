@@ -93,7 +93,7 @@ class Mesh:
         self._ce_ratios = None
         self._cell_partitions = None
         self._control_volumes = None
-        self._interior_ce_ratios = None
+        self._signed_circumcenter_distances = None
         self._circumcenter_facet_distances = None
 
         self._cv_centroids = None
@@ -283,19 +283,18 @@ class Mesh:
         return self._ce_ratios
 
     @property
-    def ce_ratios_per_interior_facet(self):
-        if self._interior_ce_ratios is None:
-            if "edges" not in self.cells:
+    def signed_circumcenter_distances(self):
+        if self._signed_circumcenter_distances is None:
+            if "facets" not in self.cells:
                 self.create_facets()
 
-            ce_ratios = npx.sum_at(
-                self.ce_ratios.T,
-                self.cells["edges"],
-                self.edges["points"].shape[0],
-            )
-            self._interior_ce_ratios = ce_ratios[self.is_interior_facet]
+            self._signed_circumcenter_distances = npx.sum_at(
+                self.circumcenter_face_distances.T,
+                self.cells["facets"],
+                self.facets["points"].shape[0],
+            )[self.is_interior_facet]
 
-        return self._interior_ce_ratios
+        return self._signed_circumcenter_distances
 
     def _compute_cell_values(self, mask=slice(None)):
         """Computes the volumes of all edges, facets, cells etc. in the mesh. It starts
@@ -425,6 +424,9 @@ class Mesh:
 
             assert self._integral_x is not None
             self._integral_x[..., mask, :] = integral_x
+
+        # TODO don't remove on update
+        self._signed_circumcenter_distances = None
 
     @property
     def signed_cell_volumes(self):
@@ -1083,24 +1085,7 @@ class Mesh:
 
     @property
     def num_delaunay_violations(self):
-        """Number of edges where the Delaunay condition is violated."""
-        # Delaunay violations are present exactly on the interior edges where the
-        # ce_ratio is negative. Count those.
-        if self.n == 3:
-            return np.sum(self.ce_ratios_per_interior_facet < 0.0)
-
-        assert self.n == 4
-
-        # Delaunay violations are present exactly on the interior faces where the sum of
-        # the signed distances between facet circumcenter and adjacent cell circumcenter
-        # is negative.
-        if "facets" not in self.cells:
-            self.create_facets()
-
-        num_facets = self.facets["points"].shape[0]
-        sums = npx.sum_at(
-            self.circumcenter_face_distances,
-            self.cells["facets"].T,
-            num_facets,
-        )
-        return np.sum(sums[self.is_interior_facet] < 0.0)
+        """Number of interior facets where the Delaunay condition is violated."""
+        # Delaunay violations are present exactly on the interior facets where the
+        # signed circumcenter distance is negative. Count those.
+        return np.sum(self.signed_circumcenter_distances < 0.0)
