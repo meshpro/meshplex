@@ -1072,6 +1072,10 @@ class Mesh:
         return self._control_volumes
 
     @property
+    def is_delaunay(self):
+        return self.num_delaunay_violations == 0
+
+    @property
     def num_delaunay_violations(self):
         """Number of interior facets where the Delaunay condition is violated."""
         # Delaunay violations are present exactly on the interior facets where the
