@@ -5,7 +5,7 @@ import numpy as np
 
 import meshplex
 
-from .helpers import assert_mesh_consistency, compute_all_entities
+from .helpers import assert_mesh_consistency, assert_mesh_equality, compute_all_entities
 
 this_dir = pathlib.Path(__file__).resolve().parent
 
@@ -340,6 +340,20 @@ def test_doubled_cell():
     )
     cells = np.array([[0, 1, 2], [0, 1, 2]])
     mesh = meshplex.MeshTri(points, cells)
-    mesh.show()
     mesh.flip_until_delaunay()
     assert np.all(np.isnan(mesh.circumcenter_facet_distances))
+
+
+def test_negative_after_flip():
+    points = [[0.0, 0.0], [3.0, 0.0], [1.14960653, 0.03], [1.85039347, 0.03]]
+    cells = [
+        [0, 3, 2],
+        [0, 1, 3],
+    ]
+    mesh0 = meshplex.MeshTri(points, cells)
+    # mesh.show()
+    mesh0.flip_until_delaunay()
+
+
+if __name__ == "__main__":
+    test_failing()

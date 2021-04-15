@@ -476,9 +476,10 @@ class MeshTri(Mesh):
 
         step = 0
 
+        is_flip_interior_facet = self.signed_circumcenter_distances < -tol
+
         while True:
             step += 1
-            is_flip_interior_facet = self.signed_circumcenter_distances < -tol
             if not np.any(is_flip_interior_facet):
                 break
 
@@ -488,7 +489,6 @@ class MeshTri(Mesh):
                     f"Maximum number of edge flips reached ({max_steps}). "
                     f"Smallest signed circumcenter distance: {m:.3e}."
                 )
-                exit(1)
                 break
 
             interior_facets_cells = self.facets_cells["interior"][1:3].T
@@ -515,6 +515,30 @@ class MeshTri(Mesh):
             # actually perform the flips
             self.flip_interior_facets(is_flip_interior_facet)
             num_flips += np.sum(is_flip_interior_facet)
+
+            # check the new signed_circumcenter_distances
+            new_scd = self.signed_circumcenter_distances[is_flip_interior_facet]
+            is_negative_before_and_after = new_scd < 0
+            if np.any(is_negative_before_and_after):
+                message = (
+                    "There are facets which have a negative circumcenter distance "
+                    + "before and after the flip. Values after:\n"
+                )
+                message += (
+                    "["
+                    + ", ".join(
+                        f"{s:.3e}" for s in new_scd[is_negative_before_and_after]
+                    )
+                    + "]\n"
+                )
+                message += "Leaving those facets as they are."
+                warnings.warn(message)
+                exit(1)  # TODO remove
+
+            is_flip_interior_facet_old = is_flip_interior_facet.copy()
+            is_flip_interior_facet = self.signed_circumcenter_distances < -tol
+            # Simply don't flip edges which have just been flipped
+            is_flip_interior_facet[is_flip_interior_facet_old] = False
 
         return num_flips
 
