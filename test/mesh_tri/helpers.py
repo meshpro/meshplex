@@ -108,6 +108,7 @@ def compute_all_entities(mesh):
     assert mesh._volumes is not None
     assert mesh._ce_ratios is not None
     assert mesh._circumcenters is not None
+    assert mesh._circumcenter_facet_distances is not None
     assert mesh._signed_circumcenter_distances is not None
     assert mesh._control_volumes is not None
     assert mesh._cell_partitions is not None
@@ -159,6 +160,10 @@ def assert_mesh_equality(mesh0, mesh1):
     assert np.all(np.abs(mesh0.ei_dot_ei - mesh1.ei_dot_ei) < 1.0e-14)
     assert np.all(np.abs(mesh0.cell_volumes - mesh1.cell_volumes) < 1.0e-14)
     assert np.all(np.abs(mesh0.ce_ratios - mesh1.ce_ratios) < 1.0e-14)
+    assert np.all(
+        np.abs(mesh0.circumcenter_facet_distances - mesh1.circumcenter_facet_distances)
+        < 1.0e-14
+    )
     assert np.all(
         np.abs(
             mesh0.signed_circumcenter_distances - mesh1.signed_circumcenter_distances
