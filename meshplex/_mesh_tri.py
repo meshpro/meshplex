@@ -556,13 +556,11 @@ class MeshTri(Mesh):
         # Make sure that positive/negative area orientation is preserved. This is
         # especially important for signed area computations: In a mesh of all positive
         # areas, you don't want a negative area appear after a facet flip.
-        self.cells["points"][adj_cells[0]] = np.column_stack([v[0], v[2], v[1]])
-        self.cells["points"][adj_cells[1]] = np.column_stack([v[0], v[1], v[3]])
+        self.cells["points"][adj_cells[0]] = v[[0, 2, 1]].T
+        self.cells["points"][adj_cells[1]] = v[[0, 1, 3]].T
 
         # Set up new facet->points relationships.
-        self.facets["points"][facet_gids] = np.sort(
-            np.column_stack([v[0], v[1]]), axis=1
-        )
+        self.facets["points"][facet_gids] = np.sort(v[[0, 1]], axis=0).T
 
         # Set up new cells->facets relationships.
         previous_facets = self.cells["facets"][adj_cells].copy()  # TODO need copy?
