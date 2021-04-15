@@ -29,6 +29,7 @@ def test_flip_simple():
     mesh = meshplex.MeshTri(points, cells)
 
     mesh.create_facets()
+    assert not mesh.is_delaunay
     assert mesh.num_delaunay_violations == 1
     assert np.array_equal(
         mesh.edges["points"], [[0, 1], [0, 3], [1, 2], [1, 3], [2, 3]]
@@ -328,5 +329,17 @@ def test_flip_into_existing_edge():
     assert np.all(mesh2.cells["points"] == ref)
 
 
-if __name__ == "__main__":
-    test_flip_same_edge_twice()
+def test_doubled_cell():
+    # Two congruent cells. One can think of it as a deflated, coarse ball.
+    points = np.array(
+        [
+            [0.0, 0.0],
+            [1.0, 0.0],
+            [0.5, 0.4],
+        ]
+    )
+    cells = np.array([[0, 1, 2], [0, 1, 2]])
+    mesh = meshplex.MeshTri(points, cells)
+    mesh.show()
+    mesh.flip_until_delaunay()
+    assert np.all(np.isnan(mesh.circumcenter_facet_distances))

@@ -461,62 +461,66 @@ class MeshTri(Mesh):
         """Flip edges until the mesh is fully Delaunay (up to `tol`)."""
         num_flips = 0
         assert tol >= 0.0
-        # If all coedge/edge ratios are positive, all cells are Delaunay.
-        if np.all(self.ce_ratios > -0.5 * tol):
+        # If all circumcenter-facet distances are positive, all cells are Delaunay.
+        if np.all(self.circumcenter_facet_distances > -0.5 * tol):
             return num_flips
 
-        # Now compute the boundary edges. A little more costly, but we'd have to do that
-        # anyway. If all _interior_ coedge/edge ratios are positive, all cells are
-        # Delaunay.
-        if np.all(self.ce_ratios[~self.is_boundary_facet_local] > -0.5 * tol):
+        # Now compute the boundary facet. A little more costly, but we'd have to do that
+        # anyway. If all _interior_ circumcenter-facet distances are positive, all cells
+        # are Delaunay.
+        if np.all(
+            self.circumcenter_facet_distances[~self.is_boundary_facet_local]
+            > -0.5 * tol
+        ):
             return num_flips
 
         step = 0
 
         while True:
             step += 1
-            is_flip_interior_edge = self.signed_circumcenter_distances < -tol
-            if not np.any(is_flip_interior_edge):
+            is_flip_interior_facet = self.signed_circumcenter_distances < -tol
+            if not np.any(is_flip_interior_facet):
                 break
 
             if step > max_steps:
                 m = np.min(self.signed_circumcenter_distances)
                 warnings.warn(
-                    "Maximum number of edge flips reached. "
+                    f"Maximum number of edge flips reached ({max_steps}). "
                     f"Smallest signed circumcenter distance: {m:.3e}."
                 )
+                exit(1)
                 break
 
             interior_facets_cells = self.facets_cells["interior"][1:3].T
-            adj_cells = interior_facets_cells[is_flip_interior_edge].T
+            adj_cells = interior_facets_cells[is_flip_interior_facet].T
 
-            # Check if there are cells for which more than one edge needs to be flipped.
-            # For those, only flip one edge, namely that with the smaller (more
-            # negative) ce_ratio.
+            # Check if there are cells for which more than one facet needs to be
+            # flipped. For those, only flip one facet, namely that with the smaller
+            # (more negative) circumcenter_facet_distance.
             cell_gids, num_flips_per_cell = np.unique(adj_cells, return_counts=True)
-            critical_cell_gids = cell_gids[num_flips_per_cell > 1]
+            multiflip_cell_gids = cell_gids[num_flips_per_cell > 1]
             while np.any(num_flips_per_cell > 1):
-                for cell_gid in critical_cell_gids:
-                    edge_gids = self.cells["edges"][cell_gid]
-                    is_interior_facet = self.is_interior_facet[edge_gids]
-                    idx = self.facets_cells_idx[edge_gids[is_interior_facet]]
+                for cell_gid in multiflip_cell_gids:
+                    facet_gids = self.cells["facets"][cell_gid]
+                    is_interior_facet = self.is_interior_facet[facet_gids]
+                    idx = self.facets_cells_idx[facet_gids[is_interior_facet]]
                     k = np.argmin(self.signed_circumcenter_distances[idx])
-                    is_flip_interior_edge[idx] = False
-                    is_flip_interior_edge[idx[k]] = True
+                    is_flip_interior_facet[idx] = False
+                    is_flip_interior_facet[idx[k]] = True
 
-                adj_cells = interior_facets_cells[is_flip_interior_edge].T
+                adj_cells = interior_facets_cells[is_flip_interior_facet].T
                 cell_gids, num_flips_per_cell = np.unique(adj_cells, return_counts=True)
-                critical_cell_gids = cell_gids[num_flips_per_cell > 1]
+                multiflip_cell_gids = cell_gids[num_flips_per_cell > 1]
 
             # actually perform the flips
-            self.flip_interior_facets(is_flip_interior_edge)
-            num_flips += np.sum(is_flip_interior_edge)
+            self.flip_interior_facets(is_flip_interior_facet)
+            num_flips += np.sum(is_flip_interior_facet)
 
         return num_flips
 
-    def flip_interior_facets(self, is_flip_interior_edge):
-        facets_cells_flip = self.facets_cells["interior"][:, is_flip_interior_edge]
-        edge_gids = facets_cells_flip[0]
+    def flip_interior_facets(self, is_flip_interior_facet):
+        facets_cells_flip = self.facets_cells["interior"][:, is_flip_interior_facet]
+        facet_gids = facets_cells_flip[0]
         adj_cells = facets_cells_flip[1:3]
         lids = facets_cells_flip[3:5]
 
@@ -551,68 +555,68 @@ class MeshTri(Mesh):
         # Set up new cells->points relationships.
         # Make sure that positive/negative area orientation is preserved. This is
         # especially important for signed area computations: In a mesh of all positive
-        # areas, you don't want a negative area appear after an edge flip.
-        self.cells["points"][adj_cells[0]] = np.column_stack([v[0], v[2], v[1]])
-        self.cells["points"][adj_cells[1]] = np.column_stack([v[0], v[1], v[3]])
+        # areas, you don't want a negative area appear after a facet flip.
+        self.cells["points"][adj_cells[0]] = v[[0, 2, 1]].T
+        self.cells["points"][adj_cells[1]] = v[[0, 1, 3]].T
 
-        # Set up new edges->points relationships.
-        self.edges["points"][edge_gids] = np.sort(np.column_stack([v[0], v[1]]), axis=1)
+        # Set up new facet->points relationships.
+        self.facets["points"][facet_gids] = np.sort(v[[0, 1]], axis=0).T
 
-        # Set up new cells->edges relationships.
-        previous_edges = self.cells["edges"][adj_cells].copy()  # TODO need copy?
+        # Set up new cells->facets relationships.
+        previous_facets = self.cells["facets"][adj_cells].copy()  # TODO need copy?
         # Do the neighboring cells have equal orientation (both point sets
         # clockwise/counterclockwise)?
         #
-        # edges as in the above ascii art
+        # facets as in the above ascii art
         i0 = np.ones(equal_orientation.shape[0], dtype=int)
         i0[~equal_orientation] = 2
         i1 = np.ones(equal_orientation.shape[0], dtype=int)
         i1[equal_orientation] = 2
         e = [
-            np.choose((lids[0] + 2) % 3, previous_edges[0].T),
-            np.choose((lids[1] + i0) % 3, previous_edges[1].T),
-            np.choose((lids[1] + i1) % 3, previous_edges[1].T),
-            np.choose((lids[0] + 1) % 3, previous_edges[0].T),
+            np.choose((lids[0] + 2) % 3, previous_facets[0].T),
+            np.choose((lids[1] + i0) % 3, previous_facets[1].T),
+            np.choose((lids[1] + i1) % 3, previous_facets[1].T),
+            np.choose((lids[0] + 1) % 3, previous_facets[0].T),
         ]
         # The order here is tightly coupled to self.cells["points"] above
-        self.cells["edges"][adj_cells[0]] = np.column_stack([e[1], edge_gids, e[0]])
-        self.cells["edges"][adj_cells[1]] = np.column_stack([e[2], e[3], edge_gids])
+        self.cells["facets"][adj_cells[0]] = np.column_stack([e[1], facet_gids, e[0]])
+        self.cells["facets"][adj_cells[1]] = np.column_stack([e[2], e[3], facet_gids])
 
         # update is_boundary_facet_local
         for k in range(3):
             self.is_boundary_facet_local[k, adj_cells] = self.is_boundary_facet[
-                self.cells["edges"][adj_cells, k]
+                self.cells["facets"][adj_cells, k]
             ]
 
-        # Update the edge->cells relationship. We need to update facets_cells info for
-        # all five edges.
-        # First update the flipped edge; it's always interior.
-        idx = self.facets_cells_idx[edge_gids]
+        # Update the facet->cells relationship. We need to update facets_cells info for
+        # all five facets.
+        # First update the flipped facet; it's always interior.
+        idx = self.facets_cells_idx[facet_gids]
         # cell ids
         self.facets_cells["interior"][1, idx] = adj_cells[0]
         self.facets_cells["interior"][2, idx] = adj_cells[1]
-        # local edge ids; see self.cells["edges"]
+        # local facet ids; see self.cells["facets"]
         self.facets_cells["interior"][3, idx] = 1
         self.facets_cells["interior"][4, idx] = 2
         #
-        # Now handle the four surrounding edges
+        # Now handle the four surrounding facets
         conf = [
             # The data is:
-            # (1) edge id
+            # (1) facet id
             # (2) previous adjacent cell (adj_cells[0] or adj_cells[1])
             # (3) new adjacent cell (adj_cells[0] or adj_cells[1])
-            # (4) local edge index in the new adjacent cell
+            # (4) local facet index in the new adjacent cell
             (e[0], 0, 0, 2),
             (e[1], 1, 0, 0),
             (e[2], 1, 1, 0),
             (e[3], 0, 1, 1),
         ]
-        for edge, prev_adj_idx, new__adj_idx, new_local_edge_index in conf:
+        for facet, prev_adj_idx, new__adj_idx, new_local_facet_index in conf:
             prev_adj = adj_cells[prev_adj_idx]
             new__adj = adj_cells[new__adj_idx]
-            idx = self.facets_cells_idx[edge]
+            idx = self.facets_cells_idx[facet]
             # boundary...
-            is_boundary = self.is_boundary_facet[edge]
+            is_boundary = self.is_boundary_facet[facet]
             idx_bou = idx[is_boundary]
             prev_adjacent = prev_adj[is_boundary]
             new__adjacent = new__adj[is_boundary]
@@ -620,13 +624,13 @@ class MeshTri(Mesh):
             # trigger.
             assert np.all(prev_adjacent == self.facets_cells["boundary"][1, idx_bou])
             self.facets_cells["boundary"][1, idx_bou] = new__adjacent
-            self.facets_cells["boundary"][2, idx_bou] = new_local_edge_index
+            self.facets_cells["boundary"][2, idx_bou] = new_local_facet_index
             # ...or interior?
             prev_adjacent = prev_adj[~is_boundary]
             new__adjacent = new__adj[~is_boundary]
             idx_int = idx[~is_boundary]
-            # Interior edges have two neighboring cells in no particular order. Find out
-            # if the adj_cell if the flipped edge comes first or second.
+            # Interior facets have two neighboring cells in no particular order. Find
+            # out if the adj_cell if the flipped facet comes first or second.
             is_first = prev_adjacent == self.facets_cells["interior"][1, idx_int]
             # The following is just a safety net. We could as well take ~is_first.
             is_secnd = prev_adjacent == self.facets_cells["interior"][2, idx_int]
@@ -634,19 +638,19 @@ class MeshTri(Mesh):
             # actually set the data
             idx_first = idx_int[is_first]
             self.facets_cells["interior"][1, idx_first] = new__adjacent[is_first]
-            self.facets_cells["interior"][3, idx_first] = new_local_edge_index
+            self.facets_cells["interior"][3, idx_first] = new_local_facet_index
             # likewise for when the cell appears in the second column
             idx_secnd = idx_int[~is_first]
             self.facets_cells["interior"][2, idx_secnd] = new__adjacent[~is_first]
-            self.facets_cells["interior"][4, idx_secnd] = new_local_edge_index
+            self.facets_cells["interior"][4, idx_secnd] = new_local_facet_index
 
         # Schedule the cell ids for data updates
         update_cell_ids = np.unique(adj_cells.T.flat)
-        # Same for edge ids
-        update_edge_gids = self.cells["edges"][update_cell_ids].flat
-        edge_cell_idx = self.facets_cells_idx[update_edge_gids]
+        # Same for facet ids
+        update_facet_gids = self.cells["facets"][update_cell_ids].flat
+        facet_cell_idx = self.facets_cells_idx[update_facet_gids]
         update_interior_facet_ids = np.unique(
-            edge_cell_idx[self.is_interior_facet[update_edge_gids]]
+            facet_cell_idx[self.is_interior_facet[update_facet_gids]]
         )
 
         self._update_cell_values(update_cell_ids, update_interior_facet_ids)
@@ -654,7 +658,6 @@ class MeshTri(Mesh):
     def _update_cell_values(self, cell_ids, interior_facet_ids):
         """Updates all sorts of cell information for the given cell IDs."""
         # update idx
-        # self.idx[0][:, cell_ids] = self.cells["points"][cell_ids].T
         for j in range(1, self.n - 1):
             m = len(self.idx[j - 1])
             r = np.arange(m)
@@ -674,31 +677,23 @@ class MeshTri(Mesh):
                 self.is_boundary_facet_local[:, cell_ids], axis=0
             )
 
+        # update the signed circumcenter distances for all interior_facet_ids
         if self._signed_circumcenter_distances is not None:
             self._signed_circumcenter_distances[interior_facet_ids] = 0.0
             facet_gids = self.interior_facets[interior_facet_ids]
             adj_cells = self.facets_cells["interior"][1:3, interior_facet_ids].T
 
-            is_facet = np.array(
-                [
-                    self.cells["facets"][adj_cells[:, 0]][:, k] == facet_gids
-                    for k in range(3)
-                ]
-            )
-            assert np.all(np.sum(is_facet, axis=0) == 1)
-            for k in range(3):
-                self._signed_circumcenter_distances[
-                    interior_facet_ids[is_facet[k]]
-                ] += self._circumcenter_facet_distances[k, adj_cells[is_facet[k], 0]]
-
-            is_facet = np.array(
-                [
-                    self.cells["facets"][adj_cells[:, 1]][:, k] == facet_gids
-                    for k in range(3)
-                ]
-            )
-            assert np.all(np.sum(is_facet, axis=0) == 1)
-            for k in range(3):
-                self._signed_circumcenter_distances[
-                    interior_facet_ids[is_facet[k]]
-                ] += self._circumcenter_facet_distances[k, adj_cells[is_facet[k], 1]]
+            for i in [0, 1]:
+                is_facet = np.array(
+                    [
+                        self.cells["facets"][adj_cells[:, i]][:, k] == facet_gids
+                        for k in range(3)
+                    ]
+                )
+                # assert np.all(np.sum(is_facet, axis=0) == 1)
+                for k in range(3):
+                    self._signed_circumcenter_distances[
+                        interior_facet_ids[is_facet[k]]
+                    ] += self._circumcenter_facet_distances[
+                        k, adj_cells[is_facet[k], i]
+                    ]

@@ -192,7 +192,7 @@ class Mesh:
         return self._cell_partitions
 
     @property
-    def circumcenter_facet_distances(self):
+    def circumcenter_facet_distances(self) -> ArrayLike:
         if self._circumcenter_facet_distances is None:
             self._compute_cell_values()
         return self._circumcenter_facet_distances
@@ -1070,6 +1070,10 @@ class Mesh:
         if self._control_volumes is None:
             return self.get_control_volumes()
         return self._control_volumes
+
+    @property
+    def is_delaunay(self):
+        return self.num_delaunay_violations == 0
 
     @property
     def num_delaunay_violations(self):
