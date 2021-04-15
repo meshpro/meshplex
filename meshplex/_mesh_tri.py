@@ -560,7 +560,9 @@ class MeshTri(Mesh):
         self.cells["points"][adj_cells[1]] = np.column_stack([v[0], v[1], v[3]])
 
         # Set up new facet->points relationships.
-        self.facets["points"][facet_gids] = np.sort(np.column_stack([v[0], v[1]]), axis=1)
+        self.facets["points"][facet_gids] = np.sort(
+            np.column_stack([v[0], v[1]]), axis=1
+        )
 
         # Set up new cells->facets relationships.
         previous_facets = self.cells["facets"][adj_cells].copy()  # TODO need copy?
@@ -658,7 +660,6 @@ class MeshTri(Mesh):
     def _update_cell_values(self, cell_ids, interior_facet_ids):
         """Updates all sorts of cell information for the given cell IDs."""
         # update idx
-        # self.idx[0][:, cell_ids] = self.cells["points"][cell_ids].T
         for j in range(1, self.n - 1):
             m = len(self.idx[j - 1])
             r = np.arange(m)
@@ -678,31 +679,23 @@ class MeshTri(Mesh):
                 self.is_boundary_facet_local[:, cell_ids], axis=0
             )
 
+        # update the signed circumcenter distances for all interior_facet_ids
         if self._signed_circumcenter_distances is not None:
             self._signed_circumcenter_distances[interior_facet_ids] = 0.0
             facet_gids = self.interior_facets[interior_facet_ids]
             adj_cells = self.facets_cells["interior"][1:3, interior_facet_ids].T
 
-            is_facet = np.array(
-                [
-                    self.cells["facets"][adj_cells[:, 0]][:, k] == facet_gids
-                    for k in range(3)
-                ]
-            )
-            assert np.all(np.sum(is_facet, axis=0) == 1)
-            for k in range(3):
-                self._signed_circumcenter_distances[
-                    interior_facet_ids[is_facet[k]]
-                ] += self._circumcenter_facet_distances[k, adj_cells[is_facet[k], 0]]
-
-            is_facet = np.array(
-                [
-                    self.cells["facets"][adj_cells[:, 1]][:, k] == facet_gids
-                    for k in range(3)
-                ]
-            )
-            assert np.all(np.sum(is_facet, axis=0) == 1)
-            for k in range(3):
-                self._signed_circumcenter_distances[
-                    interior_facet_ids[is_facet[k]]
-                ] += self._circumcenter_facet_distances[k, adj_cells[is_facet[k], 1]]
+            for i in [0, 1]:
+                is_facet = np.array(
+                    [
+                        self.cells["facets"][adj_cells[:, i]][:, k] == facet_gids
+                        for k in range(3)
+                    ]
+                )
+                # assert np.all(np.sum(is_facet, axis=0) == 1)
+                for k in range(3):
+                    self._signed_circumcenter_distances[
+                        interior_facet_ids[is_facet[k]]
+                    ] += self._circumcenter_facet_distances[
+                        k, adj_cells[is_facet[k], i]
+                    ]

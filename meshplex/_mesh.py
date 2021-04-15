@@ -192,7 +192,7 @@ class Mesh:
         return self._cell_partitions
 
     @property
-    def circumcenter_facet_distances(self):
+    def circumcenter_facet_distances(self) -> ArrayLike:
         if self._circumcenter_facet_distances is None:
             self._compute_cell_values()
         return self._circumcenter_facet_distances

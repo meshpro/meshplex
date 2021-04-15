@@ -329,40 +329,20 @@ def test_flip_into_existing_edge():
     assert np.all(mesh2.cells["points"] == ref)
 
 
-def test_weird():
+def test_doubled_cell():
+    # Two congruent cells. One can think of it as a deflated, coarse ball.
     points = np.array(
         [
-            [0.5, 0.5],
             [0.0, 0.0],
-            [0.8, 0.05],
             [1.0, 0.0],
+            [0.5, 0.4],
         ]
     )
-    cells = np.array([[2, 3, 1], [3, 0, 1], [0, 3, 2]])
+    cells = np.array([[0, 1, 2], [0, 1, 2]])
     mesh = meshplex.MeshTri(points, cells)
-    print(mesh.is_delaunay)
     mesh.show()
     mesh.flip_until_delaunay()
-
-
-# def test_weird2():
-#     k = 879
-#     print()
-#     print(f"{k = }")
-#     np.random.seed(k)
-#     points = np.random.rand(4, 2)
-#     import scipy.spatial
-#
-#     cells = scipy.spatial.Delaunay(points)
-#     points += 0.1 * np.random.rand(4, 2)
-#     print(points)
-#     print(cells.simplices)
-#     mesh = meshplex.MeshTri(points, cells.simplices)
-#     print(mesh.num_delaunay_violations)
-#     mesh.show()
-#     # if mesh.is_delaunay:
-#     #     continue
-#     mesh.flip_until_delaunay()
+    assert np.all(np.isnan(mesh.circumcenter_facet_distances))
 
 
 if __name__ == "__main__":
