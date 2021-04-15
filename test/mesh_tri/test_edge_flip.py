@@ -343,7 +343,3 @@ def test_doubled_cell():
     mesh.show()
     mesh.flip_until_delaunay()
     assert np.all(np.isnan(mesh.circumcenter_facet_distances))
-
-
-if __name__ == "__main__":
-    test_weird()
