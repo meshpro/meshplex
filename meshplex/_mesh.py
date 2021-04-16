@@ -208,7 +208,7 @@ class Mesh:
             self._compute_cell_values()
         return self._circumcenter_facet_distances
 
-    def get_control_volume_centroids(self, idx=slice(None)):
+    def get_control_volume_centroids(self, cell_mask=None):
         """The centroid of any volume V is given by
 
         .. math::
@@ -222,25 +222,27 @@ class Mesh:
         for example, for temporarily disregarding flat cells on the boundary when
         performing Lloyd mesh optimization.
         """
-        assert idx is not None
-
-        if self._cv_centroids is None or np.any(idx != self._cvc_cell_mask):
+        if self._cv_centroids is None or np.any(cell_mask != self._cvc_cell_mask):
             if self._integral_x is None:
                 self._compute_cell_values()
 
+            if cell_mask is None:
+                idx = Ellipsis
+            else:
+                cell_mask = np.asarray(cell_mask)
+                assert cell_mask.shape == (self.idx[-1].shape[-1],)
+                # Use ":" for the first n-1 dimensions, then cell_mask
+                idx = tuple((self.n - 1) * [slice(None)] + [cell_mask])
+
             # TODO this can be improved by first summing up all components per cell
             integral_p = npx.sum_at(
-                self._integral_x[..., idx, :],
-                self.idx[-1][..., idx],
-                len(self.points),
+                self._integral_x[idx], self.idx[-1][idx], len(self.points)
             )
 
             # Divide by the control volume
-            cv = self.get_control_volumes(idx)
+            cv = self.get_control_volumes(cell_mask)
             self._cv_centroids = (integral_p.T / cv).T
-
-            self._cvc_cell_mask = idx
-            assert np.all(idx == self._cv_cell_mask)
+            self._cvc_cell_mask = cell_mask
 
         return self._cv_centroids
 
