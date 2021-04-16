@@ -4,6 +4,9 @@ import meshplex
 
 
 def assert_mesh_consistency(mesh0, tol=1.0e-14):
+
+    assert mesh0.idx[0].base is mesh0.cells["points"]
+    assert np.all(mesh0.cells["points"] == mesh0.idx[0].T)
     assert np.all(np.logical_xor(mesh0.is_boundary_facet, mesh0.is_interior_facet))
 
     bpts = np.array(
