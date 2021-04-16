@@ -5,7 +5,7 @@ import numpy as np
 
 import meshplex
 
-from .helpers import assert_mesh_consistency, assert_mesh_equality, compute_all_entities
+from .helpers import assert_mesh_consistency, compute_all_entities
 
 this_dir = pathlib.Path(__file__).resolve().parent
 
