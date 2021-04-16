@@ -231,7 +231,7 @@ class Mesh:
             # TODO this can be improved by first summing up all components per cell
             integral_p = npx.sum_at(
                 self._integral_x[..., idx, :],
-                self.idx[-1][:, idx],
+                self.idx[-1][..., idx],
                 len(self.points),
             )
 
@@ -1063,8 +1063,8 @@ class Mesh:
 
             # TODO this can be improved by first summing up all components per cell
             self._control_volumes = npx.sum_at(
-                self.cell_partitions[:, idx],
-                self.idx[-1][:, idx],
+                self.cell_partitions[..., idx],
+                self.idx[-1][..., idx],
                 len(self.points),
             )
 
