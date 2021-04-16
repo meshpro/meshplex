@@ -1,4 +1,5 @@
 import math
+import warnings
 
 import meshio
 import npx
@@ -428,11 +429,11 @@ class Mesh:
 
     def compute_signed_cell_volumes(self, idx=slice(None)):
         n = self.points.shape[1]
-        assert n == self.cells("points").shape[1] - 1, (
+        assert self.n == self.points.shape[1] + 1, (
             "Signed areas only make sense for n-simplices in in nD. "
             f"Got {n}D points."
         )
-        if n == 2:
+        if self.n == 3:
             # On <https://stackoverflow.com/q/50411583/353337>, we have a number of
             # alternatives computing the oriented area, but it's fastest with the
             # half-edges.
@@ -1011,8 +1012,8 @@ class Mesh:
         this case, the boundary cell can be removed, and the newly outward node is made
         a boundary node."""
         num_removed = 0
-        num_boundary_cells = np.sum(self.is_boundary_cell)
         while True:
+            num_boundary_cells = np.sum(self.is_boundary_cell)
             crit = criterion(self.is_boundary_cell)
 
             if ~np.any(crit):
@@ -1082,3 +1083,11 @@ class Mesh:
         # Delaunay violations are present exactly on the interior facets where the
         # signed circumcenter distance is negative. Count those.
         return np.sum(self.signed_circumcenter_distances < 0.0)
+
+    @property
+    def idx_hierarchy(self):
+        warnings.warn(
+            "idx_hierarchy is deprecated, use idx[-1] instead",
+            DeprecationWarning
+        )
+        return self.idx[-1]
