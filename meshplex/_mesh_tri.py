@@ -726,3 +726,8 @@ class MeshTri(Mesh):
                     ] += self._circumcenter_facet_distances[
                         k, adj_cells[is_facet[k], i]
                     ]
+
+        # TODO update those values
+        self._control_volumes = None
+        self._ce_ratios = None
+        self._cv_centroids = None
