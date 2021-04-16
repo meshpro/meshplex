@@ -5,11 +5,7 @@ import pytest
 
 import meshplex
 
-from .mesh_tri.helpers import (
-    assert_mesh_consistency,
-    assert_mesh_equality,
-    compute_all_entities,
-)
+from .mesh_tri.helpers import assert_mesh_consistency, compute_all_entities
 
 
 def get_mesh0():
@@ -168,13 +164,6 @@ def test_reference(mesh0, remove_cells):
     mesh0.remove_cells(remove_cells)
 
     assert_mesh_consistency(mesh0)
-
-    # recreate the reduced mesh from scratch
-    mesh1 = meshplex.Mesh(mesh0.points, mesh0.cells["points"])
-    mesh1.create_facets()
-
-    # check against the original
-    assert_mesh_equality(mesh0, mesh1)
 
 
 def test_remove_duplicate():

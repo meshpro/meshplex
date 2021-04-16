@@ -68,7 +68,7 @@ class Mesh:
 
         self._is_boundary_facet = None
         self._is_boundary_facet_local = None
-        self.edges = None
+        self.facets = None
         self._boundary_facets = None
         self._interior_facets = None
         self._is_interior_point = None
@@ -696,7 +696,7 @@ class Mesh:
         applications, it sometimes does come in handy, for example for mesh
         manipulation.
         """
-        if self.edges is None:
+        if self.facets is None:
             self.create_facets()
 
         # num_edges = len(self.edges["points"])
@@ -748,7 +748,7 @@ class Mesh:
                 self._compute_facets_cells()
             assert self.is_boundary_facet is not None
             # For each edge, store the index into the respective edge array.
-            num_edges = len(self.edges["points"])
+            num_edges = len(self.facets["points"])
             self._facets_cells_idx = np.empty(num_edges, dtype=int)
             num_b = np.sum(self.is_boundary_facet)
             num_i = np.sum(self.is_interior_facet)
@@ -774,8 +774,8 @@ class Mesh:
         if self._cv_centroids is not None:
             self._cv_centroids = self._cv_centroids[is_part_of_cell]
 
-        if self.edges is not None:
-            self.edges["points"] = new_point_idx[self.edges["points"]]
+        if self.facets is not None:
+            self.facets["points"] = new_point_idx[self.facets["points"]]
 
         if self._is_interior_point is not None:
             self._is_interior_point = self._is_interior_point[is_part_of_cell]
@@ -1064,12 +1064,7 @@ class Mesh:
             self._cv_cell_mask = idx
         return self._control_volumes
 
-    @property
-    def control_volumes(self):
-        """The control volumes around each vertex."""
-        if self._control_volumes is None:
-            return self.get_control_volumes()
-        return self._control_volumes
+    control_volumes = property(get_control_volumes)
 
     @property
     def is_delaunay(self):
