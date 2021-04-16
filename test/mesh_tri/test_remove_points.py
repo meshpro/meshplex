@@ -21,7 +21,7 @@ def test():
     mesh.remove_dangling_points()
 
     assert len(mesh.points) == 4
-    assert np.all(mesh.cells["points"] == np.array([[0, 1, 2], [0, 2, 3]]))
+    assert np.all(mesh.cells("points") == np.array([[0, 1, 2], [0, 2, 3]]))
     assert np.all(
         mesh.edges["points"] == np.array([[0, 1], [0, 2], [0, 3], [1, 2], [2, 3]])
     )

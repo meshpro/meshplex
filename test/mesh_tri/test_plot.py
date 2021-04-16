@@ -7,7 +7,7 @@ this_dir = pathlib.Path(__file__).resolve().parent
 
 def test_show_mesh():
     mesh = meshplex.read(this_dir / ".." / "meshes" / "pacman-optimized.vtk")
-    mesh = meshplex.MeshTri(mesh.points[:, :2], mesh.cells["points"])
+    mesh = meshplex.MeshTri(mesh.points[:, :2], mesh.cells("points"))
     print(mesh)  # test __repr__
     # mesh.plot(show_axes=False)
     mesh.show(

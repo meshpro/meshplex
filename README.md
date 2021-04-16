@@ -27,12 +27,11 @@ meshplex is used in [optimesh](https://github.com/nschloe/optimesh) and
 
 meshplex can compute the following data:
 ```python
-import numpy
 import meshplex
 
 # create a simple Mesh instance
-points = numpy.array([[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]])
-cells = numpy.array([[0, 1, 2]])
+points = [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]]
+cells = [[0, 1, 2]]
 mesh = meshplex.Mesh(points, cells)
 # or read it from a file
 # mesh = meshplex.read("pacman.vtk")
@@ -105,20 +104,20 @@ mesh.show(
 
 <!--exdown-skip-->
 ```python
-import numpy
+import numpy as np
 import meshplex
 
 # Generate tetrahedron
 points = (
-    numpy.array(
+    np.array(
         [
-            [1.0, 0.0, -1.0 / numpy.sqrt(8)],
-            [-0.5, +numpy.sqrt(3.0) / 2.0, -1.0 / numpy.sqrt(8)],
-            [-0.5, -numpy.sqrt(3.0) / 2.0, -1.0 / numpy.sqrt(8)],
-            [0.0, 0.0, numpy.sqrt(2.0) - 1.0 / numpy.sqrt(8)],
+            [1.0, 0.0, -1.0 / np.sqrt(8)],
+            [-0.5, +np.sqrt(3.0) / 2.0, -1.0 / np.sqrt(8)],
+            [-0.5, -np.sqrt(3.0) / 2.0, -1.0 / np.sqrt(8)],
+            [0.0, 0.0, np.sqrt(2.0) - 1.0 / np.sqrt(8)],
         ]
     )
-    / numpy.sqrt(3.0)
+    / np.sqrt(3.0)
 )
 cells = [[0, 1, 2, 3]]
 

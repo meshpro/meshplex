@@ -49,15 +49,13 @@ class Mesh:
         # prevent accidental override of parts of the array
         self._points.setflags(write=False)
 
-        self.cells = {"points": np.asarray(cells)}
-
         # Initialize the idx hierarchy. The first entry, idx[0], is the cells->points
         # relationship, shape [3, numcells] for triangles and [4, numcells] for
         # tetrahedra. idx[1] is the (half-)facet->points to relationship, shape [2, 3,
         # numcells] for triangles and [3, 4, numcells] for tetrahedra, for example. The
         # indexing is chosen such the point idx[0][k] is opposite of the facet idx[1][:,
         # k]. This indexing keeps going until idx[-1] is of shape [2, 3, ..., numcells].
-        self.idx = [self.cells["points"].T]
+        self.idx = [np.asarray(cells).T]
         for _ in range(1, self.n - 1):
             m = len(self.idx[-1])
             r = np.arange(m)
@@ -74,6 +72,7 @@ class Mesh:
         self._is_interior_point = None
         self._is_boundary_point = None
         self._is_boundary_cell = None
+        self._cells_facets = None
 
         self.subdomains = {}
 
@@ -105,9 +104,9 @@ class Mesh:
             2: "line",
             3: "triangle",
             4: "tetra",
-        }[self.cells["points"].shape[1]]
+        }[self.cells("points").shape[1]]
         num_points = len(self.points)
-        num_cells = len(self.cells["points"])
+        num_cells = len(self.cells("points"))
         string = f"<meshplex {name} mesh, {num_points} points, {num_cells} cells>"
         return string
 
@@ -129,6 +128,17 @@ class Mesh:
         self.points[idx] = new_points
         self.points.setflags(write=False)
         self._reset_point_data()
+
+    def cells(self, which):
+        if which == "points":
+            return self.idx[0].T
+        elif which == "facets":
+            assert self._cells_facets is not None
+            return self._cells_facets
+
+        assert which == "edges"
+        assert self.n == 3
+        return self._cells_facets
 
     @property
     def half_edge_coords(self):
@@ -269,12 +279,12 @@ class Mesh:
     @property
     def signed_circumcenter_distances(self):
         if self._signed_circumcenter_distances is None:
-            if "facets" not in self.cells:
+            if self._cells_facets is None:
                 self.create_facets()
 
             self._signed_circumcenter_distances = npx.sum_at(
                 self.circumcenter_facet_distances.T,
-                self.cells["facets"],
+                self.cells("facets"),
                 self.facets["points"].shape[0],
             )[self.is_interior_facet]
 
@@ -418,7 +428,7 @@ class Mesh:
 
     def compute_signed_cell_volumes(self, idx=slice(None)):
         n = self.points.shape[1]
-        assert n == self.cells["points"].shape[1] - 1, (
+        assert n == self.cells("points").shape[1] - 1, (
             "Signed areas only make sense for n-simplices in in nD. "
             f"Got {n}D points."
         )
@@ -430,14 +440,14 @@ class Mesh:
             return (x[0, idx, 1] * x[2, idx, 0] - x[0, idx, 0] * x[2, idx, 1]) / 2
 
         # https://en.wikipedia.org/wiki/Simplex#Volume
-        cp = self.points[self.cells["points"]]
+        cp = self.points[self.cells("points")]
         # append ones; this appends a column instead of a row as suggested by
         # wikipedia, but that doesn't change the determinant
         cp1 = np.concatenate([cp, np.ones(cp.shape[:-1] + (1,))], axis=-1)
         return np.linalg.det(cp1) / math.factorial(n)
 
     def compute_cell_centroids(self, idx=slice(None)):
-        return np.sum(self.points[self.cells["points"][idx]], axis=1) / self.n
+        return np.sum(self.points[self.cells("points")[idx]], axis=1) / self.n
 
     @property
     def cell_centroids(self):
@@ -455,7 +465,7 @@ class Mesh:
         # https://en.wikipedia.org/wiki/Incenter#Barycentric_coordinates
         # https://math.stackexchange.com/a/2864770/36678
         abc = self.facet_areas / np.sum(self.facet_areas, axis=0)
-        return np.einsum("ij,jik->jk", abc, self.points[self.cells["points"]])
+        return np.einsum("ij,jik->jk", abc, self.points[self.cells("points")])
 
     @property
     def cell_inradius(self):
@@ -476,7 +486,7 @@ class Mesh:
         # helps.
         if self._is_point_used is None:
             self._is_point_used = np.zeros(len(self.points), dtype=bool)
-            self._is_point_used[self.cells["points"]] = True
+            self._is_point_used[self.cells("points")] = True
         return self._is_point_used
 
     def write(
@@ -492,17 +502,17 @@ class Mesh:
         else:
             a = self.points
 
-        if self.cells["points"].shape[1] == 3:
+        if self.cells("points").shape[1] == 3:
             cell_type = "triangle"
         else:
             assert (
-                self.cells["points"].shape[1] == 4
+                self.cells("points").shape[1] == 4
             ), "Only triangles/tetrahedra supported"
             cell_type = "tetra"
 
         meshio.Mesh(
             a,
-            {cell_type: self.cells["points"]},
+            {cell_type: self.cells("points")},
             point_data=point_data,
             cell_data=cell_data,
             field_data=field_data,
@@ -610,7 +620,7 @@ class Mesh:
             )
             # check if cells are identical, list them
             _, inv, cts = npx.unique_rows(
-                np.sort(self.cells["points"]), return_inverse=True, return_counts=True
+                np.sort(self.cells("points")), return_inverse=True, return_counts=True
             )
             if np.any(cts > 1):
                 msg += " The following cells are equal:\n"
@@ -623,14 +633,12 @@ class Mesh:
 
         self.facets = {"points": a_unique}
         # cell->facets relationship
-        self.cells["facets"] = inv.reshape(self.n, -1).T
+        self._cells_facets = inv.reshape(self.n, -1).T
 
         if self.n == 2:
             pass
         elif self.n == 3:
             self.edges = self.facets
-            self.cells["edges"] = self.cells["facets"]
-
             self._facets_cells = None
             self._facets_cells_idx = None
         else:
@@ -700,10 +708,10 @@ class Mesh:
             self.create_facets()
 
         # num_edges = len(self.edges["points"])
-        # count = np.bincount(self.cells["edges"].flat, minlength=num_edges)
+        # count = np.bincount(self.cells("edges").flat, minlength=num_edges)
 
         # <https://stackoverflow.com/a/50395231/353337>
-        edges_flat = self.cells["edges"].flat
+        edges_flat = self.cells("edges").flat
         idx_sort = np.argsort(edges_flat)
         sorted_edges = edges_flat[idx_sort]
         idx_start, count = grp_start_len(sorted_edges)
@@ -759,12 +767,12 @@ class Mesh:
     def remove_dangling_points(self):
         """Remove all points which aren't part of an array"""
         is_part_of_cell = np.zeros(self.points.shape[0], dtype=bool)
-        is_part_of_cell[self.cells["points"].flat] = True
+        is_part_of_cell[self.cells("points").flat] = True
 
         new_point_idx = np.cumsum(is_part_of_cell) - 1
 
         self._points = self._points[is_part_of_cell]
-        self.cells["points"] = new_point_idx[self.cells["points"]]
+
         for k in range(len(self.idx)):
             self.idx[k] = new_point_idx[self.idx[k]]
 
@@ -825,26 +833,26 @@ class Mesh:
             return 0
 
         if remove_array.dtype == int:
-            keep = np.ones(len(self.cells["points"]), dtype=bool)
+            keep = np.ones(len(self.cells("points")), dtype=bool)
             keep[remove_array] = False
         else:
             assert remove_array.dtype == bool
             keep = ~remove_array
 
-        assert len(keep) == len(self.cells["points"]), "Wrong length of index array."
+        assert len(keep) == len(self.cells("points")), "Wrong length of index array."
 
         if np.all(keep):
             return 0
 
         # handle facet; this is a bit messy
-        if "facets" in self.cells:
+        if self._cells_facets is not None:
             # updating the boundary data is a lot easier with facets_cells
             if self._facets_cells is None:
                 self._compute_facets_cells()
 
             # Set facet to is_boundary_facet_local=True if it is adjacent to a removed
             # cell.
-            facet_ids = self.cells["facets"][~keep].flatten()
+            facet_ids = self.cells("facets")[~keep].flatten()
             # only consider interior facets
             facet_ids = facet_ids[self.is_interior_facet[facet_ids]]
             idx = self.facets_cells_idx[facet_ids]
@@ -902,7 +910,7 @@ class Mesh:
 
             num_facets_old = len(self.facets["points"])
             adjacent_facets, counts = np.unique(
-                self.cells["facets"][~keep].flat, return_counts=True
+                self.cells("facets")[~keep].flat, return_counts=True
             )
             # remove facet entirely either if 2 adjacent cells are removed or if it is a
             # boundary facet and 1 adjacent cells are removed
@@ -924,10 +932,10 @@ class Mesh:
             self._is_boundary_facet = self._is_boundary_facet[keep_facets]
 
             # update facet and cell indices
-            self.cells["facets"] = self.cells["facets"][keep]
+            self._cells_facets = self.cells("facets")[keep]
             new_index_facets = np.arange(num_facets_old) - np.cumsum(~keep_facets)
-            self.cells["facets"] = new_index_facets[self.cells["facets"]]
-            num_cells_old = len(self.cells["points"])
+            self._cells_facets = new_index_facets[self.cells("facets")]
+            num_cells_old = len(self.cells("points"))
             new_index_cells = np.arange(num_cells_old) - np.cumsum(~keep)
 
             # this takes fairly long
@@ -941,8 +949,6 @@ class Mesh:
             self._facets_cells_idx = None
             self._boundary_facets = None
             self._interior_facets = None
-
-        self.cells["points"] = self.cells["points"][keep]
 
         for k in range(len(self.idx)):
             self.idx[k] = self.idx[k][..., keep]
@@ -1027,12 +1033,12 @@ class Mesh:
         return num_removed
 
     def remove_duplicate_cells(self):
-        sorted_cells = np.sort(self.cells["points"])
+        sorted_cells = np.sort(self.cells("points"))
         _, inv, cts = npx.unique_rows(
             sorted_cells, return_inverse=True, return_counts=True
         )
 
-        remove = np.zeros(len(self.cells["points"]), dtype=bool)
+        remove = np.zeros(len(self.cells("points")), dtype=bool)
         for k in np.where(cts > 1)[0]:
             rem = inv == k
             # don't remove first occurence

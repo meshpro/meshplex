@@ -125,10 +125,10 @@ def test_regular_tri_additional_points():
 
     tol = 1.0e-14
 
-    assert np.array_equal(mesh.cells["points"], [[1, 2, 3]])
+    assert np.array_equal(mesh.cells("points"), [[1, 2, 3]])
 
     mesh.create_facets()
-    assert np.array_equal(mesh.cells["edges"], [[2, 1, 0]])
+    assert np.array_equal(mesh.cells("edges"), [[2, 1, 0]])
     assert np.array_equal(mesh.edges["points"], [[1, 2], [1, 3], [2, 3]])
 
     # ce_ratios
@@ -162,7 +162,7 @@ def test_regular_tri_order():
     cells = np.array([[0, 1, 2]])
 
     mesh = meshplex.MeshTri(points, cells)
-    assert all((mesh.cells["points"] == [0, 1, 2]).flat)
+    assert all((mesh.cells("points") == [0, 1, 2]).flat)
 
     tol = 1.0e-14
 
@@ -687,13 +687,13 @@ def test_set_points():
     mesh.set_points([0.1, 0.1], [0])
     ref = mesh.cell_volumes.copy()
 
-    mesh2 = meshplex.MeshTri(mesh.points, mesh.cells["points"])
+    mesh2 = meshplex.MeshTri(mesh.points, mesh.cells("points"))
     assert np.all(np.abs(ref - mesh2.cell_volumes) < 1.0e-10)
 
 
 def test_reference_vals_pacman():
     mesh = meshplex.read(this_dir / ".." / "meshes" / "pacman.vtk")
-    mesh = meshplex.MeshTri(mesh.points[:, :2], mesh.cells["points"])
+    mesh = meshplex.MeshTri(mesh.points[:, :2], mesh.cells("points"))
 
     assert_norms(
         mesh.points,

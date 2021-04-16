@@ -34,7 +34,7 @@ def test_flip_simple():
     assert np.array_equal(
         mesh.edges["points"], [[0, 1], [0, 3], [1, 2], [1, 3], [2, 3]]
     )
-    assert np.array_equal(mesh.cells["edges"], [[3, 1, 0], [4, 3, 2]])
+    assert np.array_equal(mesh.cells("edges"), [[3, 1, 0], [4, 3, 2]])
     assert_mesh_consistency(mesh)
 
     # mesh.show()
@@ -46,8 +46,8 @@ def test_flip_simple():
     assert np.array_equal(
         mesh.edges["points"], [[0, 1], [0, 3], [1, 2], [0, 2], [2, 3]]
     )
-    assert np.array_equal(mesh.cells["points"], [[0, 1, 2], [0, 2, 3]])
-    assert np.array_equal(mesh.cells["edges"], [[2, 3, 0], [4, 1, 3]])
+    assert np.array_equal(mesh.cells("points"), [[0, 1, 2], [0, 2, 3]])
+    assert np.array_equal(mesh.cells("edges"), [[2, 3, 0], [4, 1, 3]])
 
 
 def test_flip_simple_negative_orientation():
@@ -73,7 +73,7 @@ def test_flip_simple_negative_orientation():
     assert np.array_equal(
         mesh.edges["points"], [[0, 1], [0, 3], [1, 2], [1, 3], [2, 3]]
     )
-    assert np.array_equal(mesh.cells["edges"], [[3, 0, 1], [4, 2, 3]])
+    assert np.array_equal(mesh.cells("edges"), [[3, 0, 1], [4, 2, 3]])
     assert_mesh_consistency(mesh)
 
     # mesh.show()
@@ -83,8 +83,8 @@ def test_flip_simple_negative_orientation():
     assert np.array_equal(
         mesh.edges["points"], [[0, 1], [0, 3], [1, 2], [0, 2], [2, 3]]
     )
-    assert np.array_equal(mesh.cells["points"], [[0, 3, 2], [0, 2, 1]])
-    assert np.array_equal(mesh.cells["edges"], [[4, 3, 1], [2, 0, 3]])
+    assert np.array_equal(mesh.cells("points"), [[0, 3, 2], [0, 2, 1]])
+    assert np.array_equal(mesh.cells("edges"), [[4, 3, 1], [2, 0, 3]])
 
 
 def test_flip_simple_opposite_orientation():
@@ -110,7 +110,7 @@ def test_flip_simple_opposite_orientation():
     assert np.array_equal(
         mesh.edges["points"], [[0, 1], [0, 3], [1, 2], [1, 3], [2, 3]]
     )
-    assert np.array_equal(mesh.cells["edges"], [[3, 1, 0], [4, 2, 3]])
+    assert np.array_equal(mesh.cells("edges"), [[3, 1, 0], [4, 2, 3]])
     assert_mesh_consistency(mesh)
 
     # mesh.show()
@@ -120,8 +120,8 @@ def test_flip_simple_opposite_orientation():
     assert np.array_equal(
         mesh.edges["points"], [[0, 1], [0, 3], [1, 2], [0, 2], [2, 3]]
     )
-    assert np.array_equal(mesh.cells["points"], [[0, 1, 2], [0, 2, 3]])
-    assert np.array_equal(mesh.cells["edges"], [[2, 3, 0], [4, 1, 3]])
+    assert np.array_equal(mesh.cells("points"), [[0, 1, 2], [0, 2, 3]])
+    assert np.array_equal(mesh.cells("edges"), [[2, 3, 0], [4, 1, 3]])
 
 
 def test_flip_delaunay_near_boundary():
@@ -131,15 +131,15 @@ def test_flip_delaunay_near_boundary():
 
     mesh.create_facets()
     assert mesh.num_delaunay_violations == 1
-    assert np.array_equal(mesh.cells["points"], [[0, 1, 2], [0, 2, 3]])
-    assert np.array_equal(mesh.cells["edges"], [[3, 1, 0], [4, 2, 1]])
+    assert np.array_equal(mesh.cells("points"), [[0, 1, 2], [0, 2, 3]])
+    assert np.array_equal(mesh.cells("edges"), [[3, 1, 0], [4, 2, 1]])
 
     mesh.flip_until_delaunay()
 
     assert_mesh_consistency(mesh)
     assert mesh.num_delaunay_violations == 0
-    assert np.array_equal(mesh.cells["points"], [[1, 2, 3], [1, 3, 0]])
-    assert np.array_equal(mesh.cells["edges"], [[4, 1, 3], [2, 0, 1]])
+    assert np.array_equal(mesh.cells("points"), [[1, 2, 3], [1, 3, 0]])
+    assert np.array_equal(mesh.cells("edges"), [[4, 1, 3], [2, 0, 1]])
 
 
 def test_flip_same_edge_twice():
@@ -184,7 +184,7 @@ def test_flip_two_edges():
 
     mesh.show(show_point_numbers=True)
     assert np.array_equal(
-        mesh.cells["points"], [[2, 5, 0], [2, 0, 1], [5, 2, 3], [3, 4, 5]]
+        mesh.cells("points"), [[2, 5, 0], [2, 0, 1], [5, 2, 3], [3, 4, 5]]
     )
 
 
@@ -287,7 +287,7 @@ def test_flip_delaunay():
 
     # We don't need to check for exact equality with a replicated mesh. The order of the
     # edges will be different, for example. Just make sure the mesh is consistent.
-    # mesh1 = meshplex.MeshTri(mesh0.points.copy(), mesh0.cells["points"].copy())
+    # mesh1 = meshplex.MeshTri(mesh0.points.copy(), mesh0.cells("points").copy())
     # mesh1.create_facets()
     # assert_mesh_equality(mesh0, mesh1)
 
@@ -321,12 +321,12 @@ def test_flip_into_existing_edge():
     # remove_duplicate_cells().
     ref = np.array([[[2, 0, 3], [2, 3, 0], [2, 3, 1]]])
     # after flip
-    assert np.all(mesh.cells["points"] == ref)
+    assert np.all(mesh.cells("points") == ref)
 
-    mesh2 = meshplex.Mesh(mesh.points, mesh.cells["points"])
+    mesh2 = meshplex.Mesh(mesh.points, mesh.cells("points"))
     mesh2.remove_duplicate_cells()
     ref = np.array([[[2, 0, 3], [2, 3, 1]]])
-    assert np.all(mesh2.cells["points"] == ref)
+    assert np.all(mesh2.cells("points") == ref)
 
 
 def test_doubled_cell():
