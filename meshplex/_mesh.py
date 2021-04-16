@@ -602,13 +602,18 @@ class Mesh:
 
     def create_facets(self):
         """Set up facet->point and facet->cell relations."""
-        idx = self.idx[1]
-        # reshape the last two dimensions into one
-        idx = idx.reshape(idx.shape[0], -1)
+        if self.n == 2:
+            # Too bad that the need a specializaiton here. Could be avoided if the
+            # idx hierarchy would be of shape (1,2,...,n), not (2,...,n), but not sure
+            # if that's worth the change.
+            idx = self.idx[0].flatten()
+        else:
+            idx = self.idx[1]
+            idx = idx.reshape(idx.shape[0], -1)
 
         # Sort the columns to make it possible for `unique()` to identify individual
         # facets.
-        idx = np.sort(idx.T, axis=1)
+        idx = np.sort(idx, axis=0).T
         a_unique, inv, cts = npx.unique_rows(
             idx, return_inverse=True, return_counts=True
         )
@@ -636,14 +641,11 @@ class Mesh:
         # cell->facets relationship
         self._cells_facets = inv.reshape(self.n, -1).T
 
-        if self.n == 2:
-            pass
-        elif self.n == 3:
+        if self.n == 3:
             self.edges = self.facets
             self._facets_cells = None
             self._facets_cells_idx = None
-        else:
-            assert self.n == 4
+        elif self.n == 4:
             self.faces = self.facets
 
     @property
@@ -685,7 +687,14 @@ class Mesh:
     def is_boundary_point(self):
         if self._is_boundary_point is None:
             self._is_boundary_point = np.zeros(len(self.points), dtype=bool)
-            self._is_boundary_point[self.idx[1][:, self.is_boundary_facet_local]] = True
+            if self.n == 2:
+                self._is_boundary_point[
+                    self.idx[0][self.is_boundary_facet_local]
+                ] = True
+            else:
+                self._is_boundary_point[
+                    self.idx[1][:, self.is_boundary_facet_local]
+                ] = True
         return self._is_boundary_point
 
     @property
@@ -1087,7 +1096,6 @@ class Mesh:
     @property
     def idx_hierarchy(self):
         warnings.warn(
-            "idx_hierarchy is deprecated, use idx[-1] instead",
-            DeprecationWarning
+            "idx_hierarchy is deprecated, use idx[-1] instead", DeprecationWarning
         )
         return self.idx[-1]
