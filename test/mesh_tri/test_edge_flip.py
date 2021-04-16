@@ -353,7 +353,3 @@ def test_negative_after_flip():
     mesh0 = meshplex.MeshTri(points, cells)
     # mesh.show()
     mesh0.flip_until_delaunay()
-
-
-if __name__ == "__main__":
-    test_failing()
