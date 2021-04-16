@@ -30,7 +30,7 @@ def test_regular_tet0(a):
     # test __repr__
     print(mesh)
 
-    assert np.all(mesh.cells["points"] == cells)
+    assert np.all(mesh.cells("points") == cells)
 
     mesh.show()
     mesh.show_edge(0)
@@ -146,7 +146,7 @@ def test_unit_tetrahedron_geometric(a):
 
     mesh = meshplex.MeshTetra(points, cells)
 
-    assert all((mesh.cells["points"] == cells).flat)
+    assert all((mesh.cells("points") == cells).flat)
 
     assert is_near_equal(mesh.cell_circumcenters, [a / 2.0, a / 2.0, a / 2.0], tol)
 
@@ -201,7 +201,7 @@ def test_regular_tet1_geometric_order():
 
     mesh = meshplex.MeshTetra(points, cells)
 
-    assert all((mesh.cells["points"] == [0, 1, 2, 3]).flat)
+    assert all((mesh.cells("points") == [0, 1, 2, 3]).flat)
 
     assert is_near_equal(mesh.cell_circumcenters, [a / 2.0, a / 2.0, a / 2.0], tol)
 
@@ -428,7 +428,7 @@ def test_tetrahedron():
 def test_toy_geometric():
     mesh = meshplex.read(this_dir / "meshes" / "toy.vtk")
 
-    mesh = meshplex.MeshTetra(mesh.points, mesh.cells["points"])
+    mesh = meshplex.MeshTetra(mesh.points, mesh.cells("points"))
 
     run(
         mesh,
@@ -449,7 +449,7 @@ def test_toy_geometric():
 def test_signed_volume():
     mesh = meshplex.read(this_dir / "meshes" / "toy.vtk")
 
-    vols = meshplex.get_signed_simplex_volumes(mesh.cells["points"], mesh.points)
+    vols = meshplex.get_signed_simplex_volumes(mesh.cells("points"), mesh.points)
     # TODO see if this gets more accurate
     assert np.all(abs(abs(vols) - mesh.cell_volumes) < 1.0e-11 * mesh.cell_volumes)
 

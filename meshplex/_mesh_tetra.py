@@ -112,7 +112,7 @@ class MeshTetra(Mesh):
         # "It is not currently possible to manually set the aspect on 3D axes"
         # plt.axis("equal")
 
-        for cell_id in range(len(self.cells["points"])):
+        for cell_id in range(len(self.cells("points"))):
             cc = self.cell_circumcenters[cell_id]
             #
             face_ccs = self._circumcenters[-2]
@@ -151,7 +151,7 @@ class MeshTetra(Mesh):
         from matplotlib import pyplot as plt
         from mpl_toolkits.mplot3d import Axes3D
 
-        if "facets" not in self.cells:
+        if self._cells_facets is None:
             self.create_facets()
         if "edges" not in self.faces:
             self._create_face_edge_relationships()
@@ -165,8 +165,8 @@ class MeshTetra(Mesh):
         # find all cells with the faces
         # https://stackoverflow.com/a/38481969/353337
         adj_cell_ids = np.where(
-            np.in1d(self.cells["facets"], adj_face_ids)
-            .reshape(self.cells["facets"].shape)
+            np.in1d(self.cells("facets"), adj_face_ids)
+            .reshape(self.cells("facets").shape)
             .any(axis=1)
         )[0]
 
@@ -175,7 +175,7 @@ class MeshTetra(Mesh):
             [
                 adj_edge_id
                 for adj_cell_id in adj_cell_ids
-                for face_id in self.cells["facets"][adj_cell_id]
+                for face_id in self.cells("facets")[adj_cell_id]
                 for adj_edge_id in self.faces["edges"][face_id]
             ]
         )
@@ -275,7 +275,7 @@ class MeshTetra(Mesh):
         render_window_interactor.SetRenderWindow(render_window)
 
         for ij in [[0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3]]:
-            x0, x1 = self.points[self.cells["points"][cell_id][ij]]
+            x0, x1 = self.points[self.cells("points")[cell_id][ij]]
             renderer.AddActor(get_line_actor(x0, x1, line_width))
         renderer.SetBackground(1.0, 1.0, 1.0)
 

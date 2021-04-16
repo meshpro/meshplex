@@ -21,7 +21,7 @@ def test_line():
             [2, 3],
         ]
     )
-    assert np.all(mesh.cells["facets"] == ref)
+    assert np.all(mesh.cells("facets") == ref)
 
 
 def test_tri():
@@ -54,7 +54,7 @@ def test_tri():
             [4, 2, 1],
         ]
     )
-    assert np.all(mesh.cells["facets"] == ref)
+    assert np.all(mesh.cells("facets") == ref)
 
 
 def test_tetra():
@@ -90,7 +90,7 @@ def test_tetra():
             [6, 4, 2, 0],
         ]
     )
-    assert np.all(mesh.cells["facets"] == ref)
+    assert np.all(mesh.cells("facets") == ref)
 
 
 def test_duplicate_cells():

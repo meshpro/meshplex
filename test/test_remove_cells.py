@@ -61,7 +61,7 @@ def get_mesh1():
 def get_mesh2():
     this_dir = pathlib.Path(__file__).resolve().parent
     mesh0 = meshplex.read(this_dir / "meshes" / "pacman.vtk")
-    return meshplex.Mesh(mesh0.points[:, :2], mesh0.cells["points"])
+    return meshplex.Mesh(mesh0.points[:, :2], mesh0.cells("points"))
 
 
 @pytest.mark.parametrize(
@@ -79,11 +79,11 @@ def get_mesh2():
 )
 def test_remove_cells(remove_idx, expected_num_cells, expected_num_edges):
     mesh = get_mesh0()
-    assert len(mesh.cells["points"]) == 6
+    assert len(mesh.cells("points")) == 6
     assert len(mesh.edges["points"]) == 13
     # remove a corner cell
     mesh.remove_cells(remove_idx)
-    assert len(mesh.cells["points"]) == expected_num_cells
+    assert len(mesh.cells("points")) == expected_num_cells
     assert len(mesh.edges["points"]) == expected_num_edges
     assert_mesh_consistency(mesh)
 
@@ -133,7 +133,7 @@ def test_remove_boundary_cell():
     mesh.remove_boundary_cells(
         lambda ibc: np.all(mesh.cell_centroids[ibc] > 0.5, axis=1)
     )
-    assert mesh.cells["points"].shape[0] == 5
+    assert mesh.cells("points").shape[0] == 5
 
 
 def test_remove_all():
@@ -173,7 +173,7 @@ def test_remove_duplicate():
     mesh = meshplex.Mesh(points, cells)
     n = mesh.remove_duplicate_cells()
     assert n == 2
-    assert np.all(mesh.cells["points"] == np.array([[0, 1], [1, 2], [3, 2]]))
+    assert np.all(mesh.cells("points") == np.array([[0, 1], [1, 2], [3, 2]]))
 
     # triangle
     points = np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]])
@@ -181,7 +181,7 @@ def test_remove_duplicate():
     mesh = meshplex.Mesh(points, cells)
     n = mesh.remove_duplicate_cells()
     assert n == 1
-    assert np.all(mesh.cells["points"] == np.array([[0, 2, 3], [0, 1, 2]]))
+    assert np.all(mesh.cells("points") == np.array([[0, 2, 3], [0, 1, 2]]))
 
     # tetrahedra
     points = np.array(
@@ -191,7 +191,7 @@ def test_remove_duplicate():
     mesh = meshplex.Mesh(points, cells)
     n = mesh.remove_duplicate_cells()
     assert n == 1
-    assert np.all(mesh.cells["points"] == np.array([[0, 1, 2, 3]]))
+    assert np.all(mesh.cells("points") == np.array([[0, 1, 2, 3]]))
 
 
 if __name__ == "__main__":

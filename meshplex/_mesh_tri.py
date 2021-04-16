@@ -24,12 +24,12 @@ class MeshTri(Mesh):
     @property
     def euler_characteristic(self):
         # number of vertices - number of edges + number of faces
-        if "edges" not in self.cells:
+        if self._cells_facets is None:
             self.create_facets()
         return (
             self.points.shape[0]
             - self.edges["points"].shape[0]
-            + self.cells["points"].shape[0]
+            + self.cells("points").shape[0]
         )
 
     @property
@@ -292,7 +292,7 @@ class MeshTri(Mesh):
             plt.tripcolor(
                 self.points[:, 0],
                 self.points[:, 1],
-                self.cells["points"],
+                self.cells("points"),
                 self.q_radius_ratio,
                 shading="flat",
                 cmap=cmap,
@@ -311,7 +311,7 @@ class MeshTri(Mesh):
                 mark_cells = np.where(mark_cells)[0]
 
             patches = [
-                Polygon(self.points[self.cells["points"][idx]]) for idx in mark_cells
+                Polygon(self.points[self.cells("points")[idx]]) for idx in mark_cells
             ]
             p = PatchCollection(patches, facecolor="C1")
             ax.add_collection(p)
@@ -356,13 +356,13 @@ class MeshTri(Mesh):
             # Plot connection of the circumcenter to the midpoint of all three
             # axes.
             a = np.stack(
-                [cc[:, :2], edge_midpoints[self.cells["edges"][:, 0], :2]], axis=1
+                [cc[:, :2], edge_midpoints[self.cells("edges")[:, 0], :2]], axis=1
             )
             b = np.stack(
-                [cc[:, :2], edge_midpoints[self.cells["edges"][:, 1], :2]], axis=1
+                [cc[:, :2], edge_midpoints[self.cells("edges")[:, 1], :2]], axis=1
             )
             c = np.stack(
-                [cc[:, :2], edge_midpoints[self.cells["edges"][:, 2], :2]], axis=1
+                [cc[:, :2], edge_midpoints[self.cells("edges")[:, 2], :2]], axis=1
             )
 
             line_segments = LineCollection(
@@ -433,10 +433,10 @@ class MeshTri(Mesh):
         # Highlight ce_ratios.
         if show_ce_ratio:
             # Find the cells that contain the vertex
-            cell_ids = np.where((self.cells["points"] == point_id).any(axis=1))[0]
+            cell_ids = np.where((self.cells("points") == point_id).any(axis=1))[0]
 
             for cell_id in cell_ids:
-                for edge_gid in self.cells["edges"][cell_id]:
+                for edge_gid in self.cells("edges")[cell_id]:
                     if point_id not in self.edges["points"][edge_gid]:
                         continue
                     point_ids = self.edges["points"][edge_gid]
@@ -460,7 +460,7 @@ class MeshTri(Mesh):
     def flip_until_delaunay(self, tol=0.0, max_steps=100):
         """Flip edges until the mesh is fully Delaunay (up to `tol`)."""
         print(self.points.tolist())
-        print(self.cells["points"].tolist())
+        print(self.cells("points").tolist())
         num_flips = 0
         assert tol >= 0.0
         # If all circumcenter-facet distances are positive, all cells are Delaunay.
@@ -503,7 +503,7 @@ class MeshTri(Mesh):
             multiflip_cell_gids = cell_gids[num_flips_per_cell > 1]
             while np.any(num_flips_per_cell > 1):
                 for cell_gid in multiflip_cell_gids:
-                    facet_gids = self.cells["facets"][cell_gid]
+                    facet_gids = self.cells("facets")[cell_gid]
                     is_interior_facet = self.is_interior_facet[facet_gids]
                     idx = self.facets_cells_idx[facet_gids[is_interior_facet]]
                     k = np.argmin(self.signed_circumcenter_distances[idx])
@@ -565,31 +565,31 @@ class MeshTri(Mesh):
         #
         v = np.array(
             [
-                self.cells["points"][adj_cells[0], lids[0]],
-                self.cells["points"][adj_cells[1], lids[1]],
-                self.cells["points"][adj_cells[0], (lids[0] + 1) % 3],
-                self.cells["points"][adj_cells[0], (lids[0] + 2) % 3],
+                self.cells("points")[adj_cells[0], lids[0]],
+                self.cells("points")[adj_cells[1], lids[1]],
+                self.cells("points")[adj_cells[0], (lids[0] + 1) % 3],
+                self.cells("points")[adj_cells[0], (lids[0] + 2) % 3],
             ]
         )
 
         # This must be computed before the points are reset
         equal_orientation = (
-            self.cells["points"][adj_cells[0], (lids[0] + 1) % 3]
-            == self.cells["points"][adj_cells[1], (lids[1] + 2) % 3]
+            self.cells("points")[adj_cells[0], (lids[0] + 1) % 3]
+            == self.cells("points")[adj_cells[1], (lids[1] + 2) % 3]
         )
 
         # Set up new cells->points relationships.
         # Make sure that positive/negative area orientation is preserved. This is
         # especially important for signed area computations: In a mesh of all positive
         # areas, you don't want a negative area appear after a facet flip.
-        self.cells["points"][adj_cells[0]] = v[[0, 2, 1]].T
-        self.cells["points"][adj_cells[1]] = v[[0, 1, 3]].T
+        self.cells("points")[adj_cells[0]] = v[[0, 2, 1]].T
+        self.cells("points")[adj_cells[1]] = v[[0, 1, 3]].T
 
         # Set up new facet->points relationships.
         self.facets["points"][facet_gids] = np.sort(v[[0, 1]], axis=0).T
 
         # Set up new cells->facets relationships.
-        previous_facets = self.cells["facets"][adj_cells].copy()  # TODO need copy?
+        previous_facets = self.cells("facets")[adj_cells].copy()  # TODO need copy?
         # Do the neighboring cells have equal orientation (both point sets
         # clockwise/counterclockwise)?
         #
@@ -604,14 +604,14 @@ class MeshTri(Mesh):
             np.choose((lids[1] + i1) % 3, previous_facets[1].T),
             np.choose((lids[0] + 1) % 3, previous_facets[0].T),
         ]
-        # The order here is tightly coupled to self.cells["points"] above
-        self.cells["facets"][adj_cells[0]] = np.column_stack([e[1], facet_gids, e[0]])
-        self.cells["facets"][adj_cells[1]] = np.column_stack([e[2], e[3], facet_gids])
+        # The order here is tightly coupled to self.cells("points") above
+        self.cells("facets")[adj_cells[0]] = np.column_stack([e[1], facet_gids, e[0]])
+        self.cells("facets")[adj_cells[1]] = np.column_stack([e[2], e[3], facet_gids])
 
         # update is_boundary_facet_local
         for k in range(3):
             self.is_boundary_facet_local[k, adj_cells] = self.is_boundary_facet[
-                self.cells["facets"][adj_cells, k]
+                self.cells("facets")[adj_cells, k]
             ]
 
         # Update the facet->cells relationship. We need to update facets_cells info for
@@ -621,7 +621,7 @@ class MeshTri(Mesh):
         # cell ids
         self.facets_cells["interior"][1, idx] = adj_cells[0]
         self.facets_cells["interior"][2, idx] = adj_cells[1]
-        # local facet ids; see self.cells["facets"]
+        # local facet ids; see self.cells("facets")
         self.facets_cells["interior"][3, idx] = 1
         self.facets_cells["interior"][4, idx] = 2
         #
@@ -673,7 +673,7 @@ class MeshTri(Mesh):
         # Schedule the cell ids for data updates
         update_cell_ids = np.unique(adj_cells.T.flat)
         # Same for facet ids
-        update_facet_gids = self.cells["facets"][update_cell_ids].flat
+        update_facet_gids = self.cells("facets")[update_cell_ids].flat
         facet_cell_idx = self.facets_cells_idx[update_facet_gids]
         update_interior_facet_ids = np.unique(
             facet_cell_idx[self.is_interior_facet[update_facet_gids]]
@@ -715,7 +715,7 @@ class MeshTri(Mesh):
             for i in [0, 1]:
                 is_facet = np.array(
                     [
-                        self.cells["facets"][adj_cells[:, i]][:, k] == facet_gids
+                        self.cells("facets")[adj_cells[:, i]][:, k] == facet_gids
                         for k in range(3)
                     ]
                 )
