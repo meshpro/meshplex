@@ -14,6 +14,8 @@ class MeshTri(Mesh):
     def __init__(self, points, cells, sort_cells=False):
         super().__init__(points, cells, sort_cells=sort_cells)
 
+        assert self.n == 3
+
         # some backwards-compatibility fixes
         self.create_edges = super().create_facets
         self.compute_signed_cell_areas = super().compute_signed_cell_volumes

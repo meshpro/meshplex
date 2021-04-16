@@ -10,7 +10,7 @@ class MeshTetra(Mesh):
 
     def __init__(self, points, cells, sort_cells=False):
         super().__init__(points, cells, sort_cells=sort_cells)
-
+        assert self.n == 4
         self.faces = None
 
     def _create_face_edge_relationships(self):
