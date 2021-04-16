@@ -459,6 +459,8 @@ class MeshTri(Mesh):
 
     def flip_until_delaunay(self, tol=0.0, max_steps=100):
         """Flip edges until the mesh is fully Delaunay (up to `tol`)."""
+        print(self.points.tolist())
+        print(self.cells["points"].tolist())
         num_flips = 0
         assert tol >= 0.0
         # If all circumcenter-facet distances are positive, all cells are Delaunay.
@@ -700,6 +702,9 @@ class MeshTri(Mesh):
             self._is_boundary_cell[cell_ids] = np.any(
                 self.is_boundary_facet_local[:, cell_ids], axis=0
             )
+
+        if self._cell_centroids is not None:
+            self._cell_centroids[cell_ids] = self.compute_cell_centroids(cell_ids)
 
         # update the signed circumcenter distances for all interior_facet_ids
         if self._signed_circumcenter_distances is not None:
