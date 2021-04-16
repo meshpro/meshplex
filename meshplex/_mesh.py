@@ -1064,12 +1064,7 @@ class Mesh:
             self._cv_cell_mask = idx
         return self._control_volumes
 
-    @property
-    def control_volumes(self):
-        """The control volumes around each vertex."""
-        if self._control_volumes is None:
-            return self.get_control_volumes()
-        return self._control_volumes
+    control_volumes = property(get_control_volumes)
 
     @property
     def is_delaunay(self):
