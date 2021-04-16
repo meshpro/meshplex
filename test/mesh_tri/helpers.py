@@ -137,7 +137,6 @@ def compute_all_entities(mesh):
     mesh.signed_circumcenter_distances
     mesh.control_volume_centroids
 
-    assert mesh._cv_cell_mask is not None
     assert mesh.edges is not None
     assert mesh.subdomains is not {}
     assert mesh._is_interior_point is not None
@@ -160,6 +159,5 @@ def compute_all_entities(mesh):
     assert mesh._control_volumes is not None
     assert mesh._cell_partitions is not None
     assert mesh._cv_centroids is not None
-    assert mesh._cvc_cell_mask is not None
     assert mesh._signed_cell_volumes is not None
     assert mesh._cell_centroids is not None

@@ -212,7 +212,7 @@ class MeshTri(Mesh):
         show_point_numbers=False,
         show_edge_numbers=False,
         show_cell_numbers=False,
-        cell_mask=slice(None),
+        cell_mask=None,
         mark_points=None,
         mark_edges=None,
         mark_cells=None,
@@ -378,7 +378,7 @@ class MeshTri(Mesh):
             ax.add_collection(line_segments1)
 
         if control_volume_centroid_color is not None:
-            centroids = self.get_control_volume_centroids(idx=cell_mask)
+            centroids = self.get_control_volume_centroids(cell_mask=cell_mask)
             ax.plot(
                 centroids[:, 0],
                 centroids[:, 1],
