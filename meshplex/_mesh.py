@@ -1,4 +1,5 @@
 import math
+import pathlib
 import warnings
 
 import meshio
@@ -1120,10 +1121,9 @@ class Mesh:
         plt.show()
         plt.close()
 
-    def savefig(self, filename, *args, **kwargs):
-        """Save the mesh to a file."""
-        _, file_extension = os.path.splitext(filename)
-        if file_extension in [".png", ".svg"]:
+    def save(self, filename, *args, **kwargs):
+        """Save the mesh to a file, either as a PNG/SVG or a mesh file"""
+        if pathlib.Path(filename).suffix in [".png", ".svg"]:
             import matplotlib.pyplot as plt
 
             self.plot(*args, **kwargs)
@@ -1141,6 +1141,7 @@ class Mesh:
 
     def _plot_line(self):
         import matplotlib.pyplot as plt
+
         if len(self.points.shape) == 1:
             x = self.points
             y = np.zeros(self.points.shape[0])
