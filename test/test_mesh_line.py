@@ -17,5 +17,5 @@ def test_mesh_line():
     assert np.all(mesh.is_boundary_point == [True, False, False, True])
 
     # control volume with some index
-    c = mesh.get_control_volume_centroids([True, True, True])
+    c = mesh.get_control_volume_centroids([False, False, False])
     assert _is_near_equal(c, [0.25, 1.25, 2.75, 3.75])

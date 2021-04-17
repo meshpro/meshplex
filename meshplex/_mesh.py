@@ -230,9 +230,10 @@ class Mesh:
                 idx = Ellipsis
             else:
                 cell_mask = np.asarray(cell_mask)
+                assert cell_mask.dtype == bool
                 assert cell_mask.shape == (self.idx[-1].shape[-1],)
                 # Use ":" for the first n-1 dimensions, then cell_mask
-                idx = tuple((self.n - 1) * [slice(None)] + [cell_mask])
+                idx = tuple((self.n - 1) * [slice(None)] + [~cell_mask])
 
             # TODO this can be improved by first summing up all components per cell
             integral_p = npx.sum_at(
@@ -1060,17 +1061,22 @@ class Mesh:
 
         return self.remove_cells(remove)
 
-    def get_control_volumes(self, idx=slice(None)):
+    def get_control_volumes(self, cell_mask=None):
         """The control volumes around each vertex. Optionally disregard the
         contributions from particular cells. This is useful, for example, for
         temporarily disregarding flat cells on the boundary when performing Lloyd mesh
         optimization.
         """
-        if self._control_volumes is None or np.any(idx != self._cv_cell_mask):
+        if self._cv_centroids is None or np.any(cell_mask != self._cvc_cell_mask):
             # Sum up the contributions according to how self.idx is constructed.
             # roll = np.array([np.roll(np.arange(kk + 3), -i) for i in range(1, kk + 3)])
             # vols = npx.sum_at(vols, roll, kk + 3)
             # v = self.cell_partitions[..., idx]
+
+            if cell_mask is None:
+                idx = slice(None)
+            else:
+                idx = ~cell_mask
 
             # TODO this can be improved by first summing up all components per cell
             self._control_volumes = npx.sum_at(
@@ -1079,7 +1085,7 @@ class Mesh:
                 len(self.points),
             )
 
-            self._cv_cell_mask = idx
+            self._cv_cell_mask = cell_mask
         return self._control_volumes
 
     control_volumes = property(get_control_volumes)
