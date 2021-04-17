@@ -618,9 +618,6 @@ class Mesh:
         # Sort the columns to make it possible for `unique()` to identify individual
         # facets.
         idx = np.sort(idx, axis=0).T
-        print(self)
-        print(self.points.shape)
-        print(idx.shape)
         a_unique, inv, cts = npx.unique_rows(
             idx, return_inverse=True, return_counts=True
         )
