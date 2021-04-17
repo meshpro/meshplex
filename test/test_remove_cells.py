@@ -17,28 +17,24 @@ def get_mesh0():
     # |  \_   _/  |
     # |___ \_/____|
     #
-    points = np.array(
-        [
-            [0.0, 0.0],
-            [1.0, 0.0],
-            [1.0, 1.0],
-            [0.0, 1.0],
-            [0.0, 0.5],
-            [0.5, 0.0],
-            [1.0, 0.5],
-            [0.5, 1.0],
-        ]
-    )
-    cells = np.array(
-        [
-            [0, 5, 4],
-            [5, 1, 6],
-            [6, 2, 7],
-            [7, 3, 4],
-            [5, 6, 4],
-            [6, 7, 4],
-        ]
-    )
+    points = [
+        [0.0, 0.0],
+        [1.0, 0.0],
+        [1.0, 1.0],
+        [0.0, 1.0],
+        [0.0, 0.5],
+        [0.5, 0.0],
+        [1.0, 0.5],
+        [0.5, 1.0],
+    ]
+    cells = [
+        [0, 5, 4],
+        [5, 1, 6],
+        [6, 2, 7],
+        [7, 3, 4],
+        [5, 6, 4],
+        [6, 7, 4],
+    ]
     mesh = meshplex.Mesh(points, cells)
     mesh.create_facets()
     return mesh
@@ -137,7 +133,7 @@ def test_remove_boundary_cell():
 
 
 def test_remove_all():
-    points = np.array([[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]])
+    points = [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]]
     cells = [[0, 1, 2]]
     mesh = meshplex.Mesh(points, cells)
     assert np.all(mesh.is_point_used)
@@ -168,30 +164,28 @@ def test_reference(mesh0, remove_cells):
 
 def test_remove_duplicate():
     # lines
-    points = np.array([0.0, 0.1, 0.7, 1.0])
-    cells = np.array([[0, 1], [1, 2], [2, 1], [0, 1], [3, 2]])
+    points = [0.0, 0.1, 0.7, 1.0]
+    cells = [[0, 1], [1, 2], [2, 1], [0, 1], [3, 2]]
     mesh = meshplex.Mesh(points, cells)
     n = mesh.remove_duplicate_cells()
     assert n == 2
-    assert np.all(mesh.cells("points") == np.array([[0, 1], [1, 2], [3, 2]]))
+    assert np.all(mesh.cells("points") == [[0, 1], [1, 2], [3, 2]])
 
     # triangle
-    points = np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]])
-    cells = np.array([[0, 2, 3], [0, 1, 2], [0, 2, 1]])
+    points = [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]
+    cells = [[0, 2, 3], [0, 1, 2], [0, 2, 1]]
     mesh = meshplex.Mesh(points, cells)
     n = mesh.remove_duplicate_cells()
     assert n == 1
-    assert np.all(mesh.cells("points") == np.array([[0, 2, 3], [0, 1, 2]]))
+    assert np.all(mesh.cells("points") == [[0, 2, 3], [0, 1, 2]])
 
     # tetrahedra
-    points = np.array(
-        [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
-    )
-    cells = np.array([[0, 1, 2, 3], [3, 1, 2, 0]])
+    points = [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
+    cells = [[0, 1, 2, 3], [3, 1, 2, 0]]
     mesh = meshplex.Mesh(points, cells)
     n = mesh.remove_duplicate_cells()
     assert n == 1
-    assert np.all(mesh.cells("points") == np.array([[0, 1, 2, 3]]))
+    assert np.all(mesh.cells("points") == [[0, 1, 2, 3]])
 
 
 if __name__ == "__main__":

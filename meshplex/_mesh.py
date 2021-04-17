@@ -1,4 +1,6 @@
 import math
+import pathlib
+import warnings
 
 import meshio
 import npx
@@ -207,7 +209,7 @@ class Mesh:
             self._compute_cell_values()
         return self._circumcenter_facet_distances
 
-    def get_control_volume_centroids(self, idx=slice(None)):
+    def get_control_volume_centroids(self, cell_mask=None):
         """The centroid of any volume V is given by
 
         .. math::
@@ -221,25 +223,28 @@ class Mesh:
         for example, for temporarily disregarding flat cells on the boundary when
         performing Lloyd mesh optimization.
         """
-        assert idx is not None
-
-        if self._cv_centroids is None or np.any(idx != self._cvc_cell_mask):
+        if self._cv_centroids is None or np.any(cell_mask != self._cvc_cell_mask):
             if self._integral_x is None:
                 self._compute_cell_values()
 
+            if cell_mask is None:
+                idx = Ellipsis
+            else:
+                cell_mask = np.asarray(cell_mask)
+                assert cell_mask.dtype == bool
+                assert cell_mask.shape == (self.idx[-1].shape[-1],)
+                # Use ":" for the first n-1 dimensions, then cell_mask
+                idx = tuple((self.n - 1) * [slice(None)] + [~cell_mask])
+
             # TODO this can be improved by first summing up all components per cell
             integral_p = npx.sum_at(
-                self._integral_x[..., idx, :],
-                self.idx[-1][:, idx],
-                len(self.points),
+                self._integral_x[idx], self.idx[-1][idx], len(self.points)
             )
 
             # Divide by the control volume
-            cv = self.get_control_volumes(idx)
+            cv = self.get_control_volumes(cell_mask)
             self._cv_centroids = (integral_p.T / cv).T
-
-            self._cvc_cell_mask = idx
-            assert np.all(idx == self._cv_cell_mask)
+            self._cvc_cell_mask = cell_mask
 
         return self._cv_centroids
 
@@ -428,11 +433,11 @@ class Mesh:
 
     def compute_signed_cell_volumes(self, idx=slice(None)):
         n = self.points.shape[1]
-        assert n == self.cells("points").shape[1] - 1, (
+        assert self.n == self.points.shape[1] + 1, (
             "Signed areas only make sense for n-simplices in in nD. "
             f"Got {n}D points."
         )
-        if n == 2:
+        if self.n == 3:
             # On <https://stackoverflow.com/q/50411583/353337>, we have a number of
             # alternatives computing the oriented area, but it's fastest with the
             # half-edges.
@@ -601,13 +606,18 @@ class Mesh:
 
     def create_facets(self):
         """Set up facet->point and facet->cell relations."""
-        idx = self.idx[1]
-        # reshape the last two dimensions into one
-        idx = idx.reshape(idx.shape[0], -1)
+        if self.n == 2:
+            # Too bad that the need a specializaiton here. Could be avoided if the
+            # idx hierarchy would be of shape (1,2,...,n), not (2,...,n), but not sure
+            # if that's worth the change.
+            idx = self.idx[0].flatten()
+        else:
+            idx = self.idx[1]
+            idx = idx.reshape(idx.shape[0], -1)
 
         # Sort the columns to make it possible for `unique()` to identify individual
         # facets.
-        idx = np.sort(idx.T, axis=1)
+        idx = np.sort(idx, axis=0).T
         a_unique, inv, cts = npx.unique_rows(
             idx, return_inverse=True, return_counts=True
         )
@@ -635,14 +645,11 @@ class Mesh:
         # cell->facets relationship
         self._cells_facets = inv.reshape(self.n, -1).T
 
-        if self.n == 2:
-            pass
-        elif self.n == 3:
+        if self.n == 3:
             self.edges = self.facets
             self._facets_cells = None
             self._facets_cells_idx = None
-        else:
-            assert self.n == 4
+        elif self.n == 4:
             self.faces = self.facets
 
     @property
@@ -684,7 +691,14 @@ class Mesh:
     def is_boundary_point(self):
         if self._is_boundary_point is None:
             self._is_boundary_point = np.zeros(len(self.points), dtype=bool)
-            self._is_boundary_point[self.idx[1][:, self.is_boundary_facet_local]] = True
+            if self.n == 2:
+                self._is_boundary_point[
+                    self.idx[0][self.is_boundary_facet_local]
+                ] = True
+            else:
+                self._is_boundary_point[
+                    self.idx[1][:, self.is_boundary_facet_local]
+                ] = True
         return self._is_boundary_point
 
     @property
@@ -1011,8 +1025,8 @@ class Mesh:
         this case, the boundary cell can be removed, and the newly outward node is made
         a boundary node."""
         num_removed = 0
-        num_boundary_cells = np.sum(self.is_boundary_cell)
         while True:
+            num_boundary_cells = np.sum(self.is_boundary_cell)
             crit = criterion(self.is_boundary_cell)
 
             if ~np.any(crit):
@@ -1048,26 +1062,31 @@ class Mesh:
 
         return self.remove_cells(remove)
 
-    def get_control_volumes(self, idx=slice(None)):
+    def get_control_volumes(self, cell_mask=None):
         """The control volumes around each vertex. Optionally disregard the
         contributions from particular cells. This is useful, for example, for
         temporarily disregarding flat cells on the boundary when performing Lloyd mesh
         optimization.
         """
-        if self._control_volumes is None or np.any(idx != self._cv_cell_mask):
+        if self._cv_centroids is None or np.any(cell_mask != self._cvc_cell_mask):
             # Sum up the contributions according to how self.idx is constructed.
             # roll = np.array([np.roll(np.arange(kk + 3), -i) for i in range(1, kk + 3)])
             # vols = npx.sum_at(vols, roll, kk + 3)
             # v = self.cell_partitions[..., idx]
 
+            if cell_mask is None:
+                idx = slice(None)
+            else:
+                idx = ~cell_mask
+
             # TODO this can be improved by first summing up all components per cell
             self._control_volumes = npx.sum_at(
-                self.cell_partitions[:, idx],
-                self.idx[-1][:, idx],
+                self.cell_partitions[..., idx],
+                self.idx[-1][..., idx],
                 len(self.points),
             )
 
-            self._cv_cell_mask = idx
+            self._cv_cell_mask = cell_mask
         return self._control_volumes
 
     control_volumes = property(get_control_volumes)
@@ -1082,3 +1101,251 @@ class Mesh:
         # Delaunay violations are present exactly on the interior facets where the
         # signed circumcenter distance is negative. Count those.
         return np.sum(self.signed_circumcenter_distances < 0.0)
+
+    @property
+    def idx_hierarchy(self):
+        warnings.warn(
+            "idx_hierarchy is deprecated, use idx[-1] instead", DeprecationWarning
+        )
+        return self.idx[-1]
+
+    def show(self, *args, fullscreen=False, **kwargs):
+        """Show the mesh (see plot())."""
+        import matplotlib.pyplot as plt
+
+        self.plot(*args, **kwargs)
+        if fullscreen:
+            mng = plt.get_current_fig_manager()
+            # mng.frame.Maximize(True)
+            mng.window.showMaximized()
+        plt.show()
+        plt.close()
+
+    def save(self, filename, *args, **kwargs):
+        """Save the mesh to a file, either as a PNG/SVG or a mesh file"""
+        if pathlib.Path(filename).suffix in [".png", ".svg"]:
+            import matplotlib.pyplot as plt
+
+            self.plot(*args, **kwargs)
+            plt.savefig(filename, transparent=True, bbox_inches="tight")
+            plt.close()
+        else:
+            self.write(filename)
+
+    def plot(self, *args, **kwargs):
+        if self.n == 2:
+            self._plot_line(*args, **kwargs)
+        else:
+            assert self.n == 3
+            self._plot_tri(*args, **kwargs)
+
+    def _plot_line(self):
+        import matplotlib.pyplot as plt
+
+        if len(self.points.shape) == 1:
+            x = self.points
+            y = np.zeros(self.points.shape[0])
+        else:
+            assert len(self.points.shape) == 2 and self.points.shape[1] == 2
+            x, y = self.points.T
+
+        plt.plot(x, y, "-o")
+
+    def _plot_tri(
+        self,
+        show_coedges=True,
+        control_volume_centroid_color=None,
+        mesh_color="k",
+        nondelaunay_edge_color=None,
+        boundary_edge_color=None,
+        comesh_color=(0.8, 0.8, 0.8),
+        show_axes=True,
+        cell_quality_coloring=None,
+        show_point_numbers=False,
+        show_edge_numbers=False,
+        show_cell_numbers=False,
+        cell_mask=None,
+        mark_points=None,
+        mark_edges=None,
+        mark_cells=None,
+    ):
+        """Show the mesh using matplotlib."""
+        # Importing matplotlib takes a while, so don't do that at the header.
+        import matplotlib.pyplot as plt
+        from matplotlib.collections import LineCollection, PatchCollection
+        from matplotlib.patches import Polygon
+
+        fig = plt.figure()
+        ax = fig.gca()
+        plt.axis("equal")
+        if not show_axes:
+            ax.set_axis_off()
+
+        xmin = np.amin(self.points[:, 0])
+        xmax = np.amax(self.points[:, 0])
+        ymin = np.amin(self.points[:, 1])
+        ymax = np.amax(self.points[:, 1])
+
+        width = xmax - xmin
+        xmin -= 0.1 * width
+        xmax += 0.1 * width
+
+        height = ymax - ymin
+        ymin -= 0.1 * height
+        ymax += 0.1 * height
+
+        ax.set_xlim(xmin, xmax)
+        ax.set_ylim(ymin, ymax)
+
+        # for k, x in enumerate(self.points):
+        #     if self.is_boundary_point[k]:
+        #         plt.plot(x[0], x[1], "g.")
+        #     else:
+        #         plt.plot(x[0], x[1], "r.")
+
+        if show_point_numbers:
+            for i, x in enumerate(self.points):
+                plt.text(
+                    x[0],
+                    x[1],
+                    str(i),
+                    bbox={"facecolor": "w", "alpha": 0.7},
+                    horizontalalignment="center",
+                    verticalalignment="center",
+                )
+
+        if show_edge_numbers:
+            if self.edges is None:
+                self.create_facets()
+            for i, point_ids in enumerate(self.edges["points"]):
+                midpoint = np.sum(self.points[point_ids], axis=0) / 2
+                plt.text(
+                    midpoint[0],
+                    midpoint[1],
+                    str(i),
+                    bbox={"facecolor": "b", "alpha": 0.7},
+                    color="w",
+                    horizontalalignment="center",
+                    verticalalignment="center",
+                )
+
+        if show_cell_numbers:
+            for i, x in enumerate(self.cell_centroids):
+                plt.text(
+                    x[0],
+                    x[1],
+                    str(i),
+                    bbox={"facecolor": "r", "alpha": 0.5},
+                    horizontalalignment="center",
+                    verticalalignment="center",
+                )
+
+        # coloring
+        if cell_quality_coloring:
+            cmap, cmin, cmax, show_colorbar = cell_quality_coloring
+            plt.tripcolor(
+                self.points[:, 0],
+                self.points[:, 1],
+                self.cells("points"),
+                self.q_radius_ratio,
+                shading="flat",
+                cmap=cmap,
+                vmin=cmin,
+                vmax=cmax,
+            )
+            if show_colorbar:
+                plt.colorbar()
+
+        if mark_points is not None:
+            idx = mark_points
+            plt.plot(self.points[idx, 0], self.points[idx, 1], "x", color="r")
+
+        if mark_cells is not None:
+            if np.asarray(mark_cells).dtype == bool:
+                mark_cells = np.where(mark_cells)[0]
+
+            patches = [
+                Polygon(self.points[self.cells("points")[idx]]) for idx in mark_cells
+            ]
+            p = PatchCollection(patches, facecolor="C1")
+            ax.add_collection(p)
+
+        if self.edges is None:
+            self.create_facets()
+
+        # Get edges, cut off z-component.
+        e = self.points[self.edges["points"]][:, :, :2]
+
+        if nondelaunay_edge_color is None:
+            line_segments0 = LineCollection(e, color=mesh_color)
+            ax.add_collection(line_segments0)
+        else:
+            # Plot regular edges, mark those with negative ce-ratio red.
+            is_pos = np.zeros(len(self.edges["points"]), dtype=bool)
+            is_pos[self.interior_facets[self.signed_circumcenter_distances >= 0]] = True
+
+            # Mark Delaunay-conforming boundary edges
+            is_pos_boundary = self.ce_ratios[self.is_boundary_facet_local] >= 0
+            is_pos[self.boundary_facets[is_pos_boundary]] = True
+
+            line_segments0 = LineCollection(e[is_pos], color=mesh_color)
+            ax.add_collection(line_segments0)
+            #
+            line_segments1 = LineCollection(e[~is_pos], color=nondelaunay_edge_color)
+            ax.add_collection(line_segments1)
+
+        if mark_edges is not None:
+            e = self.points[self.edges["points"][mark_edges]][..., :2]
+            ax.add_collection(LineCollection(e, color="r"))
+
+        if show_coedges:
+            # Connect all cell circumcenters with the edge midpoints
+            cc = self.cell_circumcenters
+
+            edge_midpoints = 0.5 * (
+                self.points[self.edges["points"][:, 0]]
+                + self.points[self.edges["points"][:, 1]]
+            )
+
+            # Plot connection of the circumcenter to the midpoint of all three
+            # axes.
+            a = np.stack(
+                [cc[:, :2], edge_midpoints[self.cells("edges")[:, 0], :2]], axis=1
+            )
+            b = np.stack(
+                [cc[:, :2], edge_midpoints[self.cells("edges")[:, 1], :2]], axis=1
+            )
+            c = np.stack(
+                [cc[:, :2], edge_midpoints[self.cells("edges")[:, 2], :2]], axis=1
+            )
+
+            line_segments = LineCollection(
+                np.concatenate([a, b, c]), color=comesh_color
+            )
+            ax.add_collection(line_segments)
+
+        if boundary_edge_color:
+            e = self.points[self.edges["points"][self.is_boundary_facet]][:, :, :2]
+            line_segments1 = LineCollection(e, color=boundary_edge_color)
+            ax.add_collection(line_segments1)
+
+        if control_volume_centroid_color is not None:
+            centroids = self.get_control_volume_centroids(cell_mask=cell_mask)
+            ax.plot(
+                centroids[:, 0],
+                centroids[:, 1],
+                linestyle="",
+                marker=".",
+                color=control_volume_centroid_color,
+            )
+            for k, centroid in enumerate(centroids):
+                plt.text(
+                    centroid[0],
+                    centroid[1],
+                    str(k),
+                    bbox=dict(facecolor=control_volume_centroid_color, alpha=0.7),
+                    horizontalalignment="center",
+                    verticalalignment="center",
+                )
+
+        return fig

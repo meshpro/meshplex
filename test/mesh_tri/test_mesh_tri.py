@@ -99,10 +99,10 @@ def test_unit_triangle(cells_dtype):
 
     # save
     _, filename = tempfile.mkstemp(suffix=".png")
-    mesh.savefig(filename)
+    mesh.save(filename)
     os.remove(filename)
     _, filename = tempfile.mkstemp(suffix=".vtk")
-    mesh.savefig(filename)
+    mesh.save(filename)
     os.remove(filename)
 
 
