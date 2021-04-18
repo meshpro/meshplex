@@ -366,7 +366,7 @@ class Mesh:
             sumx += circumcenters[-1]
 
             # cell partitions
-            # don't use sqrt(lmbda2) here; lmbda can be negative
+            # don't use sqrt(lmbda2) here; lmbda, just like sigma, can be negative
             sqrt_vv = np.sqrt(vv)
             lmbda = sigma * sqrt_vv
             partitions *= lmbda / (kk + 2)
@@ -599,8 +599,9 @@ class Mesh:
             is_inside = subdomain.is_inside(self.points.T).T
 
             if subdomain.is_boundary_only:
-                # Filter boundary
-                is_inside = is_inside & self.is_boundary_point
+                # if the boundary hasn't been computed yet, this can take a little
+                # moment
+                is_inside &= self.is_boundary_point
 
         self.subdomains[subdomain] = {"vertices": is_inside}
 
@@ -691,14 +692,11 @@ class Mesh:
     def is_boundary_point(self):
         if self._is_boundary_point is None:
             self._is_boundary_point = np.zeros(len(self.points), dtype=bool)
-            if self.n == 2:
-                self._is_boundary_point[
-                    self.idx[0][self.is_boundary_facet_local]
-                ] = True
-            else:
-                self._is_boundary_point[
-                    self.idx[1][:, self.is_boundary_facet_local]
-                ] = True
+            # it's a little weird that we have to special-case n==2 here
+            i = 0 if self.n == 2 else 1
+            self._is_boundary_point[
+                self.idx[i][..., self.is_boundary_facet_local]
+            ] = True
         return self._is_boundary_point
 
     @property
