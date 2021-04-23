@@ -806,6 +806,8 @@ class Mesh:
         if self._is_point_used is not None:
             self._is_point_used = self._is_point_used[is_part_of_cell]
 
+        return np.sum(~is_part_of_cell)
+
     @property
     def q_radius_ratio(self):
         """Ratio of incircle and circumcircle ratios times (n-1). ("Normalized shape
