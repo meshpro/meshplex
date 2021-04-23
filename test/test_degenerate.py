@@ -20,3 +20,35 @@ def test_degenerate_cell(tol=1.0e-14):
     # those are nan
     assert np.all(np.isnan(mesh.cell_circumradius))
     assert np.all(np.isnan(mesh.cell_circumcenters))
+
+
+def test_degenerate_flip():
+    # almost degenerate
+    points = [
+        [0.0, 0.0],
+        [0.5, -1.0e-5],
+        [1.0, 0.0],
+        [0.5, 0.5],
+    ]
+    cells = [[0, 2, 1], [0, 2, 3]]
+    mesh = meshplex.MeshTri(points, cells)
+    num_flips = mesh.flip_until_delaunay()
+    assert num_flips == 1
+    ref = np.array([[1, 0, 3], [1, 3, 2]])
+    assert np.all(mesh.cells("points") == ref)
+
+    # make sure the same thing happens if the cell is exactly degenerate
+    points = [
+        [0.0, 0.0],
+        [0.5, 0.0],
+        [1.0, 0.0],
+        [0.5, 0.5],
+    ]
+    cells = [[0, 2, 1], [0, 2, 3]]
+    mesh = meshplex.MeshTri(points, cells)
+    num_flips = mesh.flip_until_delaunay()
+    assert num_flips == 1
+    ref = np.array([[1, 0, 3], [1, 3, 2]])
+    assert np.all(mesh.cells("points") == ref)
+
+    exit(1)
