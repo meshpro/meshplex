@@ -2,6 +2,7 @@ import warnings
 
 import numpy as np
 
+from ._exceptions import MeshplexError
 from ._mesh import Mesh
 
 __all__ = ["MeshTri"]
@@ -263,11 +264,12 @@ class MeshTri(Mesh):
 
             if step > max_steps:
                 m = np.min(self.signed_circumcenter_distances)
-                warnings.warn(
+                raise MeshplexError(
                     f"Maximum number of edge flips reached ({max_steps}). "
-                    f"Smallest signed circumcenter distance: {m:.3e}."
+                    + f"Smallest signed circumcenter distance: {m:.3e}. "
+                    + f"Try increasing the tolerance (from {tol}) "
+                    + f"or max_steps (from {max_steps})."
                 )
-                break
 
             interior_facets_cells = self.facets_cells["interior"][1:3].T
             adj_cells = interior_facets_cells[is_flip_interior_facet].T
