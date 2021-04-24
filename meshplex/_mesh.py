@@ -308,7 +308,6 @@ class Mesh:
 
         e = self.points[self.idx[-1][..., mask]]
         e0 = e[0]
-        print(f"{e0 = }")
         diff = e[1] - e[0]
 
         orthogonal_basis = np.array([diff])
@@ -332,7 +331,6 @@ class Mesh:
             # the side, pointing towards the additional point `p0`.
             p0 = self.points[idx][:, mask]
             v = p0 - e0
-            print(f"{v = }")
             # modified gram-schmidt
             for w, w_dot_w in zip(orthogonal_basis, norms2):
                 w_dot_v = np.einsum("...k,...k->...", w, v)
@@ -342,7 +340,6 @@ class Mesh:
                 alpha = np.divide(w_dot_v, w_dot_w, where=w_dot_w > 0.0)
                 v -= _multiply(w, alpha, self.n - 1 - kk)
 
-            print(f"{v = }")
             vv = np.einsum("...k,...k->...", v, v)
 
             # Form the orthogonal basis for the next iteration by choosing one side
@@ -367,13 +364,11 @@ class Mesh:
             # that the values aren't nan when they should be inf (for degenerate
             # simplices, i.e., vv == 0).
             a = 0.5 * (p0c2 - circumradii2)
-            print(f"{a = }")
             sqrt_vv = np.sqrt(vv)
-            print(f"{sqrt_vv = }")
             with warnings.catch_warnings():
                 # silence division-by-0 warnings
-                # Happens for degenerate cells, but this case is supported by meshplex.
-                # The values lmbda and sigma will just be +-inf.
+                # Happens for degenerate cells (sqrt(vv) == 0), and this case is
+                # supported by meshplex. The values lmbda and sigma will just be +-inf.
                 warnings.simplefilter("ignore", category=RuntimeWarning)
                 lmbda = a / sqrt_vv
                 sigma_k0 = a[k0] / vv[k0]
