@@ -188,7 +188,7 @@ class Mesh:
         return self._circumcenters[-1]
 
     @property
-    def cell_circumradius(self):
+    def cell_circumradius(self) -> ArrayLike:
         """Get the circumradii of all cells"""
         if self._cell_circumradii is None:
             self._compute_cell_values()
@@ -295,7 +295,7 @@ class Mesh:
 
         return self._signed_circumcenter_distances
 
-    def _compute_cell_values(self, mask=slice(None)):
+    def _compute_cell_values(self, mask=None):
         """Computes the volumes of all edges, facets, cells etc. in the mesh. It starts
         off by computing the (squared) edge lengths, then complements the edge with one
         vertex to form face. It computes an orthogonal basis of the face (with modified
@@ -303,6 +303,9 @@ class Mesh:
         of the face is computed. Then, it complements again to form the 3-simplex,
         again forms an orthogonal basis with Gram-Schmidt, and so on.
         """
+        if mask is None:
+            mask = slice(None)
+
         e = self.points[self.idx[-1][..., mask]]
         e0 = e[0]
         diff = e[1] - e[0]
@@ -316,11 +319,11 @@ class Mesh:
         vv = _dot(diff, self.n - 1)
         circumradii2 = 0.25 * vv
         sqrt_vv = np.sqrt(vv)
-        lmbda = 0.5 * np.sqrt(vv)
+        lmbda = 0.5 * sqrt_vv
 
         sumx = np.array(e + circumcenters[-1])
 
-        partitions = 0.5 * np.sqrt(np.array([vv, vv]))
+        partitions = 0.5 * np.array([sqrt_vv, sqrt_vv])
 
         norms2 = np.array(volumes2)
         for kk, idx in enumerate(self.idx[:-1][::-1]):
@@ -353,22 +356,23 @@ class Mesh:
             c = circumcenters[-1]
 
             p0c2 = _dot(p0 - c, self.n - 1 - kk)
-            #
-            sigma = 0.5 * (p0c2 - circumradii2) / vv
-            lmbda2 = sigma ** 2 * vv
+            # Be a bit careful here. sigma and lmbda can be negative. Also make sure
+            # that the values aren't nan when they should be inf (for degenerate
+            # simplices, i.e., vv == 0).
+            a = 0.5 * (p0c2 - circumradii2)
+            sqrt_vv = np.sqrt(vv)
+            lmbda = a / sqrt_vv
 
             # circumcenter, squared circumradius
             # <https://math.stackexchange.com/a/4064749/36678>
-            #
-            circumradii2 = lmbda2[k0] + circumradii2[k0]
-            circumcenters.append(c[k0] + _multiply(v[k0], sigma[k0], self.n - 2 - kk))
+            sigma_k0 = a[k0] / vv[k0]
+            lmbda2_k0 = sigma_k0 * a[k0]
+            circumradii2 = lmbda2_k0 + circumradii2[k0]
+            circumcenters.append(c[k0] + _multiply(v[k0], sigma_k0, self.n - 2 - kk))
 
             sumx += circumcenters[-1]
 
             # cell partitions
-            # don't use sqrt(lmbda2) here; lmbda, just like sigma, can be negative
-            sqrt_vv = np.sqrt(vv)
-            lmbda = sigma * sqrt_vv
             partitions *= lmbda / (kk + 2)
 
         # The integral of x,

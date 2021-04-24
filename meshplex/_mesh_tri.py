@@ -313,7 +313,6 @@ class MeshTri(Mesh):
                 )
                 message += "Leaving those facets as they are."
                 warnings.warn(message)
-                # exit(1)  # TODO remove
 
             is_flip_interior_facet_old = is_flip_interior_facet.copy()
             is_flip_interior_facet = self.signed_circumcenter_distances < -tol
