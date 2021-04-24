@@ -308,6 +308,7 @@ class Mesh:
 
         e = self.points[self.idx[-1][..., mask]]
         e0 = e[0]
+        print(f"{e0 = }")
         diff = e[1] - e[0]
 
         orthogonal_basis = np.array([diff])
@@ -331,11 +332,17 @@ class Mesh:
             # the side, pointing towards the additional point `p0`.
             p0 = self.points[idx][:, mask]
             v = p0 - e0
+            print(f"{v = }")
             # modified gram-schmidt
-            for w, ww in zip(orthogonal_basis, norms2):
-                alpha = np.einsum("...k,...k->...", w, v) / ww
+            for w, w_dot_w in zip(orthogonal_basis, norms2):
+                w_dot_v = np.einsum("...k,...k->...", w, v)
+                # Compute <w, v> / <w, w>, but don't set the output value where w==0.
+                # The value remains uninitialized and gets canceled out in the next
+                # iteration when multiplied by w.
+                alpha = np.divide(w_dot_v, w_dot_w, where=w_dot_w > 0.0)
                 v -= _multiply(w, alpha, self.n - 1 - kk)
 
+            print(f"{v = }")
             vv = np.einsum("...k,...k->...", v, v)
 
             # Form the orthogonal basis for the next iteration by choosing one side
@@ -360,7 +367,9 @@ class Mesh:
             # that the values aren't nan when they should be inf (for degenerate
             # simplices, i.e., vv == 0).
             a = 0.5 * (p0c2 - circumradii2)
+            print(f"{a = }")
             sqrt_vv = np.sqrt(vv)
+            print(f"{sqrt_vv = }")
             with warnings.catch_warnings():
                 # silence division-by-0 warnings
                 # Happens for degenerate cells, but this case is supported by meshplex.

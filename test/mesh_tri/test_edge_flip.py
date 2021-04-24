@@ -347,8 +347,6 @@ def test_doubled_cell():
     ref = [[2, 0, 2], [2, 2, 1]]
     assert np.all(mesh.cells("points") == ref)
 
-    assert np.all(np.isnan(mesh.circumcenter_facet_distances))
-
 
 def test_negative_after_flip():
     points = [[0.0, 0.0], [3.0, 0.0], [1.14960653, 0.03], [1.85039347, 0.03]]

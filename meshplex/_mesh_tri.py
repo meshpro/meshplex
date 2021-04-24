@@ -1,4 +1,5 @@
 import warnings
+from inspect import currentframe
 
 import numpy as np
 
@@ -264,12 +265,15 @@ class MeshTri(Mesh):
 
             if step > max_steps:
                 m = np.min(self.signed_circumcenter_distances)
-                raise MeshplexError(
+                msg = (
                     f"Maximum number of edge flips reached ({max_steps}). "
                     + f"Smallest signed circumcenter distance: {m:.3e}. "
-                    + f"Try increasing the tolerance (from {tol}) "
-                    + f"or max_steps (from {max_steps})."
+                    + f"Try increasing the tolerance (currently {tol}) "
+                    + f"or max_steps (currentframe {max_steps})."
                 )
+                warnings.warn(msg)
+                break
+                # raise MeshplexError(msg)
 
             interior_facets_cells = self.facets_cells["interior"][1:3].T
             adj_cells = interior_facets_cells[is_flip_interior_facet].T
@@ -314,9 +318,10 @@ class MeshTri(Mesh):
                 message += "Leaving those facets as they are."
                 warnings.warn(message)
 
+            # Check which edges need to be flipped next. Don't flip edges which have
+            # just been flipped though. (This can happen due to round-off errors.)
             is_flip_interior_facet_old = is_flip_interior_facet.copy()
             is_flip_interior_facet = self.signed_circumcenter_distances < -tol
-            # Simply don't flip edges which have just been flipped
             is_flip_interior_facet[is_flip_interior_facet_old] = False
 
         return num_flips
