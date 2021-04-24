@@ -340,7 +340,13 @@ def test_doubled_cell():
     )
     cells = np.array([[0, 1, 2], [0, 1, 2]])
     mesh = meshplex.MeshTri(points, cells)
-    mesh.flip_until_delaunay()
+
+    num_flips = mesh.flip_until_delaunay()
+    assert num_flips == 1
+
+    ref = [[2, 0, 2], [2, 2, 1]]
+    assert np.all(mesh.cells("points") == ref)
+
     assert np.all(np.isnan(mesh.circumcenter_facet_distances))
 
 
