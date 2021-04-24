@@ -313,20 +313,9 @@ def test_flip_into_existing_edge():
     )
 
     mesh = meshplex.MeshTri(points, cells)
-    mesh.flip_until_delaunay()
-    # Note that we actually have duplicate cells after the flipping. This can happen
-    # with manifold meshes. An edge is also duplicated.
-    # When reinstating a new mesh from points and cells, the edge generator will fail
-    # with a hint on duplicate cells. The simple fix is to remove those first via
-    # remove_duplicate_cells().
-    ref = np.array([[[2, 0, 3], [2, 3, 0], [2, 3, 1]]])
-    # after flip
-    assert np.all(mesh.cells("points") == ref)
-
-    mesh2 = meshplex.Mesh(mesh.points, mesh.cells("points"))
-    mesh2.remove_duplicate_cells()
-    ref = np.array([[[2, 0, 3], [2, 3, 1]]])
-    assert np.all(mesh2.cells("points") == ref)
+    n = mesh.flip_until_delaunay()
+    # no flips performed
+    assert n == 0
 
 
 def test_doubled_cell():
