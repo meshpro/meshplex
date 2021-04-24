@@ -1,6 +1,7 @@
 import warnings
 from inspect import currentframe
 
+import npx
 import numpy as np
 
 from ._exceptions import MeshplexError
@@ -327,6 +328,31 @@ class MeshTri(Mesh):
         return num_flips
 
     def flip_interior_facets(self, is_flip_interior_facet):
+        facets_cells_flip = self.facets_cells["interior"][:, is_flip_interior_facet]
+        # facet_gids = facets_cells_flip[0]
+        adj_cells = facets_cells_flip[1:3]
+        lids = facets_cells_flip[3:5]
+
+        # Check if some flips would lead to the same flipped edge. This can happen, for
+        # example, in triangular shell meshes in 3D, and leads to weird behavior down
+        # the line. See <https://github.com/nschloe/meshplex/issues/130>.
+        new_edges = np.array(
+            [
+                self.cells("points")[adj_cells[0], lids[0]],
+                self.cells("points")[adj_cells[1], lids[1]],
+            ]
+        ).T
+        new_edges = np.sort(new_edges, axis=1)
+        _, inv = npx.unique_rows(new_edges, return_inverse=True)
+        is_unique = np.zeros(len(new_edges), dtype=bool)
+        is_unique[inv] = True
+        is_flip_interior_facet[is_flip_interior_facet] = is_unique
+
+        # TODO
+        # Check if expected new edges are already present in the mesh for the same
+        # reasons as above
+
+        # now actuall perform the flip
         facets_cells_flip = self.facets_cells["interior"][:, is_flip_interior_facet]
         facet_gids = facets_cells_flip[0]
         adj_cells = facets_cells_flip[1:3]

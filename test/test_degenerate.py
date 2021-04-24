@@ -27,8 +27,7 @@ def test_degenerate_cell(tol=1.0e-14):
 
 
 def test_repeated_point(tol=1.0e-14):
-    """Special case of the degeneracy: A point is doubled up.
-    """
+    """Special case of the degeneracy: A point is doubled up."""
     points = [
         [0.0, 0.0],
         [1.0, 0.0],
@@ -56,7 +55,6 @@ def test_repeated_point(tol=1.0e-14):
     #     mesh.cell_partitions
     #     == [[[np.inf], [-np.inf], [np.inf]], [[np.inf], [-np.inf], [np.inf]]]
     # )
-
 
 
 def test_all_same_point(tol=1.0e-14):
