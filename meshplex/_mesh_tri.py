@@ -1,10 +1,8 @@
 import warnings
-from inspect import currentframe
 
 import npx
 import numpy as np
 
-from ._exceptions import MeshplexError
 from ._mesh import Mesh
 
 __all__ = ["MeshTri"]
