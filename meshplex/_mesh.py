@@ -361,14 +361,25 @@ class Mesh:
             # simplices, i.e., vv == 0).
             a = 0.5 * (p0c2 - circumradii2)
             sqrt_vv = np.sqrt(vv)
-            lmbda = a / sqrt_vv
+            with warnings.catch_warnings():
+                # silence division-by-0 warnings
+                # Happens for degenerate cells, but this case is supported by meshplex.
+                # The values lmbda and sigma will just be +-inf.
+                warnings.simplefilter("ignore", category=RuntimeWarning)
+                lmbda = a / sqrt_vv
+                sigma_k0 = a[k0] / vv[k0]
 
             # circumcenter, squared circumradius
             # <https://math.stackexchange.com/a/4064749/36678>
-            sigma_k0 = a[k0] / vv[k0]
             lmbda2_k0 = sigma_k0 * a[k0]
             circumradii2 = lmbda2_k0 + circumradii2[k0]
-            circumcenters.append(c[k0] + _multiply(v[k0], sigma_k0, self.n - 2 - kk))
+            with warnings.catch_warnings():
+                # Similar as above: The multiplicattion `v * sigma` correctly produces
+                # nans for degenerate cells.
+                warnings.simplefilter("ignore", category=RuntimeWarning)
+                circumcenters.append(
+                    c[k0] + _multiply(v[k0], sigma_k0, self.n - 2 - kk)
+                )
 
             sumx += circumcenters[-1]
 
