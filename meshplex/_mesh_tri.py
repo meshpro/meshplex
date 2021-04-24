@@ -351,6 +351,10 @@ class MeshTri(Mesh):
         # TODO
         # Check if expected new edges are already present in the mesh for the same
         # reasons as above
+        # print(new_edges)
+        # print()
+        # print(self.facets["points"])
+        # exit(1)
 
         # now actuall perform the flip
         facets_cells_flip = self.facets_cells["interior"][:, is_flip_interior_facet]
