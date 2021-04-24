@@ -297,8 +297,8 @@ class MeshTri(Mesh):
                 multiflip_cell_gids = cell_gids[num_flips_per_cell > 1]
 
             # actually perform the flips
-            self.flip_interior_facets(is_flip_interior_facet)
-            num_flips += np.sum(is_flip_interior_facet)
+            num = self.flip_interior_facets(is_flip_interior_facet)
+            num_flips += num
 
             # check the new signed_circumcenter_distances
             new_scd = self.signed_circumcenter_distances[is_flip_interior_facet]
@@ -462,6 +462,8 @@ class MeshTri(Mesh):
         )
 
         self._update_cell_values(update_cell_ids, update_interior_facet_ids)
+
+        return np.sum(is_flip_interior_facet)
 
     def _update_cell_values(self, cell_ids, interior_facet_ids):
         """Updates all sorts of cell information for the given cell IDs."""
