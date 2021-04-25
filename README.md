@@ -3,8 +3,8 @@
   <p align="center">Fast tools for simplex meshes.</p>
 </p>
 
-[![PyPi Version](https://img.shields.io/pypi/v/meshplex.svg?style=flat-square)](https://pypi.org/project/meshplex)
-[![PyPI pyversions](https://img.shields.io/pypi/pyversions/meshplex.svg?style=flat-square)](https://pypi.org/pypi/meshplex/)
+[![PyPi Version](https://img.shields.io/pypi/v/meshplex.svg?style=flat-square)](https://pypi.org/project/meshplex/)
+[![PyPI pyversions](https://img.shields.io/pypi/pyversions/meshplex.svg?style=flat-square)](https://pypi.org/project/meshplex/)
 [![GitHub stars](https://img.shields.io/github/stars/nschloe/meshplex.svg?style=flat-square&logo=github&label=Stars&logoColor=white)](https://github.com/nschloe/meshplex)
 [![PyPi downloads](https://img.shields.io/pypi/dm/meshplex.svg?style=flat-square)](https://pypistats.org/packages/meshplex)
 

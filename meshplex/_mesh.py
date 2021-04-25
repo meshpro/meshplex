@@ -494,7 +494,7 @@ class Mesh:
     @property
     def cell_inradius(self):
         """Get the inradii of all cells"""
-        # See <http://mathworld.wolfram.com/Incircle.html>.
+        # See <https://mathworld.wolfram.com/Incircle.html>.
         # https://en.wikipedia.org/wiki/Tetrahedron#Inradius
         return (self.n - 1) * self.cell_volumes / np.sum(self.facet_areas, axis=0)
 

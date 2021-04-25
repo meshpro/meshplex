@@ -88,7 +88,7 @@ class MeshTetra(Mesh):
     def q_vol_rms_edgelength3(self):
         """For each cell, return the ratio of the volume and the cube of the
         root-mean-square edge length. (This is cell quality measure used by Stellar
-        <https://people.eecs.berkeley.edu/~jrs/stellar>.)
+        <https://people.eecs.berkeley.edu/~jrs/stellar/>.)
         """
         el2 = self.ei_dot_ei
         rms = np.sqrt(

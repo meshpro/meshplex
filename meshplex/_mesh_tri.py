@@ -63,7 +63,7 @@ class MeshTri(Mesh):
     #            Discrete gradient method in solid mechanics,
     #            Lu, Jia and Qian, Jing and Han, Weimin,
     #            International Journal for Numerical Methods in Engineering,
-    #            https://doi.org/10.1002/nme.2187.
+    #            <https://doi.org/10.1002/nme.2187>.
     #         '''
     #         if self.cell_circumcenters is None:
     #             self.cell_circumcenters = self._circumcenters[-1]

@@ -1,5 +1,6 @@
-import meshplex
 import pytest
+
+import meshplex
 
 
 def test_gh126():

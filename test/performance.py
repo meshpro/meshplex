@@ -29,7 +29,7 @@ def setup(n):
     m = int(0.5 * (target_num_cells + n) + 1 - n)
 
     # generate random points in circle;
-    # <http://mathworld.wolfram.com/DiskPointPicking.html>
+    # <https://mathworld.wolfram.com/DiskPointPicking.html>
     for seed in range(0, 255):
         np.random.seed(seed)
         r = np.random.rand(m)

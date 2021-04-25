@@ -2,7 +2,7 @@
 #
 # This file only contains a selection of the most common options. For a full
 # list see the documentation:
-# http://www.sphinx-doc.org/en/master/config
+# https://www.sphinx-doc.org/en/master/usage/configuration.html
 
 # -- Path setup --------------------------------------------------------------
 
@@ -26,7 +26,7 @@ copyright = "2017-2021, Nico Schlömer"
 author = "Nico Schlömer"
 
 #
-# https://packaging.python.org/single_source_version/
+# https://packaging.python.org/guides/single-sourcing-package-version/
 this_dir = os.path.abspath(os.path.dirname(__file__))
 about = {}
 about_file = os.path.join(this_dir, "..", "meshplex", "__about__.py")
