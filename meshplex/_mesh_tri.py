@@ -323,40 +323,37 @@ class MeshTri(Mesh):
             is_flip_interior_facet = self.signed_circumcenter_distances < -tol
             is_flip_interior_facet[is_flip_interior_facet_old] = False
 
+            # Also don't flip the edges which would flip into existing edges.
+            facets_cells_flip = self.facets_cells["interior"][:, is_flip_interior_facet]
+            # facet_gids = facets_cells_flip[0]
+            adj_cells = facets_cells_flip[1:3]
+            lids = facets_cells_flip[3:5]
+            #
+            expected_new_edges = np.array(
+                [
+                    self.cells("points")[adj_cells[0], lids[0]],
+                    self.cells("points")[adj_cells[1], lids[1]],
+                ]
+            ).T
+            expected_new_edges = np.sort(expected_new_edges, axis=1)
+            #
+            # Check if some flips would lead to the same flipped edge. This can happen,
+            # for example, in triangular shell meshes in 3D, and leads to weird behavior
+            # down the line. See <https://github.com/nschloe/meshplex/issues/130>.
+            _, inv = npx.unique_rows(expected_new_edges, return_inverse=True)
+            is_unique = np.zeros(len(expected_new_edges), dtype=bool)
+            is_unique[inv] = True
+            #
+            is_flip_interior_facet[is_flip_interior_facet] &= is_unique
+
+            # Check if expected new edges are already present in the mesh for the same
+            # reasons as above
+            already_exists = npx.isin_rows(expected_new_edges, self.facets["points"])
+            is_flip_interior_facet[is_flip_interior_facet] &= ~already_exists
+
         return num_flips
 
     def flip_interior_facets(self, is_flip_interior_facet):
-        facets_cells_flip = self.facets_cells["interior"][:, is_flip_interior_facet]
-        # facet_gids = facets_cells_flip[0]
-        adj_cells = facets_cells_flip[1:3]
-        lids = facets_cells_flip[3:5]
-
-        new_edges = np.array(
-            [
-                self.cells("points")[adj_cells[0], lids[0]],
-                self.cells("points")[adj_cells[1], lids[1]],
-            ]
-        ).T
-        new_edges = np.sort(new_edges, axis=1)
-        do_actually_flip = np.ones(len(new_edges), dtype=bool)
-
-        # Check if some flips would lead to the same flipped edge. This can happen, for
-        # example, in triangular shell meshes in 3D, and leads to weird behavior down
-        # the line. See <https://github.com/nschloe/meshplex/issues/130>.
-        _, inv = npx.unique_rows(new_edges, return_inverse=True)
-        is_unique = np.zeros(len(new_edges), dtype=bool)
-        is_unique[inv] = True
-        do_actually_flip &= is_unique
-
-        # Check if expected new edges are already present in the mesh for the same
-        # reasons as above
-        already_exists = npx.isin_rows(new_edges, self.facets["points"])
-        do_actually_flip &= ~already_exists
-
-        # finally apply the filter
-        is_flip_interior_facet[is_flip_interior_facet] = do_actually_flip
-
-        # now actuall perform the flip
         facets_cells_flip = self.facets_cells["interior"][:, is_flip_interior_facet]
         facet_gids = facets_cells_flip[0]
         adj_cells = facets_cells_flip[1:3]
