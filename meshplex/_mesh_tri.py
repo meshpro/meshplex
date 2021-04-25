@@ -299,7 +299,7 @@ class MeshTri(Mesh):
                     f"Maximum number of edge flips reached ({max_steps}). "
                     + f"Smallest signed circumcenter distance: {m:.3e}. "
                     + f"Try increasing the tolerance (currently {tol}) "
-                    + f"or max_steps (currentframe {max_steps})."
+                    + f"or max_steps (currently {max_steps})."
                 )
                 warnings.warn(msg)
                 break
