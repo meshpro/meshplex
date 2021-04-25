@@ -1,4 +1,5 @@
 import meshplex
+import pytest
 
 
 def test_gh126():
@@ -12,7 +13,8 @@ def test_gh126():
     ]
     mesh = meshplex.MeshTri(points, cells)
 
-    mesh.flip_until_delaunay()
+    with pytest.warns(UserWarning):
+        mesh.flip_until_delaunay()
 
     # this failed in a previous version because there were edges with more than two
     # cells after the flip
@@ -32,7 +34,8 @@ def test_gh130():
     cells = [[2, 0, 1], [2, 3, 0], [4, 0, 3], [4, 3, 5], [2, 5, 3]]
 
     mesh = meshplex.MeshTri(points, cells)
-    mesh.flip_until_delaunay(max_steps=1)
+    with pytest.warns(UserWarning):
+        mesh.flip_until_delaunay(max_steps=1)
 
     # this failed in a previous version because there were edges with more than two
     # cells after the flip

@@ -294,16 +294,7 @@ class MeshTri(Mesh):
                 break
 
             if step > max_steps:
-                m = np.min(self.signed_circumcenter_distances)
-                msg = (
-                    f"Maximum number of edge flips reached ({max_steps}). "
-                    + f"Smallest signed circumcenter distance: {m:.3e}. "
-                    + f"Try increasing the tolerance (currently {tol}) "
-                    + f"or max_steps (currently {max_steps})."
-                )
-                warnings.warn(msg)
                 break
-                # raise MeshplexError(msg)
 
             interior_facets_cells = self.facets_cells["interior"][1:3].T
             adj_cells = interior_facets_cells[is_flip_interior_facet].T
@@ -343,7 +334,8 @@ class MeshTri(Mesh):
         if num_nondelaunay_facets > 0:
             dists = self.signed_circumcenter_distances[is_negative]
             warnings.warn(
-                f"There are {num_nondelaunay_facets} remaining non-Delaunay facets. "
+                f"After {step} edge flip steps, "
+                + f"there are {num_nondelaunay_facets} remaining non-Delaunay facets. "
                 f"The signed circumcenter distances are {dists.tolist()}. "
                 + "This can happen due to round-off errors or "
                 + "to prevent non-manifold edges in shell meshes."
