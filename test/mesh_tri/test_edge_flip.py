@@ -1,4 +1,5 @@
 import pathlib
+import pytest
 
 import meshio
 import numpy as np
@@ -313,7 +314,8 @@ def test_flip_into_existing_edge():
     )
 
     mesh = meshplex.MeshTri(points, cells)
-    n = mesh.flip_until_delaunay()
+    with pytest.warns(UserWarning):
+        n = mesh.flip_until_delaunay()
     # no flips performed
     assert n == 0
 
@@ -344,5 +346,6 @@ def test_negative_after_flip():
         [0, 1, 3],
     ]
     mesh0 = meshplex.MeshTri(points, cells)
-    # mesh.show()
-    mesh0.flip_until_delaunay()
+
+    with pytest.warns(UserWarning):
+        mesh0.flip_until_delaunay()
