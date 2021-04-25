@@ -330,31 +330,24 @@ class MeshTri(Mesh):
             self.flip_interior_facets(is_flip_interior_facet)
             num_flips += np.sum(is_flip_interior_facet)
 
-            # check the new signed_circumcenter_distances
-            new_scd = self.signed_circumcenter_distances[is_flip_interior_facet]
-            is_negative_before_and_after = new_scd < 0
-            if np.any(is_negative_before_and_after):
-                message = (
-                    "There are facets which have a negative circumcenter distance "
-                    + "before and after the flip. Values after:\n"
-                )
-                message += (
-                    "["
-                    + ", ".join(
-                        f"{s:.3e}" for s in new_scd[is_negative_before_and_after]
-                    )
-                    + "]\n"
-                )
-                message += "Leaving those facets as they are."
-                warnings.warn(message)
-
             is_flip_interior_facet_old = is_flip_interior_facet.copy()
             # Check which edges need to be flipped next.
-            is_flip_interior_facet = self.signed_circumcenter_distances < -tol
+            is_flip_interior_facet =self.signed_circumcenter_distances < -tol
 
             # Don't flip edges which have just been flipped. (This can happen due to
             # round-off errors.)
             is_flip_interior_facet[is_flip_interior_facet_old] = False
+
+        is_negative = self.signed_circumcenter_distances < -tol
+        num_nondelaunay_facets = np.sum(is_negative)
+        if num_nondelaunay_facets > 0:
+            dists = self.signed_circumcenter_distances[is_negative]
+            warnings.warn(
+                f"There are {num_nondelaunay_facets} remaining non-Delaunay facets. "
+                f"The signed circumcenter distances are {dists.tolist()}. "
+                + "This can happen due to round-off errors or "
+                + "to prevent non-manifold edges in shell meshes."
+            )
 
         return num_flips
 
