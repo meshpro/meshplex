@@ -332,7 +332,7 @@ class MeshTri(Mesh):
 
             is_flip_interior_facet_old = is_flip_interior_facet.copy()
             # Check which edges need to be flipped next.
-            is_flip_interior_facet =self.signed_circumcenter_distances < -tol
+            is_flip_interior_facet = self.signed_circumcenter_distances < -tol
 
             # Don't flip edges which have just been flipped. (This can happen due to
             # round-off errors.)
