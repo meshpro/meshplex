@@ -258,6 +258,37 @@ class MeshTri(Mesh):
         is_flip_interior_facet = self.signed_circumcenter_distances < -tol
 
         while True:
+            # Don't flip the edges which would flip into existing edges. This can
+            # happen, for example, in triangular shell meshes in 3D, and leads to weird
+            # behavior down the line. See
+            # <https://github.com/nschloe/meshplex/issues/130>.
+            flip_filter = np.ones(np.sum(is_flip_interior_facet), dtype=bool)
+            #
+            facets_cells_flip = self.facets_cells["interior"][:, is_flip_interior_facet]
+            # facet_gids = facets_cells_flip[0]
+            adj_cells = facets_cells_flip[1:3]
+            lids = facets_cells_flip[3:5]
+            expected_new_edges = np.array(
+                [
+                    self.cells("points")[adj_cells[0], lids[0]],
+                    self.cells("points")[adj_cells[1], lids[1]],
+                ]
+            ).T
+            expected_new_edges = np.sort(expected_new_edges, axis=1)
+            #
+            # This isin() call can be quite costly since we're checking against _all_
+            # existing edges.
+            already_exists = npx.isin_rows(expected_new_edges, self.facets["points"])
+            flip_filter &= ~already_exists
+            #
+            # Check if some flips would lead to the same flipped edge.
+            _, inv = npx.unique_rows(expected_new_edges, return_inverse=True)
+            is_unique = np.zeros(len(expected_new_edges), dtype=bool)
+            is_unique[inv] = True
+            flip_filter &= is_unique
+            # apply the filter
+            is_flip_interior_facet[is_flip_interior_facet] &= flip_filter
+
             step += 1
             if not np.any(is_flip_interior_facet):
                 break
@@ -296,67 +327,31 @@ class MeshTri(Mesh):
                 multiflip_cell_gids = cell_gids[num_flips_per_cell > 1]
 
             # actually perform the flips
-            num = self.flip_interior_facets(is_flip_interior_facet)
-            num_flips += num
+            self.flip_interior_facets(is_flip_interior_facet)
+            num_flips += np.sum(is_flip_interior_facet)
 
-            # check the new signed_circumcenter_distances
-            new_scd = self.signed_circumcenter_distances[is_flip_interior_facet]
-            is_negative_before_and_after = new_scd < 0
-            if np.any(is_negative_before_and_after):
-                message = (
-                    "There are facets which have a negative circumcenter distance "
-                    + "before and after the flip. Values after:\n"
-                )
-                message += (
-                    "["
-                    + ", ".join(
-                        f"{s:.3e}" for s in new_scd[is_negative_before_and_after]
-                    )
-                    + "]\n"
-                )
-                message += "Leaving those facets as they are."
-                warnings.warn(message)
-
-            # Check which edges need to be flipped next. Don't flip edges which have
-            # just been flipped though. (This can happen due to round-off errors.)
             is_flip_interior_facet_old = is_flip_interior_facet.copy()
+            # Check which edges need to be flipped next.
             is_flip_interior_facet = self.signed_circumcenter_distances < -tol
+
+            # Don't flip edges which have just been flipped. (This can happen due to
+            # round-off errors.)
             is_flip_interior_facet[is_flip_interior_facet_old] = False
+
+        is_negative = self.signed_circumcenter_distances < -tol
+        num_nondelaunay_facets = np.sum(is_negative)
+        if num_nondelaunay_facets > 0:
+            dists = self.signed_circumcenter_distances[is_negative]
+            warnings.warn(
+                f"There are {num_nondelaunay_facets} remaining non-Delaunay facets. "
+                f"The signed circumcenter distances are {dists.tolist()}. "
+                + "This can happen due to round-off errors or "
+                + "to prevent non-manifold edges in shell meshes."
+            )
 
         return num_flips
 
     def flip_interior_facets(self, is_flip_interior_facet):
-        facets_cells_flip = self.facets_cells["interior"][:, is_flip_interior_facet]
-        # facet_gids = facets_cells_flip[0]
-        adj_cells = facets_cells_flip[1:3]
-        lids = facets_cells_flip[3:5]
-
-        new_edges = np.array(
-            [
-                self.cells("points")[adj_cells[0], lids[0]],
-                self.cells("points")[adj_cells[1], lids[1]],
-            ]
-        ).T
-        new_edges = np.sort(new_edges, axis=1)
-        do_actually_flip = np.ones(len(new_edges), dtype=bool)
-
-        # Check if some flips would lead to the same flipped edge. This can happen, for
-        # example, in triangular shell meshes in 3D, and leads to weird behavior down
-        # the line. See <https://github.com/nschloe/meshplex/issues/130>.
-        _, inv = npx.unique_rows(new_edges, return_inverse=True)
-        is_unique = np.zeros(len(new_edges), dtype=bool)
-        is_unique[inv] = True
-        do_actually_flip &= is_unique
-
-        # Check if expected new edges are already present in the mesh for the same
-        # reasons as above
-        already_exists = npx.isin_rows(new_edges, self.facets["points"])
-        do_actually_flip &= ~already_exists
-
-        # finally apply the filter
-        is_flip_interior_facet[is_flip_interior_facet] = do_actually_flip
-
-        # now actuall perform the flip
         facets_cells_flip = self.facets_cells["interior"][:, is_flip_interior_facet]
         facet_gids = facets_cells_flip[0]
         adj_cells = facets_cells_flip[1:3]
@@ -492,8 +487,6 @@ class MeshTri(Mesh):
         )
 
         self._update_cell_values(update_cell_ids, update_interior_facet_ids)
-
-        return np.sum(is_flip_interior_facet)
 
     def _update_cell_values(self, cell_ids, interior_facet_ids):
         """Updates all sorts of cell information for the given cell IDs."""
