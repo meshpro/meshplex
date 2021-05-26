@@ -53,9 +53,7 @@ def assert_mesh_consistency(mesh0, tol=1.0e-14):
         zip(mesh0.cells("points"), mesh0.cells("facets"))
     ):
         for k in range(len(point_ids)):
-            assert set(point_ids) == {
-                *mesh0.edges["points"][edge_ids][k], point_ids[k]
-            }
+            assert set(point_ids) == {*mesh0.edges["points"][edge_ids][k], point_ids[k]}
 
     # make sure the is_boundary_point/edge/cell is consistent
     ref_cells = np.any(mesh0.is_boundary_facet_local, axis=0)
