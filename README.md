@@ -65,7 +65,7 @@ print(mesh.num_delaunay_violations)
 mesh.remove_cells([0])
 ```
 For triangular meshes (`MeshTri`), meshplex also has some mesh manipulation routines:
-<!--exdown-skip-->
+<!--pytest-codeblocks:skip-->
 ```python
 mesh.show()  # show the mesh
 mesh.angles  # compute angles
@@ -83,7 +83,7 @@ For a documentation of all classes and functions, see
 #### Triangles
 <img src="https://nschloe.github.io/meshplex/pacman.png" width="30%">
 
-<!--exdown-skip-->
+<!--pytest-codeblocks:skip-->
 ```python
 import meshplex
 
@@ -102,7 +102,7 @@ mesh.show(
 #### Tetrahedra
 <img src="https://nschloe.github.io/meshplex/tetra.png" width="30%">
 
-<!--exdown-skip-->
+<!--pytest-codeblocks:skip-->
 ```python
 import numpy as np
 import meshplex
