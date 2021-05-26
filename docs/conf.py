@@ -29,7 +29,7 @@ author = "Nico Schlömer"
 # https://packaging.python.org/guides/single-sourcing-package-version/
 this_dir = os.path.abspath(os.path.dirname(__file__))
 about = {}
-about_file = os.path.join(this_dir, "..", "meshplex", "__about__.py")
+about_file = os.path.join(this_dir, "..", "src", "meshplex", "__about__.py")
 with open(about_file) as f:
     exec(f.read(), about)
 # The short X.Y version.
