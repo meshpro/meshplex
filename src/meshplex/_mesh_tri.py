@@ -36,8 +36,30 @@ class MeshTri(Mesh):
 
     @property
     def genus(self):
-        # https://math.stackexchange.com/a/85164/36678
-        return 1 - self.euler_characteristic / 2
+        # <https://math.stackexchange.com/a/85164/36678>::
+        #
+        # chi = 2 - 2 * g - b
+        #
+        # g = 1 - (chi + b) / 2
+        #
+        # where b is the number of boundary components.
+        from scipy.sparse import coo_matrix
+        from scipy.sparse.csgraph import connected_components
+
+        if self._is_boundary_facet is None:
+            self.create_facets()
+
+        boundary_edges = self.edges["points"][self.is_boundary_edge]
+
+        n = len(boundary_edges)
+        val = np.ones(n, dtype=int)
+        M = coo_matrix((val, boundary_edges.T), shape=(n, n))
+        num_cc, _ = connected_components(M)
+
+        chi = self.euler_characteristic
+        assert (chi + num_cc) % 2 == 0
+
+        return 1 - (chi + num_cc) // 2
 
     @property
     def angles(self):
