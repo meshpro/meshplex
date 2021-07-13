@@ -1,5 +1,8 @@
 import meshzoo
+import pytest
+
 import meshplex
+
 
 def test_euler_characteristic():
     points = [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]]
@@ -16,7 +19,5 @@ def test_euler_characteristic():
     points, cells = meshzoo.moebius(num_twists=1, nl=21, nw=6)
     mesh = meshplex.MeshTri(points, cells)
     assert mesh.euler_characteristic == 0
-    assert mesh.genus == 0
-
-
-    exit(1)
+    with pytest.raises(RuntimeError):
+        mesh.genus

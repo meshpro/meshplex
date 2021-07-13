@@ -43,21 +43,29 @@ class MeshTri(Mesh):
         # g = 1 - (chi + b) / 2
         #
         # where b is the number of boundary components.
-        from scipy.sparse import coo_matrix
-        from scipy.sparse.csgraph import connected_components
-
         if self._is_boundary_facet is None:
             self.create_facets()
 
-        boundary_edges = self.edges["points"][self.is_boundary_edge]
+        if np.any(self.is_boundary_edge):
+            from scipy.sparse import coo_matrix
+            from scipy.sparse.csgraph import connected_components
 
-        n = len(boundary_edges)
-        val = np.ones(n, dtype=int)
-        M = coo_matrix((val, boundary_edges.T), shape=(n, n))
-        num_cc, _ = connected_components(M)
+            boundary_edges = self.edges["points"][self.is_boundary_edge]
+
+            n = np.max(boundary_edges) + 1
+            val = np.ones(len(boundary_edges), dtype=int)
+            M = coo_matrix((val, boundary_edges.T), shape=(n, n))
+            # Unfortunately, connected_components() counts orphaned nodes as an
+            # individual component. See <https://github.com/scipy/scipy/issues/14391>.
+            _, cc = connected_components(M)
+            num_cc = np.sum(np.bincount(cc) > 1)
+
+        else:
+            num_cc = 0
 
         chi = self.euler_characteristic
-        assert (chi + num_cc) % 2 == 0
+        if (chi + num_cc) % 2 != 0:
+            raise RuntimeError("Non-integer genus. Is the mesh perhaps not orientable?")
 
         return 1 - (chi + num_cc) // 2
 
