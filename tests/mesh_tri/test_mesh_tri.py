@@ -81,7 +81,7 @@ def test_unit_triangle(cells_dtype):
 
     assert mesh.num_delaunay_violations == 0
 
-    assert mesh.genus == 0.5
+    assert mesh.genus == 0
 
     mesh.get_cell_mask()
     mesh.get_edge_mask()
