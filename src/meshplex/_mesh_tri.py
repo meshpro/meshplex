@@ -36,7 +36,7 @@ class MeshTri(Mesh):
 
     @property
     def genus(self):
-        # <https://math.stackexchange.com/a/85164/36678>::
+        # <https://math.stackexchange.com/a/4196497/36678>:
         #
         # chi = 2 - 2 * g - b
         #
