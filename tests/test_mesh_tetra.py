@@ -455,6 +455,15 @@ def test_signed_volume():
         < 1.0e-11 * mesh.cell_volumes
     )
 
+    points = [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
+    cells = [[0, 1, 2, 3]]
+    mesh = meshplex.Mesh(points, cells)
+    assert abs(mesh.signed_cell_volumes[0] + 1 / 6) < 1.0e-13
+
+    cells = [[0, 1, 3, 2]]
+    mesh = meshplex.Mesh(points, cells)
+    assert abs(mesh.signed_cell_volumes[0] - 1 / 6) < 1.0e-13
+
 
 def test_show_cell(render=False):
     pytest.importorskip("vtk")
