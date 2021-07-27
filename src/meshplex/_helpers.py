@@ -1,18 +1,4 @@
-import math
-
 import numpy as np
-
-
-def get_signed_simplex_volumes(cells, pts):
-    """Signed volume of a simplex in nD. Note that signing only makes sense for
-    n-simplices in R^n.
-    """
-    n = pts.shape[1]
-    assert cells.shape[1] == n + 1
-
-    p = pts[cells]
-    p = np.concatenate([p, np.ones(list(p.shape[:2]) + [1])], axis=-1)
-    return np.linalg.det(p) / math.factorial(n)
 
 
 def grp_start_len(a):
