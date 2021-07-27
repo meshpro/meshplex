@@ -451,11 +451,13 @@ class Mesh:
         return self._signed_cell_volumes
 
     def compute_signed_cell_volumes(self, idx=slice(None)):
+        """Signed volume of a simplex in nD. Note that signing only makes sense for
+        n-simplices in R^n.
+        """
         n = self.points.shape[1]
-        assert self.n == self.points.shape[1] + 1, (
-            "Signed areas only make sense for n-simplices in in nD. "
-            f"Got {n}D points."
-        )
+        assert (
+            self.n == self.points.shape[1] + 1
+        ), f"Signed areas only make sense for n-simplices in in nD. Got {n}D points."
         if self.n == 3:
             # On <https://stackoverflow.com/q/50411583/353337>, we have a number of
             # alternatives computing the oriented area, but it's fastest with the
