@@ -463,14 +463,20 @@ class Mesh:
             # alternatives computing the oriented area, but it's fastest with the
             # half-edges.
             x = self.half_edge_coords
+            assert x is not None
             return (x[0, idx, 1] * x[2, idx, 0] - x[0, idx, 0] * x[2, idx, 1]) / 2
 
         # https://en.wikipedia.org/wiki/Simplex#Volume
         cp = self.points[self.cells("points")]
-        # append ones; this appends a column instead of a row as suggested by
-        # wikipedia, but that doesn't change the determinant
+        # append 1s
         cp1 = np.concatenate([cp, np.ones(cp.shape[:-1] + (1,))], axis=-1)
-        return np.linalg.det(cp1) / math.factorial(n)
+
+        # There appears to be no canonical convention when it comes to the sign
+        # <https://math.stackexchange.com/q/4209203/36678>. With the below choice, the
+        # area of 1D simplices [a, b] with a < b are positve, and the common ordering of
+        # tetrahedra (as in VTK, for example) is positive.
+        sign = -1 if n % 2 == 1 else 1
+        return sign * np.linalg.det(cp1) / math.factorial(n)
 
     def compute_cell_centroids(self, idx=slice(None)):
         return np.sum(self.points[self.cells("points")[idx]], axis=1) / self.n
