@@ -2,43 +2,47 @@ import pathlib
 
 import meshio
 import numpy as np
+import pytest
 
 import meshplex
 
 this_dir = pathlib.Path(__file__).resolve().parent
 
 
-def test_signed_area_line():
-    X = np.array([[0.0], [0.35]])
-    cells = np.array([[0, 1]])
-    mesh = meshplex.Mesh(X, cells)
-
-    ref = np.array([0.35])
-
-    assert mesh.signed_cell_volumes.shape == ref.shape
-    assert np.all(
-        np.abs(ref - mesh.signed_cell_volumes) < np.abs(ref) * 1.0e-13 + 1.0e-13
-    )
-
-    X = np.array([[0.0], [0.35]])
-    cells = np.array([[1, 0]])
-    mesh = meshplex.Mesh(X, cells)
-
-    ref = np.array([-0.35])
-
-    assert mesh.signed_cell_volumes.shape == ref.shape
-    assert np.all(
-        np.abs(ref - mesh.signed_cell_volumes) < np.abs(ref) * 1.0e-13 + 1.0e-13
-    )
-
-
-def test_signed_area_basic():
-    points = np.array([[0.0, 0.0], [1.0, 0.0], [1.1, 1.0], [0.0, 1.0]])
-    cells = np.array([[0, 1, 2], [0, 3, 2]])
+@pytest.mark.parametrize(
+    "points,cells,ref",
+    [
+        # line
+        ([[0.0], [0.35]], [[0, 1]], [0.35]),
+        ([[0.0], [0.35]], [[1, 0]], [-0.35]),
+        # triangle
+        ([[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]], [[0, 1, 2]], [0.5]),
+        ([[0.0, 0.0], [0.0, 1.0], [1.0, 0.0]], [[0, 1, 2]], [-0.5]),
+        (
+            [[0.0, 0.0], [1.0, 0.0], [1.1, 1.0], [0.0, 1.0]],
+            [[0, 1, 2], [0, 3, 2]],
+            [0.5, -0.55],
+        ),
+        # tetra
+        (
+            [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+            [[0, 1, 2, 3]],
+            [1 / 6],
+        ),
+        (
+            [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+            [[0, 1, 3, 2]],
+            [-1 / 6],
+        ),
+    ],
+)
+def test_signed_area(points, cells, ref):
     mesh = meshplex.Mesh(points, cells)
-    ref = np.array([0.5, -0.55])
-
-    assert np.all(np.abs(mesh.signed_cell_volumes - ref) < 1.0e-10 * np.abs(ref))
+    ref = np.array(ref)
+    assert mesh.signed_cell_volumes.shape == ref.shape
+    assert np.all(
+        np.abs(ref - mesh.signed_cell_volumes) < np.abs(ref) * 1.0e-13 + 1.0e-13
+    )
 
 
 def test_signed_area_pacman():
@@ -52,35 +56,3 @@ def test_signed_area_pacman():
     # all cells are positively oriented in this mesh
     assert np.all(mesh.signed_cell_volumes > 0.0)
     assert np.all(abs(abs(vols) - mesh.cell_volumes) < 1.0e-12 * mesh.cell_volumes)
-
-
-def test_signed_area2():
-    points = np.array([[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]])
-    cells = np.array([[0, 1, 2]])
-    mesh = meshplex.Mesh(points, cells)
-    ref = 0.5
-    assert abs(mesh.signed_cell_volumes[0] - ref) < 1.0e-10 * abs(ref)
-
-    mesh.points = np.array([[0.0, 0.0], [0.0, 1.0], [1.0, 0.0]])
-    ref = -0.5
-    assert abs(mesh.signed_cell_volumes[0] - ref) < 1.0e-10 * abs(ref)
-
-
-def test_signed_tetrahedron():
-    points = np.array(
-        [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
-    )
-
-    cells = np.array([[0, 1, 2, 3]])
-    mesh = meshplex.Mesh(points, cells)
-
-    print(mesh.signed_cell_volumes)
-    ref = np.array([1 / 6])
-    assert np.all(np.abs(mesh.signed_cell_volumes - ref) < 1.0e-13 * np.abs(ref))
-
-    cells = np.array([[0, 1, 3, 2]])
-    mesh = meshplex.Mesh(points, cells)
-
-    print(mesh.signed_cell_volumes)
-    ref = np.array([-1 / 6])
-    assert np.all(np.abs(mesh.signed_cell_volumes - ref) < 1.0e-13 * np.abs(ref))
