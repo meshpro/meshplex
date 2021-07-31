@@ -13,10 +13,8 @@ def test_signed_area_line():
     cells = np.array([[0, 1]])
     mesh = meshplex.Mesh(X, cells)
 
-    # TODO this is weird; shold be positive?
-    ref = np.array([-0.35])
+    ref = np.array([0.35])
 
-    print(mesh.signed_cell_volumes)
     assert mesh.signed_cell_volumes.shape == ref.shape
     assert np.all(
         np.abs(ref - mesh.signed_cell_volumes) < np.abs(ref) * 1.0e-13 + 1.0e-13
@@ -26,10 +24,8 @@ def test_signed_area_line():
     cells = np.array([[1, 0]])
     mesh = meshplex.Mesh(X, cells)
 
-    # TODO this is weird; shold be negative?
-    ref = np.array([0.35])
+    ref = np.array([-0.35])
 
-    print(mesh.signed_cell_volumes)
     assert mesh.signed_cell_volumes.shape == ref.shape
     assert np.all(
         np.abs(ref - mesh.signed_cell_volumes) < np.abs(ref) * 1.0e-13 + 1.0e-13
@@ -79,12 +75,12 @@ def test_signed_tetrahedron():
     mesh = meshplex.Mesh(points, cells)
 
     print(mesh.signed_cell_volumes)
-    ref = np.array([-1 / 6])
+    ref = np.array([1 / 6])
     assert np.all(np.abs(mesh.signed_cell_volumes - ref) < 1.0e-13 * np.abs(ref))
 
     cells = np.array([[0, 1, 3, 2]])
     mesh = meshplex.Mesh(points, cells)
 
     print(mesh.signed_cell_volumes)
-    ref = np.array([1 / 6])
+    ref = np.array([-1 / 6])
     assert np.all(np.abs(mesh.signed_cell_volumes - ref) < 1.0e-13 * np.abs(ref))
