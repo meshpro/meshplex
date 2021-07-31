@@ -446,25 +446,6 @@ def test_toy_geometric():
     assert abs(cc_norm_inf - 3.4234008596539662) < 1.0e-11
 
 
-def test_signed_volume():
-    mesh = meshplex.read(this_dir / "meshes" / "toy.vtk")
-
-    # TODO see if this gets more accurate
-    assert np.all(
-        np.abs(np.abs(mesh.signed_cell_volumes) - mesh.cell_volumes)
-        < 1.0e-11 * mesh.cell_volumes
-    )
-
-    points = [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
-    cells = [[0, 1, 2, 3]]
-    mesh = meshplex.Mesh(points, cells)
-    assert abs(mesh.signed_cell_volumes[0] + 1 / 6) < 1.0e-13
-
-    cells = [[0, 1, 3, 2]]
-    mesh = meshplex.Mesh(points, cells)
-    assert abs(mesh.signed_cell_volumes[0] - 1 / 6) < 1.0e-13
-
-
 def test_show_cell(render=False):
     pytest.importorskip("vtk")
     # filename = download_mesh("toy.vtk", "f48abda972822bab224b91a74d695573")
