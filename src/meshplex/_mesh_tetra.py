@@ -43,7 +43,7 @@ class MeshTetra(Mesh):
         equilateral tetrahedron.
         """
         # https://math.stackexchange.com/a/49340/36678
-        fa = self._volumes[-2]
+        fa = self.facet_areas
 
         el2 = self.ei_dot_ei
         a = el2[0][0]
