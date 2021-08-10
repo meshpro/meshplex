@@ -9,7 +9,7 @@ def _main():
     # points = np.array([[0.0, 0.0], [1.0, 0.0], [0.5, np.sqrt(3) / 2]])
     cells = np.array([[0, 1, 2]])
 
-    mesh = meshplex.mesh_tri.MeshTri(points, cells)
+    mesh = meshplex.Mesh(points, cells)
 
     lw = 5.0
     col = "0.6"
@@ -46,9 +46,7 @@ def _main():
         p = points - points[i]
         v1 = p[j] / np.linalg.norm(p[j])
         m1 = points[i] + np.dot(p[k], v1) * v1
-        plt.plot(
-            [points[k, 0], m1[0]], [points[k, 1], m1[1]], col, linewidth=lw, color=col
-        )
+        plt.plot([points[k, 0], m1[0]], [points[k, 1], m1[1]], linewidth=lw, color=col)
 
     # # incircle
     # circle2 = plt.Circle(
@@ -86,9 +84,8 @@ def _main():
     ax.set_ylim(-0.4, 0.9)
     ax.set_aspect("equal")
     plt.axis("off")
-    plt.savefig("logo.svg")
+    plt.savefig("logo.svg", bbox_inches="tight", transparent=True)
     # plt.show()
-    return
 
 
 if __name__ == "__main__":

@@ -144,21 +144,24 @@ class Mesh:
         return self._cells_facets
 
     @property
-    def half_edge_coords(self):
+    def half_edge_coords(self) -> NDArray[np.float_]:
         if self._half_edge_coords is None:
             self._compute_cell_values()
+        assert self._half_edge_coords is not None
         return self._half_edge_coords
 
     @property
-    def ei_dot_ei(self):
+    def ei_dot_ei(self) -> NDArray[np.int_]:
         if self._ei_dot_ei is None:
             self._compute_cell_values()
+        assert self._ei_dot_ei is not None
         return self._ei_dot_ei
 
     @property
-    def cell_heights(self):
+    def cell_heights(self) -> NDArray[np.float_]:
         if self._cell_heights is None:
             self._compute_cell_values()
+        assert self._cell_heights is not None
         return self._cell_heights
 
     @property

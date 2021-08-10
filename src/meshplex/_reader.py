@@ -1,9 +1,3 @@
-"""
-Module for reading unstructured grids (and related data) from various file
-formats.
-
-.. moduleauthor:: Nico Schlömer <nico.schloemer@gmail.com>
-"""
 import meshio
 import numpy as np
 
