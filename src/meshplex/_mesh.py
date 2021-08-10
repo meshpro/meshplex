@@ -5,7 +5,7 @@ import warnings
 import meshio
 import npx
 import numpy as np
-from numpy.typing import ArrayLike
+from numpy.typing import ArrayLike, NDArray
 
 from ._exceptions import MeshplexError
 from ._helpers import _dot, _multiply, grp_start_len
@@ -131,7 +131,7 @@ class Mesh:
         self.points.setflags(write=False)
         self._reset_point_data()
 
-    def cells(self, which):
+    def cells(self, which) -> NDArray[np.int_]:
         if which == "points":
             return self.idx[0].T
         elif which == "facets":
@@ -140,6 +140,7 @@ class Mesh:
 
         assert which == "edges"
         assert self.n == 3
+        assert self._cells_facets is not None
         return self._cells_facets
 
     @property
@@ -161,52 +162,60 @@ class Mesh:
         return self._cell_heights
 
     @property
-    def edge_lengths(self):
+    def edge_lengths(self) -> NDArray[np.float_]:
         if self._volumes is None:
             self._compute_cell_values()
+        assert self._volumes is not None
         return self._volumes[0]
 
     @property
-    def facet_areas(self):
+    def facet_areas(self) -> NDArray[np.float_]:
         if self.n == 2:
+            assert self.facets is not None
             return np.ones(len(self.facets["points"]))
         if self._volumes is None:
             self._compute_cell_values()
+        assert self._volumes is not None
         return self._volumes[-2]
 
     @property
-    def cell_volumes(self):
+    def cell_volumes(self) -> NDArray[np.float_]:
         if self._volumes is None:
             self._compute_cell_values()
+        assert self._volumes is not None
         return self._volumes[-1]
 
     @property
-    def cell_circumcenters(self):
+    def cell_circumcenters(self) -> NDArray[np.float_]:
         """Get the center of the circumsphere of each cell."""
         if self._circumcenters is None:
             self._compute_cell_values()
+        assert self._circumcenters is not None
         return self._circumcenters[-1]
 
     @property
-    def cell_circumradius(self) -> ArrayLike:
+    def cell_circumradius(self) -> NDArray[np.float_]:
         """Get the circumradii of all cells"""
         if self._cell_circumradii is None:
             self._compute_cell_values()
+        assert self._cell_circumradii is not None
         return self._cell_circumradii
 
     @property
-    def cell_partitions(self):
+    def cell_partitions(self) -> NDArray[np.float_]:
         """Each simplex can be subdivided into parts that a closest to each corner.
         This method gives those parts, like ce_ratios associated with each edge.
         """
         if self._cell_partitions is None:
             self._compute_cell_values()
+        assert self._cell_partitions is not None
         return self._cell_partitions
 
     @property
-    def circumcenter_facet_distances(self) -> ArrayLike:
+    def circumcenter_facet_distances(self) -> NDArray[np.float_]:
         if self._circumcenter_facet_distances is None:
             self._compute_cell_values()
+        assert self._circumcenter_facet_distances is not None
         return self._circumcenter_facet_distances
 
     def get_control_volume_centroids(self, cell_mask=None):
@@ -253,7 +262,7 @@ class Mesh:
         return self.get_control_volume_centroids()
 
     @property
-    def ce_ratios(self):
+    def ce_ratios(self) -> NDArray[np.float_]:
         """The covolume-edgelength ratios."""
         # There are many ways for computing the ratio of the covolume and the edge
         # length. For triangles, for example, there is
@@ -272,11 +281,8 @@ class Mesh:
         # Since we have detailed cell partitions at hand, though, the easiest and
         # fastest is via those.
         if self._ce_ratios is None:
-            if self._cell_partitions is None:
-                self._compute_cell_values()
-
             self._ce_ratios = (
-                self._cell_partitions[0] / self.ei_dot_ei * 2 * (self.n - 1)
+                self.cell_partitions[0] / self.ei_dot_ei * 2 * (self.n - 1)
             )
 
         return self._ce_ratios
@@ -482,7 +488,7 @@ class Mesh:
         return np.sum(self.points[self.cells("points")[idx]], axis=1) / self.n
 
     @property
-    def cell_centroids(self):
+    def cell_centroids(self) -> NDArray[np.float_]:
         """The centroids (barycenters, midpoints of the circumcircles) of all
         simplices."""
         if self._cell_centroids is None:
@@ -492,7 +498,7 @@ class Mesh:
     cell_barycenters = cell_centroids
 
     @property
-    def cell_incenters(self):
+    def cell_incenters(self) -> NDArray[np.float_]:
         """Get the midpoints of the inspheres."""
         # https://en.wikipedia.org/wiki/Incenter#Barycentric_coordinates
         # https://math.stackexchange.com/a/2864770/36678
@@ -500,14 +506,14 @@ class Mesh:
         return np.einsum("ij,jik->jk", abc, self.points[self.cells("points")])
 
     @property
-    def cell_inradius(self):
+    def cell_inradius(self) -> NDArray[np.float_]:
         """Get the inradii of all cells"""
         # See <https://mathworld.wolfram.com/Incircle.html>.
         # https://en.wikipedia.org/wiki/Tetrahedron#Inradius
         return (self.n - 1) * self.cell_volumes / np.sum(self.facet_areas, axis=0)
 
     @property
-    def is_point_used(self):
+    def is_point_used(self) -> NDArray[np.bool_]:
         # Check which vertices are used.
         # If there are vertices which do not appear in the cells list, this
         # ```
@@ -681,19 +687,21 @@ class Mesh:
             self.faces = self.facets
 
     @property
-    def is_boundary_facet_local(self):
+    def is_boundary_facet_local(self) -> NDArray[np.bool_]:
         if self._is_boundary_facet_local is None:
             self.create_facets()
+        assert self._is_boundary_facet_local is not None
         return self._is_boundary_facet_local
 
     @property
-    def is_boundary_facet(self):
+    def is_boundary_facet(self) -> NDArray[np.bool_]:
         if self._is_boundary_facet is None:
             self.create_facets()
+        assert self._is_boundary_facet is not None
         return self._is_boundary_facet
 
     @property
-    def is_interior_facet(self):
+    def is_interior_facet(self) -> NDArray[np.bool_]:
         return ~self.is_boundary_facet
 
     @property
