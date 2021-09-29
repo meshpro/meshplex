@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import math
 import pathlib
 import warnings
@@ -1100,12 +1102,15 @@ class Mesh:
 
         return self.remove_cells(remove)
 
-    def get_control_volumes(self, cell_mask=None):
+    def get_control_volumes(self, cell_mask: ArrayLike | None = None) -> np.ndarray:
         """The control volumes around each vertex. Optionally disregard the
         contributions from particular cells. This is useful, for example, for
         temporarily disregarding flat cells on the boundary when performing Lloyd mesh
         optimization.
         """
+        if cell_mask is not None:
+            cell_mask = np.asarray(cell_mask)
+
         if self._cv_centroids is None or np.any(cell_mask != self._cvc_cell_mask):
             # Sum up the contributions according to how self.idx is constructed.
             # roll = np.array([np.roll(np.arange(kk + 3), -i) for i in range(1, kk + 3)])
@@ -1125,6 +1130,8 @@ class Mesh:
             )
 
             self._cv_cell_mask = cell_mask
+
+        assert self._control_volumes is not None
         return self._control_volumes
 
     control_volumes = property(get_control_volumes)
