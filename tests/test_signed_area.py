@@ -46,7 +46,7 @@ def test_signed_area(points, cells, ref):
 
 
 def test_signed_area_pacman():
-    mesh = meshio.read(this_dir / "meshes" / "pacman.vtk")
+    mesh = meshio.read(this_dir / "meshes" / "pacman.vtu")
     assert np.all(np.abs(mesh.points[:, 2]) < 1.0e-15)
     X = mesh.points[:, :2]
 

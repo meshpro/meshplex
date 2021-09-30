@@ -426,30 +426,28 @@ def test_tetrahedron():
 
 
 def test_toy_geometric():
-    mesh = meshplex.read(this_dir / "meshes" / "toy.vtk")
+    mesh = meshplex.read(this_dir / "meshes" / "toy.vtu")
 
     mesh = meshplex.MeshTetra(mesh.points, mesh.cells("points"))
 
     run(
         mesh,
-        volume=9.3875504672601107,
-        convol_norms=[0.20175742659663737, 0.0093164692200450819],
-        ce_ratio_norms=[13.497977312281323, 0.42980191511570004],
-        cellvol_norms=[0.091903119589148916, 0.0019959463063558944],
+        volume=1.2558406318969064,
+        convol_norms=[0.06426267704764405, 0.006376495345775972],
+        ce_ratio_norms=[2.3838036244886744, 0.061790574680317234],
+        cellvol_norms=[0.03813510075830597, 0.002568756890638246],
         tol=1.0e-6,
     )
 
     cc = mesh.cell_circumcenters
     cc_norm_2 = fsum(cc.flat)
     cc_norm_inf = max(cc.flat)
-    assert abs(cc_norm_2 - 1103.7038287583791) < 1.0e-11
-    assert abs(cc_norm_inf - 3.4234008596539662) < 1.0e-11
+    assert abs(cc_norm_2 - 250.71142559136365) < 1.0e-11, cc_norm_2
+    assert abs(cc_norm_inf - 1.6682679741134048) < 1.0e-11, cc_norm_inf
 
 
 def test_show_cell(render=False):
     pytest.importorskip("vtk")
-    # filename = download_mesh("toy.vtk", "f48abda972822bab224b91a74d695573")
-    # mesh = meshplex.read(filename)
 
     points = (
         np.array(

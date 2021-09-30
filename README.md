@@ -87,7 +87,7 @@ For a documentation of all classes and functions, see
 ```python
 import meshplex
 
-mesh = meshplex.read("pacman-optimized.vtk")
+mesh = meshplex.read("pacman.vtk")
 mesh.show(
     # show_coedges=True,
     # control_volume_centroid_color=None,
