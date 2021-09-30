@@ -56,7 +56,7 @@ def get_mesh1():
 
 def get_mesh2():
     this_dir = pathlib.Path(__file__).resolve().parent
-    mesh0 = meshplex.read(this_dir / "meshes" / "pacman.vtk")
+    mesh0 = meshplex.read(this_dir / "meshes" / "pacman.vtu")
     return meshplex.Mesh(mesh0.points[:, :2], mesh0.cells("points"))
 
 

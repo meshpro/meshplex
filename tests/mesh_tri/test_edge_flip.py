@@ -270,14 +270,16 @@ def test_flip_interior_to_boundary():
 
 
 def test_flip_delaunay():
-    np.random.seed(123)
-    mesh0 = meshio.read(this_dir / ".." / "meshes" / "pacman.vtk")
-    mesh0.points[:, :2] += 5.0e-2 * np.random.rand(*mesh0.points[:, :2].shape)
+    rng = np.random.default_rng(123)
+    mesh0 = meshio.read(this_dir / ".." / "meshes" / "pacman.vtu")
+    mesh0.points[:, :2] += 1.0e-1 * rng.random(mesh0.points[:, :2].shape)
 
     mesh0 = meshplex.MeshTri(mesh0.points[:, :2], mesh0.get_cells_type("triangle"))
     compute_all_entities(mesh0)
 
-    assert mesh0.num_delaunay_violations == 16
+    assert np.all(mesh0.signed_cell_volumes > 0)
+
+    assert mesh0.num_delaunay_violations == 5
 
     mesh0.flip_until_delaunay()
     assert mesh0.num_delaunay_violations == 0

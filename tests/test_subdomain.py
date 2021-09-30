@@ -6,7 +6,7 @@ this_dir = pathlib.Path(__file__).resolve().parent
 
 
 def test_get_edges():
-    mesh = meshplex.read(this_dir / "meshes" / "pacman.vtk")
+    mesh = meshplex.read(this_dir / "meshes" / "pacman.vtu")
     mesh.create_facets()
     edge_mask = mesh.get_edge_mask()
     edge_points = mesh.edges["points"][edge_mask]
@@ -14,7 +14,7 @@ def test_get_edges():
 
 
 def test_mark_subdomain2d():
-    mesh = meshplex.read(this_dir / "meshes" / "pacman.vtk")
+    mesh = meshplex.read(this_dir / "meshes" / "pacman.vtu")
 
     class Subdomain1:
         is_boundary_only = True
