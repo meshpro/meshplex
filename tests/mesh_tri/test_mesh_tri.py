@@ -4,6 +4,7 @@ import platform
 import tempfile
 
 import meshio
+import meshzoo
 import numpy as np
 import pytest
 
@@ -501,15 +502,16 @@ def test_shell():
 
 
 def test_sphere():
-    mesh = meshplex.read(this_dir / ".." / "meshes" / "sphere.vtk")
+    points, cells = meshzoo.icosa_sphere(5)
+    mesh = meshplex.Mesh(points, cells)
+
     run(
         mesh,
-        12.273645818711595,
-        [1.0177358705967492, 0.10419690304323895],
-        [366.3982135866799, 1.7062353589387327],
-        [0.72653362732751214, 0.05350373815413411],
+        12.413437988936916,
+        [0.7864027242108207, 0.05524648209283611],
+        [128.70115197256447, 0.3605511489598192],
+        [0.5593675314375034, 0.02963260270642986],
     )
-    # assertEqual(mesh.num_delaunay_violations, 60)
 
 
 def test_update_point_coordinates():
