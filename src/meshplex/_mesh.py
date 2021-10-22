@@ -116,7 +116,7 @@ class Mesh:
 
     # prevent overriding points without adapting the other mesh data
     @property
-    def points(self):
+    def points(self) -> np.ndarray:
         return self._points
 
     @points.setter
