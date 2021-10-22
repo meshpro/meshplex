@@ -10,7 +10,8 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-import os
+import pathlib
+from configparser import ConfigParser
 
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
@@ -25,17 +26,11 @@ project = "meshplex"
 copyright = "2017-2021, Nico Schlömer"
 author = "Nico Schlömer"
 
-#
-# https://packaging.python.org/guides/single-sourcing-package-version/
-this_dir = os.path.abspath(os.path.dirname(__file__))
-about = {}
-about_file = os.path.join(this_dir, "..", "src", "meshplex", "__about__.py")
-with open(about_file) as f:
-    exec(f.read(), about)
-# The short X.Y version.
-# version = ".".join(about["__version__"].split(".")[:2])
-# The full version, including alpha/beta/rc tags.
-release = about["__version__"]
+
+this_dir = pathlib.Path(__file__).resolve().parent
+p = ConfigParser()
+p.read(this_dir / ".." / "setup.cfg")
+release = p["metadata"]["version"]
 
 
 # -- General configuration ---------------------------------------------------

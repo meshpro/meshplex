@@ -26,6 +26,7 @@ meshplex is used in [optimesh](https://github.com/nschloe/optimesh) and
 ### Quickstart
 
 meshplex can compute the following data:
+
 ```python
 import meshplex
 
@@ -64,8 +65,11 @@ print(mesh.num_delaunay_violations)
 # removes some cells
 mesh.remove_cells([0])
 ```
+
 For triangular meshes (`MeshTri`), meshplex also has some mesh manipulation routines:
+
 <!--pytest-codeblocks:skip-->
+
 ```python
 mesh.show()  # show the mesh
 mesh.angles  # compute angles
@@ -81,9 +85,11 @@ For a documentation of all classes and functions, see
 ### Plotting
 
 #### Triangles
+
 <img src="https://nschloe.github.io/meshplex/pacman.png" width="30%">
 
 <!--pytest-codeblocks:skip-->
+
 ```python
 import meshplex
 
@@ -100,9 +106,11 @@ mesh.show(
 ```
 
 #### Tetrahedra
+
 <img src="https://nschloe.github.io/meshplex/tetra.png" width="30%">
 
 <!--pytest-codeblocks:skip-->
+
 ```python
 import numpy as np
 import meshplex
@@ -142,11 +150,14 @@ mesh.show_cell(
 
 meshplex is [available from the Python Package
 Index](https://pypi.org/project/meshplex/), so simply type
+
 ```
 pip install meshplex
 ```
+
 to install.
 
 ### License
+
 This software is published under the [GPLv3
 license](https://www.gnu.org/licenses/gpl-3.0.en.html).

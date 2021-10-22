@@ -7,7 +7,9 @@ import meshplex
 
 
 def test_io_2d():
-    vertices, cells = meshzoo.rectangle_tri((0.0, 0.0), (1.0, 1.0), 2)
+    vertices, cells = meshzoo.rectangle_tri(
+        np.linspace(0.0, 1.0, 3), np.linspace(0.0, 1.0, 3)
+    )
     mesh = meshplex.MeshTri(vertices, cells)
     # mesh = meshplex.read('pacman.vtu')
     assert mesh.num_delaunay_violations == 0
