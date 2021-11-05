@@ -348,7 +348,7 @@ class Mesh:
                 # Compute <w, v> / <w, w>, but don't set the output value where w==0.
                 # The value remains uninitialized and gets canceled out in the next
                 # iteration when multiplied by w.
-                alpha = np.divide(w_dot_v, w_dot_w, where=w_dot_w > 0.0)
+                alpha = np.divide(w_dot_v, w_dot_w, where=w_dot_w > 0.0, out=w_dot_v)
                 v -= _multiply(w, alpha, self.n - 1 - kk)
 
             vv = np.einsum("...k,...k->...", v, v)
@@ -484,8 +484,8 @@ class Mesh:
 
         # There appears to be no canonical convention when it comes to the sign
         # <https://math.stackexchange.com/q/4209203/36678>. With the below choice, the
-        # area of 1D simplices [a, b] with a < b are positve, and the common ordering of
-        # tetrahedra (as in VTK, for example) is positive.
+        # area of 1D simplices [a, b] with a < b are positive, and the common ordering
+        # of tetrahedra (as in VTK, for example) is positive.
         sign = -1 if n % 2 == 1 else 1
         return sign * np.linalg.det(cp1) / math.factorial(n)
 
@@ -854,7 +854,7 @@ class Mesh:
         ratio".) Is 1 for the equilateral simplex, and is often used a quality measure
         for the cell.
         """
-        # There are other sensible possiblities of defining cell quality, e.g.:
+        # There are other sensible possibilities of defining cell quality, e.g.:
         #   * inradius to longest edge
         #   * shortest to longest edge
         #   * minimum dihedral angle
@@ -1095,7 +1095,7 @@ class Mesh:
         remove = np.zeros(len(self.cells("points")), dtype=bool)
         for k in np.where(cts > 1)[0]:
             rem = inv == k
-            # don't remove first occurence
+            # don't remove first occurrence
             first_idx = np.where(rem)[0][0]
             rem[first_idx] = False
             remove |= rem
