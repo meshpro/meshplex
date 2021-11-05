@@ -392,7 +392,7 @@ def test_tetrahedron():
 #
 #     # Even if the input data has only a small error, the error in the
 #     # ce_ratios can be magnitudes larger. This is demonstrated here: Take
-#     # the same mesh from two different source files with a differnce of
+#     # the same mesh from two different source files with a difference of
 #     # the order of 1e-16. The ce_ratios differ by up to 1e-7.
 #     if False:
 #         print(mesh.cells.keys())
