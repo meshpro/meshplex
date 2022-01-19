@@ -1,3 +1,4 @@
+from .__about__ import __version__
 from ._exceptions import MeshplexError
 from ._mesh import Mesh
 from ._mesh_tetra import MeshTetra
@@ -11,4 +12,5 @@ __all__ = [
     "MeshplexError",
     "read",
     "from_meshio",
+    "__version__",
 ]
