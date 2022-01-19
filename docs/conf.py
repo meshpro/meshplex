@@ -10,8 +10,7 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-import pathlib
-from configparser import ConfigParser
+# from meshplex import __version__ as release
 
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
@@ -23,14 +22,8 @@ master_doc = "index"
 # -- Project information -----------------------------------------------------
 
 project = "meshplex"
-copyright = "2017-2021, Nico Schlömer"
+copyright = "2017-2022, Nico Schlömer"
 author = "Nico Schlömer"
-
-
-this_dir = pathlib.Path(__file__).resolve().parent
-p = ConfigParser()
-p.read(this_dir / ".." / "setup.cfg")
-release = p["metadata"]["version"]
 
 
 # -- General configuration ---------------------------------------------------
