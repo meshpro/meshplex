@@ -19,6 +19,7 @@ class Mesh:
     def __init__(self, points, cells, sort_cells: bool = False):
         points = np.asarray(points)
         cells = np.asarray(cells)
+        self.edges = None
 
         if sort_cells:
             # Sort cells, first every row, then the rows themselves. This helps in many
@@ -1260,7 +1261,7 @@ class Mesh:
                 )
 
         if show_edge_numbers:
-            if self.edges is None:
+            if getattr(self, 'edges', None) is None:
                 self.create_facets()
             for i, point_ids in enumerate(self.edges["points"]):
                 midpoint = np.sum(self.points[point_ids], axis=0) / 2
