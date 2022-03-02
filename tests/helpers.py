@@ -25,7 +25,7 @@ def run(mesh, volume, convol_norms, ce_ratio_norms, cellvol_norms, tol=1.0e-12):
     # self.assertAlmostEqual(volume, total_ce_ratio, delta=tol * volume)
     # ```
     # Check ce_ratio norms.
-    alpha2 = fsum((mesh.ce_ratios ** 2).flat)
+    alpha2 = fsum((mesh.ce_ratios**2).flat)
     alpha_inf = max(abs(mesh.ce_ratios).flat)
     assert is_near_equal(ce_ratio_norms, [alpha2, alpha_inf], tol), [alpha2, alpha_inf]
 

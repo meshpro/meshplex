@@ -116,17 +116,14 @@ import numpy as np
 import meshplex
 
 # Generate tetrahedron
-points = (
-    np.array(
-        [
-            [1.0, 0.0, -1.0 / np.sqrt(8)],
-            [-0.5, +np.sqrt(3.0) / 2.0, -1.0 / np.sqrt(8)],
-            [-0.5, -np.sqrt(3.0) / 2.0, -1.0 / np.sqrt(8)],
-            [0.0, 0.0, np.sqrt(2.0) - 1.0 / np.sqrt(8)],
-        ]
-    )
-    / np.sqrt(3.0)
-)
+points = np.array(
+    [
+        [1.0, 0.0, -1.0 / np.sqrt(8)],
+        [-0.5, +np.sqrt(3.0) / 2.0, -1.0 / np.sqrt(8)],
+        [-0.5, -np.sqrt(3.0) / 2.0, -1.0 / np.sqrt(8)],
+        [0.0, 0.0, np.sqrt(2.0) - 1.0 / np.sqrt(8)],
+    ]
+) / np.sqrt(3.0)
 cells = [[0, 1, 2, 3]]
 
 # Create mesh object
@@ -159,5 +156,7 @@ to install.
 
 ### License
 
-This software is published under the [GPLv3
-license](https://www.gnu.org/licenses/gpl-3.0.en.html).
+This software is available under the [GPLv3
+license](https://www.gnu.org/licenses/gpl-3.0.en.html) as well as a commercial
+license. If you'd like to use this software commercially, please contact the
+author.

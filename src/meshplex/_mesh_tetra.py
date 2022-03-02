@@ -79,7 +79,7 @@ class MeshTetra(Mesh):
         cos_alpha += [(fa[2] ** 2 + fa[3] ** 2 - H2) / (2 * fa[2] * fa[3])]
 
         cos_alpha = np.array(cos_alpha).T
-        sin_alpha = np.sqrt(1 - cos_alpha ** 2)
+        sin_alpha = np.sqrt(1 - cos_alpha**2)
 
         m = np.min(sin_alpha, axis=1) / (np.sqrt(2) * 2 / 3)
         return m
@@ -95,7 +95,7 @@ class MeshTetra(Mesh):
             (el2[0][0] + el2[1][0] + el2[2][0] + el2[0][2] + el2[1][1] + el2[0][1]) / 6
         )
         alpha = np.sqrt(2) / 12  # normalization factor
-        return self.cell_volumes / rms ** 3 / alpha
+        return self.cell_volumes / rms**3 / alpha
 
     def show(self):
         from matplotlib import pyplot as plt

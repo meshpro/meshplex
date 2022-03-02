@@ -60,7 +60,7 @@ def test_regular_tet0(a):
     )
 
     # cell volumes
-    vol = a ** 3 / 6.0 / np.sqrt(2)
+    vol = a**3 / 6.0 / np.sqrt(2)
     assert is_near_equal(mesh.cell_volumes, [vol], tol)
 
     # control volumes
@@ -161,12 +161,12 @@ def test_unit_tetrahedron_geometric(a):
     assert is_near_equal(mesh.ce_ratios, ref, tol)
 
     # cell volumes
-    assert is_near_equal(mesh.cell_volumes, [a ** 3 / 6.0], tol)
+    assert is_near_equal(mesh.cell_volumes, [a**3 / 6.0], tol)
 
     # control volumes
     assert is_near_equal(
         mesh.control_volumes,
-        [a ** 3 / 8.0, a ** 3 / 72.0, a ** 3 / 72.0, a ** 3 / 72.0],
+        [a**3 / 8.0, a**3 / 72.0, a**3 / 72.0, a**3 / 72.0],
         tol,
     )
 
@@ -216,12 +216,12 @@ def test_regular_tet1_geometric_order():
     assert is_near_equal(mesh.ce_ratios, ref, tol)
 
     # cell volumes
-    assert is_near_equal(mesh.cell_volumes, [a ** 3 / 6.0], tol)
+    assert is_near_equal(mesh.cell_volumes, [a**3 / 6.0], tol)
 
     # control volumes
     assert is_near_equal(
         mesh.control_volumes,
-        [a ** 3 / 72.0, a ** 3 / 8.0, a ** 3 / 72.0, a ** 3 / 72.0],
+        [a**3 / 72.0, a**3 / 8.0, a**3 / 72.0, a**3 / 72.0],
         tol,
     )
 
@@ -449,17 +449,14 @@ def test_toy_geometric():
 def test_show_cell(render=False):
     pytest.importorskip("vtk")
 
-    points = (
-        np.array(
-            [
-                [1.0, 0.0, -1.0 / np.sqrt(8)],
-                [-0.5, +np.sqrt(3.0) / 2.0, -1.0 / np.sqrt(8)],
-                [-0.5, -np.sqrt(3.0) / 2.0, -1.0 / np.sqrt(8)],
-                [0.0, 0.0, np.sqrt(2.0) - 1.0 / np.sqrt(8)],
-            ]
-        )
-        / np.sqrt(3.0)
-    )
+    points = np.array(
+        [
+            [1.0, 0.0, -1.0 / np.sqrt(8)],
+            [-0.5, +np.sqrt(3.0) / 2.0, -1.0 / np.sqrt(8)],
+            [-0.5, -np.sqrt(3.0) / 2.0, -1.0 / np.sqrt(8)],
+            [0.0, 0.0, np.sqrt(2.0) - 1.0 / np.sqrt(8)],
+        ]
+    ) / np.sqrt(3.0)
 
     # points = np.array(
     #     [

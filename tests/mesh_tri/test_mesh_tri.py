@@ -212,7 +212,7 @@ def test_regular_tri2(a):
     assert is_near_equal(mesh.ce_ratios, [val, val, val], tol)
 
     # control volumes
-    vol = np.sqrt(3.0) / 4 * a ** 2
+    vol = np.sqrt(3.0) / 4 * a**2
     assert is_near_equal(mesh.control_volumes, [vol / 3.0, vol / 3.0, vol / 3.0], tol)
 
     # cell volumes
@@ -300,17 +300,17 @@ def test_degenerate_small0b(h):
     tol = 1.0e-14
 
     # edge lengths
-    el = np.sqrt(0.5 ** 2 + h ** 2)
+    el = np.sqrt(0.5**2 + h**2)
     assert is_near_equal(mesh.edge_lengths.T, [el, el, 1.0], tol)
 
     # ce_ratios
-    ce0 = 0.5 / h * (h ** 2 - 0.25)
+    ce0 = 0.5 / h * (h**2 - 0.25)
     ce12 = 0.25 / h
     assert is_near_equal(mesh.ce_ratios.T, [ce12, ce12, ce0], tol)
 
     # control volumes
-    cv12 = 0.25 * (1.0 ** 2 * ce0 + (0.25 + h ** 2) * ce12)
-    cv0 = 0.5 * (0.25 + h ** 2) * ce12
+    cv12 = 0.25 * (1.0**2 * ce0 + (0.25 + h**2) * ce12)
+    cv0 = 0.5 * (0.25 + h**2) * ce12
     assert is_near_equal(mesh.control_volumes, [cv12, cv12, cv0], tol)
 
     # cell volumes
@@ -374,8 +374,8 @@ def test_degenerate_small1(h, a):
     tol = 1.0e-12
 
     # edge lengths
-    el0 = np.sqrt((1.0 - a) ** 2 + h ** 2)
-    el1 = np.sqrt(a ** 2 + h ** 2)
+    el0 = np.sqrt((1.0 - a) ** 2 + h**2)
+    el1 = np.sqrt(a**2 + h**2)
     el2 = 1.0
     assert is_near_equal(mesh.edge_lengths.T, [[el0, el1, el2]], tol)
 
@@ -648,18 +648,18 @@ def test_flat_boundary():
     mesh = meshplex.MeshTri(X, cells)
 
     # Inspect the covolumes in left cell.
-    edge_length = np.sqrt(x ** 2 + y ** 2)
+    edge_length = np.sqrt(x**2 + y**2)
     ref = np.array([edge_length, edge_length, 1.0])
     assert np.all(np.abs(mesh.edge_lengths[:, 3] - ref) < 1.0e-12)
     #
-    alpha = 0.5 / x * y * np.sqrt(y ** 2 + x ** 2)
-    beta = 0.5 / x * (x ** 2 - y ** 2)
+    alpha = 0.5 / x * y * np.sqrt(y**2 + x**2)
+    beta = 0.5 / x * (x**2 - y**2)
     ref = [alpha, alpha, beta]
     covolumes = mesh.ce_ratios[:, 3] * mesh.edge_lengths[:, 3]
     assert np.all(np.abs(covolumes - ref) < 1.0e-12)
 
     #
-    beta = np.sqrt(alpha ** 2 + 0.2 ** 2 + 0.25 ** 2)
+    beta = np.sqrt(alpha**2 + 0.2**2 + 0.25**2)
     control_volume_corners = np.array(
         [
             mesh.cell_circumcenters[0][:2],

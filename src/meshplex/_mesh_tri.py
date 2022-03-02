@@ -202,7 +202,7 @@ class MeshTri(Mesh):
         #
         #    curl = z * sum_edge_dot_A * 0.5 / |A|^2.
         #
-        curl = z * (0.5 * sum_edge_dot_A / self.cell_volumes ** 2)[..., None]
+        curl = z * (0.5 * sum_edge_dot_A / self.cell_volumes**2)[..., None]
         return curl
 
     def show_vertex(self, *args, **kwargs):
