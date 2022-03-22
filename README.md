@@ -9,12 +9,6 @@
 [![PyPi downloads](https://img.shields.io/pypi/dm/meshplex.svg?style=flat-square)](https://pypistats.org/packages/meshplex)
 
 [![Discord](https://img.shields.io/static/v1?logo=discord&label=chat&message=on%20discord&color=7289da&style=flat-square)](https://discord.gg/hnTJ5MRX2Y)
-[![Documentation Status](https://readthedocs.org/projects/meshplex/badge?style=flat-square&version=latest)](https://readthedocs.org/projects/meshplex/?badge=latest)
-
-[![gh-actions](https://img.shields.io/github/workflow/status/nschloe/meshplex/ci?style=flat-square)](https://github.com/nschloe/meshplex/actions?query=workflow%3Aci)
-[![codecov](https://img.shields.io/codecov/c/github/nschloe/meshplex.svg?style=flat-square)](https://codecov.io/gh/nschloe/meshplex)
-[![LGTM](https://img.shields.io/lgtm/grade/python/github/nschloe/meshplex.svg?style=flat-square)](https://lgtm.com/projects/g/nschloe/meshplex)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg?style=flat-square)](https://github.com/psf/black)
 
 Compute all sorts of interesting points, areas, and volumes in simplex (triangle,
 tetrahedral, n-simplex) meshes of any dimension, with a focus on efficiency. Useful in
@@ -24,6 +18,12 @@ meshplex is used in [optimesh](https://github.com/nschloe/optimesh) and
 [pyfvm](https://github.com/nschloe/pyfvm).
 
 ### Quickstart
+
+Install with
+
+```
+pip install meshplex
+```
 
 meshplex can compute the following data:
 
@@ -142,21 +142,3 @@ mesh.show_cell(
     line_width=3.0,
 )
 ```
-
-### Installation
-
-meshplex is [available from the Python Package
-Index](https://pypi.org/project/meshplex/), so simply type
-
-```
-pip install meshplex
-```
-
-to install.
-
-### License
-
-This software is available under the [GPLv3
-license](https://www.gnu.org/licenses/gpl-3.0.en.html) as well as a commercial
-license. If you'd like to use this software commercially, please contact the
-author.
