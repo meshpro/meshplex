@@ -1,0 +1,243 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>meshplex — Simplex meshes for Python &#8212; meshplex  documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <link rel="shortcut icon" href="_static/meshplex-32x32.ico"/>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="meshplex-simplex-meshes-for-python">
+<h1>meshplex — Simplex meshes for Python<a class="headerlink" href="#meshplex-simplex-meshes-for-python" title="Permalink to this headline">¶</a></h1>
+<p>meshplex computes all sorts of interesting points, areas, and volumes in triangular and
+tetrahedral meshes, with a focus on efficiency. Useful in many contexts, e.g.,
+finite-element and finite-volume computations.</p>
+<p>For a quickstart, checkout <a class="reference external" href="//github.com/nschloe/meshplex">meshplex’s GitHubPage</a>.</p>
+<section id="module-meshplex">
+<span id="overview-of-classes-and-functions"></span><h2>Overview of classes and functions<a class="headerlink" href="#module-meshplex" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="meshplex.MeshTetra">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">meshplex.</span></span><span class="sig-name descname"><span class="pre">MeshTetra</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">points</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cells</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sort_cells</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#meshplex.MeshTetra" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class for handling tetrahedral meshes.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="meshplex.MeshTetra.plot_edge">
+<span class="sig-name descname"><span class="pre">plot_edge</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">edge_id</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#meshplex.MeshTetra.plot_edge" title="Permalink to this definition">¶</a></dt>
+<dd><p>Displays edge with ce_ratio.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>edge_id</strong> (<em>int</em>) – Edge ID for which to show the ce_ratio.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="meshplex.MeshTetra.q_min_sin_dihedral_angles">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">q_min_sin_dihedral_angles</span></span><a class="headerlink" href="#meshplex.MeshTetra.q_min_sin_dihedral_angles" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the smallest of the sines of the 6 angles between the faces of each
+tetrahedron, times a scaling factor that makes sure the value is 1 for the
+equilateral tetrahedron.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="meshplex.MeshTetra.q_vol_rms_edgelength3">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">q_vol_rms_edgelength3</span></span><a class="headerlink" href="#meshplex.MeshTetra.q_vol_rms_edgelength3" title="Permalink to this definition">¶</a></dt>
+<dd><p>For each cell, return the ratio of the volume and the cube of the
+root-mean-square edge length. (This is cell quality measure used by Stellar
+&lt;<a class="reference external" href="https://people.eecs.berkeley.edu/~jrs/stellar/">https://people.eecs.berkeley.edu/~jrs/stellar/</a>&gt;.)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="meshplex.MeshTetra.show">
+<span class="sig-name descname"><span class="pre">show</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#meshplex.MeshTetra.show" title="Permalink to this definition">¶</a></dt>
+<dd><p>Show the mesh (see plot()).</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="meshplex.MeshTri">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">meshplex.</span></span><span class="sig-name descname"><span class="pre">MeshTri</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">points</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cells</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sort_cells</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#meshplex.MeshTri" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class for handling triangular meshes.</p>
+<dl class="py property">
+<dt class="sig sig-object py" id="meshplex.MeshTri.angles">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">angles</span></span><a class="headerlink" href="#meshplex.MeshTri.angles" title="Permalink to this definition">¶</a></dt>
+<dd><p>All angles in the triangle.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="meshplex.MeshTri.compute_ncurl">
+<span class="sig-name descname"><span class="pre">compute_ncurl</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">vector_field</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#meshplex.MeshTri.compute_ncurl" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes the n.dot.curl of a vector field over the mesh. While the vector
+field is point-based, the curl will be cell-based. The approximation is based on</p>
+<div class="math notranslate nohighlight">
+\[n\cdot curl(F) = \lim_{A\to 0} |A|^{-1} \rangle\int_{dGamma}, F\rangle dr;\]</div>
+<p>see <a class="reference external" href="https://en.wikipedia.org/wiki/Curl_(mathematics">https://en.wikipedia.org/wiki/Curl_(mathematics</a>). Actually, to approximate
+the integral, one would only need the projection of the vector field onto the
+edges at the midpoint of the edges.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="meshplex.MeshTri.flip_until_delaunay">
+<span class="sig-name descname"><span class="pre">flip_until_delaunay</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_steps</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#meshplex.MeshTri.flip_until_delaunay" title="Permalink to this definition">¶</a></dt>
+<dd><p>Flip edges until the mesh is fully Delaunay (up to <cite>tol</cite>).</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="meshplex.MeshTri.plot_vertex">
+<span class="sig-name descname"><span class="pre">plot_vertex</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">point_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_ce_ratio</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#meshplex.MeshTri.plot_vertex" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot the vicinity of a point and its covolume/edgelength ratio.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>point_id</strong> (<em>int</em>) – Node ID of the point to be shown.</p></li>
+<li><p><strong>show_ce_ratio</strong> (<em>bool</em><em>, </em><em>optional</em>) – If true, shows the ce_ratio of the point, too.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="meshplex.MeshTri.show_vertex">
+<span class="sig-name descname"><span class="pre">show_vertex</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#meshplex.MeshTri.show_vertex" title="Permalink to this definition">¶</a></dt>
+<dd><p>Show the mesh around a vertex (see plot_vertex()).</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="meshplex.MeshplexError">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">meshplex.</span></span><span class="sig-name descname"><span class="pre">MeshplexError</span></span><a class="headerlink" href="#meshplex.MeshplexError" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="meshplex.from_meshio">
+<span class="sig-prename descclassname"><span class="pre">meshplex.</span></span><span class="sig-name descname"><span class="pre">from_meshio</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mesh</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#meshplex.from_meshio" title="Permalink to this definition">¶</a></dt>
+<dd><p>Transform from meshio to meshplex format.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>mesh</strong> (<em>meshio.Mesh</em>) – The meshio mesh object.</p>
+</dd>
+<dt class="field-even">Returns mesh{2,3}d</dt>
+<dd class="field-even"><p>The mesh data.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="meshplex.read">
+<span class="sig-prename descclassname"><span class="pre">meshplex.</span></span><span class="sig-name descname"><span class="pre">read</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#meshplex.read" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reads an unstructured mesh into meshplex format.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>filenames</strong> (<em>str</em>) – The files to read from.</p>
+</dd>
+<dt class="field-even">Returns mesh{2,3}d</dt>
+<dd class="field-even"><p>The mesh data.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="#">
+    <img class="logo" src="_static/meshplex-logo.svg" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="#">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017-2022, Nico Schlömer.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.4.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/index.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+    <a href="https://github.com/nschloe/meshplex" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>
