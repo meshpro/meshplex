@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://github.com/nschloe/meshplex"><img alt="meshplex" src="https://nschloe.github.io/meshplex/meshplex-logo.svg" width="60%"></a>
+  <a href="https://github.com/nschloe/meshplex"><img alt="meshplex" src="https://raw.githubusercontent.com/meshpro/meshplex/assets/meshplex-logo.svg" width="60%"></a>
   <p align="center">Fast tools for simplex meshes.</p>
 </p>
 
@@ -86,7 +86,7 @@ For a documentation of all classes and functions, see
 
 #### Triangles
 
-<img src="https://nschloe.github.io/meshplex/pacman.png" width="30%">
+<img src="https://raw.githubusercontent.com/meshpro/meshplex/assets/pacman.png" width="30%">
 
 <!--pytest-codeblocks:skip-->
 
@@ -107,7 +107,7 @@ mesh.show(
 
 #### Tetrahedra
 
-<img src="https://nschloe.github.io/meshplex/tetra.png" width="30%">
+<img src="https://raw.githubusercontent.com/meshpro/meshplex/assets/tetra.png" width="30%">
 
 <!--pytest-codeblocks:skip-->
 
