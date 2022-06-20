@@ -68,7 +68,7 @@ mesh.remove_cells([0])
 
 For triangular meshes (`MeshTri`), meshplex also has some mesh manipulation routines:
 
-<!--pytest-codeblocks:skip-->
+<!--pytest.mark.skip-->
 
 ```python
 mesh.show()  # show the mesh
@@ -88,7 +88,7 @@ For a documentation of all classes and functions, see
 
 <img src="https://raw.githubusercontent.com/meshpro/meshplex/assets/pacman.png" width="30%">
 
-<!--pytest-codeblocks:skip-->
+<!--pytest.mark.skip-->
 
 ```python
 import meshplex
@@ -109,7 +109,7 @@ mesh.show(
 
 <img src="https://raw.githubusercontent.com/meshpro/meshplex/assets/tetra.png" width="30%">
 
-<!--pytest-codeblocks:skip-->
+<!--pytest.mark.skip-->
 
 ```python
 import numpy as np
