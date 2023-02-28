@@ -17,13 +17,30 @@ many contexts, e.g., finite-element and finite-volume computations.
 meshplex is used in [optimesh](https://github.com/nschloe/optimesh) and
 [pyfvm](https://github.com/nschloe/pyfvm).
 
+### Installation
+
+Install meshzoo [from PyPI](https://pypi.org/project/meshzoo/) with
+
+```
+pip install meshzoo
+```
+
+### How to get a license
+
+Licenses for personal and academic use can be purchased
+[here](https://buy.stripe.com/5kA3eV8t8af83iE9AE).
+You'll receive a confirmation email with a license key.
+Install the key with
+
+```
+plm add <your-license-key>
+```
+
+on your machine and you're good to go.
+
+For commerical use, please contact support@mondaytech.com.
+
 ### Quickstart
-
-Install with
-
-```
-pip install meshplex
-```
 
 meshplex can compute the following data:
 
