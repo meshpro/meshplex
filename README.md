@@ -25,20 +25,10 @@ Install meshzoo [from PyPI](https://pypi.org/project/meshzoo/) with
 pip install meshzoo
 ```
 
-### How to get a license
-
-Licenses for personal and academic use can be purchased
-[here](https://buy.stripe.com/5kA3eV8t8af83iE9AE).
-You'll receive a confirmation email with a license key.
-Install the key with
-
-```
-plm add <your-license-key>
-```
-
-on your machine and you're good to go.
-
-For commerical use, please contact support@mondaytech.com.
+For full usage of meshplex, you require a license. Licenses for personal and
+academic use can be purchased
+[here](https://buy.stripe.com/5kA3eV8t8af83iE9AE). For more info, see
+[here](https://github.com/meshpro).
 
 ### Quickstart
 
