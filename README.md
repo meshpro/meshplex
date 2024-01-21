@@ -14,15 +14,12 @@ Compute all sorts of interesting points, areas, and volumes in simplex (triangle
 tetrahedral, n-simplex) meshes of any dimension, with a focus on efficiency. Useful in
 many contexts, e.g., finite-element and finite-volume computations.
 
-meshplex is used in [optimesh](https://github.com/nschloe/optimesh) and
-[pyfvm](https://github.com/nschloe/pyfvm).
-
 ### Installation
 
-Install meshzoo [from PyPI](https://pypi.org/project/meshzoo/) with
+Install meshplex [from PyPI](https://pypi.org/project/meshplex/) with
 
 ```
-pip install meshzoo
+pip install meshplex
 ```
 
 For full usage of meshplex, you require a license. Licenses for personal and
