@@ -10,9 +10,10 @@
 
 [![Discord](https://img.shields.io/static/v1?logo=discord&label=chat&message=on%20discord&color=7289da&style=flat-square)](https://discord.gg/hnTJ5MRX2Y)
 
-Compute all sorts of interesting points, areas, and volumes in simplex (triangle,
-tetrahedral, n-simplex) meshes of any dimension, with a focus on efficiency. Useful in
-many contexts, e.g., finite-element and finite-volume computations.
+Compute all sorts of interesting points, areas, and volumes in simplex
+(triangle, tetrahedral, n-simplex) meshes of any dimension, with a focus on
+efficiency. Useful in many contexts, e.g., finite-element and finite-volume
+computations.
 
 ### Installation
 
@@ -65,6 +66,9 @@ print(mesh.ce_ratios)
 
 # count Delaunay violations
 print(mesh.num_delaunay_violations)
+
+# get all boundary angles in radians
+print(mesh.outside_boundary_angles_radians)
 
 # removes some cells
 mesh.remove_cells([0])
