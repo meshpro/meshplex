@@ -8,8 +8,6 @@
 [![GitHub stars](https://img.shields.io/github/stars/nschloe/meshplex.svg?style=flat-square&logo=github&label=Stars&logoColor=white)](https://github.com/nschloe/meshplex)
 [![PyPi downloads](https://img.shields.io/pypi/dm/meshplex.svg?style=flat-square)](https://pypistats.org/packages/meshplex)
 
-[![Discord](https://img.shields.io/static/v1?logo=discord&label=chat&message=on%20discord&color=7289da&style=flat-square)](https://discord.gg/hnTJ5MRX2Y)
-
 Compute all sorts of interesting points, areas, and volumes in simplex
 (triangle, tetrahedral, n-simplex) meshes of any dimension, with a focus on
 efficiency. Useful in many contexts, e.g., finite-element and finite-volume
@@ -36,21 +34,29 @@ meshplex can compute the following data:
 import meshplex
 
 # create a simple Mesh instance
+# (could be tetrahedra or even higher dimensional simplices)
 points = [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]]
 cells = [[0, 1, 2]]
 mesh = meshplex.Mesh(points, cells)
 # or read it from a file
 # mesh = meshplex.read("pacman.vtk")
 
-# triangle volumes, heights
+# simplex volumes, heights
 print(mesh.cell_volumes)
 print(mesh.signed_cell_volumes)
 print(mesh.cell_heights)
+print(mesh.volume)
+print(mesh.surface_area)
 
-# circumcenters, centroids, incenters
+# centers of any kind
 print(mesh.cell_circumcenters)
 print(mesh.cell_centroids)
 print(mesh.cell_incenters)
+print(mesh.cell_monge_points)
+print(mesh.cell_nagel_points)
+print(mesh.cell_spieker_centers)
+print(mesh.cell_lemoine_points)
+print(mesh.center_of_gravity)
 
 # circumradius, inradius, cell quality
 print(mesh.cell_circumradius)
